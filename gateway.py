@@ -18,7 +18,7 @@ from typing import Optional
 import httpx
 import yaml
 from fastapi import FastAPI, Header, HTTPException, Request
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 
 # ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -381,6 +381,223 @@ async def list_backends(authorization: Optional[str] = Header(None)):
             "healthy": backend_health.get(b["name"], False),
         })
     return result
+
+
+# ─── Web UI ──────────────────────────────────────────────────────────────────
+
+ADMIN_HTML = """\
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LLM Gateway</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,system-ui,sans-serif;background:#f5f5f5;color:#333}
+.header{background:#1a1a2e;color:#fff;padding:16px 24px;display:flex;align-items:center;gap:12px}
+.header h1{font-size:18px;font-weight:600}
+.container{max-width:1100px;margin:20px auto;padding:0 16px}
+.login-box{max-width:380px;margin:80px auto;background:#fff;border-radius:8px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.login-box h2{margin-bottom:16px;text-align:center}
+.card{background:#fff;border-radius:8px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.card h3{font-size:15px;color:#666;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px}
+.stat{background:#f8f9fa;border-radius:6px;padding:14px;text-align:center}
+.stat .val{font-size:24px;font-weight:700;color:#1a1a2e}
+.stat .lbl{font-size:12px;color:#888;margin-top:4px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid #eee}
+th{font-weight:600;color:#666;font-size:12px;text-transform:uppercase}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:600}
+.badge.up{background:#d4edda;color:#155724}
+.badge.down{background:#f8d7da;color:#721c24}
+input,select,button{font-size:14px;padding:8px 12px;border-radius:6px;border:1px solid #ddd;outline:none}
+input:focus{border-color:#4a6cf7}
+button{background:#4a6cf7;color:#fff;border:none;cursor:pointer;font-weight:600}
+button:hover{background:#3a5ce5}
+button.secondary{background:#6c757d}
+button.sm{padding:4px 10px;font-size:12px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.mt{margin-top:12px}
+.actions{display:flex;gap:8px;margin-top:12px}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:100;display:none}
+.modal{background:#fff;border-radius:10px;padding:24px;min-width:340px;max-width:90vw}
+.modal h3{margin-bottom:14px}
+.modal .field{margin-bottom:10px}
+.modal .field label{display:block;font-size:13px;color:#666;margin-bottom:4px}
+.modal .field input{width:100%}
+.key-display{background:#f1f3f5;padding:10px;border-radius:6px;font-family:monospace;word-break:break-all;margin:10px 0;font-size:13px}
+.tabs{display:flex;gap:0;border-bottom:2px solid #eee;margin-bottom:16px}
+.tab{padding:8px 18px;cursor:pointer;font-weight:500;color:#888;border-bottom:2px solid transparent;margin-bottom:-2px}
+.tab.active{color:#4a6cf7;border-color:#4a6cf7}
+#app{display:none}
+</style>
+</head>
+<body>
+<div class="header">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+<h1>LLM Gateway</h1>
+</div>
+
+<div id="login" class="login-box">
+<h2>🔐 管理登录</h2>
+<div class="field"><label>Admin Key</label><input id="key-input" type="password" placeholder="sk-admin-..." style="width:100%;margin:10px 0"></div>
+<button onclick="doLogin()" style="width:100%">登录</button>
+<p id="login-err" style="color:red;font-size:13px;margin-top:8px;text-align:center"></p>
+</div>
+
+<div id="app">
+<div class="container">
+<div class="tabs">
+<div class="tab active" onclick="switchTab('overview',this)">概览</div>
+<div class="tab" onclick="switchTab('users',this)">用户管理</div>
+<div class="tab" onclick="switchTab('usage',this)">用量统计</div>
+</div>
+<div id="tab-overview">
+<div class="grid" id="stats"></div>
+<div class="card"><h3>📡 后端状态</h3><table id="backends-table"><thead><tr><th>名称</th><th>地址</th><th>模型</th><th>状态</th></tr></thead><tbody></tbody></table></div>
+</div>
+<div id="tab-users" style="display:none">
+<div class="actions"><button onclick="showModal('create-user')">+ 新建用户</button></div>
+<div class="card mt"><table id="users-table"><thead><tr><th>ID</th><th>用户名</th><th>余额</th><th>创建时间</th><th>操作</th></tr></thead><tbody></tbody></table></div>
+</div>
+<div id="tab-usage" style="display:none">
+<div class="row"><label>天数</label><select id="usage-days" onchange="loadUsage()"><option value="1">1天</option><option value="7" selected>7天</option><option value="30">30天</option></select></div>
+<div class="card mt"><table id="usage-table"><thead><tr><th>用户</th><th>模型</th><th>请求数</th><th>Input tokens</th><th>Output tokens</th><th>费用</th></tr></thead><tbody></tbody></table></div>
+</div>
+</div>
+</div>
+
+<!-- Modals -->
+<div class="modal-bg" id="modal-create-user"><div class="modal">
+<h3>新建用户</h3>
+<div class="field"><label>用户名</label><input id="nu-name"></div>
+<div class="field"><label>初始余额</label><input id="nu-balance" type="number" value="0"></div>
+<div class="row mt"><button onclick="createUser()">创建</button><button class="secondary" onclick="hideModals()">取消</button></div>
+</div></div>
+
+<div class="modal-bg" id="modal-add-balance"><div class="modal">
+<h3>调整余额</h3>
+<div class="field"><label>金额（正数充值，负数扣减）</label><input id="ab-amount" type="number"></div>
+<input type="hidden" id="ab-uid">
+<div class="row mt"><button onclick="addBalance()">确认</button><button class="secondary" onclick="hideModals()">取消</button></div>
+</div></div>
+
+<div class="modal-bg" id="modal-create-key"><div class="modal">
+<h3>创建 API Key</h3>
+<div class="field"><label>名称（备注）</label><input id="ck-name" placeholder="可选"></div>
+<input type="hidden" id="ck-uid">
+<div id="ck-result"></div>
+<div class="row mt"><button onclick="createKey()">生成</button><button class="secondary" onclick="hideModals()">取消</button></div>
+</div></div>
+
+<script>
+let KEY='';
+const H=()=>({headers:{'Authorization':'Bearer '+KEY,'Content-Type':'application/json'}});
+
+async function doLogin(){
+  KEY=document.getElementById('key-input').value.trim();
+  try{
+    const r=await fetch('/admin/backends',H());
+    if(!r.ok) throw 0;
+    document.getElementById('login').style.display='none';
+    document.getElementById('app').style.display='block';
+    loadAll();
+  }catch(e){document.getElementById('login-err').textContent='Key 无效';}
+}
+
+function switchTab(name,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  ['overview','users','usage'].forEach(n=>{
+    document.getElementById('tab-'+n).style.display=n===name?'':'none';
+  });
+  if(name==='users') loadUsers();
+  if(name==='usage') loadUsage();
+}
+
+async function loadAll(){await Promise.all([loadBackends(),loadUsers(),loadUsage()]);}
+
+async function loadBackends(){
+  const data=await(await fetch('/admin/backends',H())).json();
+  const users=await(await fetch('/admin/users',H())).json();
+  // stats
+  const healthy=data.filter(b=>b.healthy).length;
+  const models=new Set();data.forEach(b=>b.models.forEach(m=>models.add(m)));
+  const totalBal=users.reduce((s,u)=>s+u.balance,0);
+  document.getElementById('stats').innerHTML=`
+    <div class="stat"><div class="val">${data.length}</div><div class="lbl">后端节点</div></div>
+    <div class="stat"><div class="val">${healthy}/${data.length}</div><div class="lbl">健康节点</div></div>
+    <div class="stat"><div class="val">${models.size}</div><div class="lbl">可用模型</div></div>
+    <div class="stat"><div class="val">${users.length}</div><div class="lbl">用户数</div></div>
+    <div class="stat"><div class="val">${totalBal.toFixed(2)}</div><div class="lbl">总余额</div></div>`;
+  const tb=document.querySelector('#backends-table tbody');
+  tb.innerHTML=data.map(b=>`<tr><td>${b.name}</td><td>${b.url}</td><td>${b.models.join(', ')}</td>
+    <td><span class="badge ${b.healthy?'up':'down'}">${b.healthy?'● 健康':'● 离线'}</span></td></tr>`).join('');
+}
+
+async function loadUsers(){
+  const data=await(await fetch('/admin/users',H())).json();
+  const tb=document.querySelector('#users-table tbody');
+  tb.innerHTML=data.map(u=>`<tr><td>${u.id}</td><td>${u.username}</td><td>${u.balance.toFixed(4)}</td>
+    <td>${new Date(u.created_at*1000).toLocaleString()}</td>
+    <td><button class="sm" onclick="showBalanceModal(${u.id})">充值</button>
+    <button class="sm secondary" onclick="showKeyModal(${u.id})">+ Key</button></td></tr>`).join('');
+}
+
+async function loadUsage(){
+  const days=document.getElementById('usage-days').value;
+  const data=await(await fetch('/admin/usage?days='+days,H())).json();
+  const tb=document.querySelector('#usage-table tbody');
+  tb.innerHTML=data.map(r=>`<tr><td>${r.username||'-'}</td><td>${r.model}</td><td>${r.requests}</td>
+    <td>${(r.input_tokens||0).toLocaleString()}</td><td>${(r.output_tokens||0).toLocaleString()}</td>
+    <td>${(r.total_cost||0).toFixed(4)}</td></tr>`).join('');
+  if(!data.length) tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:#999">暂无数据</td></tr>';
+}
+
+function showModal(id){document.getElementById('modal-'+id).style.display='flex';}
+function hideModals(){document.querySelectorAll('.modal-bg').forEach(m=>{m.style.display='none';});document.getElementById('ck-result').innerHTML='';}
+
+function showBalanceModal(uid){document.getElementById('ab-uid').value=uid;document.getElementById('ab-amount').value='';showModal('add-balance');}
+function showKeyModal(uid){document.getElementById('ck-uid').value=uid;document.getElementById('ck-name').value='';document.getElementById('ck-result').innerHTML='';showModal('create-key');}
+
+async function createUser(){
+  const name=document.getElementById('nu-name').value.trim();
+  const balance=parseFloat(document.getElementById('nu-balance').value)||0;
+  if(!name){alert('请输入用户名');return;}
+  await fetch('/admin/users',{...H(),method:'POST',body:JSON.stringify({username:name,balance})});
+  hideModals();loadUsers();loadBackends();
+}
+
+async function addBalance(){
+  const uid=document.getElementById('ab-uid').value;
+  const amount=parseFloat(document.getElementById('ab-amount').value);
+  if(isNaN(amount)){alert('请输入金额');return;}
+  await fetch(`/admin/users/${uid}/balance`,{...H(),method:'POST',body:JSON.stringify({amount})});
+  hideModals();loadUsers();loadBackends();
+}
+
+async function createKey(){
+  const uid=document.getElementById('ck-uid').value;
+  const name=document.getElementById('ck-name').value.trim();
+  const r=await(await fetch(`/admin/users/${uid}/keys`,{...H(),method:'POST',body:JSON.stringify({name})})).json();
+  document.getElementById('ck-result').innerHTML=`<div class="key-display">⚠️ 仅显示一次，请复制保存：<br><strong>${r.key}</strong></div>`;
+}
+
+// auto-refresh backends every 30s
+setInterval(()=>{if(KEY)loadBackends();},30000);
+
+// Enter key to login
+document.getElementById('key-input').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+</script>
+</body>
+</html>
+"""
+
+
+@app.get("/admin/", response_class=HTMLResponse)
+async def admin_ui():
+    return ADMIN_HTML
 
 
 # ─── CLI ─────────────────────────────────────────────────────────────────────
