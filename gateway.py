@@ -125,15 +125,22 @@ def auth_user(authorization: Optional[str]) -> dict:
     }
 
 
-# ─── Backend health ─────────────────────────────────────────────────────────
+# ─── Backend registry ────────────────────────────────────────────────────────
 
+# Dynamic backend list: [{name, url, models}]
+# Initialized from config, can be updated at runtime via /register
+backends: list[dict] = []
 backend_health: dict[str, bool] = {}  # name -> healthy
+
+
+def _find_backend(name: str) -> Optional[dict]:
+    return next((b for b in backends if b["name"] == name), None)
 
 
 async def health_check_loop():
     while True:
         async with httpx.AsyncClient(timeout=5) as client:
-            for b in CFG.get("backends", []):
+            for b in backends:
                 name = b["name"]
                 try:
                     r = await client.get(f"{b['url']}/models")
@@ -146,7 +153,7 @@ async def health_check_loop():
 def get_backends_for_model(model: str) -> list[dict]:
     """Return healthy backends that serve the given model."""
     results = []
-    for b in CFG.get("backends", []):
+    for b in backends:
         if model in b.get("models", []) and backend_health.get(b["name"], False):
             results.append(b)
     return results
@@ -179,9 +186,11 @@ async def lifespan(app: FastAPI):
     global DB
     init_db()
     DB = get_db()
-    # mark all backends unknown first
+    # seed from config
     for b in CFG.get("backends", []):
-        backend_health[b["name"]] = False
+        if not _find_backend(b["name"]):
+            backends.append({"name": b["name"], "url": b["url"], "models": b.get("models", [])})
+            backend_health[b["name"]] = False
     task = asyncio.create_task(health_check_loop())
     yield
     task.cancel()
@@ -197,7 +206,7 @@ app = FastAPI(title="LLM Gateway", lifespan=lifespan)
 async def list_models(authorization: Optional[str] = Header(None)):
     auth_user(authorization)
     models = set()
-    for b in CFG.get("backends", []):
+    for b in backends:
         if backend_health.get(b["name"], False):
             models.update(b.get("models", []))
     data = [{"id": m, "object": "model", "owned_by": "llm-gateway"} for m in sorted(models)]
@@ -373,7 +382,7 @@ async def get_usage(
 async def list_backends(authorization: Optional[str] = Header(None)):
     verify_admin(authorization)
     result = []
-    for b in CFG.get("backends", []):
+    for b in backends:
         result.append({
             "name": b["name"],
             "url": b["url"],
@@ -381,6 +390,50 @@ async def list_backends(authorization: Optional[str] = Header(None)):
             "healthy": backend_health.get(b["name"], False),
         })
     return result
+
+
+@app.post("/register")
+async def register_backend(request: Request):
+    """Backend self-registration. Body: {name, url, models[], token}"""
+    body = await request.json()
+    token = body.get("token", "")
+    admin_key = CFG["server"].get("admin_key", "")
+    if not secrets.compare_digest(token, admin_key):
+        raise HTTPException(403, "Invalid registration token")
+    name = body["name"]
+    url = body["url"].rstrip("/")
+    models = body.get("models", [])
+    existing = _find_backend(name)
+    if existing:
+        existing["url"] = url
+        existing["models"] = models
+    else:
+        backends.append({"name": name, "url": url, "models": models})
+    backend_health[name] = False  # will be verified by next health check
+    # immediate health check
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            r = await client.get(f"{url}/models")
+            backend_health[name] = r.status_code == 200
+    except Exception:
+        pass
+    return {"status": "registered", "name": name, "healthy": backend_health.get(name, False)}
+
+
+@app.post("/unregister")
+async def unregister_backend(request: Request):
+    """Remove a backend. Body: {name, token}"""
+    body = await request.json()
+    token = body.get("token", "")
+    admin_key = CFG["server"].get("admin_key", "")
+    if not secrets.compare_digest(token, admin_key):
+        raise HTTPException(403, "Invalid token")
+    name = body["name"]
+    existing = _find_backend(name)
+    if existing:
+        backends.remove(existing)
+        backend_health.pop(name, None)
+    return {"status": "removed", "name": name}
 
 
 # ─── Web UI ──────────────────────────────────────────────────────────────────
@@ -455,7 +508,7 @@ button.sm{padding:4px 10px;font-size:12px}
 </div>
 <div id="tab-overview">
 <div class="grid" id="stats"></div>
-<div class="card"><h3>📡 后端状态</h3><table id="backends-table"><thead><tr><th>名称</th><th>地址</th><th>模型</th><th>状态</th></tr></thead><tbody></tbody></table></div>
+<div class="card"><h3>📡 后端状态</h3><table id="backends-table"><thead><tr><th>名称</th><th>地址</th><th>模型</th><th>状态</th><th>获取连接</th></tr></thead><tbody></tbody></table></div>
 </div>
 <div id="tab-users" style="display:none">
 <div class="actions"><button onclick="showModal('create-user')">+ 新建用户</button></div>
@@ -532,8 +585,10 @@ async function loadBackends(){
     <div class="stat"><div class="val">${users.length}</div><div class="lbl">用户数</div></div>
     <div class="stat"><div class="val">${totalBal.toFixed(2)}</div><div class="lbl">总余额</div></div>`;
   const tb=document.querySelector('#backends-table tbody');
-  tb.innerHTML=data.map(b=>`<tr><td>${b.name}</td><td>${b.url}</td><td>${b.models.join(', ')}</td>
-    <td><span class="badge ${b.healthy?'up':'down'}">${b.healthy?'● 健康':'● 离线'}</span></td></tr>`).join('');
+  const gw=location.origin;
+  tb.innerHTML=data.map(b=>{const proxy=`${gw}/${b.name}/v1`;return `<tr><td>${b.name}</td><td>${b.url}</td><td>${b.models.join(', ')}</td>
+    <td><span class="badge ${b.healthy?'up':'down'}">${b.healthy?'● 健康':'● 离线'}</span></td>
+    <td><code style="font-size:12px;cursor:pointer;background:#f1f3f5;padding:2px 6px;border-radius:4px" onclick="navigator.clipboard.writeText('${proxy}');this.textContent='已复制!';setTimeout(()=>this.textContent='${proxy}',1500)">${proxy}</code></td></tr>`;}).join('');
 }
 
 async function loadUsers(){
