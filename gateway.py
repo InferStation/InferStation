@@ -362,6 +362,19 @@ async def _stream_forward(backend: dict, body: dict, user: dict, model: str) -> 
 # ─── Admin endpoints ─────────────────────────────────────────────────────────
 
 
+@app.post("/admin/login")
+async def admin_login(request: Request):
+    """Verify admin username + key. Returns 200 on success, 403 on failure."""
+    body = await request.json()
+    username = body.get("username", "")
+    key = body.get("key", "")
+    expected_user = CFG["server"].get("admin_username", "")
+    expected_key = CFG["server"].get("admin_key", "")
+    if not secrets.compare_digest(username, expected_user) or not secrets.compare_digest(key, expected_key):
+        raise HTTPException(403, "Invalid credentials")
+    return {"status": "ok"}
+
+
 @app.post("/admin/users")
 async def create_user(request: Request, authorization: Optional[str] = Header(None)):
     verify_admin(authorization)
@@ -776,6 +789,7 @@ button.outline:hover{background:var(--primary-light)}
     <h2>LLM Gateway</h2>
     <p>轻量级 LLM 路由管理平台</p>
   </div>
+  <div class="field"><label>管理用户名</label><input id="username-input" type="text" placeholder="请输入用户名"></div>
   <div class="field"><label>管理密钥</label><input id="key-input" type="password" placeholder="sk-admin-..."></div>
   <button onclick="doLogin()">登 录</button>
   <p class="err" id="login-err"></p>
@@ -892,16 +906,17 @@ const H=()=>({headers:{'Authorization':'Bearer '+KEY,'Content-Type':'application
 function toast(msg,dur=2500){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),dur);}
 
 async function doLogin(){
+  const username=document.getElementById('username-input').value.trim();
   KEY=document.getElementById('key-input').value.trim();
   try{
-    const r=await fetch('/admin/backends',H());
+    const r=await fetch('/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,key:KEY})});
     if(!r.ok) throw 0;
     document.getElementById('login').style.display='none';
     document.getElementById('app').style.display='block';
     loadAll();
-  }catch(e){document.getElementById('login-err').textContent='密钥无效，请重试';}
+  }catch(e){document.getElementById('login-err').textContent='用户名或密钥错误，请重试';}
 }
-function doLogout(){KEY='';document.getElementById('app').style.display='none';document.getElementById('login').style.display='flex';document.getElementById('key-input').value='';document.getElementById('login-err').textContent='';}
+function doLogout(){KEY='';document.getElementById('app').style.display='none';document.getElementById('login').style.display='flex';document.getElementById('key-input').value='';document.getElementById('username-input').value='';document.getElementById('login-err').textContent='';}}
 
 const tabNames={overview:'概览',marketplace:'模型服务广场',users:'用户管理',usage:'用量统计'};
 let mpData=[];
