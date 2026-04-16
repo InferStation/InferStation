@@ -554,6 +554,37 @@ async def backend_details(name: str, authorization: Optional[str] = Header(None)
     return result
 
 
+@app.get("/admin/marketplace")
+async def admin_marketplace(authorization: Optional[str] = Header(None)):
+    """Return all backends grouped by model for the marketplace view."""
+    verify_admin(authorization)
+    model_map = {}  # model_name -> [{backend info}]
+    for b in backends:
+        healthy = backend_health.get(b["name"], False)
+        pr = b.get("pricing", {})
+        owner_id = b.get("owner_id")
+        owner_name = "共享"
+        if owner_id:
+            row = DB.execute("SELECT username FROM users WHERE id = ?", (owner_id,)).fetchone()
+            if row:
+                owner_name = row["username"]
+        info = {
+            "backend": b["name"],
+            "url": b["url"],
+            "healthy": healthy,
+            "owner": owner_name,
+            "pricing": pr,
+            "client_info": b.get("client_info", {}),
+        }
+        for m in b.get("models", []):
+            model_map.setdefault(m, []).append(info)
+    result = []
+    for model, svcs in sorted(model_map.items()):
+        healthy_count = sum(1 for s in svcs if s["healthy"])
+        result.append({"model": model, "services": svcs, "total": len(svcs), "healthy": healthy_count})
+    return result
+
+
 # ─── Web UI ──────────────────────────────────────────────────────────────────
 
 ADMIN_HTML = """\
@@ -619,6 +650,34 @@ a{color:var(--primary);text-decoration:none}
 .card-head h3{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px}
 .card-body{padding:0}
 .card-body.padded{padding:16px 20px}
+
+/* ── Marketplace ── */
+.mp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:18px;padding:4px 0}
+.mp-model{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;border:1px solid var(--border);transition:box-shadow .2s}
+.mp-model:hover{box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.mp-model-head{padding:16px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);background:linear-gradient(135deg,#f8faff 0%,#f0f4ff 100%)}
+.mp-model-head h4{font-size:15px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px}
+.mp-model-head .mp-counts{display:flex;gap:8px}
+.mp-model-head .mp-counts span{font-size:11px;padding:3px 8px;border-radius:12px;font-weight:600}
+.mp-counts .total{background:#eef1ff;color:var(--primary)}
+.mp-counts .healthy{background:#ecfdf5;color:#059669}
+.mp-svc-list{padding:0}
+.mp-svc{padding:12px 18px;border-bottom:1px solid #f5f5f5;display:flex;justify-content:space-between;align-items:center;font-size:13px;transition:background .1s}
+.mp-svc:last-child{border-bottom:none}
+.mp-svc:hover{background:#fafbfc}
+.mp-svc .svc-left{display:flex;align-items:center;gap:10px}
+.mp-svc .svc-name{font-weight:600;color:var(--text)}
+.mp-svc .svc-owner{font-size:11px;color:var(--text2);background:#f5f5f5;padding:2px 8px;border-radius:10px}
+.mp-svc .svc-right{display:flex;align-items:center;gap:14px}
+.mp-svc .svc-price{font-family:'SF Mono',Monaco,monospace;font-size:12px;color:var(--text)}
+.mp-svc .svc-price .unit{font-size:10px;color:var(--text2)}
+.mp-svc .svc-gpu{font-size:11px;color:var(--text2);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mp-empty{text-align:center;padding:60px 20px;color:var(--text2)}
+.mp-empty svg{margin-bottom:12px;opacity:.4}
+.mp-search{display:flex;gap:12px;margin-bottom:18px;align-items:center}
+.mp-search input{flex:1;max-width:360px;padding:9px 14px;border-radius:8px;border:1px solid var(--border);font-size:14px}
+.mp-summary{display:flex;gap:14px;margin-bottom:18px}
+.mp-summary .mp-chip{padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;background:var(--card);border:1px solid var(--border);box-shadow:var(--shadow)}
 
 /* ── Table ── */
 table{width:100%;border-collapse:collapse;font-size:13px}
@@ -712,6 +771,7 @@ button.outline:hover{background:var(--primary-light)}
     </div>
     <nav>
       <a href="#" class="active" onclick="switchTab('overview',this);return false">📊 概览</a>
+      <a href="#" onclick="switchTab('marketplace',this);return false">🏪 模型广场</a>
       <a href="#" onclick="switchTab('users',this);return false">👥 用户管理</a>
       <a href="#" onclick="switchTab('usage',this);return false">📈 用量统计</a>
     </nav>
@@ -737,6 +797,16 @@ button.outline:hover{background:var(--primary-light)}
             <table id="backends-table"><thead><tr><th>名称</th><th>地址</th><th>模型</th><th>归属</th><th>定价(入/出)</th><th>状态</th><th style="width:40px"></th></tr></thead><tbody></tbody></table>
           </div>
         </div>
+      </div>
+
+      <!-- Marketplace -->
+      <div id="tab-marketplace" style="display:none">
+        <div class="mp-search">
+          <input id="mp-filter" placeholder="搜索模型名称..." oninput="filterMarketplace()">
+          <button class="sm outline" onclick="loadMarketplace()">↻ 刷新</button>
+        </div>
+        <div class="mp-summary" id="mp-summary"></div>
+        <div id="mp-content"></div>
       </div>
 
       <!-- Users -->
@@ -812,12 +882,14 @@ async function doLogin(){
 }
 function doLogout(){KEY='';document.getElementById('app').style.display='none';document.getElementById('login').style.display='flex';document.getElementById('key-input').value='';document.getElementById('login-err').textContent='';}
 
-const tabNames={overview:'概览',users:'用户管理',usage:'用量统计'};
+const tabNames={overview:'概览',marketplace:'模型服务广场',users:'用户管理',usage:'用量统计'};
+let mpData=[];
 function switchTab(name,el){
   document.querySelectorAll('.sidebar nav a').forEach(a=>a.classList.remove('active'));
   if(el)el.classList.add('active');
-  ['overview','users','usage'].forEach(n=>{document.getElementById('tab-'+n).style.display=n===name?'':'none';});
+  ['overview','marketplace','users','usage'].forEach(n=>{document.getElementById('tab-'+n).style.display=n===name?'':'none';});
   document.getElementById('page-title').textContent=tabNames[name]||name;
+  if(name==='marketplace') loadMarketplace();
   if(name==='users') loadUsers();
   if(name==='usage') loadUsage();
 }
@@ -945,6 +1017,58 @@ async function createKey(){
   const r=await(await fetch('/admin/users/'+uid+'/keys',{...H(),method:'POST',body:JSON.stringify({name})})).json();
   document.getElementById('ck-result').innerHTML='<div class="key-display">⚠️ 仅显示一次，请复制保存：<br><strong>'+r.key+'</strong></div>';
 }
+
+async function loadMarketplace(){
+  try{
+    mpData=await(await fetch('/admin/marketplace',H())).json();
+    renderMarketplace();
+  }catch(e){document.getElementById('mp-content').innerHTML='<div class="mp-empty">加载失败: '+e.message+'</div>';}
+}
+function renderMarketplace(){
+  const filter=(document.getElementById('mp-filter').value||'').toLowerCase();
+  const filtered=filter?mpData.filter(m=>m.model.toLowerCase().includes(filter)):mpData;
+  const totalModels=filtered.length;
+  const totalSvcs=filtered.reduce((s,m)=>s+m.total,0);
+  const totalHealthy=filtered.reduce((s,m)=>s+m.healthy,0);
+  document.getElementById('mp-summary').innerHTML=`
+    <div class="mp-chip">🤖 ${totalModels} 个模型</div>
+    <div class="mp-chip">📡 ${totalSvcs} 个服务</div>
+    <div class="mp-chip">💚 ${totalHealthy} 个在线</div>`;
+  if(!filtered.length){
+    document.getElementById('mp-content').innerHTML='<div class="mp-empty"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><br>没有找到匹配的模型</div>';
+    return;
+  }
+  document.getElementById('mp-content').innerHTML='<div class="mp-grid">'+filtered.map(m=>{
+    const svcs=m.services.map(s=>{
+      const pr=s.pricing||{};
+      const hasP=pr.input!=null;
+      const gpus=(s.client_info&&s.client_info.gpus)||[];
+      const gpuStr=gpus.length?gpus.map(g=>g.name).filter((v,i,a)=>a.indexOf(v)===i).join(', '):'';
+      return `<div class="mp-svc">
+        <div class="svc-left">
+          <span class="badge ${s.healthy?'up':'down'}" style="padding:2px 8px;font-size:11px">${s.healthy?'●':'●'}</span>
+          <span class="svc-name">${s.backend}</span>
+          <span class="svc-owner">${s.owner}</span>
+        </div>
+        <div class="svc-right">
+          ${gpuStr?'<span class="svc-gpu" title="'+gpuStr+'">'+gpuStr+'</span>':''}
+          <span class="svc-price">${hasP?'¥'+pr.input+' <span class="unit">入</span> / ¥'+pr.output+' <span class="unit">出</span>':'<span class="unit">默认定价</span>'}</span>
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="mp-model">
+      <div class="mp-model-head">
+        <h4>🤖 ${m.model}</h4>
+        <div class="mp-counts">
+          <span class="total">${m.total} 服务</span>
+          <span class="healthy">${m.healthy} 在线</span>
+        </div>
+      </div>
+      <div class="mp-svc-list">${svcs}</div>
+    </div>`;
+  }).join('')+'</div>';
+}
+function filterMarketplace(){renderMarketplace();}
 
 setInterval(()=>{if(KEY)loadBackends();},30000);
 document.getElementById('key-input').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
