@@ -500,7 +500,7 @@ th{font-weight:600;color:#666;font-size:12px;text-transform:uppercase}
 .badge.down{background:#f8d7da;color:#721c24}
 .expand-btn{cursor:pointer;user-select:none;font-size:14px;display:inline-block;transition:transform .2s;color:#888}
 .expand-btn:hover{color:#4a6cf7}
-.expand-btn.open{transform:rotate(180deg)}
+.expand-btn.open{transform:rotate(-90deg)}
 .detail-row td{padding:0!important;border:none!important}
 .detail-panel{background:#f8f9fa;padding:16px 20px;font-size:13px;display:none}
 .detail-panel.show{display:block}
@@ -634,7 +634,7 @@ async function loadBackends(){
   tb.innerHTML=data.map(b=>`<tr>
     <td>${b.name}</td><td>${b.url}</td><td>${b.models.join(', ')}</td>
     <td><span class="badge ${b.healthy?'up':'down'}">${b.healthy?'● 健康':'● 离线'}</span></td>
-    <td><span class="expand-btn" onclick="toggleDetail(this,'${b.name}')">▼</span></td>
+    <td><span class="expand-btn" onclick="toggleDetail(this,'${b.name}')">◀</span></td>
   </tr><tr class="detail-row" id="detail-${b.name}"><td colspan="5"><div class="detail-panel" id="panel-${b.name}">
     <div style="color:#999;padding:8px">加载中...</div>
   </div></td></tr>`).join('');
