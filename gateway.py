@@ -162,7 +162,7 @@ async def health_check_loop():
             for b in backends:
                 name = b["name"]
                 try:
-                    r = await client.get(f"{b['url']}/v1/models")
+                    r = await client.get(f"{b['url']}/models")
                     backend_health[name] = r.status_code == 200
                 except Exception:
                     backend_health[name] = False
@@ -516,7 +516,7 @@ async def register_backend(request: Request):
     # immediate health check
     try:
         async with httpx.AsyncClient(timeout=5) as client:
-            r = await client.get(f"{url}/v1/models")
+            r = await client.get(f"{url}/models")
             backend_health[name] = r.status_code == 200
     except Exception:
         pass
@@ -561,7 +561,7 @@ async def backend_details(name: str, authorization: Optional[str] = Header(None)
     # Fetch live model details and version from vLLM
     try:
         async with httpx.AsyncClient(timeout=5) as client:
-            r = await client.get(f"{b['url']}/v1/models")
+            r = await client.get(f"{b['url']}/models")
             if r.status_code == 200:
                 data = r.json()
                 result["vllm_models"] = data.get("data", [])
