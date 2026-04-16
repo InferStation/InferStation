@@ -508,108 +508,226 @@ ADMIN_HTML = """\
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>LLM Gateway</title>
+<title>LLM Gateway - Admin</title>
 <style>
+:root{--primary:#4361ee;--primary-dark:#3a56d4;--primary-light:#eef1ff;--bg:#f0f2f5;--card:#fff;--text:#1a1a2e;--text2:#64748b;--border:#e2e8f0;--success:#10b981;--danger:#ef4444;--warning:#f59e0b;--radius:10px;--shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04)}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,system-ui,sans-serif;background:#f5f5f5;color:#333}
-.header{background:#1a1a2e;color:#fff;padding:16px 24px;display:flex;align-items:center;gap:12px}
-.header h1{font-size:18px;font-weight:600}
-.container{max-width:1100px;margin:20px auto;padding:0 16px}
-.login-box{max-width:380px;margin:80px auto;background:#fff;border-radius:8px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,.1)}
-.login-box h2{margin-bottom:16px;text-align:center}
-.card{background:#fff;border-radius:8px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
-.card h3{font-size:15px;color:#666;margin-bottom:12px;display:flex;align-items:center;gap:8px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px}
-.stat{background:#f8f9fa;border-radius:6px;padding:14px;text-align:center}
-.stat .val{font-size:24px;font-weight:700;color:#1a1a2e}
-.stat .lbl{font-size:12px;color:#888;margin-top:4px}
-table{width:100%;border-collapse:collapse;font-size:14px}
-th,td{text-align:left;padding:8px 10px;border-bottom:1px solid #eee}
-th{font-weight:600;color:#666;font-size:12px;text-transform:uppercase}
-.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:600}
-.badge.up{background:#d4edda;color:#155724}
-.badge.down{background:#f8d7da;color:#721c24}
-.expand-btn{cursor:pointer;user-select:none;font-size:14px;display:inline-block;transition:transform .2s;color:#888}
-.expand-btn:hover{color:#4a6cf7}
-.expand-btn.open{transform:rotate(-90deg)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+a{color:var(--primary);text-decoration:none}
+
+/* ── Layout ── */
+.layout{display:flex;flex:1;min-height:0}
+.sidebar{width:220px;background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);color:#fff;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:50;transition:transform .3s}
+.sidebar .brand{padding:20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.1)}
+.sidebar .brand svg{flex-shrink:0}
+.sidebar .brand h1{font-size:16px;font-weight:700;letter-spacing:-.5px}
+.sidebar .brand small{font-size:10px;color:rgba(255,255,255,.5);display:block;margin-top:2px}
+.sidebar nav{flex:1;padding:12px 0}
+.sidebar nav a{display:flex;align-items:center;gap:10px;padding:10px 20px;color:rgba(255,255,255,.6);font-size:14px;font-weight:500;transition:all .15s;border-left:3px solid transparent}
+.sidebar nav a:hover{color:#fff;background:rgba(255,255,255,.05)}
+.sidebar nav a.active{color:#fff;background:rgba(255,255,255,.08);border-left-color:var(--primary)}
+.sidebar .status{padding:16px 20px;border-top:1px solid rgba(255,255,255,.1);font-size:12px;color:rgba(255,255,255,.4)}
+.sidebar .status .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--success);margin-right:6px}
+.main{flex:1;margin-left:220px;display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:var(--card);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:40}
+.topbar h2{font-size:16px;font-weight:600;color:var(--text)}
+.topbar .actions{display:flex;gap:8px;align-items:center}
+.topbar .refresh-hint{font-size:11px;color:var(--text2)}
+.content{flex:1;padding:24px 28px}
+.footer{padding:12px 28px;text-align:center;font-size:12px;color:var(--text2);border-top:1px solid var(--border);background:var(--card)}
+
+/* ── Login ── */
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)}
+.login-card{background:var(--card);border-radius:16px;padding:40px;width:400px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.login-card .logo{text-align:center;margin-bottom:24px}
+.login-card .logo svg{margin-bottom:12px}
+.login-card .logo h2{font-size:22px;color:var(--text)}
+.login-card .logo p{font-size:13px;color:var(--text2);margin-top:4px}
+.login-card .field{margin-bottom:16px}
+.login-card .field label{display:block;font-size:13px;font-weight:500;color:var(--text2);margin-bottom:6px}
+.login-card .field input{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;transition:border .2s;outline:none}
+.login-card .field input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(67,97,238,.1)}
+.login-card button{width:100%;padding:11px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}
+.login-card button:hover{background:var(--primary-dark)}
+.login-card .err{color:var(--danger);font-size:13px;text-align:center;margin-top:10px;min-height:20px}
+
+/* ── Cards & Stats ── */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px}
+.stat-card{background:var(--card);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);display:flex;align-items:center;gap:14px}
+.stat-card .icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.stat-card .icon.blue{background:#eef1ff;color:var(--primary)}
+.stat-card .icon.green{background:#ecfdf5;color:var(--success)}
+.stat-card .icon.amber{background:#fffbeb;color:var(--warning)}
+.stat-card .icon.purple{background:#f3e8ff;color:#8b5cf6}
+.stat-card .info .val{font-size:22px;font-weight:700;color:var(--text);line-height:1.2}
+.stat-card .info .lbl{font-size:12px;color:var(--text2);margin-top:2px}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:16px}
+.card-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.card-head h3{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px}
+.card-body{padding:0}
+.card-body.padded{padding:16px 20px}
+
+/* ── Table ── */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 16px;font-weight:600;color:var(--text2);font-size:11px;text-transform:uppercase;letter-spacing:.5px;background:#fafbfc;border-bottom:1px solid var(--border)}
+td{padding:10px 16px;border-bottom:1px solid #f5f5f5;vertical-align:middle}
+tbody tr:hover{background:#fafbfc}
+tbody tr:last-child td{border-bottom:none}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600}
+.badge.up{background:#ecfdf5;color:#059669}
+.badge.down{background:#fef2f2;color:#dc2626}
+
+/* ── Expand detail ── */
+.expand-btn{cursor:pointer;user-select:none;font-size:12px;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;transition:all .2s;color:var(--text2);background:#f5f5f5}
+.expand-btn:hover{background:var(--primary-light);color:var(--primary)}
+.expand-btn.open{transform:rotate(-90deg);background:var(--primary-light);color:var(--primary)}
 .detail-row td{padding:0!important;border:none!important}
-.detail-panel{background:#f8f9fa;padding:16px 20px;font-size:13px;display:none}
+.detail-panel{background:#fafbfc;padding:16px 20px;font-size:13px;display:none;border-top:1px solid var(--border)}
 .detail-panel.show{display:block}
-.detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
-.detail-section{background:#fff;border-radius:6px;padding:12px;border:1px solid #eee}
-.detail-section h4{font-size:13px;color:#4a6cf7;margin-bottom:8px;font-weight:600}
-.detail-section .item{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #f5f5f5}
+.detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.detail-section{background:var(--card);border-radius:8px;padding:14px;border:1px solid var(--border)}
+.detail-section h4{font-size:12px;color:var(--primary);margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+.detail-section .item{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f5f5f5}
 .detail-section .item:last-child{border:none}
-.detail-section .label{color:#888}
-.detail-section .value{font-weight:500;font-family:monospace;font-size:12px}
-input,select,button{font-size:14px;padding:8px 12px;border-radius:6px;border:1px solid #ddd;outline:none}
-input:focus{border-color:#4a6cf7}
-button{background:#4a6cf7;color:#fff;border:none;cursor:pointer;font-weight:600}
-button:hover{background:#3a5ce5}
-button.secondary{background:#6c757d}
-button.sm{padding:4px 10px;font-size:12px}
+.detail-section .label{color:var(--text2);font-size:12px}
+.detail-section .value{font-weight:500;font-family:'SF Mono',Monaco,monospace;font-size:12px;color:var(--text);text-align:right;max-width:60%;word-break:break-all}
+
+/* ── Forms ── */
+input,select,button{font-size:14px;padding:8px 14px;border-radius:8px;border:1px solid var(--border);outline:none;font-family:inherit}
+input:focus,select:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(67,97,238,.08)}
+button{background:var(--primary);color:#fff;border:none;cursor:pointer;font-weight:600;transition:all .15s}
+button:hover{background:var(--primary-dark);transform:translateY(-1px);box-shadow:0 2px 8px rgba(67,97,238,.25)}
+button:active{transform:translateY(0)}
+button.secondary{background:#6b7280;color:#fff}
+button.secondary:hover{background:#4b5563}
+button.sm{padding:5px 12px;font-size:12px;border-radius:6px}
+button.outline{background:transparent;color:var(--primary);border:1px solid var(--primary)}
+button.outline:hover{background:var(--primary-light)}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .mt{margin-top:12px}
-.actions{display:flex;gap:8px;margin-top:12px}
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:100;display:none}
-.modal{background:#fff;border-radius:10px;padding:24px;min-width:340px;max-width:90vw}
-.modal h3{margin-bottom:14px}
-.modal .field{margin-bottom:10px}
-.modal .field label{display:block;font-size:13px;color:#666;margin-bottom:4px}
-.modal .field input{width:100%}
-.key-display{background:#f1f3f5;padding:10px;border-radius:6px;font-family:monospace;word-break:break-all;margin:10px 0;font-size:13px}
-.tabs{display:flex;gap:0;border-bottom:2px solid #eee;margin-bottom:16px}
-.tab{padding:8px 18px;cursor:pointer;font-weight:500;color:#888;border-bottom:2px solid transparent;margin-bottom:-2px}
-.tab.active{color:#4a6cf7;border-color:#4a6cf7}
+
+/* ── Modal ── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:100;display:none;animation:fadeIn .15s}
+.modal{background:var(--card);border-radius:14px;padding:28px;min-width:380px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,.2);animation:slideUp .2s}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.modal h3{font-size:16px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.modal .field{margin-bottom:14px}
+.modal .field label{display:block;font-size:13px;font-weight:500;color:var(--text2);margin-bottom:6px}
+.modal .field input{width:100%;padding:10px 14px}
+.key-display{background:#fef3c7;border:1px solid #fcd34d;padding:12px;border-radius:8px;font-family:monospace;word-break:break-all;margin:12px 0;font-size:13px;line-height:1.6}
+
+/* ── Toast ── */
+.toast{position:fixed;top:20px;right:20px;background:var(--text);color:#fff;padding:12px 20px;border-radius:8px;font-size:13px;z-index:200;animation:slideIn .3s;box-shadow:0 4px 12px rgba(0,0,0,.15)}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+
+/* ── Responsive ── */
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0}
+  .topbar .menu-btn{display:block}
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+  .detail-grid{grid-template-columns:1fr}
+}
 #app{display:none}
 </style>
 </head>
 <body>
-<div class="header">
-<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-<h1>LLM Gateway</h1>
+
+<!-- Login -->
+<div id="login" class="login-wrap">
+<div class="login-card">
+  <div class="logo">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#4361ee" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+    <h2>LLM Gateway</h2>
+    <p>轻量级 LLM 路由管理平台</p>
+  </div>
+  <div class="field"><label>管理密钥</label><input id="key-input" type="password" placeholder="sk-admin-..."></div>
+  <button onclick="doLogin()">登 录</button>
+  <p class="err" id="login-err"></p>
+</div>
 </div>
 
-<div id="login" class="login-box">
-<h2>🔐 管理登录</h2>
-<div class="field"><label>Admin Key</label><input id="key-input" type="password" placeholder="sk-admin-..." style="width:100%;margin:10px 0"></div>
-<button onclick="doLogin()" style="width:100%">登录</button>
-<p id="login-err" style="color:red;font-size:13px;margin-top:8px;text-align:center"></p>
-</div>
-
+<!-- App -->
 <div id="app">
-<div class="container">
-<div class="tabs">
-<div class="tab active" onclick="switchTab('overview',this)">概览</div>
-<div class="tab" onclick="switchTab('users',this)">用户管理</div>
-<div class="tab" onclick="switchTab('usage',this)">用量统计</div>
-</div>
-<div id="tab-overview">
-<div class="grid" id="stats"></div>
-<div class="card"><h3>📡 后端状态</h3><table id="backends-table"><thead><tr><th>名称</th><th>地址</th><th>模型</th><th>状态</th><th></th></tr></thead><tbody></tbody></table></div>
-</div>
-<div id="tab-users" style="display:none">
-<div class="actions"><button onclick="showModal('create-user')">+ 新建用户</button></div>
-<div class="card mt"><table id="users-table"><thead><tr><th>ID</th><th>用户名</th><th>余额</th><th>创建时间</th><th>操作</th></tr></thead><tbody></tbody></table></div>
-</div>
-<div id="tab-usage" style="display:none">
-<div class="row"><label>天数</label><select id="usage-days" onchange="loadUsage()"><option value="1">1天</option><option value="7" selected>7天</option><option value="30">30天</option></select></div>
-<div class="card mt"><table id="usage-table"><thead><tr><th>用户</th><th>模型</th><th>请求数</th><th>Input tokens</th><th>Output tokens</th><th>费用</th></tr></thead><tbody></tbody></table></div>
-</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      <div><h1>LLM Gateway</h1><small>Admin Console</small></div>
+    </div>
+    <nav>
+      <a href="#" class="active" onclick="switchTab('overview',this);return false">📊 概览</a>
+      <a href="#" onclick="switchTab('users',this);return false">👥 用户管理</a>
+      <a href="#" onclick="switchTab('usage',this);return false">📈 用量统计</a>
+    </nav>
+    <div class="status"><span class="dot"></span>系统运行中</div>
+  </aside>
+  <div class="main">
+    <div class="topbar">
+      <h2 id="page-title">概览</h2>
+      <div class="actions">
+        <span class="refresh-hint" id="refresh-hint"></span>
+        <button class="sm outline" onclick="loadAll()">↻ 刷新</button>
+        <button class="sm secondary" onclick="doLogout()">退出</button>
+      </div>
+    </div>
+    <div class="content">
+
+      <!-- Overview -->
+      <div id="tab-overview">
+        <div class="stats-row" id="stats"></div>
+        <div class="card">
+          <div class="card-head"><h3>📡 后端节点</h3></div>
+          <div class="card-body">
+            <table id="backends-table"><thead><tr><th>名称</th><th>地址</th><th>模型</th><th>状态</th><th style="width:40px"></th></tr></thead><tbody></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Users -->
+      <div id="tab-users" style="display:none">
+        <div style="margin-bottom:14px"><button onclick="showModal('create-user')">+ 新建用户</button></div>
+        <div class="card">
+          <div class="card-head"><h3>👥 用户列表</h3></div>
+          <div class="card-body">
+            <table id="users-table"><thead><tr><th>ID</th><th>用户名</th><th>余额</th><th>创建时间</th><th>操作</th></tr></thead><tbody></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Usage -->
+      <div id="tab-usage" style="display:none">
+        <div class="row" style="margin-bottom:14px">
+          <span style="font-size:13px;color:var(--text2)">时间范围：</span>
+          <select id="usage-days" onchange="loadUsage()"><option value="1">1 天</option><option value="7" selected>7 天</option><option value="30">30 天</option></select>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>📈 用量明细</h3></div>
+          <div class="card-body">
+            <table id="usage-table"><thead><tr><th>用户</th><th>模型</th><th>请求数</th><th>Input Tokens</th><th>Output Tokens</th><th>费用</th></tr></thead><tbody></tbody></table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="footer">LLM Gateway &copy; 2026 &mdash; Lightweight LLM Routing Platform</div>
+  </div>
 </div>
 </div>
 
 <!-- Modals -->
 <div class="modal-bg" id="modal-create-user"><div class="modal">
 <h3>新建用户</h3>
-<div class="field"><label>用户名</label><input id="nu-name"></div>
-<div class="field"><label>初始余额</label><input id="nu-balance" type="number" value="0"></div>
+<div class="field"><label>用户名</label><input id="nu-name" placeholder="输入用户名"></div>
+<div class="field"><label>初始余额</label><input id="nu-balance" type="number" value="0" step="0.01"></div>
 <div class="row mt"><button onclick="createUser()">创建</button><button class="secondary" onclick="hideModals()">取消</button></div>
 </div></div>
 
 <div class="modal-bg" id="modal-add-balance"><div class="modal">
 <h3>调整余额</h3>
-<div class="field"><label>金额（正数充值，负数扣减）</label><input id="ab-amount" type="number"></div>
+<div class="field"><label>金额（正数充值，负数扣减）</label><input id="ab-amount" type="number" step="0.01"></div>
 <input type="hidden" id="ab-uid">
 <div class="row mt"><button onclick="addBalance()">确认</button><button class="secondary" onclick="hideModals()">取消</button></div>
 </div></div>
@@ -619,12 +737,15 @@ button.sm{padding:4px 10px;font-size:12px}
 <div class="field"><label>名称（备注）</label><input id="ck-name" placeholder="可选"></div>
 <input type="hidden" id="ck-uid">
 <div id="ck-result"></div>
-<div class="row mt"><button onclick="createKey()">生成</button><button class="secondary" onclick="hideModals()">取消</button></div>
+<div class="row mt"><button onclick="createKey()">生成 Key</button><button class="secondary" onclick="hideModals()">取消</button></div>
 </div></div>
 
 <script>
 let KEY='';
+let lastRefresh=0;
 const H=()=>({headers:{'Authorization':'Bearer '+KEY,'Content-Type':'application/json'}});
+
+function toast(msg,dur=2500){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),dur);}
 
 async function doLogin(){
   KEY=document.getElementById('key-input').value.trim();
@@ -634,20 +755,35 @@ async function doLogin(){
     document.getElementById('login').style.display='none';
     document.getElementById('app').style.display='block';
     loadAll();
-  }catch(e){document.getElementById('login-err').textContent='Key 无效';}
+  }catch(e){document.getElementById('login-err').textContent='密钥无效，请重试';}
 }
+function doLogout(){KEY='';document.getElementById('app').style.display='none';document.getElementById('login').style.display='flex';document.getElementById('key-input').value='';document.getElementById('login-err').textContent='';}
 
+const tabNames={overview:'概览',users:'用户管理',usage:'用量统计'};
 function switchTab(name,el){
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');
-  ['overview','users','usage'].forEach(n=>{
-    document.getElementById('tab-'+n).style.display=n===name?'':'none';
-  });
+  document.querySelectorAll('.sidebar nav a').forEach(a=>a.classList.remove('active'));
+  if(el)el.classList.add('active');
+  ['overview','users','usage'].forEach(n=>{document.getElementById('tab-'+n).style.display=n===name?'':'none';});
+  document.getElementById('page-title').textContent=tabNames[name]||name;
   if(name==='users') loadUsers();
   if(name==='usage') loadUsage();
 }
 
-async function loadAll(){await Promise.all([loadBackends(),loadUsers(),loadUsage()]);}
+async function loadAll(){
+  await Promise.all([loadBackends(),loadUsers(),loadUsage()]);
+  lastRefresh=Date.now();
+  updateRefreshHint();
+  toast('数据已刷新');
+}
+function updateRefreshHint(){
+  if(!lastRefresh)return;
+  const s=Math.round((Date.now()-lastRefresh)/1000);
+  const el=document.getElementById('refresh-hint');
+  if(s<10)el.textContent='刚刚更新';
+  else if(s<60)el.textContent=s+'秒前更新';
+  else el.textContent=Math.round(s/60)+'分钟前更新';
+}
+setInterval(updateRefreshHint,10000);
 
 async function loadBackends(){
   const data=await(await fetch('/admin/backends',H())).json();
@@ -656,18 +792,18 @@ async function loadBackends(){
   const models=new Set();data.forEach(b=>b.models.forEach(m=>models.add(m)));
   const totalBal=users.reduce((s,u)=>s+u.balance,0);
   document.getElementById('stats').innerHTML=`
-    <div class="stat"><div class="val">${data.length}</div><div class="lbl">后端节点</div></div>
-    <div class="stat"><div class="val">${healthy}/${data.length}</div><div class="lbl">健康节点</div></div>
-    <div class="stat"><div class="val">${models.size}</div><div class="lbl">可用模型</div></div>
-    <div class="stat"><div class="val">${users.length}</div><div class="lbl">用户数</div></div>
-    <div class="stat"><div class="val">${totalBal.toFixed(2)}</div><div class="lbl">总余额</div></div>`;
+    <div class="stat-card"><div class="icon blue">📡</div><div class="info"><div class="val">${data.length}</div><div class="lbl">后端节点</div></div></div>
+    <div class="stat-card"><div class="icon green">💚</div><div class="info"><div class="val">${healthy}/${data.length}</div><div class="lbl">健康节点</div></div></div>
+    <div class="stat-card"><div class="icon purple">🤖</div><div class="info"><div class="val">${models.size}</div><div class="lbl">可用模型</div></div></div>
+    <div class="stat-card"><div class="icon amber">👥</div><div class="info"><div class="val">${users.length}</div><div class="lbl">用户数</div></div></div>
+    <div class="stat-card"><div class="icon blue">💰</div><div class="info"><div class="val">${totalBal.toFixed(2)}</div><div class="lbl">总余额</div></div></div>`;
   const tb=document.querySelector('#backends-table tbody');
   tb.innerHTML=data.map(b=>`<tr>
-    <td>${b.name}</td><td>${b.url}</td><td>${b.models.join(', ')}</td>
+    <td><strong>${b.name}</strong></td><td style="font-family:monospace;font-size:12px">${b.url}</td><td>${b.models.map(m=>'<code style="background:#f0f0f0;padding:1px 6px;border-radius:4px;font-size:12px">'+m+'</code>').join(' ')}</td>
     <td><span class="badge ${b.healthy?'up':'down'}">${b.healthy?'● 健康':'● 离线'}</span></td>
     <td><span class="expand-btn" onclick="toggleDetail(this,'${b.name}')">◀</span></td>
   </tr><tr class="detail-row" id="detail-${b.name}"><td colspan="5"><div class="detail-panel" id="panel-${b.name}">
-    <div style="color:#999;padding:8px">加载中...</div>
+    <div style="color:var(--text2);padding:8px">加载中...</div>
   </div></td></tr>`).join('');
 }
 
@@ -676,7 +812,7 @@ async function toggleDetail(el,name){
   const isOpen=panel.classList.toggle('show');
   el.classList.toggle('open',isOpen);
   if(!isOpen) return;
-  panel.innerHTML='<div style="color:#999;padding:8px">加载中...</div>';
+  panel.innerHTML='<div style="color:var(--text2);padding:8px">加载中...</div>';
   try{
     const d=await(await fetch('/admin/backends/'+encodeURIComponent(name)+'/details',H())).json();
     const ci=d.client_info||{};
@@ -692,42 +828,44 @@ async function toggleDetail(el,name){
         <div class="item"><span class="label">注册时间</span><span class="value">${regTime}</span></div>
       </div>
       <div class="detail-section"><h4>🎮 显卡信息 (${gpus.length})</h4>
-        ${gpus.length?gpus.map(g=>`<div class="item"><span class="label">GPU ${g.id}</span><span class="value">${g.name}${g.vram_mb?' · '+g.vram_mb+'MB':''}</span></div>`).join(''):'<div style="color:#999">未上报 GPU 信息</div>'}
+        ${gpus.length?gpus.map(g=>`<div class="item"><span class="label">GPU ${g.id}</span><span class="value">${g.name}${g.vram_mb?' · '+g.vram_mb+'MB':''}</span></div>`).join(''):'<div style="color:var(--text2)">未上报 GPU 信息</div>'}
       </div>
       <div class="detail-section"><h4>🤖 vLLM 模型详情</h4>
         ${d.vllm_version?`<div class="item"><span class="label">vLLM 版本</span><span class="value">${d.vllm_version}</span></div>`:''}
         ${vm.length?vm.map(m=>`<div class="item"><span class="label">${m.id}</span><span class="value">ctx: ${(m.max_model_len||0).toLocaleString()}</span></div>
-        <div class="item"><span class="label">模型</span><span class="value">${m.root?(m.root.split('/').pop()||m.root):'-'}</span></div>`).join(''):'<div style="color:#999">无法获取模型详情</div>'}
+        <div class="item"><span class="label">模型</span><span class="value">${m.root?(m.root.split('/').pop()||m.root):'-'}</span></div>`).join(''):'<div style="color:var(--text2)">无法获取模型详情</div>'}
       </div>
       <div class="detail-section"><h4>🔗 服务地址</h4>
         <div class="item"><span class="label">后端 URL</span><span class="value">${d.url}</span></div>
         <div class="item"><span class="label">健康状态</span><span class="value">${d.healthy?'✅ 健康':'❌ 离线'}</span></div>
       </div>
     </div>`;
-  }catch(e){panel.innerHTML='<div style="color:red;padding:8px">加载失败: '+e.message+'</div>';}
+  }catch(e){panel.innerHTML='<div style="color:var(--danger);padding:8px">加载失败: '+e.message+'</div>';}
 }
 
 async function loadUsers(){
   const data=await(await fetch('/admin/users',H())).json();
   const tb=document.querySelector('#users-table tbody');
-  tb.innerHTML=data.map(u=>`<tr><td>${u.id}</td><td>${u.username}</td><td>${u.balance.toFixed(4)}</td>
+  tb.innerHTML=data.map(u=>`<tr><td>${u.id}</td><td><strong>${u.username}</strong></td><td style="font-family:monospace">${u.balance.toFixed(4)}</td>
     <td>${new Date(u.created_at*1000).toLocaleString()}</td>
     <td><button class="sm" onclick="showBalanceModal(${u.id})">充值</button>
     <button class="sm secondary" onclick="showKeyModal(${u.id})">+ Key</button></td></tr>`).join('');
+  if(!data.length) tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:24px">暂无用户</td></tr>';
 }
 
 async function loadUsage(){
   const days=document.getElementById('usage-days').value;
   const data=await(await fetch('/admin/usage?days='+days,H())).json();
   const tb=document.querySelector('#usage-table tbody');
-  tb.innerHTML=data.map(r=>`<tr><td>${r.username||'-'}</td><td>${r.model}</td><td>${r.requests}</td>
-    <td>${(r.input_tokens||0).toLocaleString()}</td><td>${(r.output_tokens||0).toLocaleString()}</td>
-    <td>${(r.total_cost||0).toFixed(4)}</td></tr>`).join('');
-  if(!data.length) tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:#999">暂无数据</td></tr>';
+  tb.innerHTML=data.map(r=>`<tr><td>${r.username||'-'}</td><td><code style="background:#f0f0f0;padding:1px 6px;border-radius:4px;font-size:12px">${r.model}</code></td><td>${r.requests}</td>
+    <td style="font-family:monospace">${(r.input_tokens||0).toLocaleString()}</td><td style="font-family:monospace">${(r.output_tokens||0).toLocaleString()}</td>
+    <td style="font-family:monospace">${(r.total_cost||0).toFixed(4)}</td></tr>`).join('');
+  if(!data.length) tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text2);padding:24px">暂无数据</td></tr>';
 }
 
 function showModal(id){document.getElementById('modal-'+id).style.display='flex';}
 function hideModals(){document.querySelectorAll('.modal-bg').forEach(m=>{m.style.display='none';});document.getElementById('ck-result').innerHTML='';}
+document.querySelectorAll('.modal-bg').forEach(bg=>bg.addEventListener('click',e=>{if(e.target===bg)hideModals();}));
 
 function showBalanceModal(uid){document.getElementById('ab-uid').value=uid;document.getElementById('ab-amount').value='';showModal('add-balance');}
 function showKeyModal(uid){document.getElementById('ck-uid').value=uid;document.getElementById('ck-name').value='';document.getElementById('ck-result').innerHTML='';showModal('create-key');}
@@ -735,30 +873,25 @@ function showKeyModal(uid){document.getElementById('ck-uid').value=uid;document.
 async function createUser(){
   const name=document.getElementById('nu-name').value.trim();
   const balance=parseFloat(document.getElementById('nu-balance').value)||0;
-  if(!name){alert('请输入用户名');return;}
+  if(!name){toast('请输入用户名');return;}
   await fetch('/admin/users',{...H(),method:'POST',body:JSON.stringify({username:name,balance})});
-  hideModals();loadUsers();loadBackends();
+  hideModals();loadUsers();loadBackends();toast('用户已创建');
 }
-
 async function addBalance(){
   const uid=document.getElementById('ab-uid').value;
   const amount=parseFloat(document.getElementById('ab-amount').value);
-  if(isNaN(amount)){alert('请输入金额');return;}
-  await fetch(`/admin/users/${uid}/balance`,{...H(),method:'POST',body:JSON.stringify({amount})});
-  hideModals();loadUsers();loadBackends();
+  if(isNaN(amount)){toast('请输入金额');return;}
+  await fetch('/admin/users/'+uid+'/balance',{...H(),method:'POST',body:JSON.stringify({amount})});
+  hideModals();loadUsers();loadBackends();toast('余额已更新');
 }
-
 async function createKey(){
   const uid=document.getElementById('ck-uid').value;
   const name=document.getElementById('ck-name').value.trim();
-  const r=await(await fetch(`/admin/users/${uid}/keys`,{...H(),method:'POST',body:JSON.stringify({name})})).json();
-  document.getElementById('ck-result').innerHTML=`<div class="key-display">⚠️ 仅显示一次，请复制保存：<br><strong>${r.key}</strong></div>`;
+  const r=await(await fetch('/admin/users/'+uid+'/keys',{...H(),method:'POST',body:JSON.stringify({name})})).json();
+  document.getElementById('ck-result').innerHTML='<div class="key-display">⚠️ 仅显示一次，请复制保存：<br><strong>'+r.key+'</strong></div>';
 }
 
-// auto-refresh backends every 30s
 setInterval(()=>{if(KEY)loadBackends();},30000);
-
-// Enter key to login
 document.getElementById('key-input').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 </script>
 </body>
