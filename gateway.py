@@ -95,10 +95,12 @@ def init_db():
         conn.execute("ALTER TABLE backends ADD COLUMN pricing TEXT DEFAULT '{}'")
     if "model_map" not in cols:
         conn.execute("ALTER TABLE backends ADD COLUMN model_map TEXT DEFAULT '{}'")
-    # Migration: add password_hash to users table
+    # Migration: add password_hash and email to users table
     user_cols = [r[1] for r in conn.execute("PRAGMA table_info(users)").fetchall()]
     if "password_hash" not in user_cols:
         conn.execute("ALTER TABLE users ADD COLUMN password_hash TEXT DEFAULT ''")
+    if "email" not in user_cols:
+        conn.execute("ALTER TABLE users ADD COLUMN email TEXT DEFAULT ''")
     conn.commit()
     conn.close()
 
@@ -409,26 +411,32 @@ async def _stream_forward(backend: dict, body: dict, user: dict, model: str) -> 
 
 @app.post("/auth/register")
 async def register_user(request: Request):
-    """Register a new user with username + password."""
+    """Register a new user with username + email + password."""
     import re as _re
     body = await request.json()
     username = body.get("username", "").strip()
+    email = body.get("email", "").strip()
     password = body.get("password", "")
-    if not username or not password:
-        raise HTTPException(400, "邮箱和密码不能为空")
-    if not _re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', username):
+    if not username or not email or not password:
+        raise HTTPException(400, "用户名、邮箱和密码不能为空")
+    if len(username) < 2 or len(username) > 32:
+        raise HTTPException(400, "用户名长度需在 2-32 个字符之间")
+    if not _re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
         raise HTTPException(400, "请输入有效的邮箱地址")
     if len(password) < 6:
         raise HTTPException(400, "密码长度至少 6 个字符")
     pw_hash = hash_key(password)
+    # Check email uniqueness
+    if DB.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone():
+        raise HTTPException(409, "该邮箱已注册")
     try:
         cur = DB.execute(
-            "INSERT INTO users (username, password_hash, balance) VALUES (?, ?, ?)",
-            (username, pw_hash, 0),
+            "INSERT INTO users (username, email, password_hash, balance) VALUES (?, ?, ?, ?)",
+            (username, email, pw_hash, 0),
         )
         DB.commit()
     except sqlite3.IntegrityError:
-        raise HTTPException(409, "该邮箱已注册")
+        raise HTTPException(409, "用户名已存在")
     user_id = cur.lastrowid
     token = create_session(user_id, username)
     return {"status": "ok", "role": "user", "token": token, "user_id": user_id, "username": username}
@@ -448,9 +456,9 @@ async def admin_login(request: Request):
     expected_key = CFG["server"].get("admin_key", "")
     if secrets.compare_digest(username, expected_user) and secrets.compare_digest(key, expected_key):
         return {"status": "ok", "role": "admin", "token": expected_key}
-    # Check regular user credentials
+    # Check regular user credentials (by username or email)
     row = DB.execute(
-        "SELECT id, username, password_hash FROM users WHERE username = ?", (username,)
+        "SELECT id, username, password_hash FROM users WHERE username = ? OR email = ?", (username, username)
     ).fetchone()
     if row and row["password_hash"] and secrets.compare_digest(row["password_hash"], hash_key(key)):
         token = create_session(row["id"], row["username"])
@@ -975,6 +983,7 @@ button.outline:hover{background:var(--primary-light)}
     <span class="login-tab active" id="tab-login-btn" onclick="switchLoginTab('login')">登录</span>
     <span class="login-tab" id="tab-register-btn" onclick="switchLoginTab('register')">注册</span>
   </div>
+  <div class="field" id="nickname-field" style="display:none"><label>用户名</label><input id="nickname-input" type="text" placeholder="请输入用户名" autocomplete="username"></div>
   <div class="field"><label id="username-label">用户名或邮箱</label><input id="username-input" type="text" placeholder="请输入用户名或邮箱" autocomplete="email"></div>
   <div class="field">
     <label>密码</label>
@@ -1136,6 +1145,7 @@ function switchLoginTab(mode){
   authMode=mode;
   document.getElementById('tab-login-btn').classList.toggle('active',mode==='login');
   document.getElementById('tab-register-btn').classList.toggle('active',mode==='register');
+  document.getElementById('nickname-field').style.display=mode==='register'?'':'none';
   document.getElementById('confirm-pw-field').style.display=mode==='register'?'':'none';
   document.getElementById('auth-btn').textContent=mode==='register'?'注 册':'登 录';
   document.getElementById('username-label').textContent=mode==='register'?'邮箱':'用户名或邮箱';
@@ -1179,15 +1189,17 @@ async function doAuth(){
 }
 
 async function doRegister(){
-  const username=document.getElementById('username-input').value.trim();
+  const nickname=document.getElementById('nickname-input').value.trim();
+  const email=document.getElementById('username-input').value.trim();
   const password=document.getElementById('key-input').value.trim();
   const confirm=document.getElementById('confirm-pw-input').value.trim();
-  if(!username||!password){document.getElementById('login-err').textContent='请输入邮箱和密码';return;}
-  if(!username.includes('@')){document.getElementById('login-err').textContent='请输入有效的邮箱地址';return;}
+  if(!nickname){document.getElementById('login-err').textContent='请输入用户名';return;}
+  if(!email||!email.includes('@')){document.getElementById('login-err').textContent='请输入有效的邮箱地址';return;}
+  if(!password){document.getElementById('login-err').textContent='请输入密码';return;}
   if(password!==confirm){document.getElementById('login-err').textContent='两次输入的密码不一致';return;}
   if(password.length<6){document.getElementById('login-err').textContent='密码长度至少 6 个字符';return;}
   try{
-    const r=await fetch('/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})});
+    const r=await fetch('/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:nickname,email,password})});
     const data=await r.json();
     if(!r.ok){document.getElementById('login-err').textContent=data.detail||'注册失败';return;}
     KEY=data.token;ROLE=data.role;USER_ID=data.user_id;USERNAME=data.username;
@@ -1246,7 +1258,7 @@ function setupRoleUI(){
   }
 }
 
-function doLogout(){KEY='';ROLE='';USER_ID=0;USERNAME='';document.getElementById('app').style.display='none';document.getElementById('login').style.display='flex';document.getElementById('key-input').value='';document.getElementById('key-input').type='password';document.getElementById('eye-open').style.display='';document.getElementById('eye-closed').style.display='none';document.getElementById('username-input').value='';document.getElementById('confirm-pw-input').value='';document.getElementById('confirm-pw-input').type='password';document.getElementById('confirm-eye-open').style.display='';document.getElementById('confirm-eye-closed').style.display='none';document.getElementById('login-err').textContent='';switchLoginTab('login');}
+function doLogout(){KEY='';ROLE='';USER_ID=0;USERNAME='';document.getElementById('app').style.display='none';document.getElementById('login').style.display='flex';document.getElementById('key-input').value='';document.getElementById('key-input').type='password';document.getElementById('eye-open').style.display='';document.getElementById('eye-closed').style.display='none';document.getElementById('username-input').value='';document.getElementById('nickname-input').value='';document.getElementById('confirm-pw-input').value='';document.getElementById('confirm-pw-input').type='password';document.getElementById('confirm-eye-open').style.display='';document.getElementById('confirm-eye-closed').style.display='none';document.getElementById('login-err').textContent='';switchLoginTab('login');}
 
 const tabNames={overview:'概览',marketplace:'模型服务广场',users:'用户管理',usage:'用量统计','user-dashboard':'我的概览'};
 let mpData=[];
