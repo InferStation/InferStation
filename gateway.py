@@ -75,6 +75,13 @@ def init_db():
         );
         CREATE INDEX IF NOT EXISTS idx_usage_user ON usage_logs(user_id);
         CREATE INDEX IF NOT EXISTS idx_usage_time ON usage_logs(created_at);
+        CREATE TABLE IF NOT EXISTS backends (
+            name TEXT PRIMARY KEY,
+            url TEXT NOT NULL,
+            models TEXT DEFAULT '[]',
+            client_info TEXT DEFAULT '{}',
+            updated_at REAL DEFAULT (unixepoch())
+        );
     """
     )
     conn.close()
@@ -186,9 +193,23 @@ async def lifespan(app: FastAPI):
     global DB
     init_db()
     DB = get_db()
-    # seed from config
+    # Load persisted backends from DB
+    for row in DB.execute("SELECT name, url, models, client_info FROM backends").fetchall():
+        if not _find_backend(row["name"]):
+            backends.append({
+                "name": row["name"],
+                "url": row["url"],
+                "models": json.loads(row["models"]),
+                "client_info": json.loads(row["client_info"]),
+            })
+            backend_health[row["name"]] = False
+    # seed from config (override DB if same name)
     for b in CFG.get("backends", []):
-        if not _find_backend(b["name"]):
+        existing = _find_backend(b["name"])
+        if existing:
+            existing["url"] = b["url"]
+            existing["models"] = b.get("models", [])
+        else:
             backends.append({"name": b["name"], "url": b["url"], "models": b.get("models", [])})
             backend_health[b["name"]] = False
     task = asyncio.create_task(health_check_loop())
@@ -412,6 +433,13 @@ async def register_backend(request: Request):
         existing["client_info"] = client_info
     else:
         backends.append({"name": name, "url": url, "models": models, "client_info": client_info})
+    # Persist to DB
+    DB.execute(
+        "INSERT INTO backends (name, url, models, client_info, updated_at) VALUES (?, ?, ?, ?, unixepoch()) "
+        "ON CONFLICT(name) DO UPDATE SET url=excluded.url, models=excluded.models, client_info=excluded.client_info, updated_at=excluded.updated_at",
+        (name, url, json.dumps(models), json.dumps(client_info)),
+    )
+    DB.commit()
     backend_health[name] = False  # will be verified by next health check
     # immediate health check
     try:
@@ -436,6 +464,9 @@ async def unregister_backend(request: Request):
     if existing:
         backends.remove(existing)
         backend_health.pop(name, None)
+    # Remove from DB
+    DB.execute("DELETE FROM backends WHERE name = ?", (name,))
+    DB.commit()
     return {"status": "removed", "name": name}
 
 
