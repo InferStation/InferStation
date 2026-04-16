@@ -535,13 +535,11 @@ th{font-weight:600;color:#666;font-size:12px;text-transform:uppercase}
 .detail-row td{padding:0!important;border:none!important}
 .detail-panel{background:#f8f9fa;padding:16px 20px;font-size:13px;display:none}
 .detail-panel.show{display:block}
-.detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
-.detail-section{background:#fff;border-radius:6px;padding:12px;border:1px solid #eee}
-.detail-section h4{font-size:13px;color:#4a6cf7;margin-bottom:8px;font-weight:600}
-.detail-section .item{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #f5f5f5}
-.detail-section .item:last-child{border:none}
-.detail-section .label{color:#888}
-.detail-section .value{font-weight:500;font-family:monospace;font-size:12px}
+.detail-table{width:100%;border-collapse:collapse;font-size:13px}
+.detail-table th{background:#4a6cf7;color:#fff;padding:6px 12px;text-align:left;font-weight:600;font-size:12px}
+.detail-table td{padding:5px 12px;border-bottom:1px solid #eee;font-family:monospace;font-size:12px}
+.detail-table td:first-child{color:#888;font-family:inherit;white-space:nowrap;width:120px}
+.detail-table tr.section-header td{background:#f0f0f0;font-weight:600;font-family:inherit;color:#333;padding:6px 12px;font-size:13px}
 input,select,button{font-size:14px;padding:8px 12px;border-radius:6px;border:1px solid #ddd;outline:none}
 input:focus{border-color:#4a6cf7}
 button{background:#4a6cf7;color:#fff;border:none;cursor:pointer;font-weight:600}
@@ -683,27 +681,23 @@ async function toggleDetail(el,name){
     const gpus=ci.gpus||[];
     const regTime=ci.registered_at?new Date(ci.registered_at*1000).toLocaleString():'未知';
     const vm=d.vllm_models||[];
-    panel.innerHTML=`<div class="detail-grid">
-      <div class="detail-section"><h4>🖥️ 客户端信息</h4>
-        <div class="item"><span class="label">主机名</span><span class="value">${ci.hostname||'未上报'}</span></div>
-        <div class="item"><span class="label">操作系统</span><span class="value">${ci.os||'未上报'}</span></div>
-        <div class="item"><span class="label">架构</span><span class="value">${ci.arch||'未上报'}</span></div>
-        <div class="item"><span class="label">Python</span><span class="value">${ci.python||'未上报'}</span></div>
-        <div class="item"><span class="label">注册时间</span><span class="value">${regTime}</span></div>
-      </div>
-      <div class="detail-section"><h4>🎮 显卡信息 (${gpus.length})</h4>
-        ${gpus.length?gpus.map(g=>`<div class="item"><span class="label">GPU ${g.id}</span><span class="value">${g.name}${g.vram_mb?' · '+g.vram_mb+'MB':''}</span></div>`).join(''):'<div style="color:#999">未上报 GPU 信息</div>'}
-      </div>
-      <div class="detail-section"><h4>🤖 vLLM 模型详情</h4>
-        ${d.vllm_version?`<div class="item"><span class="label">vLLM 版本</span><span class="value">${d.vllm_version}</span></div>`:''}
-        ${vm.length?vm.map(m=>`<div class="item"><span class="label">${m.id}</span><span class="value">ctx: ${(m.max_model_len||0).toLocaleString()}</span></div>
-        <div class="item"><span class="label">模型</span><span class="value">${m.root?(m.root.split('/').pop()||m.root):'-'}</span></div>`).join(''):'<div style="color:#999">无法获取模型详情</div>'}
-      </div>
-      <div class="detail-section"><h4>🔗 服务地址</h4>
-        <div class="item"><span class="label">后端 URL</span><span class="value">${d.url}</span></div>
-        <div class="item"><span class="label">健康状态</span><span class="value">${d.healthy?'✅ 健康':'❌ 离线'}</span></div>
-      </div>
-    </div>`;
+    panel.innerHTML=`<table class="detail-table">
+      <tr class="section-header"><td colspan="2">🖥️ 客户端信息</td></tr>
+      <tr><td>主机名</td><td>${ci.hostname||'未上报'}</td></tr>
+      <tr><td>操作系统</td><td>${ci.os||'未上报'}</td></tr>
+      <tr><td>架构</td><td>${ci.arch||'未上报'}</td></tr>
+      <tr><td>Python</td><td>${ci.python||'未上报'}</td></tr>
+      <tr><td>注册时间</td><td>${regTime}</td></tr>
+      <tr class="section-header"><td colspan="2">🎮 显卡信息 (${gpus.length})</td></tr>
+      ${gpus.length?gpus.map(g=>`<tr><td>GPU ${g.id}</td><td>${g.name}${g.vram_mb?' · '+g.vram_mb+'MB':''}</td></tr>`).join(''):'<tr><td colspan="2" style="color:#999">未上报 GPU 信息</td></tr>'}
+      <tr class="section-header"><td colspan="2">🤖 vLLM 模型详情</td></tr>
+      ${d.vllm_version?`<tr><td>vLLM 版本</td><td>${d.vllm_version}</td></tr>`:''}
+      ${vm.length?vm.map(m=>`<tr><td>${m.id}</td><td>ctx: ${(m.max_model_len||0).toLocaleString()}</td></tr>
+      <tr><td>模型</td><td>${m.root?(m.root.split('/').pop()||m.root):'-'}</td></tr>`).join(''):'<tr><td colspan="2" style="color:#999">无法获取模型详情</td></tr>'}
+      <tr class="section-header"><td colspan="2">🔗 服务地址</td></tr>
+      <tr><td>后端 URL</td><td>${d.url}</td></tr>
+      <tr><td>健康状态</td><td>${d.healthy?'✅ 健康':'❌ 离线'}</td></tr>
+    </table>`;
   }catch(e){panel.innerHTML='<div style="color:red;padding:8px">加载失败: '+e.message+'</div>';}
 }
 
