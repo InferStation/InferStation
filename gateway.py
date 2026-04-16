@@ -494,8 +494,9 @@ th{font-weight:600;color:#666;font-size:12px;text-transform:uppercase}
 .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:600}
 .badge.up{background:#d4edda;color:#155724}
 .badge.down{background:#f8d7da;color:#721c24}
-.expand-btn{cursor:pointer;user-select:none;font-size:16px;display:inline-block;transition:transform .2s}
-.expand-btn.open{transform:rotate(90deg)}
+.expand-btn{cursor:pointer;user-select:none;font-size:14px;display:inline-block;transition:transform .2s;color:#888}
+.expand-btn:hover{color:#4a6cf7}
+.expand-btn.open{transform:rotate(180deg)}
 .detail-row td{padding:0!important;border:none!important}
 .detail-panel{background:#f8f9fa;padding:16px 20px;font-size:13px;display:none}
 .detail-panel.show{display:block}
@@ -550,7 +551,7 @@ button.sm{padding:4px 10px;font-size:12px}
 </div>
 <div id="tab-overview">
 <div class="grid" id="stats"></div>
-<div class="card"><h3>📡 后端状态</h3><table id="backends-table"><thead><tr><th></th><th>名称</th><th>地址</th><th>模型</th><th>状态</th></tr></thead><tbody></tbody></table></div>
+<div class="card"><h3>📡 后端状态</h3><table id="backends-table"><thead><tr><th>名称</th><th>地址</th><th>模型</th><th>状态</th><th></th></tr></thead><tbody></tbody></table></div>
 </div>
 <div id="tab-users" style="display:none">
 <div class="actions"><button onclick="showModal('create-user')">+ 新建用户</button></div>
@@ -627,9 +628,9 @@ async function loadBackends(){
     <div class="stat"><div class="val">${totalBal.toFixed(2)}</div><div class="lbl">总余额</div></div>`;
   const tb=document.querySelector('#backends-table tbody');
   tb.innerHTML=data.map(b=>`<tr>
-    <td><span class="expand-btn" onclick="toggleDetail(this,'${b.name}')">▶</span></td>
     <td>${b.name}</td><td>${b.url}</td><td>${b.models.join(', ')}</td>
     <td><span class="badge ${b.healthy?'up':'down'}">${b.healthy?'● 健康':'● 离线'}</span></td>
+    <td><span class="expand-btn" onclick="toggleDetail(this,'${b.name}')">▼</span></td>
   </tr><tr class="detail-row" id="detail-${b.name}"><td colspan="5"><div class="detail-panel" id="panel-${b.name}">
     <div style="color:#999;padding:8px">加载中...</div>
   </div></td></tr>`).join('');
