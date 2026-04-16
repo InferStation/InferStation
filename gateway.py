@@ -580,17 +580,41 @@ async def list_backends(authorization: Optional[str] = Header(None)):
 
 @app.post("/register")
 async def register_backend(request: Request):
-    """Backend self-registration. Body: {name, url, models[], token, client_info?, owner?, pricing?, model_map?}
-    owner can be a username string or user_id int. If omitted, backend is shared (visible to all).
-    pricing: {input: X, output: Y} per million tokens. If omitted, uses config default.
-    model_map: {display_name: api_name} mapping. models[] should use display names;
-    gateway translates to api_name when forwarding to the backend.
+    """Backend self-registration.
+    Auth: admin token (via body token field) OR user API key / session token (via Authorization header).
+    Admin can set owner to any user; regular users automatically own their backends.
+    Body: {name, url, models[], token?, client_info?, owner?, pricing?, model_map?}
     """
     body = await request.json()
+    authorization = request.headers.get("authorization")
     token = body.get("token", "")
     admin_key = CFG["server"].get("admin_key", "")
-    if not secrets.compare_digest(token, admin_key):
-        raise HTTPException(403, "Invalid registration token")
+    is_admin = token and secrets.compare_digest(token, admin_key)
+    if not is_admin and authorization and authorization.startswith("Bearer "):
+        bearer = authorization[7:]
+        if secrets.compare_digest(bearer, admin_key):
+            is_admin = True
+    # Try user auth if not admin
+    caller_user = None
+    if not is_admin:
+        if authorization and authorization.startswith("Bearer "):
+            bearer = authorization[7:]
+            # Try API key
+            h = hash_key(bearer)
+            row = DB.execute(
+                """SELECT k.id as key_id, k.user_id, k.is_active,
+                          u.id as uid, u.username
+                   FROM api_keys k JOIN users u ON k.user_id = u.id
+                   WHERE k.key_hash = ?""", (h,)).fetchone()
+            if row and row["is_active"]:
+                caller_user = {"user_id": row["uid"], "username": row["username"]}
+            else:
+                # Try session token
+                session = user_sessions.get(bearer)
+                if session:
+                    caller_user = {"user_id": session["user_id"], "username": session["username"]}
+        if not caller_user:
+            raise HTTPException(403, "Invalid registration token or API key")
     name = body["name"]
     url = body["url"].rstrip("/")
     models = body.get("models", [])
@@ -600,16 +624,23 @@ async def register_backend(request: Request):
     model_map = body.get("model_map", {})
     # Resolve owner
     owner_id = None
-    owner = body.get("owner")
-    if owner is not None:
-        if isinstance(owner, int):
-            row = DB.execute("SELECT id FROM users WHERE id = ?", (owner,)).fetchone()
-        else:
-            row = DB.execute("SELECT id FROM users WHERE username = ?", (str(owner),)).fetchone()
-        if not row:
-            raise HTTPException(404, f"Owner user not found: {owner}")
-        owner_id = row["id"]
+    if is_admin:
+        owner = body.get("owner")
+        if owner is not None:
+            if isinstance(owner, int):
+                row = DB.execute("SELECT id FROM users WHERE id = ?", (owner,)).fetchone()
+            else:
+                row = DB.execute("SELECT id FROM users WHERE username = ?", (str(owner),)).fetchone()
+            if not row:
+                raise HTTPException(404, f"Owner user not found: {owner}")
+            owner_id = row["id"]
+    else:
+        # Regular user: always own their own backend
+        owner_id = caller_user["user_id"]
+    # Regular users can only update their own backends
     existing = _find_backend(name)
+    if existing and not is_admin and existing.get("owner_id") != owner_id:
+        raise HTTPException(403, "You can only update your own backends")
     if existing:
         existing["url"] = url
         existing["models"] = models
@@ -639,19 +670,46 @@ async def register_backend(request: Request):
 
 @app.post("/unregister")
 async def unregister_backend(request: Request):
-    """Remove a backend. Body: {name, token}"""
+    """Remove a backend. Body: {name, token?}. Auth: admin token or user API key/session."""
     body = await request.json()
+    authorization = request.headers.get("authorization")
     token = body.get("token", "")
     admin_key = CFG["server"].get("admin_key", "")
-    if not secrets.compare_digest(token, admin_key):
-        raise HTTPException(403, "Invalid token")
+    is_admin = token and secrets.compare_digest(token, admin_key)
+    if not is_admin and authorization and authorization.startswith("Bearer "):
+        bearer = authorization[7:]
+        if secrets.compare_digest(bearer, admin_key):
+            is_admin = True
+    caller_user = None
+    if not is_admin:
+        if authorization and authorization.startswith("Bearer "):
+            bearer = authorization[7:]
+            h = hash_key(bearer)
+            row = DB.execute(
+                """SELECT k.id as key_id, k.user_id, k.is_active,
+                          u.id as uid, u.username
+                   FROM api_keys k JOIN users u ON k.user_id = u.id
+                   WHERE k.key_hash = ?""", (h,)).fetchone()
+            if row and row["is_active"]:
+                caller_user = {"user_id": row["uid"], "username": row["username"]}
+            else:
+                session = user_sessions.get(bearer)
+                if session:
+                    caller_user = {"user_id": session["user_id"], "username": session["username"]}
+        if not caller_user:
+            raise HTTPException(403, "Invalid token or API key")
     name = body["name"]
     existing = _find_backend(name)
     if existing:
+        if not is_admin and existing.get("owner_id") != caller_user["user_id"]:
+            raise HTTPException(403, "You can only remove your own backends")
         backends.remove(existing)
         backend_health.pop(name, None)
     # Remove from DB
-    DB.execute("DELETE FROM backends WHERE name = ?", (name,))
+    if is_admin:
+        DB.execute("DELETE FROM backends WHERE name = ?", (name,))
+    else:
+        DB.execute("DELETE FROM backends WHERE name = ? AND owner_id = ?", (name, caller_user["user_id"]))
     DB.commit()
     return {"status": "removed", "name": name}
 
