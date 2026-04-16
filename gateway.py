@@ -143,7 +143,7 @@ async def health_check_loop():
             for b in backends:
                 name = b["name"]
                 try:
-                    r = await client.get(f"{b['url']}/models")
+                    r = await client.get(f"{b['url']}/v1/models")
                     backend_health[name] = r.status_code == 200
                 except Exception:
                     backend_health[name] = False
@@ -416,7 +416,7 @@ async def register_backend(request: Request):
     # immediate health check
     try:
         async with httpx.AsyncClient(timeout=5) as client:
-            r = await client.get(f"{url}/models")
+            r = await client.get(f"{url}/v1/models")
             backend_health[name] = r.status_code == 200
     except Exception:
         pass
@@ -453,14 +453,18 @@ async def backend_details(name: str, authorization: Optional[str] = Header(None)
         "healthy": backend_health.get(name, False),
         "client_info": b.get("client_info", {}),
         "vllm_models": [],
+        "vllm_version": "",
     }
-    # Fetch live model details from vLLM
+    # Fetch live model details and version from vLLM
     try:
         async with httpx.AsyncClient(timeout=5) as client:
-            r = await client.get(f"{b['url']}/models")
+            r = await client.get(f"{b['url']}/v1/models")
             if r.status_code == 200:
                 data = r.json()
                 result["vllm_models"] = data.get("data", [])
+            rv = await client.get(f"{b['url']}/version")
+            if rv.status_code == 200:
+                result["vllm_version"] = rv.json().get("version", "")
     except Exception:
         pass
     return result
@@ -660,8 +664,9 @@ async function toggleDetail(el,name){
         ${gpus.length?gpus.map(g=>`<div class="item"><span class="label">GPU ${g.id}</span><span class="value">${g.name}${g.vram_mb?' · '+g.vram_mb+'MB':''}</span></div>`).join(''):'<div style="color:#999">未上报 GPU 信息</div>'}
       </div>
       <div class="detail-section"><h4>🤖 vLLM 模型详情</h4>
+        ${d.vllm_version?`<div class="item"><span class="label">vLLM 版本</span><span class="value">${d.vllm_version}</span></div>`:''}
         ${vm.length?vm.map(m=>`<div class="item"><span class="label">${m.id}</span><span class="value">ctx: ${(m.max_model_len||0).toLocaleString()}</span></div>
-        <div class="item"><span class="label">root</span><span class="value">${m.root||'-'}</span></div>`).join(''):'<div style="color:#999">无法获取模型详情</div>'}
+        <div class="item"><span class="label">模型</span><span class="value">${m.root?(m.root.split('/').pop()||m.root):'-'}</span></div>`).join(''):'<div style="color:#999">无法获取模型详情</div>'}
       </div>
       <div class="detail-section"><h4>🔗 服务地址</h4>
         <div class="item"><span class="label">后端 URL</span><span class="value">${d.url}</span></div>

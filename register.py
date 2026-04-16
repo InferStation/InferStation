@@ -77,9 +77,9 @@ def collect_system_info() -> dict:
 
 
 def fetch_models(url: str) -> list[str]:
-    """Auto-detect models from vLLM /models endpoint."""
+    """Auto-detect models from vLLM /v1/models endpoint."""
     try:
-        req = urllib.request.Request(f"{url.rstrip('/')}/models")
+        req = urllib.request.Request(f"{url.rstrip('/')}/v1/models")
         with urllib.request.urlopen(req, timeout=5) as resp:
             data = json.loads(resp.read())
             return [m["id"] for m in data.get("data", [])]
