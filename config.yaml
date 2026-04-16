@@ -1,17 +1,12 @@
 server:
   host: 0.0.0.0
   port: 8080
-  admin_key: sk-admin-change-me  # 管理接口密钥，部署前务必修改
+  admin_key: sk-admin-TXWqY--DwCJ4L3Sa5qsKKBv5ZbdyIoxqha2FyxQQWSc
 
-backends:
-  - name: w7900d2
-    url: http://w7900d2:8000/v1
-    models:
-      - Qwen3.5-A3B-128K
-
-  # 示例：多后端
+backends: []
+  # 示例：
   # - name: halo4
-  #   url: http://halo4-shanghai:8000/v1
+  #   url: http://10.161.176.98:8000/v1
   #   models:
   #     - Qwen3-8B
 

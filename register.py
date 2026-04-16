@@ -24,10 +24,56 @@ Examples:
 
 import argparse
 import json
+import os
+import platform
+import re
+import subprocess
 import sys
 import time
 import urllib.request
 import urllib.error
+
+
+def collect_system_info() -> dict:
+    """Collect hostname, OS, GPU info from the local machine."""
+    info = {
+        "hostname": platform.node(),
+        "os": f"{platform.system()} {platform.release()}",
+        "arch": platform.machine(),
+        "python": platform.python_version(),
+        "gpus": [],
+    }
+    # Try rocm-smi (AMD)
+    try:
+        out = subprocess.check_output(
+            ["rocm-smi", "--showproductname", "--showmeminfo", "vram", "--csv"],
+            timeout=5, stderr=subprocess.DEVNULL
+        ).decode()
+        for line in out.strip().split("\n")[1:]:
+            parts = [p.strip() for p in line.split(",")]
+            if len(parts) >= 2:
+                gpu = {"id": parts[0], "name": parts[1] if len(parts) > 1 else ""}
+                # try to extract VRAM from additional columns
+                for p in parts[2:]:
+                    if p.isdigit():
+                        gpu["vram_mb"] = int(p) // (1024 * 1024) if int(p) > 1_000_000 else int(p)
+                info["gpus"].append(gpu)
+    except Exception:
+        pass
+    # Try nvidia-smi (NVIDIA)
+    if not info["gpus"]:
+        try:
+            out = subprocess.check_output(
+                ["nvidia-smi", "--query-gpu=index,name,memory.total", "--format=csv,noheader,nounits"],
+                timeout=5, stderr=subprocess.DEVNULL
+            ).decode()
+            for line in out.strip().split("\n"):
+                parts = [p.strip() for p in line.split(",")]
+                if len(parts) >= 3:
+                    info["gpus"].append({"id": parts[0], "name": parts[1], "vram_mb": int(parts[2])})
+        except Exception:
+            pass
+    return info
 
 
 def fetch_models(url: str) -> list[str]:
@@ -42,8 +88,11 @@ def fetch_models(url: str) -> list[str]:
         return []
 
 
-def register(gateway: str, token: str, name: str, url: str, models: list[str]) -> dict:
-    payload = json.dumps({"name": name, "url": url, "models": models, "token": token}).encode()
+def register(gateway: str, token: str, name: str, url: str, models: list[str], client_info: dict = None) -> dict:
+    body = {"name": name, "url": url, "models": models, "token": token}
+    if client_info:
+        body["client_info"] = client_info
+    payload = json.dumps(body).encode()
     req = urllib.request.Request(
         f"{gateway.rstrip('/')}/register",
         data=payload,
@@ -94,9 +143,13 @@ def main():
         else:
             print("  No models found, registering with empty list", file=sys.stderr)
 
+    print("Collecting system info ...", file=sys.stderr)
+    client_info = collect_system_info()
+    print(f"  Host: {client_info['hostname']}  GPUs: {len(client_info['gpus'])}", file=sys.stderr)
+
     while True:
         try:
-            result = register(args.gateway, args.token, args.name, args.url, models)
+            result = register(args.gateway, args.token, args.name, args.url, models, client_info)
             print(json.dumps(result, indent=2))
         except urllib.error.HTTPError as e:
             print(f"Error: {e.code} {e.read().decode()}", file=sys.stderr)

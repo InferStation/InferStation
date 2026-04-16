@@ -394,7 +394,7 @@ async def list_backends(authorization: Optional[str] = Header(None)):
 
 @app.post("/register")
 async def register_backend(request: Request):
-    """Backend self-registration. Body: {name, url, models[], token}"""
+    """Backend self-registration. Body: {name, url, models[], token, client_info?}"""
     body = await request.json()
     token = body.get("token", "")
     admin_key = CFG["server"].get("admin_key", "")
@@ -403,12 +403,15 @@ async def register_backend(request: Request):
     name = body["name"]
     url = body["url"].rstrip("/")
     models = body.get("models", [])
+    client_info = body.get("client_info", {})
+    client_info["registered_at"] = time.time()
     existing = _find_backend(name)
     if existing:
         existing["url"] = url
         existing["models"] = models
+        existing["client_info"] = client_info
     else:
-        backends.append({"name": name, "url": url, "models": models})
+        backends.append({"name": name, "url": url, "models": models, "client_info": client_info})
     backend_health[name] = False  # will be verified by next health check
     # immediate health check
     try:
@@ -434,6 +437,33 @@ async def unregister_backend(request: Request):
         backends.remove(existing)
         backend_health.pop(name, None)
     return {"status": "removed", "name": name}
+
+
+@app.get("/admin/backends/{name}/details")
+async def backend_details(name: str, authorization: Optional[str] = Header(None)):
+    """Fetch detailed info about a backend: client_info + live model details from vLLM."""
+    verify_admin(authorization)
+    b = _find_backend(name)
+    if not b:
+        raise HTTPException(404, "Backend not found")
+    result = {
+        "name": b["name"],
+        "url": b["url"],
+        "models": b.get("models", []),
+        "healthy": backend_health.get(name, False),
+        "client_info": b.get("client_info", {}),
+        "vllm_models": [],
+    }
+    # Fetch live model details from vLLM
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            r = await client.get(f"{b['url']}/models")
+            if r.status_code == 200:
+                data = r.json()
+                result["vllm_models"] = data.get("data", [])
+    except Exception:
+        pass
+    return result
 
 
 # ─── Web UI ──────────────────────────────────────────────────────────────────
@@ -464,6 +494,18 @@ th{font-weight:600;color:#666;font-size:12px;text-transform:uppercase}
 .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:600}
 .badge.up{background:#d4edda;color:#155724}
 .badge.down{background:#f8d7da;color:#721c24}
+.expand-btn{cursor:pointer;user-select:none;font-size:16px;display:inline-block;transition:transform .2s}
+.expand-btn.open{transform:rotate(90deg)}
+.detail-row td{padding:0!important;border:none!important}
+.detail-panel{background:#f8f9fa;padding:16px 20px;font-size:13px;display:none}
+.detail-panel.show{display:block}
+.detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.detail-section{background:#fff;border-radius:6px;padding:12px;border:1px solid #eee}
+.detail-section h4{font-size:13px;color:#4a6cf7;margin-bottom:8px;font-weight:600}
+.detail-section .item{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #f5f5f5}
+.detail-section .item:last-child{border:none}
+.detail-section .label{color:#888}
+.detail-section .value{font-weight:500;font-family:monospace;font-size:12px}
 input,select,button{font-size:14px;padding:8px 12px;border-radius:6px;border:1px solid #ddd;outline:none}
 input:focus{border-color:#4a6cf7}
 button{background:#4a6cf7;color:#fff;border:none;cursor:pointer;font-weight:600}
@@ -508,7 +550,7 @@ button.sm{padding:4px 10px;font-size:12px}
 </div>
 <div id="tab-overview">
 <div class="grid" id="stats"></div>
-<div class="card"><h3>📡 后端状态</h3><table id="backends-table"><thead><tr><th>名称</th><th>地址</th><th>模型</th><th>状态</th><th>获取连接</th></tr></thead><tbody></tbody></table></div>
+<div class="card"><h3>📡 后端状态</h3><table id="backends-table"><thead><tr><th></th><th>名称</th><th>地址</th><th>模型</th><th>状态</th></tr></thead><tbody></tbody></table></div>
 </div>
 <div id="tab-users" style="display:none">
 <div class="actions"><button onclick="showModal('create-user')">+ 新建用户</button></div>
@@ -574,7 +616,6 @@ async function loadAll(){await Promise.all([loadBackends(),loadUsers(),loadUsage
 async function loadBackends(){
   const data=await(await fetch('/admin/backends',H())).json();
   const users=await(await fetch('/admin/users',H())).json();
-  // stats
   const healthy=data.filter(b=>b.healthy).length;
   const models=new Set();data.forEach(b=>b.models.forEach(m=>models.add(m)));
   const totalBal=users.reduce((s,u)=>s+u.balance,0);
@@ -585,10 +626,48 @@ async function loadBackends(){
     <div class="stat"><div class="val">${users.length}</div><div class="lbl">用户数</div></div>
     <div class="stat"><div class="val">${totalBal.toFixed(2)}</div><div class="lbl">总余额</div></div>`;
   const tb=document.querySelector('#backends-table tbody');
-  const gw=location.origin;
-  tb.innerHTML=data.map(b=>{const proxy=`${gw}/${b.name}/v1`;return `<tr><td>${b.name}</td><td>${b.url}</td><td>${b.models.join(', ')}</td>
+  tb.innerHTML=data.map(b=>`<tr>
+    <td><span class="expand-btn" onclick="toggleDetail(this,'${b.name}')">▶</span></td>
+    <td>${b.name}</td><td>${b.url}</td><td>${b.models.join(', ')}</td>
     <td><span class="badge ${b.healthy?'up':'down'}">${b.healthy?'● 健康':'● 离线'}</span></td>
-    <td><code style="font-size:12px;cursor:pointer;background:#f1f3f5;padding:2px 6px;border-radius:4px" onclick="navigator.clipboard.writeText('${proxy}');this.textContent='已复制!';setTimeout(()=>this.textContent='${proxy}',1500)">${proxy}</code></td></tr>`;}).join('');
+  </tr><tr class="detail-row" id="detail-${b.name}"><td colspan="5"><div class="detail-panel" id="panel-${b.name}">
+    <div style="color:#999;padding:8px">加载中...</div>
+  </div></td></tr>`).join('');
+}
+
+async function toggleDetail(el,name){
+  const panel=document.getElementById('panel-'+name);
+  const isOpen=panel.classList.toggle('show');
+  el.classList.toggle('open',isOpen);
+  if(!isOpen) return;
+  panel.innerHTML='<div style="color:#999;padding:8px">加载中...</div>';
+  try{
+    const d=await(await fetch('/admin/backends/'+encodeURIComponent(name)+'/details',H())).json();
+    const ci=d.client_info||{};
+    const gpus=ci.gpus||[];
+    const regTime=ci.registered_at?new Date(ci.registered_at*1000).toLocaleString():'未知';
+    const vm=d.vllm_models||[];
+    panel.innerHTML=`<div class="detail-grid">
+      <div class="detail-section"><h4>🖥️ 客户端信息</h4>
+        <div class="item"><span class="label">主机名</span><span class="value">${ci.hostname||'未上报'}</span></div>
+        <div class="item"><span class="label">操作系统</span><span class="value">${ci.os||'未上报'}</span></div>
+        <div class="item"><span class="label">架构</span><span class="value">${ci.arch||'未上报'}</span></div>
+        <div class="item"><span class="label">Python</span><span class="value">${ci.python||'未上报'}</span></div>
+        <div class="item"><span class="label">注册时间</span><span class="value">${regTime}</span></div>
+      </div>
+      <div class="detail-section"><h4>🎮 显卡信息 (${gpus.length})</h4>
+        ${gpus.length?gpus.map(g=>`<div class="item"><span class="label">GPU ${g.id}</span><span class="value">${g.name}${g.vram_mb?' · '+g.vram_mb+'MB':''}</span></div>`).join(''):'<div style="color:#999">未上报 GPU 信息</div>'}
+      </div>
+      <div class="detail-section"><h4>🤖 vLLM 模型详情</h4>
+        ${vm.length?vm.map(m=>`<div class="item"><span class="label">${m.id}</span><span class="value">ctx: ${(m.max_model_len||0).toLocaleString()}</span></div>
+        <div class="item"><span class="label">root</span><span class="value">${m.root||'-'}</span></div>`).join(''):'<div style="color:#999">无法获取模型详情</div>'}
+      </div>
+      <div class="detail-section"><h4>🔗 服务地址</h4>
+        <div class="item"><span class="label">后端 URL</span><span class="value">${d.url}</span></div>
+        <div class="item"><span class="label">健康状态</span><span class="value">${d.healthy?'✅ 健康':'❌ 离线'}</span></div>
+      </div>
+    </div>`;
+  }catch(e){panel.innerHTML='<div style="color:red;padding:8px">加载失败: '+e.message+'</div>';}
 }
 
 async function loadUsers(){
