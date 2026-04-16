@@ -867,6 +867,7 @@ a{color:var(--primary);text-decoration:none}
 .login-card>.login-btn{width:100%;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;margin-top:4px}
 .login-card>.login-btn:hover{background:var(--primary-dark)}
 .login-card .err{color:var(--danger);font-size:13px;text-align:center;margin-top:10px;min-height:20px}
+.pw-hint{font-size:12px;color:var(--text2);margin:-8px 0 10px;line-height:1.5}
 
 /* ── Cards & Stats ── */
 .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px}
@@ -1005,6 +1006,7 @@ button.outline:hover{background:var(--primary-light)}
       </button>
     </div>
   </div>
+  <p class="pw-hint" id="pw-hint" style="display:none">密码至少 8 位，需包含大写字母、小写字母、数字、特殊符号中的至少三种</p>
   <div class="field" id="confirm-pw-field" style="display:none">
     <label>确认密码</label>
     <div class="pwd-row">
@@ -1156,6 +1158,7 @@ function switchLoginTab(mode){
   document.getElementById('tab-login-btn').classList.toggle('active',mode==='login');
   document.getElementById('tab-register-btn').classList.toggle('active',mode==='register');
   document.getElementById('nickname-field').style.display=mode==='register'?'':'none';
+  document.getElementById('pw-hint').style.display=mode==='register'?'':'none';
   document.getElementById('confirm-pw-field').style.display=mode==='register'?'':'none';
   document.getElementById('auth-btn').textContent=mode==='register'?'注 册':'登 录';
   document.getElementById('username-label').textContent=mode==='register'?'邮箱':'用户名或邮箱';
