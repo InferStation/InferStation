@@ -656,18 +656,21 @@ a{color:var(--primary);text-decoration:none}
 /* ── Login ── */
 .login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)}
 .login-card{background:var(--card);border-radius:16px;padding:40px;width:400px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,.3)}
-.login-card .logo{text-align:center;margin-bottom:24px}
+.login-card .logo{text-align:center;margin-bottom:28px}
 .login-card .logo svg{margin-bottom:12px}
 .login-card .logo h2{font-size:22px;color:var(--text)}
 .login-card .logo p{font-size:13px;color:var(--text2);margin-top:4px}
-.login-card .field{margin-bottom:16px;position:relative}
+.login-card .field{margin-bottom:18px}
 .login-card .field label{display:block;font-size:13px;font-weight:500;color:var(--text2);margin-bottom:6px}
-.login-card .field input{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;transition:border .2s;outline:none}
+.login-card .field input{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;transition:border .2s;outline:none;box-sizing:border-box}
 .login-card .field input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(67,97,238,.1)}
-.login-card .field .pwd-toggle{position:absolute;right:12px;bottom:10px;cursor:pointer;color:var(--text2);display:flex;align-items:center;user-select:none;z-index:2;font-size:18px;opacity:0.5}
-.login-card .field .pwd-toggle:hover{color:var(--text)}
-.login-card button{width:100%;padding:11px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}
-.login-card button:hover{background:var(--primary-dark)}
+.pwd-row{display:flex;align-items:center;border:1px solid var(--border);border-radius:8px;overflow:hidden;transition:border-color .2s}
+.pwd-row:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px rgba(67,97,238,.1)}
+.pwd-row input{flex:1;padding:10px 14px;border:none;outline:none;font-size:14px;background:transparent;min-width:0}
+.pwd-row button{background:none;border:none;padding:0 14px;cursor:pointer;font-size:13px;color:var(--text2);white-space:nowrap;height:100%;line-height:40px}
+.pwd-row button:hover{color:var(--primary)}
+.login-card>.login-btn{width:100%;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;margin-top:4px}
+.login-card>.login-btn:hover{background:var(--primary-dark)}
 .login-card .err{color:var(--danger);font-size:13px;text-align:center;margin-top:10px;min-height:20px}
 
 /* ── Cards & Stats ── */
@@ -791,9 +794,15 @@ button.outline:hover{background:var(--primary-light)}
     <h2>LLM Gateway</h2>
     <p>轻量级 LLM 路由管理平台</p>
   </div>
-  <div class="field"><label>用户名</label><input id="username-input" type="text" placeholder="请输入用户名"></div>
-  <div class="field"><label>密码</label><input id="key-input" type="password" placeholder="请输入密码" style="padding-right:40px"><span class="pwd-toggle" id="pwd-toggle" onclick="togglePwd()">&#128065;</span></div>
-  <button onclick="doLogin()">登 录</button>
+  <div class="field"><label>用户名</label><input id="username-input" type="text" placeholder="请输入用户名" autocomplete="username"></div>
+  <div class="field">
+    <label>密码</label>
+    <div class="pwd-row">
+      <input id="key-input" type="password" placeholder="请输入密码" autocomplete="current-password">
+      <button type="button" id="pwd-btn" onclick="togglePwd()">显示</button>
+    </div>
+  </div>
+  <button class="login-btn" onclick="doLogin()">登 录</button>
   <p class="err" id="login-err"></p>
 </div>
 </div>
@@ -908,29 +917,30 @@ const H=()=>({headers:{'Authorization':'Bearer '+KEY,'Content-Type':'application
 function toast(msg,dur=2500){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),dur);}
 
 function togglePwd(){
-  const inp=document.getElementById('key-input');
-  const btn=document.getElementById('pwd-toggle');
+  var inp=document.getElementById('key-input');
+  var btn=document.getElementById('pwd-btn');
   if(inp.type==='password'){
     inp.type='text';
-    btn.style.opacity='1';
+    btn.textContent='\u9690\u85CF';
   }else{
     inp.type='password';
-    btn.style.opacity='0.5';
+    btn.textContent='\u663E\u793A';
   }
 }
 
 async function doLogin(){
   const username=document.getElementById('username-input').value.trim();
   KEY=document.getElementById('key-input').value.trim();
+  if(!username||!KEY){document.getElementById('login-err').textContent='\u8BF7\u8F93\u5165\u7528\u6237\u540D\u548C\u5BC6\u7801';return;}
   try{
     const r=await fetch('/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,key:KEY})});
     if(!r.ok) throw 0;
     document.getElementById('login').style.display='none';
     document.getElementById('app').style.display='block';
     loadAll();
-  }catch(e){document.getElementById('login-err').textContent='用户名或密钥错误，请重试';}
+  }catch(e){document.getElementById('login-err').textContent='用户名或密码错误，请重试';}
 }
-function doLogout(){KEY='';document.getElementById('app').style.display='none';document.getElementById('login').style.display='flex';document.getElementById('key-input').value='';document.getElementById('username-input').value='';document.getElementById('login-err').textContent='';}}
+function doLogout(){KEY='';document.getElementById('app').style.display='none';document.getElementById('login').style.display='flex';document.getElementById('key-input').value='';document.getElementById('key-input').type='password';document.getElementById('pwd-btn').textContent='\u663E\u793A';document.getElementById('username-input').value='';document.getElementById('login-err').textContent='';}
 
 const tabNames={overview:'概览',marketplace:'模型服务广场',users:'用户管理',usage:'用量统计'};
 let mpData=[];
