@@ -975,7 +975,7 @@ button.outline:hover{background:var(--primary-light)}
     <span class="login-tab active" id="tab-login-btn" onclick="switchLoginTab('login')">登录</span>
     <span class="login-tab" id="tab-register-btn" onclick="switchLoginTab('register')">注册</span>
   </div>
-  <div class="field"><label>邮箱</label><input id="username-input" type="email" placeholder="请输入邮箱" autocomplete="email"></div>
+  <div class="field"><label id="username-label">用户名或邮箱</label><input id="username-input" type="text" placeholder="请输入用户名或邮箱" autocomplete="email"></div>
   <div class="field">
     <label>密码</label>
     <div class="pwd-row">
@@ -1132,6 +1132,9 @@ function switchLoginTab(mode){
   document.getElementById('tab-register-btn').classList.toggle('active',mode==='register');
   document.getElementById('confirm-pw-field').style.display=mode==='register'?'':'none';
   document.getElementById('auth-btn').textContent=mode==='register'?'注 册':'登 录';
+  document.getElementById('username-label').textContent=mode==='register'?'邮箱':'用户名或邮箱';
+  document.getElementById('username-input').placeholder=mode==='register'?'请输入邮箱':'请输入用户名或邮箱';
+  document.getElementById('username-input').type=mode==='register'?'email':'text';
   document.getElementById('login-err').textContent='';
 }
 
@@ -1160,6 +1163,7 @@ async function doRegister(){
   const password=document.getElementById('key-input').value.trim();
   const confirm=document.getElementById('confirm-pw-input').value.trim();
   if(!username||!password){document.getElementById('login-err').textContent='请输入邮箱和密码';return;}
+  if(!username.includes('@')){document.getElementById('login-err').textContent='请输入有效的邮箱地址';return;}
   if(password!==confirm){document.getElementById('login-err').textContent='两次输入的密码不一致';return;}
   if(password.length<6){document.getElementById('login-err').textContent='密码长度至少 6 个字符';return;}
   try{
@@ -1174,7 +1178,7 @@ async function doRegister(){
 async function doLogin(){
   const username=document.getElementById('username-input').value.trim();
   KEY=document.getElementById('key-input').value.trim();
-  if(!username||!KEY){document.getElementById('login-err').textContent='请输入邮箱和密码';return;}
+  if(!username||!KEY){document.getElementById('login-err').textContent='请输入用户名或邮箱和密码';return;}
   try{
     const r=await fetch('/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,key:KEY})});
     const data=await r.json();
@@ -1184,7 +1188,7 @@ async function doLogin(){
     USER_ID=data.user_id||0;
     USERNAME=data.username||username;
     enterApp();
-  }catch(e){document.getElementById('login-err').textContent='邮箱或密码错误，请重试';}
+  }catch(e){document.getElementById('login-err').textContent='用户名/邮箱或密码错误，请重试';}
 }
 
 function enterApp(){
