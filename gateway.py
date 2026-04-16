@@ -421,10 +421,18 @@ async def register_user(request: Request):
         raise HTTPException(400, "用户名、邮箱和密码不能为空")
     if len(username) < 2 or len(username) > 32:
         raise HTTPException(400, "用户名长度需在 2-32 个字符之间")
+    if not _re.match(r'^[a-zA-Z][a-zA-Z0-9_-]*$', username):
+        raise HTTPException(400, "用户名只能包含字母、数字、下划线和连字符，且以字母开头")
     if not _re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
         raise HTTPException(400, "请输入有效的邮箱地址")
-    if len(password) < 6:
-        raise HTTPException(400, "密码长度至少 6 个字符")
+    if len(password) < 8:
+        raise HTTPException(400, "密码长度至少 8 个字符")
+    if not _re.search(r'[A-Z]', password):
+        raise HTTPException(400, "密码需包含至少一个大写字母")
+    if not _re.search(r'[a-z]', password):
+        raise HTTPException(400, "密码需包含至少一个小写字母")
+    if not _re.search(r'[0-9]', password):
+        raise HTTPException(400, "密码需包含至少一个数字")
     pw_hash = hash_key(password)
     # Check email uniqueness
     if DB.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone():
@@ -1193,11 +1201,15 @@ async function doRegister(){
   const email=document.getElementById('username-input').value.trim();
   const password=document.getElementById('key-input').value.trim();
   const confirm=document.getElementById('confirm-pw-input').value.trim();
-  if(!nickname){document.getElementById('login-err').textContent='请输入用户名';return;}
+  if(!nickname||nickname.length<2){document.getElementById('login-err').textContent='用户名长度至少 2 个字符';return;}
+  if(!/^[a-zA-Z][a-zA-Z0-9_-]*$/.test(nickname)){document.getElementById('login-err').textContent='用户名只能包含字母、数字、下划线和连字符，且以字母开头';return;}
   if(!email||!email.includes('@')){document.getElementById('login-err').textContent='请输入有效的邮箱地址';return;}
   if(!password){document.getElementById('login-err').textContent='请输入密码';return;}
+  if(password.length<8){document.getElementById('login-err').textContent='密码长度至少 8 个字符';return;}
+  if(!/[A-Z]/.test(password)){document.getElementById('login-err').textContent='密码需包含至少一个大写字母';return;}
+  if(!/[a-z]/.test(password)){document.getElementById('login-err').textContent='密码需包含至少一个小写字母';return;}
+  if(!/[0-9]/.test(password)){document.getElementById('login-err').textContent='密码需包含至少一个数字';return;}
   if(password!==confirm){document.getElementById('login-err').textContent='两次输入的密码不一致';return;}
-  if(password.length<6){document.getElementById('login-err').textContent='密码长度至少 6 个字符';return;}
   try{
     const r=await fetch('/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:nickname,email,password})});
     const data=await r.json();
