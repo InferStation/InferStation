@@ -82,6 +82,7 @@ def init_db():
             client_info TEXT DEFAULT '{}',
             owner_id INTEGER REFERENCES users(id),
             pricing TEXT DEFAULT '{}',
+            model_map TEXT DEFAULT '{}',
             updated_at REAL DEFAULT (unixepoch())
         );
     """
@@ -92,8 +93,9 @@ def init_db():
         conn.execute("ALTER TABLE backends ADD COLUMN owner_id INTEGER REFERENCES users(id)")
     if "pricing" not in cols:
         conn.execute("ALTER TABLE backends ADD COLUMN pricing TEXT DEFAULT '{}'")
-    if cols and ("owner_id" not in cols or "pricing" not in cols):
-        conn.commit()
+    if "model_map" not in cols:
+        conn.execute("ALTER TABLE backends ADD COLUMN model_map TEXT DEFAULT '{}'")
+    conn.commit()
     conn.close()
 
 
@@ -216,7 +218,7 @@ async def lifespan(app: FastAPI):
     init_db()
     DB = get_db()
     # Load persisted backends from DB
-    for row in DB.execute("SELECT name, url, models, client_info, owner_id, pricing FROM backends").fetchall():
+    for row in DB.execute("SELECT name, url, models, client_info, owner_id, pricing, model_map FROM backends").fetchall():
         if not _find_backend(row["name"]):
             backends.append({
                 "name": row["name"],
@@ -225,6 +227,7 @@ async def lifespan(app: FastAPI):
                 "client_info": json.loads(row["client_info"]),
                 "owner_id": row["owner_id"],
                 "pricing": json.loads(row["pricing"] or "{}"),
+                "model_map": json.loads(row["model_map"] or "{}"),
             })
             backend_health[row["name"]] = False
     # seed from config (override DB if same name)
@@ -295,7 +298,17 @@ async def chat_completions(request: Request, authorization: Optional[str] = Head
     raise HTTPException(502, f"All backends failed: {last_err}")
 
 
+def _translate_model(backend: dict, body: dict) -> dict:
+    """If backend has model_map, replace display model name with backend API name."""
+    mm = backend.get("model_map", {})
+    req_model = body.get("model", "")
+    if mm and req_model in mm:
+        body = {**body, "model": mm[req_model]}
+    return body
+
+
 async def _forward(backend: dict, body: dict, user: dict, model: str) -> JSONResponse:
+    body = _translate_model(backend, body)
     async with httpx.AsyncClient(timeout=300) as client:
         r = await client.post(f"{backend['url']}/chat/completions", json=body)
         r.raise_for_status()
@@ -310,6 +323,7 @@ async def _forward(backend: dict, body: dict, user: dict, model: str) -> JSONRes
 
 
 async def _stream_forward(backend: dict, body: dict, user: dict, model: str) -> StreamingResponse:
+    body = _translate_model(backend, body)
     client = httpx.AsyncClient(timeout=300)
     req = client.build_request("POST", f"{backend['url']}/chat/completions", json=body)
     resp = await client.send(req, stream=True)
@@ -445,15 +459,18 @@ async def list_backends(authorization: Optional[str] = Header(None)):
             "owner_id": oid,
             "owner": user_map.get(oid, "共享") if oid else "共享",
             "pricing": b.get("pricing", {}),
+            "model_map": b.get("model_map", {}),
         })
     return result
 
 
 @app.post("/register")
 async def register_backend(request: Request):
-    """Backend self-registration. Body: {name, url, models[], token, client_info?, owner?, pricing?}
+    """Backend self-registration. Body: {name, url, models[], token, client_info?, owner?, pricing?, model_map?}
     owner can be a username string or user_id int. If omitted, backend is shared (visible to all).
     pricing: {input: X, output: Y} per million tokens. If omitted, uses config default.
+    model_map: {display_name: api_name} mapping. models[] should use display names;
+    gateway translates to api_name when forwarding to the backend.
     """
     body = await request.json()
     token = body.get("token", "")
@@ -466,6 +483,7 @@ async def register_backend(request: Request):
     client_info = body.get("client_info", {})
     client_info["registered_at"] = time.time()
     pricing = body.get("pricing", {})
+    model_map = body.get("model_map", {})
     # Resolve owner
     owner_id = None
     owner = body.get("owner")
@@ -484,13 +502,14 @@ async def register_backend(request: Request):
         existing["client_info"] = client_info
         existing["owner_id"] = owner_id
         existing["pricing"] = pricing
+        existing["model_map"] = model_map
     else:
-        backends.append({"name": name, "url": url, "models": models, "client_info": client_info, "owner_id": owner_id, "pricing": pricing})
+        backends.append({"name": name, "url": url, "models": models, "client_info": client_info, "owner_id": owner_id, "pricing": pricing, "model_map": model_map})
     # Persist to DB
     DB.execute(
-        "INSERT INTO backends (name, url, models, client_info, owner_id, pricing, updated_at) VALUES (?, ?, ?, ?, ?, ?, unixepoch()) "
-        "ON CONFLICT(name) DO UPDATE SET url=excluded.url, models=excluded.models, client_info=excluded.client_info, owner_id=excluded.owner_id, pricing=excluded.pricing, updated_at=excluded.updated_at",
-        (name, url, json.dumps(models), json.dumps(client_info), owner_id, json.dumps(pricing)),
+        "INSERT INTO backends (name, url, models, client_info, owner_id, pricing, model_map, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, unixepoch()) "
+        "ON CONFLICT(name) DO UPDATE SET url=excluded.url, models=excluded.models, client_info=excluded.client_info, owner_id=excluded.owner_id, pricing=excluded.pricing, model_map=excluded.model_map, updated_at=excluded.updated_at",
+        (name, url, json.dumps(models), json.dumps(client_info), owner_id, json.dumps(pricing), json.dumps(model_map)),
     )
     DB.commit()
     backend_health[name] = False  # will be verified by next health check
@@ -575,6 +594,7 @@ async def admin_marketplace(authorization: Optional[str] = Header(None)):
             "owner": owner_name,
             "pricing": pr,
             "client_info": b.get("client_info", {}),
+            "model_map": b.get("model_map", {}),
         }
         for m in b.get("models", []):
             model_map.setdefault(m, []).append(info)
@@ -657,6 +677,7 @@ a{color:var(--primary);text-decoration:none}
 .mp-model:hover{box-shadow:0 4px 16px rgba(0,0,0,.08)}
 .mp-model-head{padding:16px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);background:linear-gradient(135deg,#f8faff 0%,#f0f4ff 100%)}
 .mp-model-head h4{font-size:15px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px}
+.mp-api-name{font-size:11px;color:var(--text2);background:#f1f5f9;padding:2px 8px;border-radius:8px;font-weight:500;font-family:monospace}
 .mp-model-head .mp-counts{display:flex;gap:8px}
 .mp-model-head .mp-counts span{font-size:11px;padding:3px 8px;border-radius:12px;font-weight:600}
 .mp-counts .total{background:#eef1ff;color:var(--primary)}
@@ -1056,9 +1077,11 @@ function renderMarketplace(){
         </div>
       </div>`;
     }).join('');
+    const apiNames=[...new Set(m.services.map(s=>(s.model_map&&s.model_map[m.model])?s.model_map[m.model]:m.model).filter(n=>n!==m.model))];
+    const apiTag=apiNames.length?'<span class="mp-api-name" title="API 调用名">API: '+apiNames.join(', ')+'</span>':'';
     return `<div class="mp-model">
       <div class="mp-model-head">
-        <h4>🤖 ${m.model}</h4>
+        <h4>🤖 ${m.model}</h4>${apiTag}
         <div class="mp-counts">
           <span class="total">${m.total} 服务</span>
           <span class="healthy">${m.healthy} 在线</span>

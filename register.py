@@ -89,7 +89,8 @@ def fetch_models(url: str) -> list[str]:
 
 
 def register(gateway: str, token: str, name: str, url: str, models: list[str],
-             client_info: dict = None, owner: str = None, pricing: dict = None) -> dict:
+             client_info: dict = None, owner: str = None, pricing: dict = None,
+             model_map: dict = None) -> dict:
     body = {"name": name, "url": url, "models": models, "token": token}
     if client_info:
         body["client_info"] = client_info
@@ -97,6 +98,8 @@ def register(gateway: str, token: str, name: str, url: str, models: list[str],
         body["owner"] = owner
     if pricing:
         body["pricing"] = pricing
+    if model_map:
+        body["model_map"] = model_map
     payload = json.dumps(body).encode()
     req = urllib.request.Request(
         f"{gateway.rstrip('/')}/register",
@@ -130,6 +133,8 @@ def main():
     p.add_argument("--owner", default=None, help="Owner username (omit for shared backend)")
     p.add_argument("--input-price", type=float, default=None, help="Input token price per million (e.g. 1.0)")
     p.add_argument("--output-price", type=float, default=None, help="Output token price per million (e.g. 3.0)")
+    p.add_argument("--model-map", nargs="+", default=[], metavar="DISPLAY=API",
+                   help="Model name mapping: display_name=api_name (e.g. Qwen3.5-35B-A3B=red-serving-api)")
     p.add_argument("--unregister", action="store_true", help="Unregister instead of register")
     p.add_argument("--heartbeat", type=int, default=0, help="Re-register every N seconds (0=once)")
     args = p.parse_args()
@@ -163,9 +168,19 @@ def main():
         }
         print(f"  Pricing: input={pricing['input']}/M  output={pricing['output']}/M", file=sys.stderr)
 
+    model_map = None
+    if args.model_map:
+        model_map = {}
+        for entry in args.model_map:
+            if "=" not in entry:
+                p.error(f"Invalid --model-map format: {entry}  (expected DISPLAY=API)")
+            display, api = entry.split("=", 1)
+            model_map[display] = api
+        print(f"  Model map: {model_map}", file=sys.stderr)
+
     while True:
         try:
-            result = register(args.gateway, args.token, args.name, args.url, models, client_info, args.owner, pricing)
+            result = register(args.gateway, args.token, args.name, args.url, models, client_info, args.owner, pricing, model_map)
             print(json.dumps(result, indent=2))
         except urllib.error.HTTPError as e:
             print(f"Error: {e.code} {e.read().decode()}", file=sys.stderr)
