@@ -789,8 +789,8 @@ button.outline:hover{background:var(--primary-light)}
     <h2>LLM Gateway</h2>
     <p>轻量级 LLM 路由管理平台</p>
   </div>
-  <div class="field"><label>管理用户名</label><input id="username-input" type="text" placeholder="请输入用户名"></div>
-  <div class="field"><label>管理密钥</label><input id="key-input" type="password" placeholder="sk-admin-..."></div>
+  <div class="field"><label>用户名</label><input id="username-input" type="text" placeholder="请输入用户名"></div>
+  <div class="field"><label>密码</label><input id="key-input" type="password" placeholder="请输入密码"></div>
   <button onclick="doLogin()">登 录</button>
   <p class="err" id="login-err"></p>
 </div>
