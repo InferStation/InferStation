@@ -664,7 +664,7 @@ a{color:var(--primary);text-decoration:none}
 .login-card .field label{display:block;font-size:13px;font-weight:500;color:var(--text2);margin-bottom:6px}
 .login-card .field input{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;transition:border .2s;outline:none}
 .login-card .field input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(67,97,238,.1)}
-.login-card .field .pwd-toggle{position:absolute;right:12px;bottom:10px;cursor:pointer;color:var(--text2);display:flex;align-items:center;user-select:none}
+.login-card .field .pwd-toggle{position:absolute;right:12px;bottom:10px;cursor:pointer;color:var(--text2);display:flex;align-items:center;user-select:none;z-index:2;font-size:18px;opacity:0.5}
 .login-card .field .pwd-toggle:hover{color:var(--text)}
 .login-card button{width:100%;padding:11px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}
 .login-card button:hover{background:var(--primary-dark)}
