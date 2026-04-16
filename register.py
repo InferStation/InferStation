@@ -88,12 +88,15 @@ def fetch_models(url: str) -> list[str]:
         return []
 
 
-def register(gateway: str, token: str, name: str, url: str, models: list[str], client_info: dict = None, owner: str = None) -> dict:
+def register(gateway: str, token: str, name: str, url: str, models: list[str],
+             client_info: dict = None, owner: str = None, pricing: dict = None) -> dict:
     body = {"name": name, "url": url, "models": models, "token": token}
     if client_info:
         body["client_info"] = client_info
     if owner is not None:
         body["owner"] = owner
+    if pricing:
+        body["pricing"] = pricing
     payload = json.dumps(body).encode()
     req = urllib.request.Request(
         f"{gateway.rstrip('/')}/register",
@@ -125,6 +128,8 @@ def main():
     p.add_argument("--url", help="vLLM backend URL, e.g. http://10.161.176.98:8000/v1")
     p.add_argument("--models", nargs="+", default=[], help="Model names (auto-detected if omitted)")
     p.add_argument("--owner", default=None, help="Owner username (omit for shared backend)")
+    p.add_argument("--input-price", type=float, default=None, help="Input token price per million (e.g. 1.0)")
+    p.add_argument("--output-price", type=float, default=None, help="Output token price per million (e.g. 3.0)")
     p.add_argument("--unregister", action="store_true", help="Unregister instead of register")
     p.add_argument("--heartbeat", type=int, default=0, help="Re-register every N seconds (0=once)")
     args = p.parse_args()
@@ -150,9 +155,17 @@ def main():
     client_info = collect_system_info()
     print(f"  Host: {client_info['hostname']}  GPUs: {len(client_info['gpus'])}", file=sys.stderr)
 
+    pricing = None
+    if args.input_price is not None or args.output_price is not None:
+        pricing = {
+            "input": args.input_price if args.input_price is not None else 1.0,
+            "output": args.output_price if args.output_price is not None else 3.0,
+        }
+        print(f"  Pricing: input={pricing['input']}/M  output={pricing['output']}/M", file=sys.stderr)
+
     while True:
         try:
-            result = register(args.gateway, args.token, args.name, args.url, models, client_info, args.owner)
+            result = register(args.gateway, args.token, args.name, args.url, models, client_info, args.owner, pricing)
             print(json.dumps(result, indent=2))
         except urllib.error.HTTPError as e:
             print(f"Error: {e.code} {e.read().decode()}", file=sys.stderr)

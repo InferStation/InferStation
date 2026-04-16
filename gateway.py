@@ -81,14 +81,18 @@ def init_db():
             models TEXT DEFAULT '[]',
             client_info TEXT DEFAULT '{}',
             owner_id INTEGER REFERENCES users(id),
+            pricing TEXT DEFAULT '{}',
             updated_at REAL DEFAULT (unixepoch())
         );
     """
     )
-    # Migration: add owner_id if missing (existing DBs)
+    # Migration: add columns if missing (existing DBs)
     cols = [r[1] for r in conn.execute("PRAGMA table_info(backends)").fetchall()]
     if "owner_id" not in cols:
         conn.execute("ALTER TABLE backends ADD COLUMN owner_id INTEGER REFERENCES users(id)")
+    if "pricing" not in cols:
+        conn.execute("ALTER TABLE backends ADD COLUMN pricing TEXT DEFAULT '{}'")
+    if cols and ("owner_id" not in cols or "pricing" not in cols):
         conn.commit()
     conn.close()
 
@@ -180,9 +184,16 @@ def get_backends_for_model(model: str, user_id: Optional[int] = None) -> list[di
 # ─── Pricing ─────────────────────────────────────────────────────────────────
 
 
-def calc_cost(model: str, input_tokens: int, output_tokens: int) -> float:
-    pricing = CFG.get("pricing", {})
-    p = pricing.get(model, pricing.get("default", {"input": 1.0, "output": 3.0}))
+def calc_cost(model: str, input_tokens: int, output_tokens: int, backend: dict = None) -> float:
+    # Priority: backend pricing > config per-model > config default
+    p = None
+    if backend:
+        bp = backend.get("pricing", {})
+        if bp and "input" in bp:
+            p = bp
+    if not p:
+        pricing = CFG.get("pricing", {})
+        p = pricing.get(model, pricing.get("default", {"input": 1.0, "output": 3.0}))
     # price per million tokens → per token
     return input_tokens * p["input"] / 1_000_000 + output_tokens * p["output"] / 1_000_000
 
@@ -205,7 +216,7 @@ async def lifespan(app: FastAPI):
     init_db()
     DB = get_db()
     # Load persisted backends from DB
-    for row in DB.execute("SELECT name, url, models, client_info, owner_id FROM backends").fetchall():
+    for row in DB.execute("SELECT name, url, models, client_info, owner_id, pricing FROM backends").fetchall():
         if not _find_backend(row["name"]):
             backends.append({
                 "name": row["name"],
@@ -213,6 +224,7 @@ async def lifespan(app: FastAPI):
                 "models": json.loads(row["models"]),
                 "client_info": json.loads(row["client_info"]),
                 "owner_id": row["owner_id"],
+                "pricing": json.loads(row["pricing"] or "{}"),
             })
             backend_health[row["name"]] = False
     # seed from config (override DB if same name)
@@ -292,7 +304,7 @@ async def _forward(backend: dict, body: dict, user: dict, model: str) -> JSONRes
     usage = data.get("usage", {})
     inp = usage.get("prompt_tokens", 0)
     out = usage.get("completion_tokens", 0)
-    cost = calc_cost(model, inp, out)
+    cost = calc_cost(model, inp, out, backend)
     record_usage(user["user_id"], user["key_id"], model, inp, out, cost)
     return JSONResponse(content=data)
 
@@ -327,7 +339,7 @@ async def _stream_forward(backend: dict, body: dict, user: dict, model: str) -> 
             await resp.aclose()
             await client.aclose()
             if inp or out:
-                cost = calc_cost(model, inp, out)
+                cost = calc_cost(model, inp, out, backend)
                 record_usage(user["user_id"], user["key_id"], model, inp, out, cost)
 
     return StreamingResponse(generate(), media_type="text/event-stream")
@@ -432,14 +444,16 @@ async def list_backends(authorization: Optional[str] = Header(None)):
             "healthy": backend_health.get(b["name"], False),
             "owner_id": oid,
             "owner": user_map.get(oid, "共享") if oid else "共享",
+            "pricing": b.get("pricing", {}),
         })
     return result
 
 
 @app.post("/register")
 async def register_backend(request: Request):
-    """Backend self-registration. Body: {name, url, models[], token, client_info?, owner?}
+    """Backend self-registration. Body: {name, url, models[], token, client_info?, owner?, pricing?}
     owner can be a username string or user_id int. If omitted, backend is shared (visible to all).
+    pricing: {input: X, output: Y} per million tokens. If omitted, uses config default.
     """
     body = await request.json()
     token = body.get("token", "")
@@ -451,6 +465,7 @@ async def register_backend(request: Request):
     models = body.get("models", [])
     client_info = body.get("client_info", {})
     client_info["registered_at"] = time.time()
+    pricing = body.get("pricing", {})
     # Resolve owner
     owner_id = None
     owner = body.get("owner")
@@ -468,13 +483,14 @@ async def register_backend(request: Request):
         existing["models"] = models
         existing["client_info"] = client_info
         existing["owner_id"] = owner_id
+        existing["pricing"] = pricing
     else:
-        backends.append({"name": name, "url": url, "models": models, "client_info": client_info, "owner_id": owner_id})
+        backends.append({"name": name, "url": url, "models": models, "client_info": client_info, "owner_id": owner_id, "pricing": pricing})
     # Persist to DB
     DB.execute(
-        "INSERT INTO backends (name, url, models, client_info, owner_id, updated_at) VALUES (?, ?, ?, ?, ?, unixepoch()) "
-        "ON CONFLICT(name) DO UPDATE SET url=excluded.url, models=excluded.models, client_info=excluded.client_info, owner_id=excluded.owner_id, updated_at=excluded.updated_at",
-        (name, url, json.dumps(models), json.dumps(client_info), owner_id),
+        "INSERT INTO backends (name, url, models, client_info, owner_id, pricing, updated_at) VALUES (?, ?, ?, ?, ?, ?, unixepoch()) "
+        "ON CONFLICT(name) DO UPDATE SET url=excluded.url, models=excluded.models, client_info=excluded.client_info, owner_id=excluded.owner_id, pricing=excluded.pricing, updated_at=excluded.updated_at",
+        (name, url, json.dumps(models), json.dumps(client_info), owner_id, json.dumps(pricing)),
     )
     DB.commit()
     backend_health[name] = False  # will be verified by next health check
@@ -718,7 +734,7 @@ button.outline:hover{background:var(--primary-light)}
         <div class="card">
           <div class="card-head"><h3>📡 后端节点</h3></div>
           <div class="card-body">
-            <table id="backends-table"><thead><tr><th>名称</th><th>地址</th><th>模型</th><th>归属</th><th>状态</th><th style="width:40px"></th></tr></thead><tbody></tbody></table>
+            <table id="backends-table"><thead><tr><th>名称</th><th>地址</th><th>模型</th><th>归属</th><th>定价(入/出)</th><th>状态</th><th style="width:40px"></th></tr></thead><tbody></tbody></table>
           </div>
         </div>
       </div>
@@ -835,14 +851,15 @@ async function loadBackends(){
     <div class="stat-card"><div class="icon amber">👥</div><div class="info"><div class="val">${users.length}</div><div class="lbl">用户数</div></div></div>
     <div class="stat-card"><div class="icon blue">💰</div><div class="info"><div class="val">${totalBal.toFixed(2)}</div><div class="lbl">总余额</div></div></div>`;
   const tb=document.querySelector('#backends-table tbody');
-  tb.innerHTML=data.map(b=>`<tr>
+  tb.innerHTML=data.map(b=>{const pr=b.pricing||{};const hasP=pr.input!=null;return `<tr>
     <td><strong>${b.name}</strong></td><td style="font-family:monospace;font-size:12px">${b.url}</td><td>${b.models.map(m=>'<code style="background:#f0f0f0;padding:1px 6px;border-radius:4px;font-size:12px">'+m+'</code>').join(' ')}</td>
     <td><span style="font-size:12px;color:${b.owner_id?'var(--primary)':'var(--text2)'}">${b.owner}</span></td>
+    <td style="font-size:12px;font-family:monospace">${hasP?pr.input+' / '+pr.output:'<span style="color:var(--text2)">默认</span>'}</td>
     <td><span class="badge ${b.healthy?'up':'down'}">${b.healthy?'● 健康':'● 离线'}</span></td>
     <td><span class="expand-btn" onclick="toggleDetail(this,'${b.name}')">◀</span></td>
-  </tr><tr class="detail-row" id="detail-${b.name}"><td colspan="6"><div class="detail-panel" id="panel-${b.name}">
+  </tr><tr class="detail-row" id="detail-${b.name}"><td colspan="7"><div class="detail-panel" id="panel-${b.name}">
     <div style="color:var(--text2);padding:8px">加载中...</div>
-  </div></td></tr>`).join('');
+  </div></td></tr>`}).join('');
 }
 
 async function toggleDetail(el,name){
