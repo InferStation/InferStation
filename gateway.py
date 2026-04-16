@@ -988,7 +988,13 @@ button.outline:hover{background:var(--primary-light)}
   </div>
   <div class="field" id="confirm-pw-field" style="display:none">
     <label>确认密码</label>
-    <input id="confirm-pw-input" type="password" placeholder="请再次输入密码" autocomplete="new-password">
+    <div class="pwd-row">
+      <input id="confirm-pw-input" type="password" placeholder="请再次输入密码" autocomplete="new-password">
+      <button type="button" onclick="toggleConfirmPwd()">
+        <svg id="confirm-eye-open" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        <svg id="confirm-eye-closed" viewBox="0 0 24 24" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+      </button>
+    </div>
   </div>
   <button class="login-btn" id="auth-btn" onclick="doAuth()">登 录</button>
   <p class="err" id="login-err"></p>
@@ -1152,6 +1158,20 @@ function togglePwd(){
     closed.style.display='none';
   }
 }
+function toggleConfirmPwd(){
+  var inp=document.getElementById('confirm-pw-input');
+  var open=document.getElementById('confirm-eye-open');
+  var closed=document.getElementById('confirm-eye-closed');
+  if(inp.type==='password'){
+    inp.type='text';
+    open.style.display='none';
+    closed.style.display='';
+  }else{
+    inp.type='password';
+    open.style.display='';
+    closed.style.display='none';
+  }
+}
 
 async function doAuth(){
   if(authMode==='register') return doRegister();
@@ -1226,7 +1246,7 @@ function setupRoleUI(){
   }
 }
 
-function doLogout(){KEY='';ROLE='';USER_ID=0;USERNAME='';document.getElementById('app').style.display='none';document.getElementById('login').style.display='flex';document.getElementById('key-input').value='';document.getElementById('key-input').type='password';document.getElementById('eye-open').style.display='';document.getElementById('eye-closed').style.display='none';document.getElementById('username-input').value='';document.getElementById('confirm-pw-input').value='';document.getElementById('login-err').textContent='';switchLoginTab('login');}
+function doLogout(){KEY='';ROLE='';USER_ID=0;USERNAME='';document.getElementById('app').style.display='none';document.getElementById('login').style.display='flex';document.getElementById('key-input').value='';document.getElementById('key-input').type='password';document.getElementById('eye-open').style.display='';document.getElementById('eye-closed').style.display='none';document.getElementById('username-input').value='';document.getElementById('confirm-pw-input').value='';document.getElementById('confirm-pw-input').type='password';document.getElementById('confirm-eye-open').style.display='';document.getElementById('confirm-eye-closed').style.display='none';document.getElementById('login-err').textContent='';switchLoginTab('login');}
 
 const tabNames={overview:'概览',marketplace:'模型服务广场',users:'用户管理',usage:'用量统计','user-dashboard':'我的概览'};
 let mpData=[];
