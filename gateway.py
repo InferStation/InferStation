@@ -95,6 +95,10 @@ def init_db():
         conn.execute("ALTER TABLE backends ADD COLUMN pricing TEXT DEFAULT '{}'")
     if "model_map" not in cols:
         conn.execute("ALTER TABLE backends ADD COLUMN model_map TEXT DEFAULT '{}'")
+    # Migration: add password_hash to users table
+    user_cols = [r[1] for r in conn.execute("PRAGMA table_info(users)").fetchall()]
+    if "password_hash" not in user_cols:
+        conn.execute("ALTER TABLE users ADD COLUMN password_hash TEXT DEFAULT ''")
     conn.commit()
     conn.close()
 
@@ -142,6 +146,47 @@ def auth_user(authorization: Optional[str]) -> dict:
         "username": row["username"],
         "balance": row["balance"],
     }
+
+
+# ─── User session management ────────────────────────────────────────────────
+
+# token -> {user_id, username, created_at}
+user_sessions: dict[str, dict] = {}
+
+
+def create_session(user_id: int, username: str) -> str:
+    token = "sess-" + secrets.token_urlsafe(32)
+    user_sessions[token] = {
+        "user_id": user_id,
+        "username": username,
+        "created_at": time.time(),
+    }
+    return token
+
+
+def verify_user_session(authorization: Optional[str]) -> dict:
+    """Validate user session token, return session dict."""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(401, "Missing authorization")
+    token = authorization[7:]
+    session = user_sessions.get(token)
+    if not session:
+        raise HTTPException(401, "Invalid or expired session")
+    return session
+
+
+def verify_admin_or_user(authorization: Optional[str]) -> dict:
+    """Check if request is from admin or user session. Returns {role, ...}."""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(401, "Missing authorization")
+    token = authorization[7:]
+    admin_key = CFG["server"].get("admin_key", "")
+    if secrets.compare_digest(token, admin_key):
+        return {"role": "admin"}
+    session = user_sessions.get(token)
+    if session:
+        return {"role": "user", **session}
+    raise HTTPException(401, "Invalid authorization")
 
 
 # ─── Backend registry ────────────────────────────────────────────────────────
@@ -359,20 +404,57 @@ async def _stream_forward(backend: dict, body: dict, user: dict, model: str) -> 
     return StreamingResponse(generate(), media_type="text/event-stream")
 
 
+# ─── Auth endpoints ──────────────────────────────────────────────────────────
+
+
+@app.post("/auth/register")
+async def register_user(request: Request):
+    """Register a new user with username + password."""
+    body = await request.json()
+    username = body.get("username", "").strip()
+    password = body.get("password", "")
+    if not username or not password:
+        raise HTTPException(400, "用户名和密码不能为空")
+    if len(username) < 2 or len(username) > 32:
+        raise HTTPException(400, "用户名长度需在 2-32 个字符之间")
+    if len(password) < 6:
+        raise HTTPException(400, "密码长度至少 6 个字符")
+    pw_hash = hash_key(password)
+    try:
+        cur = DB.execute(
+            "INSERT INTO users (username, password_hash, balance) VALUES (?, ?, ?)",
+            (username, pw_hash, 0),
+        )
+        DB.commit()
+    except sqlite3.IntegrityError:
+        raise HTTPException(409, "用户名已存在")
+    user_id = cur.lastrowid
+    token = create_session(user_id, username)
+    return {"status": "ok", "role": "user", "token": token, "user_id": user_id, "username": username}
+
+
 # ─── Admin endpoints ─────────────────────────────────────────────────────────
 
 
 @app.post("/admin/login")
 async def admin_login(request: Request):
-    """Verify admin username + key. Returns 200 on success, 403 on failure."""
+    """Verify credentials. Admin uses admin_key, regular users use password."""
     body = await request.json()
     username = body.get("username", "")
     key = body.get("key", "")
+    # Check admin credentials first
     expected_user = CFG["server"].get("admin_username", "")
     expected_key = CFG["server"].get("admin_key", "")
-    if not secrets.compare_digest(username, expected_user) or not secrets.compare_digest(key, expected_key):
-        raise HTTPException(403, "Invalid credentials")
-    return {"status": "ok"}
+    if secrets.compare_digest(username, expected_user) and secrets.compare_digest(key, expected_key):
+        return {"status": "ok", "role": "admin", "token": expected_key}
+    # Check regular user credentials
+    row = DB.execute(
+        "SELECT id, username, password_hash FROM users WHERE username = ?", (username,)
+    ).fetchone()
+    if row and row["password_hash"] and secrets.compare_digest(row["password_hash"], hash_key(key)):
+        token = create_session(row["id"], row["username"])
+        return {"status": "ok", "role": "user", "token": token, "user_id": row["id"], "username": row["username"]}
+    raise HTTPException(403, "Invalid credentials")
 
 
 @app.post("/admin/users")
@@ -618,6 +700,95 @@ async def admin_marketplace(authorization: Optional[str] = Header(None)):
     return result
 
 
+# ─── User endpoints (for logged-in regular users) ───────────────────────────
+
+
+@app.get("/user/info")
+async def user_info(authorization: Optional[str] = Header(None)):
+    session = verify_user_session(authorization)
+    row = DB.execute(
+        "SELECT id, username, balance, created_at FROM users WHERE id = ?",
+        (session["user_id"],),
+    ).fetchone()
+    if not row:
+        raise HTTPException(404, "User not found")
+    keys_count = DB.execute(
+        "SELECT COUNT(*) as cnt FROM api_keys WHERE user_id = ? AND is_active = 1",
+        (session["user_id"],),
+    ).fetchone()["cnt"]
+    return {**dict(row), "keys_count": keys_count}
+
+
+@app.get("/user/keys")
+async def user_keys(authorization: Optional[str] = Header(None)):
+    session = verify_user_session(authorization)
+    rows = DB.execute(
+        "SELECT id, key_prefix, name, is_active, created_at FROM api_keys WHERE user_id = ? ORDER BY id",
+        (session["user_id"],),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+@app.post("/user/keys")
+async def user_create_key(request: Request, authorization: Optional[str] = Header(None)):
+    session = verify_user_session(authorization)
+    body = await request.json()
+    name = body.get("name", "")
+    raw_key = "sk-" + secrets.token_urlsafe(32)
+    prefix = raw_key[:12] + "..."
+    DB.execute(
+        "INSERT INTO api_keys (user_id, key_hash, key_prefix, name) VALUES (?,?,?,?)",
+        (session["user_id"], hash_key(raw_key), prefix, name),
+    )
+    DB.commit()
+    return {"key": raw_key, "prefix": prefix, "name": name}
+
+
+@app.get("/user/usage")
+async def user_usage(authorization: Optional[str] = Header(None), days: int = 7):
+    session = verify_user_session(authorization)
+    since = time.time() - days * 86400
+    rows = DB.execute(
+        """SELECT model, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens,
+                  SUM(cost) as total_cost, COUNT(*) as requests
+           FROM usage_logs WHERE user_id = ? AND created_at > ? GROUP BY model""",
+        (session["user_id"], since),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+@app.get("/user/marketplace")
+async def user_marketplace(authorization: Optional[str] = Header(None)):
+    """Return marketplace data for regular users (same view as admin)."""
+    verify_user_session(authorization)
+    model_map = {}
+    for b in backends:
+        healthy = backend_health.get(b["name"], False)
+        pr = b.get("pricing", {})
+        owner_id = b.get("owner_id")
+        owner_name = "共享"
+        if owner_id:
+            row = DB.execute("SELECT username FROM users WHERE id = ?", (owner_id,)).fetchone()
+            if row:
+                owner_name = row["username"]
+        info = {
+            "backend": b["name"],
+            "url": b["url"],
+            "healthy": healthy,
+            "owner": owner_name,
+            "pricing": pr,
+            "client_info": b.get("client_info", {}),
+            "model_map": b.get("model_map", {}),
+        }
+        for m in b.get("models", []):
+            model_map.setdefault(m, []).append(info)
+    result = []
+    for model, svcs in sorted(model_map.items()):
+        healthy_count = sum(1 for s in svcs if s["healthy"])
+        result.append({"model": model, "services": svcs, "total": len(svcs), "healthy": healthy_count})
+    return result
+
+
 # ─── Web UI ──────────────────────────────────────────────────────────────────
 
 ADMIN_HTML = """\
@@ -660,6 +831,10 @@ a{color:var(--primary);text-decoration:none}
 .login-card .logo svg{margin-bottom:12px}
 .login-card .logo h2{font-size:22px;color:var(--text)}
 .login-card .logo p{font-size:13px;color:var(--text2);margin-top:4px}
+.login-tabs{display:flex;margin-bottom:22px;border-bottom:2px solid var(--border)}
+.login-tab{flex:1;text-align:center;padding:10px 0;font-size:14px;font-weight:600;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s}
+.login-tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.login-tab:hover{color:var(--primary)}
 .login-card .field{margin-bottom:18px}
 .login-card .field label{display:block;font-size:13px;font-weight:500;color:var(--text2);margin-bottom:6px}
 .login-card .field input{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;transition:border .2s;outline:none;box-sizing:border-box}
@@ -795,6 +970,10 @@ button.outline:hover{background:var(--primary-light)}
     <h2>LLM Gateway</h2>
     <p>轻量级 LLM 路由管理平台</p>
   </div>
+  <div class="login-tabs">
+    <span class="login-tab active" id="tab-login-btn" onclick="switchLoginTab('login')">登录</span>
+    <span class="login-tab" id="tab-register-btn" onclick="switchLoginTab('register')">注册</span>
+  </div>
   <div class="field"><label>用户名</label><input id="username-input" type="text" placeholder="请输入用户名" autocomplete="username"></div>
   <div class="field">
     <label>密码</label>
@@ -806,7 +985,11 @@ button.outline:hover{background:var(--primary-light)}
       </button>
     </div>
   </div>
-  <button class="login-btn" onclick="doLogin()">登 录</button>
+  <div class="field" id="confirm-pw-field" style="display:none">
+    <label>确认密码</label>
+    <input id="confirm-pw-input" type="password" placeholder="请再次输入密码" autocomplete="new-password">
+  </div>
+  <button class="login-btn" id="auth-btn" onclick="doAuth()">登 录</button>
   <p class="err" id="login-err"></p>
 </div>
 </div>
@@ -832,7 +1015,7 @@ button.outline:hover{background:var(--primary-light)}
       <h2 id="page-title">概览</h2>
       <div class="actions">
         <span class="refresh-hint" id="refresh-hint"></span>
-        <button class="sm outline" onclick="loadAll()">↻ 刷新</button>
+        <button class="sm outline" onclick="ROLE==='admin'?loadAll():loadUserAll()">↻ 刷新</button>
         <button class="sm secondary" onclick="doLogout()">退出</button>
       </div>
     </div>
@@ -874,12 +1057,23 @@ button.outline:hover{background:var(--primary-light)}
       <div id="tab-usage" style="display:none">
         <div class="row" style="margin-bottom:14px">
           <span style="font-size:13px;color:var(--text2)">时间范围：</span>
-          <select id="usage-days" onchange="loadUsage()"><option value="1">1 天</option><option value="7" selected>7 天</option><option value="30">30 天</option></select>
+          <select id="usage-days" onchange="ROLE==='admin'?loadUsage():loadUserUsage()"><option value="1">1 天</option><option value="7" selected>7 天</option><option value="30">30 天</option></select>
         </div>
         <div class="card">
           <div class="card-head"><h3>📈 用量明细</h3></div>
           <div class="card-body">
             <table id="usage-table"><thead><tr><th>用户</th><th>模型</th><th>请求数</th><th>Input Tokens</th><th>Output Tokens</th><th>费用</th></tr></thead><tbody></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- User Dashboard -->
+      <div id="tab-user-dashboard" style="display:none">
+        <div class="stats-row" id="user-stats"></div>
+        <div class="card" style="margin-bottom:18px">
+          <div class="card-head"><h3>🔑 我的 API Keys</h3><button class="sm" style="margin-left:auto" onclick="showUserKeyModal()">+ 创建 Key</button></div>
+          <div class="card-body">
+            <table id="user-keys-table"><thead><tr><th>ID</th><th>前缀</th><th>名称</th><th>状态</th><th>创建时间</th></tr></thead><tbody></tbody></table>
           </div>
         </div>
       </div>
@@ -913,12 +1107,32 @@ button.outline:hover{background:var(--primary-light)}
 <div class="row mt"><button onclick="createKey()">生成 Key</button><button class="secondary" onclick="hideModals()">取消</button></div>
 </div></div>
 
+<div class="modal-bg" id="modal-user-create-key"><div class="modal">
+<h3>创建 API Key</h3>
+<div class="field"><label>名称（备注）</label><input id="uk-name" placeholder="可选"></div>
+<div id="uk-result"></div>
+<div class="row mt"><button onclick="createUserKey()">生成 Key</button><button class="secondary" onclick="hideModals()">取消</button></div>
+</div></div>
+
 <script>
 let KEY='';
+let ROLE='';
+let USER_ID=0;
+let USERNAME='';
 let lastRefresh=0;
+let authMode='login'; // 'login' or 'register'
 const H=()=>({headers:{'Authorization':'Bearer '+KEY,'Content-Type':'application/json'}});
 
 function toast(msg,dur=2500){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),dur);}
+
+function switchLoginTab(mode){
+  authMode=mode;
+  document.getElementById('tab-login-btn').classList.toggle('active',mode==='login');
+  document.getElementById('tab-register-btn').classList.toggle('active',mode==='register');
+  document.getElementById('confirm-pw-field').style.display=mode==='register'?'':'none';
+  document.getElementById('auth-btn').textContent=mode==='register'?'注 册':'登 录';
+  document.getElementById('login-err').textContent='';
+}
 
 function togglePwd(){
   var inp=document.getElementById('key-input');
@@ -935,30 +1149,91 @@ function togglePwd(){
   }
 }
 
+async function doAuth(){
+  if(authMode==='register') return doRegister();
+  return doLogin();
+}
+
+async function doRegister(){
+  const username=document.getElementById('username-input').value.trim();
+  const password=document.getElementById('key-input').value.trim();
+  const confirm=document.getElementById('confirm-pw-input').value.trim();
+  if(!username||!password){document.getElementById('login-err').textContent='请输入用户名和密码';return;}
+  if(password!==confirm){document.getElementById('login-err').textContent='两次输入的密码不一致';return;}
+  if(password.length<6){document.getElementById('login-err').textContent='密码长度至少 6 个字符';return;}
+  try{
+    const r=await fetch('/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})});
+    const data=await r.json();
+    if(!r.ok){document.getElementById('login-err').textContent=data.detail||'注册失败';return;}
+    KEY=data.token;ROLE=data.role;USER_ID=data.user_id;USERNAME=data.username;
+    enterApp();
+  }catch(e){document.getElementById('login-err').textContent='注册失败，请重试';}
+}
+
 async function doLogin(){
   const username=document.getElementById('username-input').value.trim();
   KEY=document.getElementById('key-input').value.trim();
-  if(!username||!KEY){document.getElementById('login-err').textContent='\u8BF7\u8F93\u5165\u7528\u6237\u540D\u548C\u5BC6\u7801';return;}
+  if(!username||!KEY){document.getElementById('login-err').textContent='请输入用户名和密码';return;}
   try{
     const r=await fetch('/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,key:KEY})});
+    const data=await r.json();
     if(!r.ok) throw 0;
-    document.getElementById('login').style.display='none';
-    document.getElementById('app').style.display='block';
-    loadAll();
+    ROLE=data.role||'admin';
+    KEY=data.token||KEY;
+    USER_ID=data.user_id||0;
+    USERNAME=data.username||username;
+    enterApp();
   }catch(e){document.getElementById('login-err').textContent='用户名或密码错误，请重试';}
 }
-function doLogout(){KEY='';document.getElementById('app').style.display='none';document.getElementById('login').style.display='flex';document.getElementById('key-input').value='';document.getElementById('key-input').type='password';document.getElementById('eye-open').style.display='';document.getElementById('eye-closed').style.display='none';document.getElementById('username-input').value='';document.getElementById('login-err').textContent='';}
 
-const tabNames={overview:'概览',marketplace:'模型服务广场',users:'用户管理',usage:'用量统计'};
+function enterApp(){
+  document.getElementById('login').style.display='none';
+  document.getElementById('app').style.display='block';
+  setupRoleUI();
+  if(ROLE==='admin') loadAll();
+  else loadUserAll();
+}
+
+function setupRoleUI(){
+  const sidebar=document.getElementById('sidebar');
+  const brand=sidebar.querySelector('.brand small');
+  if(ROLE==='admin'){
+    brand.textContent='Admin Console';
+    sidebar.querySelector('nav').innerHTML=`
+      <a href="#" class="active" onclick="switchTab('overview',this);return false">📊 概览</a>
+      <a href="#" onclick="switchTab('marketplace',this);return false">🏪 模型广场</a>
+      <a href="#" onclick="switchTab('users',this);return false">👥 用户管理</a>
+      <a href="#" onclick="switchTab('usage',this);return false">📈 用量统计</a>`;
+    document.getElementById('tab-user-dashboard').style.display='none';
+    ['overview','marketplace','users','usage'].forEach(n=>document.getElementById('tab-'+n).style.display=n==='overview'?'':'none');
+    document.getElementById('page-title').textContent='概览';
+  } else {
+    brand.textContent=USERNAME;
+    sidebar.querySelector('nav').innerHTML=`
+      <a href="#" class="active" onclick="switchTab('user-dashboard',this);return false">📊 我的概览</a>
+      <a href="#" onclick="switchTab('marketplace',this);return false">🏪 模型广场</a>
+      <a href="#" onclick="switchTab('usage',this);return false">📈 用量统计</a>`;
+    ['overview','users'].forEach(n=>document.getElementById('tab-'+n).style.display='none');
+    document.getElementById('tab-user-dashboard').style.display='';
+    document.getElementById('tab-marketplace').style.display='none';
+    document.getElementById('tab-usage').style.display='none';
+    document.getElementById('page-title').textContent='我的概览';
+  }
+}
+
+function doLogout(){KEY='';ROLE='';USER_ID=0;USERNAME='';document.getElementById('app').style.display='none';document.getElementById('login').style.display='flex';document.getElementById('key-input').value='';document.getElementById('key-input').type='password';document.getElementById('eye-open').style.display='';document.getElementById('eye-closed').style.display='none';document.getElementById('username-input').value='';document.getElementById('confirm-pw-input').value='';document.getElementById('login-err').textContent='';switchLoginTab('login');}
+
+const tabNames={overview:'概览',marketplace:'模型服务广场',users:'用户管理',usage:'用量统计','user-dashboard':'我的概览'};
 let mpData=[];
 function switchTab(name,el){
   document.querySelectorAll('.sidebar nav a').forEach(a=>a.classList.remove('active'));
   if(el)el.classList.add('active');
-  ['overview','marketplace','users','usage'].forEach(n=>{document.getElementById('tab-'+n).style.display=n===name?'':'none';});
+  ['overview','marketplace','users','usage','user-dashboard'].forEach(n=>{document.getElementById('tab-'+n).style.display=n===name?'':'none';});
   document.getElementById('page-title').textContent=tabNames[name]||name;
-  if(name==='marketplace') loadMarketplace();
+  if(name==='marketplace') ROLE==='admin'?loadMarketplace():loadUserMarketplace();
   if(name==='users') loadUsers();
-  if(name==='usage') loadUsage();
+  if(name==='usage') ROLE==='admin'?loadUsage():loadUserUsage();
+  if(name==='user-dashboard') loadUserDashboard();
 }
 
 async function loadAll(){
@@ -1058,7 +1333,7 @@ async function loadUsage(){
 }
 
 function showModal(id){document.getElementById('modal-'+id).style.display='flex';}
-function hideModals(){document.querySelectorAll('.modal-bg').forEach(m=>{m.style.display='none';});document.getElementById('ck-result').innerHTML='';}
+function hideModals(){document.querySelectorAll('.modal-bg').forEach(m=>{m.style.display='none';});document.getElementById('ck-result').innerHTML='';document.getElementById('uk-result').innerHTML='';}
 document.querySelectorAll('.modal-bg').forEach(bg=>bg.addEventListener('click',e=>{if(e.target===bg)hideModals();}));
 
 function showBalanceModal(uid){document.getElementById('ab-uid').value=uid;document.getElementById('ab-amount').value='';showModal('add-balance');}
@@ -1139,8 +1414,58 @@ function renderMarketplace(){
 }
 function filterMarketplace(){renderMarketplace();}
 
-setInterval(()=>{if(KEY)loadBackends();},30000);
-document.getElementById('key-input').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+// ─── User dashboard functions ───
+async function loadUserAll(){
+  await Promise.all([loadUserDashboard(),loadUserMarketplace()]);
+  lastRefresh=Date.now();
+  updateRefreshHint();
+  toast('数据已刷新');
+}
+
+async function loadUserDashboard(){
+  try{
+    const info=await(await fetch('/user/info',H())).json();
+    const keys=await(await fetch('/user/keys',H())).json();
+    document.getElementById('user-stats').innerHTML=`
+      <div class="stat-card"><div class="icon blue">👤</div><div class="info"><div class="val">${info.username}</div><div class="lbl">用户名</div></div></div>
+      <div class="stat-card"><div class="icon green">💰</div><div class="info"><div class="val">${info.balance.toFixed(4)}</div><div class="lbl">余额</div></div></div>
+      <div class="stat-card"><div class="icon purple">🔑</div><div class="info"><div class="val">${info.keys_count}</div><div class="lbl">活跃 Keys</div></div></div>`;
+    const tb=document.querySelector('#user-keys-table tbody');
+    tb.innerHTML=keys.map(k=>`<tr><td>${k.id}</td><td style="font-family:monospace;font-size:12px">${k.key_prefix}</td><td>${k.name||'-'}</td>
+      <td><span class="badge ${k.is_active?'up':'down'}">${k.is_active?'活跃':'禁用'}</span></td>
+      <td>${new Date(k.created_at*1000).toLocaleString()}</td></tr>`).join('');
+    if(!keys.length) tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:24px">暂无 API Key，点击上方按钮创建</td></tr>';
+  }catch(e){console.error(e);}
+}
+
+async function loadUserMarketplace(){
+  try{
+    mpData=await(await fetch('/user/marketplace',H())).json();
+    renderMarketplace();
+  }catch(e){document.getElementById('mp-content').innerHTML='<div class="mp-empty">加载失败: '+e.message+'</div>';}
+}
+
+async function loadUserUsage(){
+  const days=document.getElementById('usage-days').value;
+  const data=await(await fetch('/user/usage?days='+days,H())).json();
+  const tb=document.querySelector('#usage-table tbody');
+  tb.innerHTML=data.map(r=>`<tr><td>${USERNAME}</td><td><code style="background:#f0f0f0;padding:1px 6px;border-radius:4px;font-size:12px">${r.model}</code></td><td>${r.requests}</td>
+    <td style="font-family:monospace">${(r.input_tokens||0).toLocaleString()}</td><td style="font-family:monospace">${(r.output_tokens||0).toLocaleString()}</td>
+    <td style="font-family:monospace">${(r.total_cost||0).toFixed(4)}</td></tr>`).join('');
+  if(!data.length) tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text2);padding:24px">暂无数据</td></tr>';
+}
+
+function showUserKeyModal(){document.getElementById('uk-name').value='';document.getElementById('uk-result').innerHTML='';showModal('user-create-key');}
+async function createUserKey(){
+  const name=document.getElementById('uk-name').value.trim();
+  const r=await(await fetch('/user/keys',{...H(),method:'POST',body:JSON.stringify({name})})).json();
+  document.getElementById('uk-result').innerHTML='<div class="key-display">⚠️ 仅显示一次，请复制保存：<br><strong>'+r.key+'</strong></div>';
+  loadUserDashboard();
+}
+
+setInterval(()=>{if(KEY&&ROLE==='admin')loadBackends();},30000);
+document.getElementById('key-input').addEventListener('keydown',e=>{if(e.key==='Enter')doAuth();});
+document.getElementById('confirm-pw-input').addEventListener('keydown',e=>{if(e.key==='Enter')doAuth();});
 </script>
 </body>
 </html>
