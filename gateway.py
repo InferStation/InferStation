@@ -667,9 +667,9 @@ a{color:var(--primary);text-decoration:none}
 .pwd-row{display:flex;align-items:center;border:1px solid var(--border);border-radius:8px;overflow:hidden;transition:border-color .2s}
 .pwd-row:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px rgba(67,97,238,.1)}
 .pwd-row input{flex:1;padding:10px 14px;border:none;outline:none;font-size:14px;background:transparent;min-width:0}
-.pwd-row button{background:none;border:none;border-left:1px solid var(--border);padding:0 12px;cursor:pointer;color:var(--text2);display:flex;align-items:center;justify-content:center;height:40px;transition:color .15s}
-.pwd-row button:hover{color:var(--primary)}
-.pwd-row button svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.pwd-row button{background:none;border:none;border-left:1px solid var(--border);padding:0 12px;cursor:pointer;color:var(--text2);display:flex;align-items:center;justify-content:center;height:40px}
+.pwd-row button svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;transition:stroke .15s}
+.pwd-row button:hover svg{stroke:var(--primary)}
 .login-card>.login-btn{width:100%;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;margin-top:4px}
 .login-card>.login-btn:hover{background:var(--primary-dark)}
 .login-card .err{color:var(--danger);font-size:13px;text-align:center;margin-top:10px;min-height:20px}
