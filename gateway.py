@@ -410,13 +410,14 @@ async def _stream_forward(backend: dict, body: dict, user: dict, model: str) -> 
 @app.post("/auth/register")
 async def register_user(request: Request):
     """Register a new user with username + password."""
+    import re as _re
     body = await request.json()
     username = body.get("username", "").strip()
     password = body.get("password", "")
     if not username or not password:
-        raise HTTPException(400, "用户名和密码不能为空")
-    if len(username) < 2 or len(username) > 32:
-        raise HTTPException(400, "用户名长度需在 2-32 个字符之间")
+        raise HTTPException(400, "邮箱和密码不能为空")
+    if not _re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', username):
+        raise HTTPException(400, "请输入有效的邮箱地址")
     if len(password) < 6:
         raise HTTPException(400, "密码长度至少 6 个字符")
     pw_hash = hash_key(password)
@@ -427,7 +428,7 @@ async def register_user(request: Request):
         )
         DB.commit()
     except sqlite3.IntegrityError:
-        raise HTTPException(409, "用户名已存在")
+        raise HTTPException(409, "该邮箱已注册")
     user_id = cur.lastrowid
     token = create_session(user_id, username)
     return {"status": "ok", "role": "user", "token": token, "user_id": user_id, "username": username}
@@ -974,7 +975,7 @@ button.outline:hover{background:var(--primary-light)}
     <span class="login-tab active" id="tab-login-btn" onclick="switchLoginTab('login')">登录</span>
     <span class="login-tab" id="tab-register-btn" onclick="switchLoginTab('register')">注册</span>
   </div>
-  <div class="field"><label>用户名</label><input id="username-input" type="text" placeholder="请输入用户名" autocomplete="username"></div>
+  <div class="field"><label>邮箱</label><input id="username-input" type="email" placeholder="请输入邮箱" autocomplete="email"></div>
   <div class="field">
     <label>密码</label>
     <div class="pwd-row">
@@ -1048,7 +1049,7 @@ button.outline:hover{background:var(--primary-light)}
         <div class="card">
           <div class="card-head"><h3>👥 用户列表</h3></div>
           <div class="card-body">
-            <table id="users-table"><thead><tr><th>ID</th><th>用户名</th><th>余额</th><th>创建时间</th><th>操作</th></tr></thead><tbody></tbody></table>
+            <table id="users-table"><thead><tr><th>ID</th><th>邮箱</th><th>余额</th><th>创建时间</th><th>操作</th></tr></thead><tbody></tbody></table>
           </div>
         </div>
       </div>
@@ -1087,7 +1088,7 @@ button.outline:hover{background:var(--primary-light)}
 <!-- Modals -->
 <div class="modal-bg" id="modal-create-user"><div class="modal">
 <h3>新建用户</h3>
-<div class="field"><label>用户名</label><input id="nu-name" placeholder="输入用户名"></div>
+<div class="field"><label>邮箱</label><input id="nu-name" type="email" placeholder="输入邮箱"></div>
 <div class="field"><label>初始余额</label><input id="nu-balance" type="number" value="0" step="0.01"></div>
 <div class="row mt"><button onclick="createUser()">创建</button><button class="secondary" onclick="hideModals()">取消</button></div>
 </div></div>
@@ -1158,7 +1159,7 @@ async function doRegister(){
   const username=document.getElementById('username-input').value.trim();
   const password=document.getElementById('key-input').value.trim();
   const confirm=document.getElementById('confirm-pw-input').value.trim();
-  if(!username||!password){document.getElementById('login-err').textContent='请输入用户名和密码';return;}
+  if(!username||!password){document.getElementById('login-err').textContent='请输入邮箱和密码';return;}
   if(password!==confirm){document.getElementById('login-err').textContent='两次输入的密码不一致';return;}
   if(password.length<6){document.getElementById('login-err').textContent='密码长度至少 6 个字符';return;}
   try{
@@ -1173,7 +1174,7 @@ async function doRegister(){
 async function doLogin(){
   const username=document.getElementById('username-input').value.trim();
   KEY=document.getElementById('key-input').value.trim();
-  if(!username||!KEY){document.getElementById('login-err').textContent='请输入用户名和密码';return;}
+  if(!username||!KEY){document.getElementById('login-err').textContent='请输入邮箱和密码';return;}
   try{
     const r=await fetch('/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,key:KEY})});
     const data=await r.json();
@@ -1183,7 +1184,7 @@ async function doLogin(){
     USER_ID=data.user_id||0;
     USERNAME=data.username||username;
     enterApp();
-  }catch(e){document.getElementById('login-err').textContent='用户名或密码错误，请重试';}
+  }catch(e){document.getElementById('login-err').textContent='邮箱或密码错误，请重试';}
 }
 
 function enterApp(){
@@ -1342,7 +1343,7 @@ function showKeyModal(uid){document.getElementById('ck-uid').value=uid;document.
 async function createUser(){
   const name=document.getElementById('nu-name').value.trim();
   const balance=parseFloat(document.getElementById('nu-balance').value)||0;
-  if(!name){toast('请输入用户名');return;}
+  if(!name){toast('请输入邮箱');return;}
   await fetch('/admin/users',{...H(),method:'POST',body:JSON.stringify({username:name,balance})});
   hideModals();loadUsers();loadBackends();toast('用户已创建');
 }
@@ -1427,7 +1428,7 @@ async function loadUserDashboard(){
     const info=await(await fetch('/user/info',H())).json();
     const keys=await(await fetch('/user/keys',H())).json();
     document.getElementById('user-stats').innerHTML=`
-      <div class="stat-card"><div class="icon blue">👤</div><div class="info"><div class="val">${info.username}</div><div class="lbl">用户名</div></div></div>
+      <div class="stat-card"><div class="icon blue">👤</div><div class="info"><div class="val">${info.username}</div><div class="lbl">邮箱</div></div></div>
       <div class="stat-card"><div class="icon green">💰</div><div class="info"><div class="val">${info.balance.toFixed(4)}</div><div class="lbl">余额</div></div></div>
       <div class="stat-card"><div class="icon purple">🔑</div><div class="info"><div class="val">${info.keys_count}</div><div class="lbl">活跃 Keys</div></div></div>`;
     const tb=document.querySelector('#user-keys-table tbody');
