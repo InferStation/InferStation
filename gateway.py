@@ -667,8 +667,9 @@ a{color:var(--primary);text-decoration:none}
 .pwd-row{display:flex;align-items:center;border:1px solid var(--border);border-radius:8px;overflow:hidden;transition:border-color .2s}
 .pwd-row:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px rgba(67,97,238,.1)}
 .pwd-row input{flex:1;padding:10px 14px;border:none;outline:none;font-size:14px;background:transparent;min-width:0}
-.pwd-row button{background:none;border:none;padding:0 14px;cursor:pointer;font-size:13px;color:var(--text2);white-space:nowrap;height:100%;line-height:40px}
+.pwd-row button{background:none;border:none;border-left:1px solid var(--border);padding:0 12px;cursor:pointer;color:var(--text2);display:flex;align-items:center;justify-content:center;height:40px;transition:color .15s}
 .pwd-row button:hover{color:var(--primary)}
+.pwd-row button svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
 .login-card>.login-btn{width:100%;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;margin-top:4px}
 .login-card>.login-btn:hover{background:var(--primary-dark)}
 .login-card .err{color:var(--danger);font-size:13px;text-align:center;margin-top:10px;min-height:20px}
@@ -799,7 +800,10 @@ button.outline:hover{background:var(--primary-light)}
     <label>密码</label>
     <div class="pwd-row">
       <input id="key-input" type="password" placeholder="请输入密码" autocomplete="current-password">
-      <button type="button" id="pwd-btn" onclick="togglePwd()">显示</button>
+      <button type="button" onclick="togglePwd()">
+        <svg id="eye-open" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        <svg id="eye-closed" viewBox="0 0 24 24" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+      </button>
     </div>
   </div>
   <button class="login-btn" onclick="doLogin()">登 录</button>
@@ -918,13 +922,16 @@ function toast(msg,dur=2500){const t=document.createElement('div');t.className='
 
 function togglePwd(){
   var inp=document.getElementById('key-input');
-  var btn=document.getElementById('pwd-btn');
+  var open=document.getElementById('eye-open');
+  var closed=document.getElementById('eye-closed');
   if(inp.type==='password'){
     inp.type='text';
-    btn.textContent='\u9690\u85CF';
+    open.style.display='none';
+    closed.style.display='';
   }else{
     inp.type='password';
-    btn.textContent='\u663E\u793A';
+    open.style.display='';
+    closed.style.display='none';
   }
 }
 
@@ -940,7 +947,7 @@ async function doLogin(){
     loadAll();
   }catch(e){document.getElementById('login-err').textContent='用户名或密码错误，请重试';}
 }
-function doLogout(){KEY='';document.getElementById('app').style.display='none';document.getElementById('login').style.display='flex';document.getElementById('key-input').value='';document.getElementById('key-input').type='password';document.getElementById('pwd-btn').textContent='\u663E\u793A';document.getElementById('username-input').value='';document.getElementById('login-err').textContent='';}
+function doLogout(){KEY='';document.getElementById('app').style.display='none';document.getElementById('login').style.display='flex';document.getElementById('key-input').value='';document.getElementById('key-input').type='password';document.getElementById('eye-open').style.display='';document.getElementById('eye-closed').style.display='none';document.getElementById('username-input').value='';document.getElementById('login-err').textContent='';}
 
 const tabNames={overview:'概览',marketplace:'模型服务广场',users:'用户管理',usage:'用量统计'};
 let mpData=[];
