@@ -3,26 +3,22 @@
 Register / unregister a vLLM backend with the LLM Gateway.
 
 Examples:
-  # Register as admin (auto-detect models from vLLM)
-  python register.py --gateway http://82.156.115.203:8080 \
-      --token sk-admin-xxx --name halo4 --url http://10.161.176.98:8000/v1
-
-  # Register as user (with user API key)
+  # Register (auto-detect models from vLLM)
   python register.py --gateway http://82.156.115.203:8080 \
       --api-key sk-xxx --name my-backend --url http://10.161.176.98:8000/v1
 
-  # Register with explicit models
+  # Register with explicit models and model-map
   python register.py --gateway http://82.156.115.203:8080 \
-      --token sk-admin-xxx --name halo4 --url http://10.161.176.98:8000/v1 \
-      --models MiniMax-M2.5 Qwen3-8B
+      --api-key sk-xxx --name halo4 --url http://10.161.176.98:8000/v1 \
+      --models Qwen3.5-35B-A3B --model-map Qwen3.5-35B-A3B=red-serving-api
 
   # Unregister
   python register.py --gateway http://82.156.115.203:8080 \
-      --token sk-admin-xxx --name halo4 --unregister
+      --api-key sk-xxx --name halo4 --unregister
 
   # Heartbeat mode (re-register every N seconds)
   python register.py --gateway http://82.156.115.203:8080 \
-      --token sk-admin-xxx --name halo4 --url http://10.161.176.98:8000/v1 \
+      --api-key sk-xxx --name halo4 --url http://10.161.176.98:8000/v1 \
       --heartbeat 60
 """
 
@@ -93,18 +89,12 @@ def fetch_models(url: str) -> list[str]:
 
 
 def register(gateway: str, name: str, url: str, models: list[str],
-             client_info: dict = None, owner: str = None, pricing: dict = None,
-             model_map: dict = None, token: str = None, api_key: str = None) -> dict:
+             client_info: dict = None, pricing: dict = None,
+             model_map: dict = None, api_key: str = "") -> dict:
     body = {"name": name, "url": url, "models": models}
-    headers = {"Content-Type": "application/json"}
-    if token:
-        body["token"] = token
-    if api_key:
-        headers["Authorization"] = f"Bearer {api_key}"
+    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}
     if client_info:
         body["client_info"] = client_info
-    if owner is not None:
-        body["owner"] = owner
     if pricing:
         body["pricing"] = pricing
     if model_map:
@@ -120,13 +110,9 @@ def register(gateway: str, name: str, url: str, models: list[str],
         return json.loads(resp.read())
 
 
-def unregister(gateway: str, name: str, token: str = None, api_key: str = None) -> dict:
+def unregister(gateway: str, name: str, api_key: str = "") -> dict:
     body = {"name": name}
-    headers = {"Content-Type": "application/json"}
-    if token:
-        body["token"] = token
-    if api_key:
-        headers["Authorization"] = f"Bearer {api_key}"
+    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}
     payload = json.dumps(body).encode()
     req = urllib.request.Request(
         f"{gateway.rstrip('/')}/unregister",
@@ -141,12 +127,10 @@ def unregister(gateway: str, name: str, token: str = None, api_key: str = None) 
 def main():
     p = argparse.ArgumentParser(description="Register/unregister vLLM backend with LLM Gateway")
     p.add_argument("--gateway", required=True, help="Gateway URL, e.g. http://82.156.115.203:8080")
-    p.add_argument("--token", default=None, help="Admin token for authentication")
-    p.add_argument("--api-key", default=None, help="User API key for authentication (alternative to --token)")
+    p.add_argument("--api-key", required=True, help="User API key for authentication")
     p.add_argument("--name", required=True, help="Backend name, e.g. halo4")
     p.add_argument("--url", help="vLLM backend URL, e.g. http://10.161.176.98:8000/v1")
     p.add_argument("--models", nargs="+", default=[], help="Model names (auto-detected if omitted)")
-    p.add_argument("--owner", default=None, help="Owner username (omit for shared backend)")
     p.add_argument("--input-price", type=float, default=None, help="Input token price per million (e.g. 1.0)")
     p.add_argument("--output-price", type=float, default=None, help="Output token price per million (e.g. 3.0)")
     p.add_argument("--model-map", nargs="+", default=[], metavar="DISPLAY=API",
@@ -155,11 +139,8 @@ def main():
     p.add_argument("--heartbeat", type=int, default=0, help="Re-register every N seconds (0=once)")
     args = p.parse_args()
 
-    if not args.token and not args.api_key:
-        p.error("Either --token (admin) or --api-key (user) is required")
-
     if args.unregister:
-        result = unregister(args.gateway, args.name, token=args.token, api_key=args.api_key)
+        result = unregister(args.gateway, args.name, api_key=args.api_key)
         print(json.dumps(result, indent=2))
         return
 
@@ -199,7 +180,7 @@ def main():
 
     while True:
         try:
-            result = register(args.gateway, args.name, args.url, models, client_info, args.owner, pricing, model_map, token=args.token, api_key=args.api_key)
+            result = register(args.gateway, args.name, args.url, models, client_info, pricing, model_map, api_key=args.api_key)
             print(json.dumps(result, indent=2))
         except urllib.error.HTTPError as e:
             print(f"Error: {e.code} {e.read().decode()}", file=sys.stderr)
