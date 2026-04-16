@@ -80,10 +80,16 @@ def init_db():
             url TEXT NOT NULL,
             models TEXT DEFAULT '[]',
             client_info TEXT DEFAULT '{}',
+            owner_id INTEGER REFERENCES users(id),
             updated_at REAL DEFAULT (unixepoch())
         );
     """
     )
+    # Migration: add owner_id if missing (existing DBs)
+    cols = [r[1] for r in conn.execute("PRAGMA table_info(backends)").fetchall()]
+    if "owner_id" not in cols:
+        conn.execute("ALTER TABLE backends ADD COLUMN owner_id INTEGER REFERENCES users(id)")
+        conn.commit()
     conn.close()
 
 
@@ -157,11 +163,16 @@ async def health_check_loop():
         await asyncio.sleep(30)
 
 
-def get_backends_for_model(model: str) -> list[dict]:
-    """Return healthy backends that serve the given model."""
+def get_backends_for_model(model: str, user_id: Optional[int] = None) -> list[dict]:
+    """Return healthy backends that serve the given model, filtered by owner."""
     results = []
     for b in backends:
         if model in b.get("models", []) and backend_health.get(b["name"], False):
+            # Filter: user sees only own backends (owner_id matches or owner_id is None=shared)
+            if user_id is not None:
+                bid = b.get("owner_id")
+                if bid is not None and bid != user_id:
+                    continue
             results.append(b)
     return results
 
@@ -194,13 +205,14 @@ async def lifespan(app: FastAPI):
     init_db()
     DB = get_db()
     # Load persisted backends from DB
-    for row in DB.execute("SELECT name, url, models, client_info FROM backends").fetchall():
+    for row in DB.execute("SELECT name, url, models, client_info, owner_id FROM backends").fetchall():
         if not _find_backend(row["name"]):
             backends.append({
                 "name": row["name"],
                 "url": row["url"],
                 "models": json.loads(row["models"]),
                 "client_info": json.loads(row["client_info"]),
+                "owner_id": row["owner_id"],
             })
             backend_health[row["name"]] = False
     # seed from config (override DB if same name)
@@ -225,10 +237,14 @@ app = FastAPI(title="LLM Gateway", lifespan=lifespan)
 
 @app.get("/v1/models")
 async def list_models(authorization: Optional[str] = Header(None)):
-    auth_user(authorization)
+    user = auth_user(authorization)
+    uid = user["user_id"]
     models = set()
     for b in backends:
         if backend_health.get(b["name"], False):
+            bid = b.get("owner_id")
+            if bid is not None and bid != uid:
+                continue
             models.update(b.get("models", []))
     data = [{"id": m, "object": "model", "owned_by": "llm-gateway"} for m in sorted(models)]
     return {"object": "list", "data": data}
@@ -241,8 +257,8 @@ async def chat_completions(request: Request, authorization: Optional[str] = Head
     model = body.get("model", "")
     stream = body.get("stream", False)
 
-    backends = get_backends_for_model(model)
-    if not backends:
+    avail_backends = get_backends_for_model(model, user["user_id"])
+    if not avail_backends:
         raise HTTPException(503, f"No healthy backend for model '{model}'")
 
     # Ensure usage info is returned for billing
@@ -251,9 +267,9 @@ async def chat_completions(request: Request, authorization: Optional[str] = Head
         body["stream_options"]["include_usage"] = True
 
     # Try backends in random order
-    random.shuffle(backends)
+    random.shuffle(avail_backends)
     last_err = None
-    for backend in backends:
+    for backend in avail_backends:
         try:
             if stream:
                 return await _stream_forward(backend, body, user, model)
@@ -402,20 +418,29 @@ async def get_usage(
 @app.get("/admin/backends")
 async def list_backends(authorization: Optional[str] = Header(None)):
     verify_admin(authorization)
+    # Build owner_id -> username map
+    user_map = {}
+    for r in DB.execute("SELECT id, username FROM users").fetchall():
+        user_map[r["id"]] = r["username"]
     result = []
     for b in backends:
+        oid = b.get("owner_id")
         result.append({
             "name": b["name"],
             "url": b["url"],
             "models": b.get("models", []),
             "healthy": backend_health.get(b["name"], False),
+            "owner_id": oid,
+            "owner": user_map.get(oid, "共享") if oid else "共享",
         })
     return result
 
 
 @app.post("/register")
 async def register_backend(request: Request):
-    """Backend self-registration. Body: {name, url, models[], token, client_info?}"""
+    """Backend self-registration. Body: {name, url, models[], token, client_info?, owner?}
+    owner can be a username string or user_id int. If omitted, backend is shared (visible to all).
+    """
     body = await request.json()
     token = body.get("token", "")
     admin_key = CFG["server"].get("admin_key", "")
@@ -426,18 +451,30 @@ async def register_backend(request: Request):
     models = body.get("models", [])
     client_info = body.get("client_info", {})
     client_info["registered_at"] = time.time()
+    # Resolve owner
+    owner_id = None
+    owner = body.get("owner")
+    if owner is not None:
+        if isinstance(owner, int):
+            row = DB.execute("SELECT id FROM users WHERE id = ?", (owner,)).fetchone()
+        else:
+            row = DB.execute("SELECT id FROM users WHERE username = ?", (str(owner),)).fetchone()
+        if not row:
+            raise HTTPException(404, f"Owner user not found: {owner}")
+        owner_id = row["id"]
     existing = _find_backend(name)
     if existing:
         existing["url"] = url
         existing["models"] = models
         existing["client_info"] = client_info
+        existing["owner_id"] = owner_id
     else:
-        backends.append({"name": name, "url": url, "models": models, "client_info": client_info})
+        backends.append({"name": name, "url": url, "models": models, "client_info": client_info, "owner_id": owner_id})
     # Persist to DB
     DB.execute(
-        "INSERT INTO backends (name, url, models, client_info, updated_at) VALUES (?, ?, ?, ?, unixepoch()) "
-        "ON CONFLICT(name) DO UPDATE SET url=excluded.url, models=excluded.models, client_info=excluded.client_info, updated_at=excluded.updated_at",
-        (name, url, json.dumps(models), json.dumps(client_info)),
+        "INSERT INTO backends (name, url, models, client_info, owner_id, updated_at) VALUES (?, ?, ?, ?, ?, unixepoch()) "
+        "ON CONFLICT(name) DO UPDATE SET url=excluded.url, models=excluded.models, client_info=excluded.client_info, owner_id=excluded.owner_id, updated_at=excluded.updated_at",
+        (name, url, json.dumps(models), json.dumps(client_info), owner_id),
     )
     DB.commit()
     backend_health[name] = False  # will be verified by next health check
@@ -681,7 +718,7 @@ button.outline:hover{background:var(--primary-light)}
         <div class="card">
           <div class="card-head"><h3>📡 后端节点</h3></div>
           <div class="card-body">
-            <table id="backends-table"><thead><tr><th>名称</th><th>地址</th><th>模型</th><th>状态</th><th style="width:40px"></th></tr></thead><tbody></tbody></table>
+            <table id="backends-table"><thead><tr><th>名称</th><th>地址</th><th>模型</th><th>归属</th><th>状态</th><th style="width:40px"></th></tr></thead><tbody></tbody></table>
           </div>
         </div>
       </div>
@@ -800,9 +837,10 @@ async function loadBackends(){
   const tb=document.querySelector('#backends-table tbody');
   tb.innerHTML=data.map(b=>`<tr>
     <td><strong>${b.name}</strong></td><td style="font-family:monospace;font-size:12px">${b.url}</td><td>${b.models.map(m=>'<code style="background:#f0f0f0;padding:1px 6px;border-radius:4px;font-size:12px">'+m+'</code>').join(' ')}</td>
+    <td><span style="font-size:12px;color:${b.owner_id?'var(--primary)':'var(--text2)'}">${b.owner}</span></td>
     <td><span class="badge ${b.healthy?'up':'down'}">${b.healthy?'● 健康':'● 离线'}</span></td>
     <td><span class="expand-btn" onclick="toggleDetail(this,'${b.name}')">◀</span></td>
-  </tr><tr class="detail-row" id="detail-${b.name}"><td colspan="5"><div class="detail-panel" id="panel-${b.name}">
+  </tr><tr class="detail-row" id="detail-${b.name}"><td colspan="6"><div class="detail-panel" id="panel-${b.name}">
     <div style="color:var(--text2);padding:8px">加载中...</div>
   </div></td></tr>`).join('');
 }

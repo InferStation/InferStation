@@ -88,10 +88,12 @@ def fetch_models(url: str) -> list[str]:
         return []
 
 
-def register(gateway: str, token: str, name: str, url: str, models: list[str], client_info: dict = None) -> dict:
+def register(gateway: str, token: str, name: str, url: str, models: list[str], client_info: dict = None, owner: str = None) -> dict:
     body = {"name": name, "url": url, "models": models, "token": token}
     if client_info:
         body["client_info"] = client_info
+    if owner is not None:
+        body["owner"] = owner
     payload = json.dumps(body).encode()
     req = urllib.request.Request(
         f"{gateway.rstrip('/')}/register",
@@ -122,6 +124,7 @@ def main():
     p.add_argument("--name", required=True, help="Backend name, e.g. halo4")
     p.add_argument("--url", help="vLLM backend URL, e.g. http://10.161.176.98:8000/v1")
     p.add_argument("--models", nargs="+", default=[], help="Model names (auto-detected if omitted)")
+    p.add_argument("--owner", default=None, help="Owner username (omit for shared backend)")
     p.add_argument("--unregister", action="store_true", help="Unregister instead of register")
     p.add_argument("--heartbeat", type=int, default=0, help="Re-register every N seconds (0=once)")
     args = p.parse_args()
@@ -149,7 +152,7 @@ def main():
 
     while True:
         try:
-            result = register(args.gateway, args.token, args.name, args.url, models, client_info)
+            result = register(args.gateway, args.token, args.name, args.url, models, client_info, args.owner)
             print(json.dumps(result, indent=2))
         except urllib.error.HTTPError as e:
             print(f"Error: {e.code} {e.read().decode()}", file=sys.stderr)
