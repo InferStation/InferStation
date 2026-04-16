@@ -1165,6 +1165,7 @@ function switchLoginTab(mode){
   document.getElementById('username-input').placeholder=mode==='register'?'请输入邮箱':'请输入用户名或邮箱';
   document.getElementById('username-input').type=mode==='register'?'email':'text';
   document.getElementById('login-err').textContent='';
+  document.getElementById('pw-hint').style.color='var(--text2)';
 }
 
 function togglePwd(){
@@ -1211,7 +1212,7 @@ async function doRegister(){
   if(!email||!email.includes('@')){document.getElementById('login-err').textContent='请输入有效的邮箱地址';return;}
   if(!password){document.getElementById('login-err').textContent='请输入密码';return;}
   if(password.length<8){document.getElementById('login-err').textContent='密码长度至少 8 个字符';return;}
-  {let c=(/[A-Z]/.test(password)?1:0)+(/[a-z]/.test(password)?1:0)+(/[0-9]/.test(password)?1:0)+(/[^a-zA-Z0-9]/.test(password)?1:0);if(c<3){document.getElementById('login-err').textContent='密码需包含大写字母、小写字母、数字、特殊符号中的至少三种';return;}}
+  {let c=(/[A-Z]/.test(password)?1:0)+(/[a-z]/.test(password)?1:0)+(/[0-9]/.test(password)?1:0)+(/[^a-zA-Z0-9]/.test(password)?1:0);if(c<3){document.getElementById('pw-hint').style.color='var(--danger)';return;}}
   if(password!==confirm){document.getElementById('login-err').textContent='两次输入的密码不一致';return;}
   try{
     const r=await fetch('/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:nickname,email,password})});
