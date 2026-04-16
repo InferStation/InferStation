@@ -815,7 +815,7 @@ button.outline:hover{background:var(--primary-light)}
         <div class="card">
           <div class="card-head"><h3>📡 后端节点</h3></div>
           <div class="card-body">
-            <table id="backends-table"><thead><tr><th>名称</th><th>地址</th><th>模型</th><th>归属</th><th>定价(入/出)</th><th>状态</th><th style="width:40px"></th></tr></thead><tbody></tbody></table>
+            <table id="backends-table"><thead><tr><th>名称</th><th>地址</th><th>模型</th><th>归属</th><th>定价(输入/输出)</th><th>状态</th><th style="width:40px"></th></tr></thead><tbody></tbody></table>
           </div>
         </div>
       </div>
@@ -1073,7 +1073,7 @@ function renderMarketplace(){
         </div>
         <div class="svc-right">
           ${gpuStr?'<span class="svc-gpu" title="'+gpuStr+'">'+gpuStr+'</span>':''}
-          <span class="svc-price">${hasP?'¥'+pr.input+' <span class="unit">入</span> / ¥'+pr.output+' <span class="unit">出</span>':'<span class="unit">默认定价</span>'}</span>
+          <span class="svc-price">${hasP?'¥'+pr.input+' <span class="unit">输入</span> / ¥'+pr.output+' <span class="unit">输出</span>':'<span class="unit">默认定价</span>'}</span>
         </div>
       </div>`;
     }).join('');
