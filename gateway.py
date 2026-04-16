@@ -660,10 +660,12 @@ a{color:var(--primary);text-decoration:none}
 .login-card .logo svg{margin-bottom:12px}
 .login-card .logo h2{font-size:22px;color:var(--text)}
 .login-card .logo p{font-size:13px;color:var(--text2);margin-top:4px}
-.login-card .field{margin-bottom:16px}
+.login-card .field{margin-bottom:16px;position:relative}
 .login-card .field label{display:block;font-size:13px;font-weight:500;color:var(--text2);margin-bottom:6px}
 .login-card .field input{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;transition:border .2s;outline:none}
 .login-card .field input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(67,97,238,.1)}
+.login-card .field .pwd-toggle{position:absolute;right:12px;bottom:10px;cursor:pointer;color:var(--text2);display:flex;align-items:center;user-select:none}
+.login-card .field .pwd-toggle:hover{color:var(--text)}
 .login-card button{width:100%;padding:11px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}
 .login-card button:hover{background:var(--primary-dark)}
 .login-card .err{color:var(--danger);font-size:13px;text-align:center;margin-top:10px;min-height:20px}
@@ -790,7 +792,7 @@ button.outline:hover{background:var(--primary-light)}
     <p>轻量级 LLM 路由管理平台</p>
   </div>
   <div class="field"><label>用户名</label><input id="username-input" type="text" placeholder="请输入用户名"></div>
-  <div class="field"><label>密码</label><input id="key-input" type="password" placeholder="请输入密码"></div>
+  <div class="field"><label>密码</label><input id="key-input" type="password" placeholder="请输入密码" style="padding-right:40px"><span class="pwd-toggle" onclick="togglePwd()"><svg id="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span></div>
   <button onclick="doLogin()">登 录</button>
   <p class="err" id="login-err"></p>
 </div>
@@ -904,6 +906,18 @@ let lastRefresh=0;
 const H=()=>({headers:{'Authorization':'Bearer '+KEY,'Content-Type':'application/json'}});
 
 function toast(msg,dur=2500){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),dur);}
+
+function togglePwd(){
+  const inp=document.getElementById('key-input');
+  const icon=document.getElementById('eye-icon');
+  if(inp.type==='password'){
+    inp.type='text';
+    icon.innerHTML='<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+  }else{
+    inp.type='password';
+    icon.innerHTML='<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+  }
+}
 
 async function doLogin(){
   const username=document.getElementById('username-input').value.trim();
