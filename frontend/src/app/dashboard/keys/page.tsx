@@ -103,24 +103,6 @@ export default function KeysPage() {
           </tbody>
         </table>
       </div>
-
-      <div className="mt-8 bg-gray-50 rounded-lg border p-6">
-        <h2 className="font-semibold mb-3">使用说明</h2>
-        <pre className="text-sm bg-white p-4 rounded border overflow-x-auto">{`from openai import OpenAI
-
-client = OpenAI(
-    base_url="http://YOUR_GATEWAY_HOST:8080/v1",
-    api_key="sk-xxxxx"
-)
-
-resp = client.chat.completions.create(
-    model="模型名称",
-    messages=[{"role": "user", "content": "Hello"}],
-    stream=True
-)
-for chunk in resp:
-    print(chunk.choices[0].delta.content or "", end="")`}</pre>
-      </div>
     </div>
   )
 }
