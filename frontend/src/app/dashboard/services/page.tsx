@@ -19,8 +19,8 @@ interface Backend {
   updated_at: string
 }
 
-export default function BackendsPage() {
-  const { user, loading } = useAuth()
+export default function ServicesPage() {
+  const { user } = useAuth()
   const router = useRouter()
   const [backends, setBackends] = useState<Backend[]>([])
   const [showForm, setShowForm] = useState(false)
@@ -35,11 +35,10 @@ export default function BackendsPage() {
   })
 
   useEffect(() => {
-    if (!loading && !user) router.push("/login")
-    if (!loading && user && !["provider", "both", "admin"].includes(user.role)) {
-      router.push("/dashboard")
+    if (user && !["provider", "both", "admin"].includes(user.role)) {
+      router.push("/dashboard/other")
     }
-  }, [loading, user, router])
+  }, [user, router])
 
   useEffect(() => {
     if (user) loadBackends()
@@ -76,7 +75,7 @@ export default function BackendsPage() {
     loadBackends()
   }
 
-  if (loading || !user) return <div className="text-center py-20 text-gray-500">加载中...</div>
+  if (!user) return null
 
   return (
     <div>
@@ -96,93 +95,41 @@ export default function BackendsPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">后端名称</label>
-                <input
-                  type="text"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  required
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                />
+                <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">接入模式</label>
-                <select
-                  value={form.mode}
-                  onChange={(e) => setForm({ ...form, mode: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                >
+                <select value={form.mode} onChange={(e) => setForm({ ...form, mode: e.target.value })} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                   <option value="direct">直连（公网可达）</option>
                   <option value="tunnel">隧道（NAT 内网）</option>
                 </select>
               </div>
             </div>
-
             {form.mode === "direct" && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">后端 URL</label>
-                <input
-                  type="url"
-                  value={form.url}
-                  onChange={(e) => setForm({ ...form, url: e.target.value })}
-                  placeholder="http://IP:PORT"
-                  required
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                />
+                <input type="url" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="http://IP:PORT" required className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
               </div>
             )}
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">模型列表（逗号分隔）</label>
-              <input
-                type="text"
-                value={form.models}
-                onChange={(e) => setForm({ ...form, models: e.target.value })}
-                placeholder="Qwen3-8B, Llama-3-70B"
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              />
+              <input type="text" value={form.models} onChange={(e) => setForm({ ...form, models: e.target.value })} placeholder="Qwen3-8B, Llama-3-70B" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
             </div>
-
             <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">输入定价（元/百万token）</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={form.input_price}
-                  onChange={(e) => setForm({ ...form, input_price: e.target.value })}
-                  placeholder="默认"
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                />
+                <input type="number" step="0.01" value={form.input_price} onChange={(e) => setForm({ ...form, input_price: e.target.value })} placeholder="默认" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">输出定价（元/百万token）</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={form.output_price}
-                  onChange={(e) => setForm({ ...form, output_price: e.target.value })}
-                  placeholder="默认"
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                />
+                <input type="number" step="0.01" value={form.output_price} onChange={(e) => setForm({ ...form, output_price: e.target.value })} placeholder="默认" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
               </div>
             </div>
-
             <div className="flex items-center">
-              <input
-                type="checkbox"
-                checked={form.is_public}
-                onChange={(e) => setForm({ ...form, is_public: e.target.checked })}
-                className="mr-2"
-              />
+              <input type="checkbox" checked={form.is_public} onChange={(e) => setForm({ ...form, is_public: e.target.checked })} className="mr-2" />
               <span className="text-sm text-gray-600">公开可见（所有用户可调用）</span>
             </div>
-
-            <button
-              type="submit"
-              className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700"
-            >
-              提交
-            </button>
+            <button type="submit" className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700">提交</button>
           </form>
         </div>
       )}
@@ -194,46 +141,26 @@ export default function BackendsPage() {
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className="font-semibold text-lg">{b.name}</h3>
-                  <span className={`px-2 py-0.5 rounded text-xs ${b.status === "online" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                    {b.status}
-                  </span>
-                  <span className="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600">
-                    {b.mode === "tunnel" ? "隧道" : "直连"}
-                  </span>
-                  {!b.is_public && (
-                    <span className="px-2 py-0.5 rounded text-xs bg-yellow-100 text-yellow-700">私有</span>
-                  )}
+                  <span className={`px-2 py-0.5 rounded text-xs ${b.status === "online" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>{b.status}</span>
+                  <span className="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600">{b.mode === "tunnel" ? "隧道" : "直连"}</span>
+                  {!b.is_public && <span className="px-2 py-0.5 rounded text-xs bg-yellow-100 text-yellow-700">私有</span>}
                 </div>
                 {b.url && <p className="text-sm text-gray-500">URL: {b.url}</p>}
-                <p className="text-sm text-gray-500">
-                  模型: {b.models.length > 0 ? b.models.join(", ") : "未设置"}
-                </p>
+                <p className="text-sm text-gray-500">模型: {b.models.length > 0 ? b.models.join(", ") : "未设置"}</p>
                 {(b.input_price != null || b.output_price != null) && (
-                  <p className="text-sm text-gray-500">
-                    定价: ¥{b.input_price}/M 输入 / ¥{b.output_price}/M 输出
-                  </p>
+                  <p className="text-sm text-gray-500">定价: ¥{b.input_price}/M 输入 / ¥{b.output_price}/M 输出</p>
                 )}
               </div>
-              <button
-                onClick={() => deleteBackend(b.name)}
-                className="text-red-500 hover:text-red-700 text-sm"
-              >
-                删除
-              </button>
+              <button onClick={() => deleteBackend(b.name)} className="text-red-500 hover:text-red-700 text-sm">删除</button>
             </div>
           </div>
         ))}
-        {backends.length === 0 && (
-          <div className="text-center py-12 text-gray-500">暂无注册的后端服务</div>
-        )}
+        {backends.length === 0 && <div className="text-center py-12 text-gray-500">暂无注册的后端服务</div>}
       </div>
 
-      {/* Tunnel usage instructions */}
       <div className="mt-8 bg-gray-50 rounded-lg border p-6">
         <h2 className="font-semibold mb-3">隧道模式使用说明</h2>
-        <p className="text-sm text-gray-600 mb-3">
-          如果你的机器在 NAT/内网后面，选择「隧道」模式注册后端，然后在机器上运行 client.py：
-        </p>
+        <p className="text-sm text-gray-600 mb-3">如果你的机器在 NAT/内网后面，选择「隧道」模式注册后端，然后在机器上运行 client.py：</p>
         <pre className="text-sm bg-white p-4 rounded border overflow-x-auto">{`python client.py \\
   --gateway ws://GATEWAY_HOST:8080/ws/tunnel \\
   --token sk-你的API-Key \\

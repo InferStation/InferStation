@@ -210,6 +210,31 @@ class UpgradeRequest(BaseModel):
     target_role: str  # "provider" or "both"
 
 
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str
+
+
+@app.post("/api/auth/change-password")
+async def change_password(req: ChangePasswordRequest, user=Depends(get_current_user)):
+    from auth import verify_password, hash_password
+
+    db = await get_db()
+    try:
+        row = await db.execute("SELECT password_hash FROM users WHERE id = ?", (user["id"],))
+        row = await row.fetchone()
+        if not verify_password(req.old_password, row["password_hash"]):
+            raise HTTPException(400, "原密码错误")
+        if len(req.new_password) < 8:
+            raise HTTPException(400, "新密码不能少于8位")
+        new_hash = hash_password(req.new_password)
+        await db.execute("UPDATE users SET password_hash = ? WHERE id = ?", (new_hash, user["id"]))
+        await db.commit()
+    finally:
+        await db.close()
+    return {"ok": True}
+
+
 @app.post("/api/user/upgrade-role")
 async def upgrade_role(req: UpgradeRequest, user=Depends(get_current_user)):
     if req.target_role not in ("provider", "both"):

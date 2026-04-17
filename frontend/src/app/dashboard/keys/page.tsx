@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 import { useAuth } from "@/context/AuthContext"
 import { apiFetch } from "@/lib/api"
-import { useRouter } from "next/navigation"
 
 interface ApiKey {
   id: number
@@ -14,15 +13,10 @@ interface ApiKey {
 }
 
 export default function KeysPage() {
-  const { user, loading } = useAuth()
-  const router = useRouter()
+  const { user } = useAuth()
   const [keys, setKeys] = useState<ApiKey[]>([])
   const [newKeyName, setNewKeyName] = useState("")
   const [newKey, setNewKey] = useState("")
-
-  useEffect(() => {
-    if (!loading && !user) router.push("/login")
-  }, [loading, user, router])
 
   useEffect(() => {
     if (user) loadKeys()
@@ -50,11 +44,11 @@ export default function KeysPage() {
     loadKeys()
   }
 
-  if (loading || !user) return <div className="text-center py-20 text-gray-500">加载中...</div>
+  if (!user) return null
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">API Keys</h1>
+      <h1 className="text-2xl font-bold mb-6">API Key</h1>
 
       <div className="bg-white rounded-lg border p-6 mb-6">
         <h2 className="font-semibold mb-4">创建新 Key</h2>
@@ -66,12 +60,7 @@ export default function KeysPage() {
             onChange={(e) => setNewKeyName(e.target.value)}
             className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
           />
-          <button
-            onClick={createKey}
-            className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700"
-          >
-            创建
-          </button>
+          <button onClick={createKey} className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700">创建</button>
         </div>
         {newKey && (
           <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -104,18 +93,12 @@ export default function KeysPage() {
                 </td>
                 <td className="px-4 py-3 text-gray-500">{k.created_at}</td>
                 <td className="px-4 py-3 text-right">
-                  {k.is_active ? (
-                    <button onClick={() => revokeKey(k.id)} className="text-red-500 hover:text-red-700 text-sm">
-                      吊销
-                    </button>
-                  ) : null}
+                  {k.is_active ? <button onClick={() => revokeKey(k.id)} className="text-red-500 hover:text-red-700 text-sm">吊销</button> : null}
                 </td>
               </tr>
             ))}
             {keys.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-gray-500">暂无 API Key</td>
-              </tr>
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-500">暂无 API Key</td></tr>
             )}
           </tbody>
         </table>

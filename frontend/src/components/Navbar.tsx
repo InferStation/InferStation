@@ -14,22 +14,11 @@ export default function Navbar() {
             <Link href="/" className="text-xl font-bold text-indigo-600">
               LLM Gateway
             </Link>
-            <Link href="/models" className="text-gray-600 hover:text-gray-900">
-              模型市场
-            </Link>
             {user && (
               <>
                 <Link href="/dashboard" className="text-gray-600 hover:text-gray-900">
-                  控制台
+                  个人中心
                 </Link>
-                <Link href="/keys" className="text-gray-600 hover:text-gray-900">
-                  API Keys
-                </Link>
-                {(user.role === "provider" || user.role === "both" || user.role === "admin") && (
-                  <Link href="/backends" className="text-gray-600 hover:text-gray-900">
-                    我的服务
-                  </Link>
-                )}
                 {user.role === "admin" && (
                   <Link href="/admin" className="text-gray-600 hover:text-gray-900">
                     管理
@@ -43,9 +32,6 @@ export default function Navbar() {
               <>
                 <span className="text-sm text-gray-500">
                   {user.username}
-                  <span className="ml-2 px-2 py-0.5 rounded text-xs bg-gray-100">
-                    {user.role === "admin" ? "管理员" : user.role === "both" ? "消费者+提供者" : user.role === "provider" ? "提供者" : "消费者"}
-                  </span>
                   <span className="ml-2 text-green-600">¥{user.balance.toFixed(2)}</span>
                 </span>
                 <button onClick={logout} className="text-sm text-red-500 hover:text-red-700">

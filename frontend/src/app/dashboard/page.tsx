@@ -1,115 +1,87 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useAuth } from "@/context/AuthContext"
 import { apiFetch } from "@/lib/api"
-import { useRouter } from "next/navigation"
+import PasswordInput, { checkStrength } from "@/components/PasswordInput"
 
-interface UsageStat {
-  model: string
-  total_input: number
-  total_output: number
-  total_cost: number
-  requests: number
-}
+export default function AccountPage() {
+  const { user } = useAuth()
+  const [oldPw, setOldPw] = useState("")
+  const [newPw, setNewPw] = useState("")
+  const [confirmPw, setConfirmPw] = useState("")
+  const [msg, setMsg] = useState("")
+  const [error, setError] = useState("")
+  const [saving, setSaving] = useState(false)
 
-export default function DashboardPage() {
-  const { user, loading, refreshUser } = useAuth()
-  const router = useRouter()
-  const [usage, setUsage] = useState<UsageStat[]>([])
-  const [upgrading, setUpgrading] = useState(false)
+  if (!user) return null
 
-  useEffect(() => {
-    if (!loading && !user) router.push("/login")
-  }, [loading, user, router])
-
-  useEffect(() => {
-    if (user) {
-      apiFetch("/api/usage?days=30").then(setUsage).catch(() => {})
-    }
-  }, [user])
-
-  const handleUpgrade = async (role: string) => {
-    setUpgrading(true)
+  const handleChangePw = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setMsg("")
+    setError("")
+    if (newPw !== confirmPw) { setError("两次密码不一致"); return }
+    if (!checkStrength(newPw).ok) { setError("密码需包含大写、小写、数字、特殊字符中的至少3种，且不少于8位"); return }
+    setSaving(true)
     try {
-      await apiFetch("/api/user/upgrade-role", {
+      await apiFetch("/api/auth/change-password", {
         method: "POST",
-        body: JSON.stringify({ target_role: role }),
+        body: JSON.stringify({ old_password: oldPw, new_password: newPw }),
       })
-      await refreshUser()
+      setMsg("密码修改成功")
+      setOldPw(""); setNewPw(""); setConfirmPw("")
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "操作失败")
+      setError(err instanceof Error ? err.message : "修改失败")
     } finally {
-      setUpgrading(false)
+      setSaving(false)
     }
   }
 
-  if (loading || !user) return <div className="text-center py-20 text-gray-500">加载中...</div>
-
-  const totalCost = usage.reduce((s, u) => s + u.total_cost, 0)
-  const totalRequests = usage.reduce((s, u) => s + u.requests, 0)
-
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">控制台</h1>
+      <h1 className="text-2xl font-bold mb-6">账号密码</h1>
 
-      <div className="grid gap-4 md:grid-cols-3 mb-8">
-        <div className="bg-white rounded-lg border p-4">
-          <div className="text-sm text-gray-500">余额</div>
-          <div className="text-2xl font-bold text-green-600">¥{user.balance.toFixed(2)}</div>
-        </div>
-        <div className="bg-white rounded-lg border p-4">
-          <div className="text-sm text-gray-500">30天请求数</div>
-          <div className="text-2xl font-bold">{totalRequests}</div>
-        </div>
-        <div className="bg-white rounded-lg border p-4">
-          <div className="text-sm text-gray-500">30天花费</div>
-          <div className="text-2xl font-bold text-orange-600">¥{totalCost.toFixed(4)}</div>
+      <div className="bg-white rounded-lg border p-6 mb-6">
+        <h2 className="font-semibold mb-4">账号信息</h2>
+        <div className="grid gap-4 md:grid-cols-2 text-sm">
+          <div>
+            <span className="text-gray-500">用户名：</span>
+            <span className="font-medium">{user.username}</span>
+          </div>
+          <div>
+            <span className="text-gray-500">邮箱：</span>
+            <span className="font-medium">{user.email}</span>
+          </div>
+          <div>
+            <span className="text-gray-500">余额：</span>
+            <span className="font-medium text-green-600">¥{user.balance.toFixed(2)}</span>
+          </div>
+          <div>
+            <span className="text-gray-500">角色：</span>
+            <span className="font-medium">
+              {user.role === "admin" ? "管理员" : user.role === "both" ? "消费者+提供者" : user.role === "provider" ? "提供者" : "消费者"}
+            </span>
+          </div>
         </div>
       </div>
 
-      {user.role === "consumer" && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
-          <p className="text-sm text-blue-800 mb-2">成为模型服务提供者？激活提供者即可注册后端。</p>
+      <div className="bg-white rounded-lg border p-6">
+        <h2 className="font-semibold mb-4">修改密码</h2>
+        {msg && <div className="mb-4 p-3 bg-green-50 text-green-600 rounded text-sm">{msg}</div>}
+        {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded text-sm">{error}</div>}
+        <form onSubmit={handleChangePw} className="space-y-4 max-w-md">
+          <PasswordInput label="原密码" value={oldPw} onChange={setOldPw} required />
+          <PasswordInput label="新密码" value={newPw} onChange={setNewPw} required minLength={8} showStrength />
+          <PasswordInput label="确认新密码" value={confirmPw} onChange={setConfirmPw} required />
           <button
-            onClick={() => handleUpgrade("both")}
-            disabled={upgrading}
-            className="text-sm bg-blue-600 text-white px-4 py-1.5 rounded hover:bg-blue-700 disabled:opacity-50"
+            type="submit"
+            disabled={saving}
+            className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
           >
-            激活 消费者+提供者
+            {saving ? "保存中..." : "修改密码"}
           </button>
-        </div>
-      )}
-
-      <h2 className="text-lg font-semibold mb-4">近30天用量</h2>
-      {usage.length === 0 ? (
-        <p className="text-gray-500">暂无使用记录</p>
-      ) : (
-        <div className="bg-white rounded-lg border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="text-left px-4 py-3 font-medium">模型</th>
-                <th className="text-right px-4 py-3 font-medium">请求数</th>
-                <th className="text-right px-4 py-3 font-medium">输入 tokens</th>
-                <th className="text-right px-4 py-3 font-medium">输出 tokens</th>
-                <th className="text-right px-4 py-3 font-medium">花费</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {usage.map((u, i) => (
-                <tr key={i}>
-                  <td className="px-4 py-3 font-mono">{u.model}</td>
-                  <td className="px-4 py-3 text-right">{u.requests}</td>
-                  <td className="px-4 py-3 text-right">{u.total_input.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-right">{u.total_output.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-right text-green-600">¥{u.total_cost.toFixed(4)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+        </form>
+      </div>
     </div>
   )
 }

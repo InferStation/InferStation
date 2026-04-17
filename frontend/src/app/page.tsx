@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react"
 import { apiFetch } from "@/lib/api"
-import Link from "next/link"
 
 interface Model {
   id: string
@@ -26,11 +25,7 @@ export default function Home() {
 
   return (
     <div>
-      <div className="text-center mb-10">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">LLM Gateway</h1>
-        <p className="text-lg text-gray-600">模型服务聚合平台 — 连接 AI 消费者与模型提供者</p>
-      </div>
-
+      <h1 className="text-2xl font-bold mb-6">模型市场</h1>
       <div className="mb-6">
         <input
           type="text"
@@ -65,21 +60,6 @@ export default function Home() {
           ))}
         </div>
       )}
-
-      <div className="mt-16 grid gap-6 md:grid-cols-3 text-center">
-        <div className="bg-white rounded-lg p-6 border">
-          <h3 className="font-semibold text-lg mb-2">🔌 OpenAI 兼容</h3>
-          <p className="text-sm text-gray-600">直接使用 OpenAI SDK 调用，无缝切换</p>
-        </div>
-        <div className="bg-white rounded-lg p-6 border">
-          <h3 className="font-semibold text-lg mb-2">🌐 NAT 穿透</h3>
-          <p className="text-sm text-gray-600">内网机器也能提供服务，WebSocket 隧道自动连接</p>
-        </div>
-        <div className="bg-white rounded-lg p-6 border">
-          <h3 className="font-semibold text-lg mb-2">💰 按量计费</h3>
-          <p className="text-sm text-gray-600">按 token 用量计费，灵活定价</p>
-        </div>
-      </div>
     </div>
   )
 }
