@@ -299,11 +299,11 @@ async def list_keys(user=Depends(get_current_user)):
 
 
 @app.delete("/api/keys/{key_id}")
-async def revoke_key(key_id: int, user=Depends(get_current_user)):
+async def delete_key(key_id: int, user=Depends(get_current_user)):
     db = await get_db()
     try:
         await db.execute(
-            "UPDATE api_keys SET is_active = 0 WHERE id = ? AND user_id = ?",
+            "DELETE FROM api_keys WHERE id = ? AND user_id = ?",
             (key_id, user["id"]),
         )
         await db.commit()
