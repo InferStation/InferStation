@@ -25,14 +25,14 @@ export default function ModelsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">模型市场</h1>
-      <div className="mb-6">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">模型市场</h1>
         <input
           type="text"
-          placeholder="搜索模型名称或提供者..."
+          placeholder="搜索模型或提供者..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+          className="w-64 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm"
         />
       </div>
 
