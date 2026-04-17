@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/context/AuthContext"
 import { apiFetch } from "@/lib/api"
+import PasswordInput, { checkStrength } from "@/components/PasswordInput"
 import Link from "next/link"
 
 export default function RegisterPage() {
@@ -21,6 +22,10 @@ export default function RegisterPage() {
     setError("")
     if (password !== confirm) {
       setError("两次密码不一致")
+      return
+    }
+    if (!checkStrength(password).ok) {
+      setError("密码需包含大写、小写、数字、特殊字符中的至少3种，且不少于8位")
       return
     }
     setLoading(true)
@@ -64,27 +69,8 @@ export default function RegisterPage() {
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">密码</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">确认密码</label>
-            <input
-              type="password"
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              required
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-            />
-          </div>
+          <PasswordInput label="密码" value={password} onChange={setPassword} required minLength={8} showStrength />
+          <PasswordInput label="确认密码" value={confirm} onChange={setConfirm} required />
           <button
             type="submit"
             disabled={loading}

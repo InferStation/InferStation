@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/context/AuthContext"
 import { apiFetch } from "@/lib/api"
+import PasswordInput from "@/components/PasswordInput"
 import Link from "next/link"
 
 export default function LoginPage() {
@@ -49,16 +50,7 @@ export default function LoginPage() {
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">密码</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-            />
-          </div>
+          <PasswordInput label="密码" value={password} onChange={setPassword} required />
           <div className="flex items-center">
             <input
               type="checkbox"
