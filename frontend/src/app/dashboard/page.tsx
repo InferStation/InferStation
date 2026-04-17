@@ -76,13 +76,13 @@ export default function DashboardPage() {
 
       {user.role === "consumer" && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
-          <p className="text-sm text-blue-800 mb-2">想提供模型服务？升级为提供者即可注册后端。</p>
+          <p className="text-sm text-blue-800 mb-2">成为模型服务提供者？激活提供者即可注册后端。</p>
           <button
             onClick={() => handleUpgrade("both")}
             disabled={upgrading}
             className="text-sm bg-blue-600 text-white px-4 py-1.5 rounded hover:bg-blue-700 disabled:opacity-50"
           >
-            升级为 消费者+提供者
+            激活 消费者+提供者
           </button>
         </div>
       )}
