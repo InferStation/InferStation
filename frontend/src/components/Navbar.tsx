@@ -14,6 +14,9 @@ export default function Navbar() {
             <Link href="/" className="text-xl font-bold text-indigo-600">
               LLM Gateway
             </Link>
+            <Link href="/models" className="text-gray-600 hover:text-gray-900">
+              模型市场
+            </Link>
             {user && (
               <>
                 <Link href="/dashboard" className="text-gray-600 hover:text-gray-900">

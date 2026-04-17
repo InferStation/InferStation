@@ -1,65 +1,37 @@
-"use client"
-
-import { useEffect, useState } from "react"
-import { apiFetch } from "@/lib/api"
-
-interface Model {
-  id: string
-  backend: string
-  provider: string
-  input_price: number | null
-  output_price: number | null
-}
+import Link from "next/link"
 
 export default function Home() {
-  const [models, setModels] = useState<Model[]>([])
-  const [search, setSearch] = useState("")
-
-  useEffect(() => {
-    apiFetch("/api/models").then(setModels).catch(() => {})
-  }, [])
-
-  const filtered = models.filter(
-    (m) => m.id.toLowerCase().includes(search.toLowerCase()) || m.provider?.toLowerCase().includes(search.toLowerCase())
-  )
-
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">模型市场</h1>
-      <div className="mb-6">
-        <input
-          type="text"
-          placeholder="搜索模型名称或提供者..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-        />
+    <div className="text-center py-16">
+      <h1 className="text-4xl font-bold text-gray-900 mb-4">LLM Gateway</h1>
+      <p className="text-lg text-gray-600 mb-10">模型服务聚合平台 — 连接 AI 消费者与模型提供者</p>
+
+      <div className="flex justify-center gap-4 mb-16">
+        <Link href="/models" className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 text-lg">
+          浏览模型市场
+        </Link>
+        <Link href="/register" className="border border-indigo-600 text-indigo-600 px-6 py-3 rounded-lg hover:bg-indigo-50 text-lg">
+          注册账号
+        </Link>
       </div>
 
-      {filtered.length === 0 ? (
-        <div className="text-center py-20 text-gray-500">
-          {models.length === 0 ? "暂无在线模型" : "未找到匹配的模型"}
+      <div className="grid gap-6 md:grid-cols-3 text-center max-w-4xl mx-auto">
+        <div className="bg-white rounded-lg p-6 border">
+          <div className="text-3xl mb-3">🔌</div>
+          <h3 className="font-semibold text-lg mb-2">OpenAI 兼容</h3>
+          <p className="text-sm text-gray-600">直接使用 OpenAI SDK 调用，无缝切换</p>
         </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((m, i) => (
-            <div key={i} className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
-              <h3 className="font-semibold text-lg text-gray-900 mb-2">{m.id}</h3>
-              <div className="text-sm text-gray-500 space-y-1">
-                <p>提供者: <span className="text-gray-700">{m.provider || "共享"}</span></p>
-                <p>后端: <span className="text-gray-700">{m.backend}</span></p>
-                {m.input_price != null && (
-                  <p>
-                    定价: <span className="text-green-600">¥{m.input_price}/M 输入</span>
-                    {" / "}
-                    <span className="text-green-600">¥{m.output_price}/M 输出</span>
-                  </p>
-                )}
-              </div>
-            </div>
-          ))}
+        <div className="bg-white rounded-lg p-6 border">
+          <div className="text-3xl mb-3">🌐</div>
+          <h3 className="font-semibold text-lg mb-2">NAT 穿透</h3>
+          <p className="text-sm text-gray-600">内网机器也能提供服务，WebSocket 隧道自动连接</p>
         </div>
-      )}
+        <div className="bg-white rounded-lg p-6 border">
+          <div className="text-3xl mb-3">💰</div>
+          <h3 className="font-semibold text-lg mb-2">按量计费</h3>
+          <p className="text-sm text-gray-600">按 token 用量计费，灵活定价</p>
+        </div>
+      </div>
     </div>
   )
 }
