@@ -1,0 +1,124 @@
+#!/usr/bin/env python3
+"""LLM Gateway Provider Client.
+
+Connects to the gateway via WebSocket tunnel, allowing NAT-behind backends
+to serve models through the gateway.
+
+Usage:
+    python client.py --gateway wss://gateway.example.com/ws/tunnel \
+                     --token sk-xxxxx \
+                     --backend-name my-gpu-server \
+                     --local-url http://localhost:8000
+"""
+import argparse
+import asyncio
+import json
+import logging
+import signal
+import sys
+
+import httpx
+
+try:
+    import websockets
+except ImportError:
+    print("pip install websockets httpx")
+    sys.exit(1)
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [client] %(levelname)s %(message)s")
+logger = logging.getLogger("client")
+
+
+async def forward_to_local(local_url: str, request_data: dict, stream: bool = False):
+    """Forward a request to the local vLLM/OpenAI-compatible server."""
+    url = f"{local_url.rstrip('/')}/v1/chat/completions"
+    async with httpx.AsyncClient(timeout=120) as client:
+        if stream:
+            chunks = []
+            async with client.stream("POST", url, json=request_data) as resp:
+                async for line in resp.aiter_lines():
+                    if line.startswith("data: "):
+                        chunk_str = line[6:]
+                        if chunk_str.strip() == "[DONE]":
+                            break
+                        try:
+                            chunks.append(json.loads(chunk_str))
+                        except json.JSONDecodeError:
+                            pass
+            return chunks
+        else:
+            resp = await client.post(url, json=request_data)
+            return resp.json()
+
+
+async def run_tunnel(gateway_ws_url: str, token: str, backend_name: str, local_url: str):
+    """Main tunnel loop with auto-reconnect."""
+    while True:
+        try:
+            logger.info(f"Connecting to {gateway_ws_url} ...")
+            async with websockets.connect(gateway_ws_url, ping_interval=20, ping_timeout=60) as ws:
+                # Send auth
+                await ws.send(json.dumps({"token": token, "backend_name": backend_name}))
+                resp = json.loads(await ws.recv())
+                if "error" in resp:
+                    logger.error(f"Auth failed: {resp['error']}")
+                    return
+                logger.info(f"Connected! backend_id={resp.get('backend_id')}")
+
+                # Handle requests
+                async for raw in ws:
+                    msg = json.loads(raw)
+                    req_id = msg.get("id", "")
+                    msg_type = msg.get("type", "")
+
+                    if msg_type == "request":
+                        asyncio.create_task(_handle_request(ws, req_id, local_url, msg["data"]))
+                    elif msg_type == "stream_request":
+                        asyncio.create_task(_handle_stream(ws, req_id, local_url, msg["data"]))
+
+        except (websockets.ConnectionClosed, ConnectionError, OSError) as e:
+            logger.warning(f"Disconnected: {e}. Reconnecting in 5s...")
+            await asyncio.sleep(5)
+        except Exception as e:
+            logger.error(f"Unexpected error: {e}. Reconnecting in 10s...")
+            await asyncio.sleep(10)
+
+
+async def _handle_request(ws, req_id: str, local_url: str, data: dict):
+    try:
+        result = await forward_to_local(local_url, data, stream=False)
+        await ws.send(json.dumps({"id": req_id, "type": "response", "data": result}))
+    except Exception as e:
+        logger.error(f"Request {req_id} failed: {e}")
+        await ws.send(json.dumps({"id": req_id, "type": "response", "data": {"error": str(e)}}))
+
+
+async def _handle_stream(ws, req_id: str, local_url: str, data: dict):
+    try:
+        data["stream"] = True
+        chunks = await forward_to_local(local_url, data, stream=True)
+        for chunk in chunks:
+            await ws.send(json.dumps({"id": req_id, "type": "stream_chunk", "data": chunk}))
+        await ws.send(json.dumps({"id": req_id, "type": "stream_end"}))
+    except Exception as e:
+        logger.error(f"Stream {req_id} failed: {e}")
+        await ws.send(json.dumps({"id": req_id, "type": "stream_end"}))
+
+
+def main():
+    parser = argparse.ArgumentParser(description="LLM Gateway Provider Client")
+    parser.add_argument("--gateway", required=True, help="Gateway WebSocket URL (ws://host:port/ws/tunnel)")
+    parser.add_argument("--token", required=True, help="API key for authentication")
+    parser.add_argument("--backend-name", required=True, help="Registered backend name")
+    parser.add_argument("--local-url", default="http://localhost:8000", help="Local vLLM server URL")
+    args = parser.parse_args()
+
+    loop = asyncio.new_event_loop()
+    try:
+        loop.run_until_complete(run_tunnel(args.gateway, args.token, args.backend_name, args.local_url))
+    except KeyboardInterrupt:
+        logger.info("Shutting down...")
+
+
+if __name__ == "__main__":
+    main()
