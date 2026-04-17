@@ -57,7 +57,6 @@ export default function ModelsPage() {
               )}
               <div className="text-sm text-gray-500 space-y-1">
                 <p>提供者: <span className="text-gray-700">{m.provider || "共享"}</span></p>
-                <p>后端: <span className="text-gray-700">{m.backend}</span></p>
                 {m.input_price != null && (
                   <p>
                     定价: <span className="text-green-600">¥{m.input_price}/M 输入</span>
