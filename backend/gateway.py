@@ -524,6 +524,12 @@ async def openai_chat(request: Request):
     if not backend:
         raise HTTPException(404, f"Model '{model}' not available")
 
+    # Rewrite model name to served name if mapping exists
+    client_info = json.loads(backend["client_info"]) if backend.get("client_info") else {}
+    model_map = client_info.get("model_map", {})
+    if model in model_map:
+        body["model"] = model_map[model]
+
     input_price, output_price = get_pricing(backend)
 
     if backend["mode"] == "tunnel":
