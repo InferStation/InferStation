@@ -321,6 +321,7 @@ class RegisterBackendRequest(BaseModel):
     url: str | None = None
     mode: str = "direct"  # "direct" or "tunnel"
     models: list[str] = []
+    tags: dict[str, str] = {}  # e.g. {"hardware": "MI300X", "framework": "vLLM"}
     input_price: float | None = None
     output_price: float | None = None
     is_public: bool = True
@@ -341,19 +342,19 @@ async def register_backend(req: RegisterBackendRequest, user=Depends(require_pro
         if existing:
             # Update
             await db.execute(
-                """UPDATE backends SET url=?, mode=?, models=?, input_price=?, output_price=?,
+                """UPDATE backends SET url=?, mode=?, models=?, tags=?, input_price=?, output_price=?,
                    is_public=?, client_info=?, updated_at=datetime('now') WHERE name=? AND owner_id=?""",
                 (
-                    req.url, req.mode, json.dumps(req.models), req.input_price, req.output_price,
+                    req.url, req.mode, json.dumps(req.models), json.dumps(req.tags), req.input_price, req.output_price,
                     1 if req.is_public else 0, json.dumps(req.client_info), req.name, user["id"],
                 ),
             )
         else:
             await db.execute(
-                """INSERT INTO backends (name, owner_id, url, mode, models, input_price, output_price, is_public, client_info)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                """INSERT INTO backends (name, owner_id, url, mode, models, tags, input_price, output_price, is_public, client_info)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
-                    req.name, user["id"], req.url, req.mode, json.dumps(req.models),
+                    req.name, user["id"], req.url, req.mode, json.dumps(req.models), json.dumps(req.tags),
                     req.input_price, req.output_price, 1 if req.is_public else 0, json.dumps(req.client_info),
                 ),
             )
@@ -383,6 +384,7 @@ async def list_backends(user=Depends(get_current_user)):
     for r in rows:
         r["models"] = json.loads(r["models"]) if r["models"] else []
         r["client_info"] = json.loads(r["client_info"]) if r["client_info"] else {}
+        r["tags"] = json.loads(r["tags"]) if r.get("tags") else {}
     return rows
 
 
@@ -410,7 +412,7 @@ async def list_models():
     db = await get_db()
     try:
         cur = await db.execute(
-            "SELECT b.name as backend, b.models, b.status, b.input_price, b.output_price, u.username as provider "
+            "SELECT b.name as backend, b.models, b.tags, b.status, b.input_price, b.output_price, u.username as provider "
             "FROM backends b LEFT JOIN users u ON b.owner_id = u.id WHERE b.is_public = 1 AND b.status = 'online'"
         )
         rows = [dict(r) for r in await cur.fetchall()]
@@ -425,6 +427,7 @@ async def list_models():
                 "id": m,
                 "backend": r["backend"],
                 "provider": r["provider"],
+                "tags": json.loads(r["tags"]) if r.get("tags") else {},
                 "input_price": r["input_price"],
                 "output_price": r["output_price"],
             })

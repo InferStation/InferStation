@@ -7,6 +7,7 @@ interface Model {
   id: string
   backend: string
   provider: string
+  tags: Record<string, string>
   input_price: number | null
   output_price: number | null
 }
@@ -45,6 +46,15 @@ export default function ModelsPage() {
           {filtered.map((m, i) => (
             <div key={i} className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
               <h3 className="font-semibold text-lg text-gray-900 mb-2">{m.id}</h3>
+              {Object.keys(m.tags || {}).length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  {Object.entries(m.tags).map(([k, v]) => (
+                    <span key={k} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+                      {v}
+                    </span>
+                  ))}
+                </div>
+              )}
               <div className="text-sm text-gray-500 space-y-1">
                 <p>提供者: <span className="text-gray-700">{m.provider || "共享"}</span></p>
                 <p>后端: <span className="text-gray-700">{m.backend}</span></p>

@@ -48,6 +48,7 @@ async def init_db():
             url TEXT,
             mode TEXT NOT NULL DEFAULT 'direct',
             models TEXT NOT NULL DEFAULT '[]',
+            tags TEXT NOT NULL DEFAULT '{}',
             status TEXT NOT NULL DEFAULT 'offline',
             client_info TEXT NOT NULL DEFAULT '{}',
             input_price REAL,
