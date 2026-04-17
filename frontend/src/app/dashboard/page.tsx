@@ -53,16 +53,10 @@ export default function DashboardPage() {
     <div>
       <h1 className="text-2xl font-bold mb-6">控制台</h1>
 
-      <div className="grid gap-4 md:grid-cols-4 mb-8">
+      <div className="grid gap-4 md:grid-cols-3 mb-8">
         <div className="bg-white rounded-lg border p-4">
           <div className="text-sm text-gray-500">余额</div>
           <div className="text-2xl font-bold text-green-600">¥{user.balance.toFixed(2)}</div>
-        </div>
-        <div className="bg-white rounded-lg border p-4">
-          <div className="text-sm text-gray-500">角色</div>
-          <div className="text-2xl font-bold">
-            {user.role === "admin" ? "管理员" : user.role === "both" ? "消费者+提供者" : user.role === "provider" ? "提供者" : "消费者"}
-          </div>
         </div>
         <div className="bg-white rounded-lg border p-4">
           <div className="text-sm text-gray-500">30天请求数</div>
