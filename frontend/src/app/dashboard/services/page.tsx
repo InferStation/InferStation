@@ -109,7 +109,7 @@ export default function ServicesPage() {
             disabled={upgrading}
             className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
           >
-            {upgrading ? "激活中..." : "激活 消费者+提供者"}
+            {upgrading ? "激活中..." : "激活"}
           </button>
         </div>
       </div>
