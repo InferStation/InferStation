@@ -298,6 +298,20 @@ async def list_keys(user=Depends(get_current_user)):
     return keys
 
 
+@app.put("/api/keys/{key_id}/toggle")
+async def toggle_key(key_id: int, user=Depends(get_current_user)):
+    db = await get_db()
+    try:
+        await db.execute(
+            "UPDATE api_keys SET is_active = 1 - is_active WHERE id = ? AND user_id = ?",
+            (key_id, user["id"]),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+    return {"ok": True}
+
+
 @app.delete("/api/keys/{key_id}")
 async def delete_key(key_id: int, user=Depends(get_current_user)):
     db = await get_db()

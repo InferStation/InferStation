@@ -38,6 +38,11 @@ export default function KeysPage() {
     }
   }
 
+  const toggleKey = async (id: number) => {
+    await apiFetch(`/api/keys/${id}/toggle`, { method: "PUT" })
+    loadKeys()
+  }
+
   const deleteKey = async (id: number) => {
     if (!confirm("确定要删除这个 Key 吗？")) return
     await apiFetch(`/api/keys/${id}`, { method: "DELETE" })
@@ -76,6 +81,7 @@ export default function KeysPage() {
             <tr>
               <th className="text-left px-4 py-3 font-medium">前缀</th>
               <th className="text-left px-4 py-3 font-medium">名称</th>
+              <th className="text-left px-4 py-3 font-medium">状态</th>
               <th className="text-left px-4 py-3 font-medium">创建时间</th>
               <th className="text-right px-4 py-3 font-medium">操作</th>
             </tr>
@@ -85,14 +91,20 @@ export default function KeysPage() {
               <tr key={k.id}>
                 <td className="px-4 py-3 font-mono">{k.key_prefix}...</td>
                 <td className="px-4 py-3">{k.name || "-"}</td>
+                <td className="px-4 py-3">
+                  <span className={`px-2 py-0.5 rounded text-xs ${k.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                    {k.is_active ? "有效" : "已停用"}
+                  </span>
+                </td>
                 <td className="px-4 py-3 text-gray-500">{k.created_at}</td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-4 py-3 text-right space-x-3">
+                  <button onClick={() => toggleKey(k.id)} className={`text-sm ${k.is_active ? "text-yellow-600 hover:text-yellow-800" : "text-green-600 hover:text-green-800"}`}>{k.is_active ? "停用" : "激活"}</button>
                   <button onClick={() => deleteKey(k.id)} className="text-red-500 hover:text-red-700 text-sm">删除</button>
                 </td>
               </tr>
             ))}
             {keys.length === 0 && (
-              <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-500">暂无 API Key</td></tr>
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-500">暂无 API Key</td></tr>
             )}
           </tbody>
         </table>
