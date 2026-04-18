@@ -47,7 +47,7 @@ export default function MyModelsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">我的模型</h1>
+      <h1 className="text-2xl font-bold mb-6">我的订阅</h1>
 
       {subs.length === 0 ? (
         <div className="text-center py-20 text-gray-500">
