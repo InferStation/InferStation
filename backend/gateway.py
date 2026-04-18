@@ -59,7 +59,7 @@ async def health_check_loop():
         try:
             db = await get_db()
             try:
-                cur = await db.execute("SELECT id, name, url, mode FROM backends")
+                cur = await db.execute("SELECT id, name, url, mode, client_info FROM backends")
                 backends = [dict(r) for r in await cur.fetchall()]
             finally:
                 await db.close()
@@ -70,8 +70,12 @@ async def health_check_loop():
                     new_status = "online" if tunnel_manager.is_connected(b["id"]) else "offline"
                 elif b["url"]:
                     try:
+                        headers = {}
+                        ci = json.loads(b["client_info"]) if b.get("client_info") else {}
+                        if ci.get("api_key"):
+                            headers["Authorization"] = f"Bearer {ci['api_key']}"
                         async with httpx.AsyncClient(timeout=10) as client:
-                            resp = await client.get(f"{b['url'].rstrip('/')}/v1/models")
+                            resp = await client.get(f"{b['url'].rstrip('/')}/v1/models", headers=headers)
                             if resp.status_code == 200:
                                 new_status = "online"
                     except Exception:
@@ -555,17 +559,26 @@ async def openai_chat(request: Request):
         return await _proxy_direct(api_user, backend, body, stream, input_price, output_price)
 
 
+def _upstream_headers(backend) -> dict:
+    ci = json.loads(backend["client_info"]) if backend.get("client_info") else {}
+    headers = {"Content-Type": "application/json"}
+    if ci.get("api_key"):
+        headers["Authorization"] = f"Bearer {ci['api_key']}"
+    return headers
+
+
 async def _proxy_direct(api_user, backend, body, stream, input_price, output_price):
     url = f"{backend['url'].rstrip('/')}/v1/chat/completions"
+    headers = _upstream_headers(backend)
 
     if stream:
         return StreamingResponse(
-            _stream_direct(api_user, backend, body, url, input_price, output_price),
+            _stream_direct(api_user, backend, body, url, input_price, output_price, headers),
             media_type="text/event-stream",
         )
 
     async with httpx.AsyncClient(timeout=120) as client:
-        resp = await client.post(url, json=body)
+        resp = await client.post(url, json=body, headers=headers)
         data = resp.json()
 
     usage = data.get("usage", {})
@@ -573,11 +586,11 @@ async def _proxy_direct(api_user, backend, body, stream, input_price, output_pri
     return data
 
 
-async def _stream_direct(api_user, backend, body, url, input_price, output_price):
+async def _stream_direct(api_user, backend, body, url, input_price, output_price, headers=None):
     total_input = 0
     total_output = 0
     async with httpx.AsyncClient(timeout=120) as client:
-        async with client.stream("POST", url, json=body) as resp:
+        async with client.stream("POST", url, json=body, headers=headers) as resp:
             async for line in resp.aiter_lines():
                 if line.startswith("data: "):
                     yield line + "\n\n"
