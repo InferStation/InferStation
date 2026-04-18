@@ -458,6 +458,37 @@ async def list_models():
     return models
 
 
+@app.get("/api/models/{model_id:path}")
+async def get_model_detail(model_id: str):
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            "SELECT b.name as backend, b.models, b.tags, b.status, b.input_price, b.output_price, "
+            "b.mode, b.created_at, b.updated_at, u.username as provider "
+            "FROM backends b LEFT JOIN users u ON b.owner_id = u.id WHERE b.is_public = 1"
+        )
+        rows = [dict(r) for r in await cur.fetchall()]
+    finally:
+        await db.close()
+
+    for r in rows:
+        model_list = json.loads(r["models"]) if r["models"] else []
+        if model_id in model_list:
+            return {
+                "id": model_id,
+                "backend": r["backend"],
+                "provider": r["provider"],
+                "status": r["status"],
+                "mode": r["mode"],
+                "tags": json.loads(r["tags"]) if r.get("tags") else {},
+                "input_price": r["input_price"],
+                "output_price": r["output_price"],
+                "created_at": r["created_at"],
+                "updated_at": r["updated_at"],
+            }
+    raise HTTPException(404, "Model not found")
+
+
 # ══════════════════════════════════════════════════════════
 #  OpenAI-Compatible API
 # ══════════════════════════════════════════════════════════

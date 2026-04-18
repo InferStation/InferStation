@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { apiFetch } from "@/lib/api"
 
 interface Model {
@@ -45,7 +46,7 @@ export default function ModelsPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filtered.map((m, i) => (
-            <div key={i} className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
+            <Link key={i} href={`/models/${m.id}`} className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer block">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-semibold text-lg text-gray-900">{m.id}</h3>
                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${m.status === "online" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>
@@ -78,7 +79,7 @@ export default function ModelsPage() {
                   </p>
                 )}
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       )}
