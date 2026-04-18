@@ -162,10 +162,6 @@ export default function ModelDetailPage() {
             </p>
           </div>
           <div className="bg-gray-50 rounded-lg p-4">
-            <p className="text-gray-500 mb-1">后端</p>
-            <p className="font-medium text-gray-900">{model.backend}</p>
-          </div>
-          <div className="bg-gray-50 rounded-lg p-4">
             <p className="text-gray-500 mb-1">注册时间</p>
             <p className="font-medium text-gray-900">{model.created_at?.replace("T", " ") || "-"}</p>
           </div>
