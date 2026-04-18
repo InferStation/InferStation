@@ -4,6 +4,7 @@ import hashlib
 import json
 import logging
 import os
+import secrets
 import sys
 import time
 from contextlib import asynccontextmanager
@@ -487,6 +488,163 @@ async def get_model_detail(model_id: str):
                 "updated_at": r["updated_at"],
             }
     raise HTTPException(404, "Model not found")
+
+
+# ══════════════════════════════════════════════════════════
+#  Subscriptions (consumer → model binding)
+# ══════════════════════════════════════════════════════════
+
+class SubscribeRequest(BaseModel):
+    model: str
+
+
+@app.post("/api/subscriptions")
+async def subscribe_model(req: SubscribeRequest, user=Depends(get_current_user)):
+    """Subscribe to a model and get a unique sub_key for API access."""
+    # Find a public+online backend serving this model
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            "SELECT id, models FROM backends WHERE is_public = 1"
+        )
+        rows = [dict(r) for r in await cur.fetchall()]
+        backend_id = None
+        for r in rows:
+            model_list = json.loads(r["models"]) if r["models"] else []
+            if req.model in model_list:
+                backend_id = r["id"]
+                break
+        if not backend_id:
+            raise HTTPException(404, "Model not found")
+
+        # Check existing subscription
+        cur = await db.execute(
+            "SELECT id, sub_key, is_active FROM subscriptions WHERE user_id = ? AND model = ?",
+            (user["id"], req.model),
+        )
+        existing = await cur.fetchone()
+        if existing:
+            existing = dict(existing)
+            if existing["is_active"]:
+                return {"sub_key": existing["sub_key"], "model": req.model}
+            # Re-activate
+            await db.execute("UPDATE subscriptions SET is_active = 1, backend_id = ? WHERE id = ?", (backend_id, existing["id"]))
+            await db.commit()
+            return {"sub_key": existing["sub_key"], "model": req.model}
+
+        sub_key = f"sub-{secrets.token_urlsafe(24)}"
+        await db.execute(
+            "INSERT INTO subscriptions (user_id, backend_id, model, sub_key) VALUES (?, ?, ?, ?)",
+            (user["id"], backend_id, req.model, sub_key),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+    return {"sub_key": sub_key, "model": req.model}
+
+
+@app.get("/api/subscriptions")
+async def list_subscriptions(user=Depends(get_current_user)):
+    """List all subscriptions for the current user."""
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            "SELECT s.id, s.model, s.sub_key, s.is_active, s.created_at, "
+            "b.name as backend, b.status as backend_status, b.input_price, b.output_price "
+            "FROM subscriptions s JOIN backends b ON s.backend_id = b.id "
+            "WHERE s.user_id = ? ORDER BY s.created_at DESC",
+            (user["id"],),
+        )
+        rows = [dict(r) for r in await cur.fetchall()]
+    finally:
+        await db.close()
+    return rows
+
+
+@app.delete("/api/subscriptions/{sub_id}")
+async def unsubscribe_model(sub_id: int, user=Depends(get_current_user)):
+    db = await get_db()
+    try:
+        await db.execute(
+            "UPDATE subscriptions SET is_active = 0 WHERE id = ? AND user_id = ?",
+            (sub_id, user["id"]),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+    return {"ok": True}
+
+
+# ── Subscription proxy endpoint ────────────────────────
+
+@app.post("/s/{sub_key}/v1/chat/completions")
+async def sub_chat(sub_key: str, request: Request):
+    """Proxy chat completions via subscription key."""
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            "SELECT s.*, u.balance, u.is_active as user_active "
+            "FROM subscriptions s JOIN users u ON s.user_id = u.id "
+            "WHERE s.sub_key = ? AND s.is_active = 1",
+            (sub_key,),
+        )
+        sub = await cur.fetchone()
+        if not sub:
+            raise HTTPException(401, "Invalid or inactive subscription")
+        sub = dict(sub)
+        if not sub["user_active"]:
+            raise HTTPException(403, "User account disabled")
+        if sub["balance"] <= 0:
+            raise HTTPException(402, "Insufficient balance")
+
+        cur = await db.execute("SELECT * FROM backends WHERE id = ?", (sub["backend_id"],))
+        backend = await cur.fetchone()
+        if not backend:
+            raise HTTPException(503, "Backend not found")
+        backend = dict(backend)
+    finally:
+        await db.close()
+
+    if backend["status"] != "online":
+        raise HTTPException(503, "Backend is offline")
+
+    body = await request.json()
+    body["model"] = sub["model"]  # Force the subscribed model
+    stream = body.get("stream", False)
+
+    # Rewrite model name if mapping exists
+    client_info = json.loads(backend["client_info"]) if backend.get("client_info") else {}
+    model_map = client_info.get("model_map", {})
+    if sub["model"] in model_map:
+        body["model"] = model_map[sub["model"]]
+
+    input_price, output_price = get_pricing(backend)
+    api_user = {"user_id": sub["user_id"], "key_id": 0}
+
+    if backend["mode"] == "tunnel":
+        return await _proxy_tunnel(api_user, backend, body, stream, input_price, output_price)
+    else:
+        return await _proxy_direct(api_user, backend, body, stream, input_price, output_price)
+
+
+@app.get("/s/{sub_key}/v1/models")
+async def sub_models(sub_key: str):
+    """List models available for this subscription."""
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            "SELECT s.model FROM subscriptions s WHERE s.sub_key = ? AND s.is_active = 1",
+            (sub_key,),
+        )
+        sub = await cur.fetchone()
+        if not sub:
+            raise HTTPException(401, "Invalid or inactive subscription")
+    finally:
+        await db.close()
+    return {
+        "object": "list",
+        "data": [{"id": sub["model"], "object": "model", "owned_by": "llm-gateway"}],
+    }
 
 
 # ══════════════════════════════════════════════════════════

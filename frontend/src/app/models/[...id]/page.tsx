@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { apiFetch } from "@/lib/api"
+import { useAuth } from "@/context/AuthContext"
 
 interface ModelDetail {
   id: string
@@ -17,12 +18,21 @@ interface ModelDetail {
   updated_at: string
 }
 
+interface Subscription {
+  sub_key: string
+  model: string
+}
+
 export default function ModelDetailPage() {
   const params = useParams()
   const router = useRouter()
+  const { user } = useAuth()
   const [model, setModel] = useState<ModelDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [sub, setSub] = useState<Subscription | null>(null)
+  const [subLoading, setSubLoading] = useState(false)
+  const [copied, setCopied] = useState("")
 
   const modelId = Array.isArray(params.id) ? params.id.join("/") : params.id
 
@@ -33,6 +43,43 @@ export default function ModelDetailPage() {
       .catch(() => setError("模型不存在"))
       .finally(() => setLoading(false))
   }, [modelId])
+
+  // Check existing subscription
+  useEffect(() => {
+    if (!user || !modelId) return
+    apiFetch("/api/subscriptions")
+      .then((subs: any[]) => {
+        const found = subs.find((s) => s.model === modelId && s.is_active)
+        if (found) setSub({ sub_key: found.sub_key, model: found.model })
+      })
+      .catch(() => {})
+  }, [user, modelId])
+
+  const handleSubscribe = async () => {
+    if (!user) {
+      router.push("/login")
+      return
+    }
+    setSubLoading(true)
+    try {
+      const res = await apiFetch("/api/subscriptions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: modelId }),
+      })
+      setSub(res)
+    } catch {
+      alert("订阅失败")
+    } finally {
+      setSubLoading(false)
+    }
+  }
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text)
+    setCopied(label)
+    setTimeout(() => setCopied(""), 2000)
+  }
 
   if (loading) {
     return <div className="text-center py-20 text-gray-500">加载中...</div>
@@ -48,6 +95,8 @@ export default function ModelDetailPage() {
       </div>
     )
   }
+
+  const baseUrl = typeof window !== "undefined" ? window.location.origin : ""
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -126,21 +175,56 @@ export default function ModelDetailPage() {
           </div>
         </div>
 
-        {/* API Usage */}
-        {model.status === "online" && (
-          <div className="mt-6 border-t pt-6">
-            <h2 className="text-lg font-semibold mb-3">API 调用示例</h2>
-            <pre className="bg-gray-900 text-gray-100 rounded-lg p-4 text-sm overflow-x-auto">
-{`curl ${typeof window !== "undefined" ? window.location.origin : ""}/v1/chat/completions \\
-  -H "Authorization: Bearer YOUR_API_KEY" \\
+        {/* Subscribe / API Section */}
+        <div className="mt-6 border-t pt-6">
+          {!sub ? (
+            <button
+              onClick={handleSubscribe}
+              disabled={subLoading || model.status !== "online"}
+              className="w-full py-3 rounded-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            >
+              {subLoading ? "订阅中..." : model.status !== "online" ? "模型离线，暂不可订阅" : "订阅此模型"}
+            </button>
+          ) : (
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700">
+                  <span className="w-2 h-2 rounded-full bg-green-500" />
+                  已订阅
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">你的专属 API 地址</p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 bg-gray-100 px-3 py-2 rounded text-sm font-mono break-all">
+                      {baseUrl}/s/{sub.sub_key}/v1/chat/completions
+                    </code>
+                    <button
+                      onClick={() => copyToClipboard(`${baseUrl}/s/${sub.sub_key}/v1/chat/completions`, "url")}
+                      className="shrink-0 px-3 py-2 text-xs bg-gray-200 hover:bg-gray-300 rounded transition-colors"
+                    >
+                      {copied === "url" ? "已复制" : "复制"}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">调用示例</p>
+                  <pre className="bg-gray-900 text-gray-100 rounded-lg p-4 text-sm overflow-x-auto">
+{`curl ${baseUrl}/s/${sub.sub_key}/v1/chat/completions \\
   -H "Content-Type: application/json" \\
   -d '{
     "model": "${model.id}",
     "messages": [{"role": "user", "content": "Hello!"}]
   }'`}
-            </pre>
-          </div>
-        )}
+                  </pre>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

@@ -74,6 +74,19 @@ async def init_db():
         CREATE INDEX IF NOT EXISTS idx_usage_logs_user ON usage_logs(user_id);
         CREATE INDEX IF NOT EXISTS idx_usage_logs_created ON usage_logs(created_at);
         CREATE INDEX IF NOT EXISTS idx_backends_owner ON backends(owner_id);
+
+        CREATE TABLE IF NOT EXISTS subscriptions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            backend_id INTEGER NOT NULL REFERENCES backends(id),
+            model TEXT NOT NULL,
+            sub_key TEXT UNIQUE NOT NULL,
+            is_active INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_sub_user_model ON subscriptions(user_id, model);
+        CREATE INDEX IF NOT EXISTS idx_sub_key ON subscriptions(sub_key);
         """)
         await db.commit()
     finally:
