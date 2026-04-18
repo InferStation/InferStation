@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext"
 
 interface ModelDetail {
   id: string
+  backend_id: number
   backend: string
   provider: string
   status: string
@@ -34,26 +35,27 @@ export default function ModelDetailPage() {
   const [subLoading, setSubLoading] = useState(false)
   const [copied, setCopied] = useState("")
 
-  const modelId = Array.isArray(params.id) ? params.id.join("/") : params.id
+  const modelId = Array.isArray(params.id) ? params.id.slice(1).join("/") : params.id
+  const backendId = Array.isArray(params.id) ? params.id[0] : ""
 
   useEffect(() => {
-    if (!modelId) return
-    apiFetch(`/api/models/${modelId}`)
+    if (!modelId || !backendId) return
+    apiFetch(`/api/models/${modelId}?backend_id=${backendId}`)
       .then(setModel)
       .catch(() => setError("模型不存在"))
       .finally(() => setLoading(false))
-  }, [modelId])
+  }, [modelId, backendId])
 
   // Check existing subscription
   useEffect(() => {
-    if (!user || !modelId) return
+    if (!user || !modelId || !backendId) return
     apiFetch("/api/subscriptions")
       .then((subs: any[]) => {
-        const found = subs.find((s) => s.model === modelId && s.is_active)
+        const found = subs.find((s) => s.model === modelId && String(s.backend_id) === backendId && s.is_active)
         if (found) setSub({ sub_key: found.sub_key, model: found.model })
       })
       .catch(() => {})
-  }, [user, modelId])
+  }, [user, modelId, backendId])
 
   const handleSubscribe = async () => {
     if (!user) {
@@ -65,7 +67,7 @@ export default function ModelDetailPage() {
       const res = await apiFetch("/api/subscriptions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: modelId }),
+        body: JSON.stringify({ model: modelId, backend_id: model?.backend_id }),
       })
       setSub(res)
     } catch {
@@ -137,6 +139,10 @@ export default function ModelDetailPage() {
 
         {/* Info Grid */}
         <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="bg-gray-50 rounded-lg p-4">
+            <p className="text-gray-500 mb-1">服务后端</p>
+            <p className="font-medium text-gray-900">{model.backend}</p>
+          </div>
           <div className="bg-gray-50 rounded-lg p-4">
             <p className="text-gray-500 mb-1">提供者</p>
             <p className="font-medium text-gray-900">{model.provider || "共享"}</p>

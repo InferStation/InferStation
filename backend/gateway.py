@@ -461,19 +461,20 @@ async def list_models():
     db = await get_db()
     try:
         cur = await db.execute(
-            "SELECT b.name as backend, b.models, b.tags, b.status, b.input_price, b.output_price, u.username as provider "
+            "SELECT b.id as backend_id, b.name as backend, b.models, b.tags, b.status, b.input_price, b.output_price, u.username as provider "
             "FROM backends b LEFT JOIN users u ON b.owner_id = u.id WHERE b.is_public = 1"
         )
         rows = [dict(r) for r in await cur.fetchall()]
     finally:
         await db.close()
 
-    models = []
+    result = []
     for r in rows:
         model_list = json.loads(r["models"]) if r["models"] else []
         for m in model_list:
-            models.append({
+            result.append({
                 "id": m,
+                "backend_id": r["backend_id"],
                 "backend": r["backend"],
                 "provider": r["provider"],
                 "status": r["status"],
@@ -481,38 +482,51 @@ async def list_models():
                 "input_price": r["input_price"],
                 "output_price": r["output_price"],
             })
-    return models
+    return result
 
 
 @app.get("/api/models/{model_id:path}")
-async def get_model_detail(model_id: str):
+async def get_model_detail(model_id: str, backend_id: int | None = None):
     db = await get_db()
     try:
-        cur = await db.execute(
-            "SELECT b.name as backend, b.models, b.tags, b.status, b.input_price, b.output_price, "
-            "b.mode, b.created_at, b.updated_at, u.username as provider "
-            "FROM backends b LEFT JOIN users u ON b.owner_id = u.id WHERE b.is_public = 1"
-        )
+        if backend_id is not None:
+            cur = await db.execute(
+                "SELECT b.id as backend_id, b.name as backend, b.models, b.tags, b.status, b.input_price, b.output_price, "
+                "b.mode, b.created_at, b.updated_at, u.username as provider "
+                "FROM backends b LEFT JOIN users u ON b.owner_id = u.id WHERE b.id = ? AND b.is_public = 1",
+                (backend_id,),
+            )
+        else:
+            cur = await db.execute(
+                "SELECT b.id as backend_id, b.name as backend, b.models, b.tags, b.status, b.input_price, b.output_price, "
+                "b.mode, b.created_at, b.updated_at, u.username as provider "
+                "FROM backends b LEFT JOIN users u ON b.owner_id = u.id WHERE b.is_public = 1"
+            )
         rows = [dict(r) for r in await cur.fetchall()]
     finally:
         await db.close()
 
+    best = None
     for r in rows:
         model_list = json.loads(r["models"]) if r["models"] else []
         if model_id in model_list:
-            return {
-                "id": model_id,
-                "backend": r["backend"],
-                "provider": r["provider"],
-                "status": r["status"],
-                "mode": r["mode"],
-                "tags": json.loads(r["tags"]) if r.get("tags") else {},
-                "input_price": r["input_price"],
-                "output_price": r["output_price"],
-                "created_at": r["created_at"],
-                "updated_at": r["updated_at"],
-            }
-    raise HTTPException(404, "Model not found")
+            if best is None or (best["status"] != "online" and r["status"] == "online"):
+                best = r
+    if not best:
+        raise HTTPException(404, "Model not found")
+    return {
+        "id": model_id,
+        "backend_id": best["backend_id"],
+        "backend": best["backend"],
+        "provider": best["provider"],
+        "status": best["status"],
+        "mode": best["mode"],
+        "tags": json.loads(best["tags"]) if best.get("tags") else {},
+        "input_price": best["input_price"],
+        "output_price": best["output_price"],
+        "created_at": best["created_at"],
+        "updated_at": best["updated_at"],
+    }
 
 
 # ══════════════════════════════════════════════════════════
@@ -521,46 +535,44 @@ async def get_model_detail(model_id: str):
 
 class SubscribeRequest(BaseModel):
     model: str
+    backend_id: int
 
 
 @app.post("/api/subscriptions")
 async def subscribe_model(req: SubscribeRequest, user=Depends(get_current_user)):
-    """Subscribe to a model and get a unique sub_key for API access."""
-    # Find a public+online backend serving this model
+    """Subscribe to a model on a specific backend and get a unique sub_key for API access."""
     db = await get_db()
     try:
         cur = await db.execute(
-            "SELECT id, models FROM backends WHERE is_public = 1"
+            "SELECT id, models FROM backends WHERE id = ? AND is_public = 1",
+            (req.backend_id,),
         )
-        rows = [dict(r) for r in await cur.fetchall()]
-        backend_id = None
-        for r in rows:
-            model_list = json.loads(r["models"]) if r["models"] else []
-            if req.model in model_list:
-                backend_id = r["id"]
-                break
-        if not backend_id:
-            raise HTTPException(404, "Model not found")
+        row = await cur.fetchone()
+        if not row:
+            raise HTTPException(404, "Backend not found")
+        row = dict(row)
+        model_list = json.loads(row["models"]) if row["models"] else []
+        if req.model not in model_list:
+            raise HTTPException(404, "Model not found on this backend")
 
-        # Check existing subscription
+        # Check existing subscription for this user + backend + model
         cur = await db.execute(
-            "SELECT id, sub_key, is_active FROM subscriptions WHERE user_id = ? AND model = ?",
-            (user["id"], req.model),
+            "SELECT id, sub_key, is_active FROM subscriptions WHERE user_id = ? AND backend_id = ? AND model = ?",
+            (user["id"], req.backend_id, req.model),
         )
         existing = await cur.fetchone()
         if existing:
             existing = dict(existing)
             if existing["is_active"]:
                 return {"sub_key": existing["sub_key"], "model": req.model}
-            # Re-activate
-            await db.execute("UPDATE subscriptions SET is_active = 1, backend_id = ? WHERE id = ?", (backend_id, existing["id"]))
+            await db.execute("UPDATE subscriptions SET is_active = 1 WHERE id = ?", (existing["id"],))
             await db.commit()
             return {"sub_key": existing["sub_key"], "model": req.model}
 
         sub_key = f"sub-{secrets.token_urlsafe(24)}"
         await db.execute(
             "INSERT INTO subscriptions (user_id, backend_id, model, sub_key) VALUES (?, ?, ?, ?)",
-            (user["id"], backend_id, req.model, sub_key),
+            (user["id"], req.backend_id, req.model, sub_key),
         )
         await db.commit()
     finally:
@@ -574,7 +586,7 @@ async def list_subscriptions(user=Depends(get_current_user)):
     db = await get_db()
     try:
         cur = await db.execute(
-            "SELECT s.id, s.model, s.sub_key, s.is_active, s.created_at, "
+            "SELECT s.id, s.backend_id, s.model, s.sub_key, s.is_active, s.created_at, "
             "b.name as backend, b.status as backend_status, b.input_price, b.output_price "
             "FROM subscriptions s JOIN backends b ON s.backend_id = b.id "
             "WHERE s.user_id = ? ORDER BY s.created_at DESC",

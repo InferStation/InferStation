@@ -6,6 +6,7 @@ import { apiFetch } from "@/lib/api"
 
 interface Model {
   id: string
+  backend_id: number
   backend: string
   provider: string
   status: string
@@ -109,7 +110,7 @@ export default function ModelsPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filtered.map((m, i) => (
-            <Link key={i} href={`/models/${m.id}`} className="group bg-white rounded-xl border border-gray-200/80 p-5 hover:shadow-lg hover:border-indigo-200 transition-all duration-200 cursor-pointer block">
+            <Link key={`${m.backend_id}-${m.id}`} href={`/models/${m.backend_id}/${m.id}`} className="group bg-white rounded-xl border border-gray-200/80 p-5 hover:shadow-lg hover:border-indigo-200 transition-all duration-200 cursor-pointer block">
               <div className="flex items-start justify-between mb-3">
                 <h3 className="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors leading-tight break-all">{m.id}</h3>
                 <span className={`shrink-0 ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${m.status === "online" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-500"}`}>
@@ -127,6 +128,10 @@ export default function ModelsPage() {
                 </div>
               )}
               <div className="text-sm text-gray-500 space-y-1 pt-2 border-t border-gray-100">
+                <div className="flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" /></svg>
+                  <span>{m.backend}</span>
+                </div>
                 <div className="flex items-center gap-1.5">
                   <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                   <span>{m.provider || "共享"}</span>
