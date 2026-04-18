@@ -6,6 +6,7 @@ import { apiFetch } from "@/lib/api"
 
 interface Sub {
   id: number
+  backend_id: number
   model: string
   sub_key: string
   is_active: number
@@ -60,7 +61,7 @@ export default function MyModelsPage() {
             <div key={s.id} className={`bg-white rounded-lg border p-5 ${!s.is_active ? "opacity-50" : ""}`}>
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <Link href={`/models/${s.model}`} className="font-semibold text-lg text-gray-900 hover:text-indigo-600">
+                  <Link href={`/models/${s.backend_id}/${s.model}`} className="font-semibold text-lg text-gray-900 hover:text-indigo-600">
                     {s.model}
                   </Link>
                   <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
