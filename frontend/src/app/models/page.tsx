@@ -66,9 +66,15 @@ export default function ModelsPage() {
                 <p>提供者: <span className="text-gray-700">{m.provider || "共享"}</span></p>
                 {m.input_price != null && (
                   <p>
-                    定价: <span className="text-green-600">¥{m.input_price}/M 输入</span>
-                    {" / "}
-                    <span className="text-green-600">¥{m.output_price}/M 输出</span>
+                    定价: {m.input_price === 0 && m.output_price === 0 ? (
+                      <span className="text-green-600 font-medium">Free</span>
+                    ) : (
+                      <>
+                        <span className="text-green-600">¥{m.input_price}/M 输入</span>
+                        {" / "}
+                        <span className="text-green-600">¥{m.output_price}/M 输出</span>
+                      </>
+                    )}
                   </p>
                 )}
               </div>
