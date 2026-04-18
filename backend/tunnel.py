@@ -26,6 +26,23 @@ class TunnelManager:
     def is_connected(self, backend_id: int) -> bool:
         return backend_id in self._tunnels
 
+    async def health_probe(self, backend_id: int, timeout: float = 10) -> bool:
+        """Send a health check through the tunnel and verify the backend is alive."""
+        conn = self._tunnels.get(backend_id)
+        if not conn:
+            return False
+        req_id = str(uuid.uuid4())
+        fut: asyncio.Future = asyncio.get_event_loop().create_future()
+        conn.pending[req_id] = fut
+        try:
+            await conn.ws.send_json({"id": req_id, "type": "health_check"})
+            result = await asyncio.wait_for(fut, timeout=timeout)
+            return result.get("status") == 200
+        except Exception:
+            return False
+        finally:
+            conn.pending.pop(req_id, None)
+
     def register(self, backend_id: int, conn: TunnelConnection):
         self._tunnels[backend_id] = conn
         logger.info(f"Tunnel connected: {conn.backend_name} (id={backend_id})")

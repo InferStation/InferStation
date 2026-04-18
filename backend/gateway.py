@@ -68,7 +68,8 @@ async def health_check_loop():
             for b in backends:
                 new_status = "offline"
                 if b["mode"] == "tunnel":
-                    new_status = "online" if tunnel_manager.is_connected(b["id"]) else "offline"
+                    if await tunnel_manager.health_probe(b["id"]):
+                        new_status = "online"
                 elif b["url"]:
                     try:
                         headers = {}
