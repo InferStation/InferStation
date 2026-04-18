@@ -59,8 +59,7 @@ export default function ModelsPage() {
             </button>
           ))}
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5">
             {(["all", "online", "offline"] as const).map((s) => (
               <button
                 key={s}
@@ -74,15 +73,14 @@ export default function ModelsPage() {
                 {s === "all" ? "全部" : s === "online" ? "在线" : "离线"}
               </button>
             ))}
-          </div>
-          <input
-            type="text"
-            placeholder="搜索模型名..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-56 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm"
-          />
         </div>
+        <input
+          type="text"
+          placeholder="搜索模型名..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-56 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm"
+        />
       </div>
 
       {filtered.length === 0 ? (
