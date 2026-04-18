@@ -20,7 +20,7 @@ export default function ModelsPage() {
   const [models, setModels] = useState<Model[]>([])
   const [search, setSearch] = useState("")
   const [familyFilter, setFamilyFilter] = useState("all")
-  const [statusFilter, setStatusFilter] = useState<"all" | "online" | "offline">("all")
+  const [statusFilter, setStatusFilter] = useState<"all" | "online" | "offline">("online")
 
   useEffect(() => {
     apiFetch("/api/models").then(setModels).catch(() => {})
