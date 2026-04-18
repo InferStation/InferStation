@@ -38,28 +38,32 @@ export default function ModelsPage() {
 
   return (
     <div>
-      <div className="mb-6 space-y-3">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">模型广场</h1>
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <button
-            onClick={() => setFamilyFilter("all")}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${familyFilter === "all" ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
-          >
-            全部
-          </button>
-          {MODEL_FAMILIES.map((f) => (
+      <h1 className="text-2xl font-bold mb-6">模型广场</h1>
+
+      <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4 space-y-3">
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium text-gray-500 shrink-0 w-16">模型类别</span>
+          <div className="flex flex-wrap items-center gap-1.5">
             <button
-              key={f}
-              onClick={() => setFamilyFilter(f)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${familyFilter === f ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+              onClick={() => setFamilyFilter("all")}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${familyFilter === "all" ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
             >
-              {f}
+              全部
             </button>
-          ))}
+            {MODEL_FAMILIES.map((f) => (
+              <button
+                key={f}
+                onClick={() => setFamilyFilter(f)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${familyFilter === f ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium text-gray-500 shrink-0 w-16">在线状态</span>
+          <div className="flex items-center gap-1.5">
             {(["all", "online", "offline"] as const).map((s) => (
               <button
                 key={s}
@@ -73,13 +77,17 @@ export default function ModelsPage() {
                 {s === "all" ? "全部" : s === "online" ? "在线" : "离线"}
               </button>
             ))}
+          </div>
         </div>
+      </div>
+
+      <div className="mb-6">
         <input
           type="text"
           placeholder="搜索模型名..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-56 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm"
         />
       </div>
 
