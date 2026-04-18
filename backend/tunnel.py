@@ -30,6 +30,7 @@ class TunnelManager:
         """Send a health check through the tunnel and verify the backend is alive."""
         conn = self._tunnels.get(backend_id)
         if not conn:
+            logger.debug(f"Health probe: no tunnel for backend {backend_id}")
             return False
         req_id = str(uuid.uuid4())
         fut: asyncio.Future = asyncio.get_event_loop().create_future()
@@ -37,8 +38,11 @@ class TunnelManager:
         try:
             await conn.ws.send_json({"id": req_id, "type": "health_check"})
             result = await asyncio.wait_for(fut, timeout=timeout)
-            return result.get("status") == 200
-        except Exception:
+            status = result.get("status")
+            logger.info(f"Health probe: {conn.backend_name} (id={backend_id}) -> status={status}")
+            return status == 200
+        except Exception as e:
+            logger.warning(f"Health probe failed: {conn.backend_name} (id={backend_id}): {e}")
             return False
         finally:
             conn.pending.pop(req_id, None)
