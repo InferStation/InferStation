@@ -28,6 +28,7 @@ export default function ServicesPage() {
     name: "",
     url: "",
     mode: "direct",
+    family: "",
     models: "",
     tag_hardware: "",
     tag_framework: "",
@@ -36,22 +37,31 @@ export default function ServicesPage() {
     output_price: "",
     is_public: true,
   })
+  const [families, setFamilies] = useState<string[]>([])
 
   const isProvider = user && ["provider", "both", "admin"].includes(user.role)
 
   useEffect(() => {
     if (isProvider) loadBackends()
+    apiFetch("/api/model-families").then((data: { families: string[] }) => setFamilies(data.families)).catch(() => {})
   }, [user])
 
   const loadBackends = () => apiFetch("/api/backends?mine=true").then(setBackends).catch(() => {})
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!form.family) {
+      alert("请选择模型类别")
+      return
+    }
     try {
       const tags: Record<string, string> = {}
       if (form.tag_hardware.trim()) tags.hardware = form.tag_hardware.trim()
       if (form.tag_framework.trim()) tags.framework = form.tag_framework.trim()
       if (form.tag_quantization.trim()) tags.quantization = form.tag_quantization.trim()
+
+      const rawModels = form.models.split(",").map((s) => s.trim()).filter(Boolean)
+      const models = rawModels.map((m) => m.includes("/") ? m : `${form.family}/${m}`)
 
       await apiFetch("/api/backends", {
         method: "POST",
@@ -59,7 +69,7 @@ export default function ServicesPage() {
           name: form.name,
           url: form.mode === "direct" ? form.url : null,
           mode: form.mode,
-          models: form.models.split(",").map((s) => s.trim()).filter(Boolean),
+          models,
           tags,
           input_price: form.input_price ? parseFloat(form.input_price) : null,
           output_price: form.output_price ? parseFloat(form.output_price) : null,
@@ -67,7 +77,7 @@ export default function ServicesPage() {
         }),
       })
       setShowForm(false)
-      setForm({ name: "", url: "", mode: "direct", models: "", tag_hardware: "", tag_framework: "", tag_quantization: "", input_price: "", output_price: "", is_public: true })
+      setForm({ name: "", url: "", mode: "direct", family: "", models: "", tag_hardware: "", tag_framework: "", tag_quantization: "", input_price: "", output_price: "", is_public: true })
       loadBackends()
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : "操作失败")
@@ -151,8 +161,17 @@ export default function ServicesPage() {
               </div>
             )}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">模型列表（逗号分隔）</label>
-              <input type="text" value={form.models} onChange={(e) => setForm({ ...form, models: e.target.value })} placeholder="Qwen3-8B, Llama-3-70B" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">模型类别</label>
+              <select value={form.family} onChange={(e) => setForm({ ...form, family: e.target.value })} required className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <option value="">请选择模型类别</option>
+                {families.map((f) => (
+                  <option key={f} value={f}>{f}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">模型列表（逗号分隔，无需填类别前缀）</label>
+              <input type="text" value={form.models} onChange={(e) => setForm({ ...form, models: e.target.value })} placeholder={form.family ? `如 ${form.family === "Qwen" ? "Qwen3-8B, Qwen3.5-4B" : form.family === "THUDM" ? "glm-4-9b-chat" : "DeepSeek-R1-Distill-Qwen-7B"}` : "先选择模型类别"} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">标签（均为可选）</label>
