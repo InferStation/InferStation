@@ -401,8 +401,13 @@ async def list_backends(user=Depends(get_current_user)):
         await db.close()
     for r in rows:
         r["models"] = json.loads(r["models"]) if r["models"] else []
-        r["client_info"] = json.loads(r["client_info"]) if r["client_info"] else {}
         r["tags"] = json.loads(r["tags"]) if r.get("tags") else {}
+        # Only show sensitive fields to the backend owner or admin
+        if user["role"] == "admin" or r.get("owner_id") == user["id"]:
+            r["client_info"] = json.loads(r["client_info"]) if r["client_info"] else {}
+        else:
+            r.pop("client_info", None)
+            r.pop("url", None)
     return rows
 
 
