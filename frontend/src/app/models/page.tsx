@@ -7,6 +7,7 @@ interface Model {
   id: string
   backend: string
   provider: string
+  status: string
   tags: Record<string, string>
   input_price: number | null
   output_price: number | null
@@ -45,7 +46,13 @@ export default function ModelsPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filtered.map((m, i) => (
             <div key={i} className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
-              <h3 className="font-semibold text-lg text-gray-900 mb-2">{m.id}</h3>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold text-lg text-gray-900">{m.id}</h3>
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${m.status === "online" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${m.status === "online" ? "bg-green-500" : "bg-red-400"}`} />
+                  {m.status === "online" ? "在线" : "离线"}
+                </span>
+              </div>
               {Object.keys(m.tags || {}).length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-3">
                   {Object.entries(m.tags).map(([k, v]) => (

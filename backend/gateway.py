@@ -436,7 +436,7 @@ async def list_models():
     try:
         cur = await db.execute(
             "SELECT b.name as backend, b.models, b.tags, b.status, b.input_price, b.output_price, u.username as provider "
-            "FROM backends b LEFT JOIN users u ON b.owner_id = u.id WHERE b.is_public = 1 AND b.status = 'online'"
+            "FROM backends b LEFT JOIN users u ON b.owner_id = u.id WHERE b.is_public = 1"
         )
         rows = [dict(r) for r in await cur.fetchall()]
     finally:
@@ -450,6 +450,7 @@ async def list_models():
                 "id": m,
                 "backend": r["backend"],
                 "provider": r["provider"],
+                "status": r["status"],
                 "tags": json.loads(r["tags"]) if r.get("tags") else {},
                 "input_price": r["input_price"],
                 "output_price": r["output_price"],
