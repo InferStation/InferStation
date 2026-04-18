@@ -43,7 +43,7 @@ export default function ServicesPage() {
     if (isProvider) loadBackends()
   }, [user])
 
-  const loadBackends = () => apiFetch("/api/backends").then(setBackends).catch(() => {})
+  const loadBackends = () => apiFetch("/api/backends?mine=true").then(setBackends).catch(() => {})
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

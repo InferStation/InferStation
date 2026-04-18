@@ -384,10 +384,15 @@ async def register_backend(req: RegisterBackendRequest, user=Depends(require_pro
 
 
 @app.get("/api/backends")
-async def list_backends(user=Depends(get_current_user)):
+async def list_backends(mine: bool = False, user=Depends(get_current_user)):
     db = await get_db()
     try:
-        if user["role"] == "admin":
+        if mine:
+            cur = await db.execute(
+                "SELECT b.*, u.username as owner_name FROM backends b LEFT JOIN users u ON b.owner_id = u.id WHERE b.owner_id = ? ORDER BY b.name",
+                (user["id"],),
+            )
+        elif user["role"] == "admin":
             cur = await db.execute(
                 "SELECT b.*, u.username as owner_name FROM backends b LEFT JOIN users u ON b.owner_id = u.id ORDER BY b.name"
             )
