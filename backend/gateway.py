@@ -355,12 +355,24 @@ class RegisterBackendRequest(BaseModel):
     client_info: dict = {}
 
 
+ALLOWED_MODEL_FAMILIES = ["Qwen", "THUDM", "deepseek-ai"]
+
+
+@app.get("/api/model-families")
+async def get_model_families():
+    return ALLOWED_MODEL_FAMILIES
+
+
 @app.post("/api/backends")
 async def register_backend(req: RegisterBackendRequest, user=Depends(require_provider)):
     if req.mode not in ("direct", "tunnel"):
         raise HTTPException(400, "mode must be 'direct' or 'tunnel'")
     if req.mode == "direct" and not req.url:
         raise HTTPException(400, "url required for direct mode")
+    for m in req.models:
+        family = m.split("/")[0] if "/" in m else m
+        if family not in ALLOWED_MODEL_FAMILIES:
+            raise HTTPException(400, f"模型 {m} 不在允许的大类中，当前支持: {', '.join(ALLOWED_MODEL_FAMILIES)}")
 
     db = await get_db()
     try:

@@ -14,9 +14,12 @@ interface Model {
   output_price: number | null
 }
 
+const MODEL_FAMILIES = ["Qwen", "THUDM", "deepseek-ai"]
+
 export default function ModelsPage() {
   const [models, setModels] = useState<Model[]>([])
   const [search, setSearch] = useState("")
+  const [familyFilter, setFamilyFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState<"all" | "online" | "offline">("all")
 
   useEffect(() => {
@@ -24,8 +27,12 @@ export default function ModelsPage() {
   }, [])
 
   const filtered = models.filter((m) => {
-    if (search && !m.id.toLowerCase().includes(search.toLowerCase()) && !m.provider?.toLowerCase().includes(search.toLowerCase())) return false
+    if (familyFilter !== "all") {
+      const family = m.id.includes("/") ? m.id.split("/")[0] : ""
+      if (family !== familyFilter) return false
+    }
     if (statusFilter !== "all" && m.status !== statusFilter) return false
+    if (search && !m.id.toLowerCase().includes(search.toLowerCase())) return false
     return true
   })
 
@@ -35,14 +42,24 @@ export default function ModelsPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">模型广场</h1>
         </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            onClick={() => setFamilyFilter("all")}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${familyFilter === "all" ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+          >
+            全部
+          </button>
+          {MODEL_FAMILIES.map((f) => (
+            <button
+              key={f}
+              onClick={() => setFamilyFilter(f)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${familyFilter === f ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
         <div className="flex flex-wrap items-center gap-3">
-          <input
-            type="text"
-            placeholder="搜索模型名..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-64 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm"
-          />
           <div className="flex items-center gap-1.5">
             {(["all", "online", "offline"] as const).map((s) => (
               <button
@@ -58,6 +75,13 @@ export default function ModelsPage() {
               </button>
             ))}
           </div>
+          <input
+            type="text"
+            placeholder="搜索模型名..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-56 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm"
+          />
         </div>
       </div>
 
