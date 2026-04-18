@@ -28,7 +28,7 @@ export default function ModelsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">模型市场</h1>
+        <h1 className="text-2xl font-bold">模型广场</h1>
         <input
           type="text"
           placeholder="搜索模型或提供者..."

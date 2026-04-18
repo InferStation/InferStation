@@ -8,7 +8,7 @@ export default function Home() {
 
       <div className="flex justify-center gap-4 mb-16">
         <Link href="/models" className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 text-lg">
-          浏览模型市场
+          浏览模型广场
         </Link>
         <Link href="/register" className="border border-indigo-600 text-indigo-600 px-6 py-3 rounded-lg hover:bg-indigo-50 text-lg">
           注册账号
