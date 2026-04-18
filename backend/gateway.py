@@ -101,6 +101,13 @@ async def lifespan(app: FastAPI):
     load_config()
     await init_db()
     await ensure_admin()
+    # Reset all tunnel backends to offline on startup (tunnels need to reconnect)
+    db = await get_db()
+    try:
+        await db.execute("UPDATE backends SET status = 'offline' WHERE mode = 'tunnel'")
+        await db.commit()
+    finally:
+        await db.close()
     task = asyncio.create_task(health_check_loop())
     logger.info("Gateway started")
     yield
