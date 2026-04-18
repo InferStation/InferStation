@@ -17,26 +17,48 @@ interface Model {
 export default function ModelsPage() {
   const [models, setModels] = useState<Model[]>([])
   const [search, setSearch] = useState("")
+  const [statusFilter, setStatusFilter] = useState<"all" | "online" | "offline">("all")
 
   useEffect(() => {
     apiFetch("/api/models").then(setModels).catch(() => {})
   }, [])
 
-  const filtered = models.filter(
-    (m) => m.id.toLowerCase().includes(search.toLowerCase()) || m.provider?.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = models.filter((m) => {
+    if (search && !m.id.toLowerCase().includes(search.toLowerCase()) && !m.provider?.toLowerCase().includes(search.toLowerCase())) return false
+    if (statusFilter !== "all" && m.status !== statusFilter) return false
+    return true
+  })
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">模型广场</h1>
-        <input
-          type="text"
-          placeholder="搜索模型或提供者..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-64 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm"
-        />
+      <div className="mb-6 space-y-3">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">模型广场</h1>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            type="text"
+            placeholder="搜索模型名..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-64 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm"
+          />
+          <div className="flex items-center gap-1.5">
+            {(["all", "online", "offline"] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(s)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  statusFilter === s
+                    ? "bg-indigo-600 text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                {s === "all" ? "全部" : s === "online" ? "在线" : "离线"}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {filtered.length === 0 ? (
