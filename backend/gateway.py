@@ -737,8 +737,12 @@ async def find_backend_for_model(model: str, user_id: int):
 
 def get_pricing(backend: dict) -> tuple[float, float]:
     default = CONFIG.get("pricing", {}).get("default", {})
-    inp = backend.get("input_price") or default.get("input", 1.0)
-    out = backend.get("output_price") or default.get("output", 3.0)
+    inp = backend.get("input_price")
+    out = backend.get("output_price")
+    if inp is None:
+        inp = default.get("input", 1.0)
+    if out is None:
+        out = default.get("output", 3.0)
     return inp, out
 
 
