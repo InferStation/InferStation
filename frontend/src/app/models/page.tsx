@@ -72,15 +72,16 @@ export default function ModelsPage() {
               <button
                 key={s}
                 onClick={() => setStatusFilter(s)}
-                className={`px-3 py-1 rounded-full text-sm font-medium transition-all ${
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium transition-all ${
                   statusFilter === s
                     ? s === "online" ? "bg-emerald-600 text-white shadow-sm"
                     : s === "offline" ? "bg-rose-500 text-white shadow-sm"
                     : "bg-indigo-600 text-white shadow-sm"
-                    : "bg-gray-50 text-gray-600 hover:bg-gray-100"
+                    : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                 }`}
               >
-                {s === "all" ? "全部" : s === "online" ? "🟢 在线" : "🔴 离线"}
+                {s !== "all" && <span className={`w-2 h-2 rounded-full ${statusFilter === s ? "bg-white" : "bg-gray-400"}`} />}
+                {s === "all" ? "全部" : s === "online" ? "在线" : "离线"}
               </button>
             ))}
           </div>
