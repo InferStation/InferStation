@@ -20,6 +20,7 @@ interface ModelDetail {
 }
 
 interface Subscription {
+  id: number
   sub_key: string
   model: string
 }
@@ -52,7 +53,7 @@ export default function ModelDetailPage() {
     apiFetch("/api/subscriptions")
       .then((subs: any[]) => {
         const found = subs.find((s) => s.model === modelId && String(s.backend_id) === backendId && s.is_active)
-        if (found) setSub({ sub_key: found.sub_key, model: found.model })
+        if (found) setSub({ id: found.id, sub_key: found.sub_key, model: found.model })
       })
       .catch(() => {})
   }, [user, modelId, backendId])
@@ -74,6 +75,16 @@ export default function ModelDetailPage() {
       alert("订阅失败")
     } finally {
       setSubLoading(false)
+    }
+  }
+
+  const handleUnsubscribe = async () => {
+    if (!sub) return
+    try {
+      await apiFetch(`/api/subscriptions/${sub.id}`, { method: "DELETE" })
+      setSub(null)
+    } catch {
+      alert("取消订阅失败")
     }
   }
 
@@ -181,11 +192,17 @@ export default function ModelDetailPage() {
             </button>
           ) : (
             <div>
-              <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center justify-between mb-4">
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700">
                   <span className="w-2 h-2 rounded-full bg-green-500" />
                   已订阅
                 </span>
+                <button
+                  onClick={handleUnsubscribe}
+                  className="text-xs text-red-500 hover:text-red-700"
+                >
+                  取消订阅
+                </button>
               </div>
 
               <div className="space-y-3">
