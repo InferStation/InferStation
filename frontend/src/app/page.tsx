@@ -10,9 +10,6 @@ export default function Home() {
         <Link href="/models" className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 text-lg">
           浏览模型广场
         </Link>
-        <Link href="/register" className="border border-indigo-600 text-indigo-600 px-6 py-3 rounded-lg hover:bg-indigo-50 text-lg">
-          注册账号
-        </Link>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3 text-center max-w-4xl mx-auto">
