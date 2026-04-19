@@ -68,7 +68,7 @@ export default function DocsPage() {
         <h2 className="text-2xl font-semibold text-gray-800 mb-4">平台简介</h2>
         <div className="bg-white rounded-lg border p-6 space-y-3 text-gray-700 text-sm leading-relaxed">
           <p>
-            <strong>LLM Gateway</strong> 是一个模型服务聚合平台，连接 AI 消费者与模型提供者。
+            <strong>天枢</strong> 是一个模型服务聚合平台，连接 AI 消费者与模型提供者。
             提供者可以将自己的 GPU 机器上运行的模型服务注册到平台，消费者则通过统一的 OpenAI 兼容 API 调用这些模型。
           </p>
           <p>平台支持两种接入模式：</p>

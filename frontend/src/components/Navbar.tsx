@@ -12,7 +12,7 @@ export default function Navbar() {
         <div className="flex justify-between h-16 items-center">
           <div className="flex items-center gap-8">
             <Link href="/" className="text-xl font-bold text-indigo-600">
-              LLM Gateway
+              天枢
             </Link>
             <Link href="/models" className="text-gray-600 hover:text-gray-900">
               模型广场
