@@ -1,10 +1,70 @@
+"use client"
+
+import { useEffect, useState } from "react"
+
+const NAV_SECTIONS = [
+  { id: "intro", label: "平台简介" },
+  { id: "quickstart", label: "快速开始" },
+  { id: "api-call", label: "API 调用" },
+  { id: "api-ref", label: "API 端点参考" },
+  { id: "tunnel", label: "隧道模式接入" },
+]
+
 export default function DocsPage() {
+  const [active, setActive] = useState("intro")
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting)
+        if (visible.length > 0) {
+          const top = visible.reduce((a, b) => (a.boundingClientRect.top < b.boundingClientRect.top ? a : b))
+          setActive(top.target.id)
+        }
+      },
+      { rootMargin: "-80px 0px -60% 0px", threshold: 0 }
+    )
+    NAV_SECTIONS.forEach(({ id }) => {
+      const el = document.getElementById(id)
+      if (el) observer.observe(el)
+    })
+    return () => observer.disconnect()
+  }, [])
+
+  const scrollTo = (id: string) => {
+    const el = document.getElementById(id)
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" })
+      setActive(id)
+    }
+  }
+
   return (
-    <div className="max-w-4xl mx-auto py-8">
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">文档</h1>
+    <div className="flex gap-8 min-h-[calc(100vh-8rem)]">
+      {/* Left Sidebar */}
+      <aside className="w-48 shrink-0 sticky top-20 self-start">
+        <nav className="space-y-1">
+          {NAV_SECTIONS.map(({ id, label }) => (
+            <button
+              key={id}
+              onClick={() => scrollTo(id)}
+              className={`block w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                active === id
+                  ? "bg-indigo-50 text-indigo-700 font-medium"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
+      </aside>
+
+      {/* Main Content */}
+      <div className="flex-1 max-w-4xl py-8">
 
       {/* 平台简介 */}
-      <section className="mb-12">
+      <section id="intro" className="mb-12 scroll-mt-20">
         <h2 className="text-2xl font-semibold text-gray-800 mb-4">平台简介</h2>
         <div className="bg-white rounded-lg border p-6 space-y-3 text-gray-700 text-sm leading-relaxed">
           <p>
@@ -27,7 +87,7 @@ export default function DocsPage() {
       </section>
 
       {/* 快速开始 */}
-      <section className="mb-12">
+      <section id="quickstart" className="mb-12 scroll-mt-20">
         <h2 className="text-2xl font-semibold text-gray-800 mb-4">快速开始</h2>
         <div className="bg-white rounded-lg border p-6 space-y-4 text-sm text-gray-700">
           <div>
@@ -52,7 +112,7 @@ export default function DocsPage() {
       </section>
 
       {/* API 调用方式 */}
-      <section className="mb-12">
+      <section id="api-call" className="mb-12 scroll-mt-20">
         <h2 className="text-2xl font-semibold text-gray-800 mb-4">API 调用</h2>
         <div className="space-y-6">
           {/* 方式一：订阅 Key */}
@@ -123,7 +183,7 @@ for chunk in response:
       </section>
 
       {/* API 端点参考 */}
-      <section className="mb-12">
+      <section id="api-ref" className="mb-12 scroll-mt-20">
         <h2 className="text-2xl font-semibold text-gray-800 mb-4">API 端点参考</h2>
         <div className="bg-white rounded-lg border overflow-hidden">
           <table className="w-full text-sm">
@@ -245,7 +305,7 @@ for chunk in response:
       </section>
 
       {/* 隧道模式 */}
-      <section className="mb-12">
+      <section id="tunnel" className="mb-12 scroll-mt-20">
         <h2 className="text-2xl font-semibold text-gray-800 mb-4">隧道模式接入</h2>
         <div className="bg-white rounded-lg border p-6 space-y-4 text-sm text-gray-700">
           <p>
@@ -267,54 +327,7 @@ for chunk in response:
           </ul>
         </div>
       </section>
-
-      {/* 角色说明 */}
-      <section className="mb-12">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-4">角色体系</h2>
-        <div className="bg-white rounded-lg border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                <th className="text-left px-4 py-3 font-medium text-gray-700">角色</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-700">权限</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              <tr>
-                <td className="px-4 py-3 font-medium">consumer</td>
-                <td className="px-4 py-3 text-gray-600">浏览模型、订阅、调用 API</td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3 font-medium">provider</td>
-                <td className="px-4 py-3 text-gray-600">注册并管理后端服务</td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3 font-medium">both</td>
-                <td className="px-4 py-3 text-gray-600">同时拥有消费者和提供者权限</td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3 font-medium">admin</td>
-                <td className="px-4 py-3 text-gray-600">用户管理、余额调整、全局用量统计</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <p className="text-xs text-gray-500 mt-2">新注册用户默认为 consumer，可在「我的服务」中激活 provider 身份升级为 both。</p>
-      </section>
-
-      {/* 支持的模型 */}
-      <section className="mb-12">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-4">支持的模型类别</h2>
-        <div className="bg-white rounded-lg border p-6 text-sm text-gray-700">
-          <p className="mb-3">当前平台支持以下模型家族的注册：</p>
-          <div className="flex gap-3">
-            <span className="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium">Qwen</span>
-            <span className="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium">THUDM</span>
-            <span className="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium">deepseek-ai</span>
-          </div>
-          <p className="text-xs text-gray-500 mt-3">如需添加更多模型类别，请联系管理员。</p>
-        </div>
-      </section>
+    </div>
     </div>
   )
 }
