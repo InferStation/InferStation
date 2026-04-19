@@ -21,6 +21,7 @@ interface SubInfo {
   id: number
   model: string
   backend_id: number
+  sub_key: string
 }
 
 const MODEL_FAMILIES = ["Qwen", "THUDM", "deepseek-ai"]
@@ -34,6 +35,7 @@ export default function ModelsPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | "online" | "offline">("online")
   const [subs, setSubs] = useState<SubInfo[]>([])
   const [subLoading, setSubLoading] = useState<string | null>(null)
+  const [copied, setCopied] = useState<string | null>(null)
 
   useEffect(() => {
     apiFetch("/api/models").then(setModels).catch(() => {})
@@ -42,11 +44,25 @@ export default function ModelsPage() {
   useEffect(() => {
     if (!user) { setSubs([]); return }
     apiFetch("/api/subscriptions")
-      .then((list: any[]) => setSubs(list.filter((s) => s.is_active).map((s) => ({ id: s.id, model: s.model, backend_id: s.backend_id }))))
+      .then((list: any[]) => setSubs(list.filter((s) => s.is_active).map((s) => ({ id: s.id, model: s.model, backend_id: s.backend_id, sub_key: s.sub_key }))))
       .catch(() => {})
   }, [user])
 
   const isSubscribed = (m: Model) => subs.some((s) => s.model === m.id && s.backend_id === m.backend_id)
+  const getSubKey = (m: Model) => subs.find((s) => s.model === m.id && s.backend_id === m.backend_id)?.sub_key
+
+  const baseUrl = typeof window !== "undefined" ? window.location.origin : ""
+
+  const copyApi = (e: React.MouseEvent, m: Model) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const key = getSubKey(m)
+    if (!key) return
+    const url = `${baseUrl}/s/${key}/v1/chat/completions`
+    navigator.clipboard.writeText(url)
+    setCopied(`${m.backend_id}-${m.id}`)
+    setTimeout(() => setCopied(null), 2000)
+  }
 
   const handleSubscribe = async (e: React.MouseEvent, m: Model) => {
     e.preventDefault()
@@ -60,7 +76,7 @@ export default function ModelsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model: m.id, backend_id: m.backend_id }),
       })
-      setSubs((prev) => [...prev, { id: res.id, model: m.id, backend_id: m.backend_id }])
+      setSubs((prev) => [...prev, { id: res.id, model: m.id, backend_id: m.backend_id, sub_key: res.sub_key }])
     } catch {}
     setSubLoading(null)
   }
@@ -202,13 +218,21 @@ export default function ModelsPage() {
               </div>
               <div className="mt-3 pt-2 border-t border-gray-100">
                 {isSubscribed(m) ? (
-                  <button
-                    onClick={(e) => handleUnsubscribe(e, m)}
-                    disabled={subLoading === `${m.backend_id}-${m.id}`}
-                    className="w-full py-1.5 rounded-lg text-xs font-medium text-red-500 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-50"
-                  >
-                    {subLoading === `${m.backend_id}-${m.id}` ? "处理中..." : "取消订阅"}
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={(e) => copyApi(e, m)}
+                      className="flex-1 py-1.5 rounded-lg text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors"
+                    >
+                      {copied === `${m.backend_id}-${m.id}` ? "已复制 API" : "复制 API 地址"}
+                    </button>
+                    <button
+                      onClick={(e) => handleUnsubscribe(e, m)}
+                      disabled={subLoading === `${m.backend_id}-${m.id}`}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium text-red-500 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-50"
+                    >
+                      {subLoading === `${m.backend_id}-${m.id}` ? "..." : "取消"}
+                    </button>
+                  </div>
                 ) : (
                   <button
                     onClick={(e) => handleSubscribe(e, m)}
