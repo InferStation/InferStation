@@ -218,7 +218,7 @@ export default function ServicesPage() {
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className="font-semibold text-lg">{b.name}</h3>
-                  <span className={`px-2 py-0.5 rounded text-xs ${b.enabled ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>{b.enabled ? "已上线" : "已下线"}</span>
+                  <span className={`px-2 py-0.5 rounded text-xs ${b.enabled ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>{b.enabled ? "已上架" : "已下架"}</span>
                   <span className={`px-2 py-0.5 rounded text-xs ${b.status === "online" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>{b.status}</span>
                   <span className="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600">{b.mode === "tunnel" ? "隧道" : "直连"}</span>
                   {!b.is_public && <span className="px-2 py-0.5 rounded text-xs bg-yellow-100 text-yellow-700">私有</span>}
@@ -255,7 +255,7 @@ export default function ServicesPage() {
                   onClick={() => toggleBackend(b.name)}
                   className={`text-sm px-3 py-1 rounded ${b.enabled ? "bg-gray-100 text-gray-600 hover:bg-gray-200" : "bg-green-100 text-green-700 hover:bg-green-200"}`}
                 >
-                  {b.enabled ? "下线" : "上线"}
+                  {b.enabled ? "下架" : "上架"}
                 </button>
                 <button onClick={() => deleteBackend(b.name)} className="text-red-500 hover:text-red-700 text-sm">删除</button>
               </div>
