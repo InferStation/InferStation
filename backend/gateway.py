@@ -474,6 +474,28 @@ async def delete_backend(name: str, user=Depends(require_provider)):
     return {"ok": True}
 
 
+@app.put("/api/backends/{name}/toggle")
+async def toggle_backend(name: str, user=Depends(require_provider)):
+    db = await get_db()
+    try:
+        if user["role"] == "admin":
+            cur = await db.execute("SELECT enabled FROM backends WHERE name = ?", (name,))
+        else:
+            cur = await db.execute("SELECT enabled FROM backends WHERE name = ? AND owner_id = ?", (name, user["id"]))
+        row = await cur.fetchone()
+        if not row:
+            raise HTTPException(404, "Backend not found")
+        new_val = 0 if row[0] else 1
+        if user["role"] == "admin":
+            await db.execute("UPDATE backends SET enabled = ? WHERE name = ?", (new_val, name))
+        else:
+            await db.execute("UPDATE backends SET enabled = ? WHERE name = ? AND owner_id = ?", (new_val, name, user["id"]))
+        await db.commit()
+    finally:
+        await db.close()
+    return {"ok": True, "enabled": bool(new_val)}
+
+
 # ══════════════════════════════════════════════════════════
 #  Model Market (public)
 # ══════════════════════════════════════════════════════════
@@ -484,7 +506,7 @@ async def list_models():
     try:
         cur = await db.execute(
             "SELECT b.id as backend_id, b.name as backend, b.models, b.tags, b.status, b.input_price, b.output_price, u.username as provider "
-            "FROM backends b LEFT JOIN users u ON b.owner_id = u.id WHERE b.is_public = 1"
+            "FROM backends b LEFT JOIN users u ON b.owner_id = u.id WHERE b.is_public = 1 AND b.enabled = 1"
         )
         rows = [dict(r) for r in await cur.fetchall()]
     finally:
@@ -515,14 +537,14 @@ async def get_model_detail(model_id: str, backend_id: int | None = None):
             cur = await db.execute(
                 "SELECT b.id as backend_id, b.name as backend, b.models, b.tags, b.status, b.input_price, b.output_price, "
                 "b.mode, b.created_at, b.updated_at, u.username as provider "
-                "FROM backends b LEFT JOIN users u ON b.owner_id = u.id WHERE b.id = ? AND b.is_public = 1",
+                "FROM backends b LEFT JOIN users u ON b.owner_id = u.id WHERE b.id = ? AND b.is_public = 1 AND b.enabled = 1",
                 (backend_id,),
             )
         else:
             cur = await db.execute(
                 "SELECT b.id as backend_id, b.name as backend, b.models, b.tags, b.status, b.input_price, b.output_price, "
                 "b.mode, b.created_at, b.updated_at, u.username as provider "
-                "FROM backends b LEFT JOIN users u ON b.owner_id = u.id WHERE b.is_public = 1"
+                "FROM backends b LEFT JOIN users u ON b.owner_id = u.id WHERE b.is_public = 1 AND b.enabled = 1"
             )
         rows = [dict(r) for r in await cur.fetchall()]
     finally:

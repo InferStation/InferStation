@@ -54,6 +54,7 @@ async def init_db():
             input_price REAL,
             output_price REAL,
             is_public INTEGER NOT NULL DEFAULT 1,
+            enabled INTEGER NOT NULL DEFAULT 1,
             updated_at TEXT NOT NULL DEFAULT (datetime('now')),
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
@@ -88,6 +89,11 @@ async def init_db():
         CREATE UNIQUE INDEX IF NOT EXISTS idx_sub_user_model ON subscriptions(user_id, model);
         CREATE INDEX IF NOT EXISTS idx_sub_key ON subscriptions(sub_key);
         """)
+        # Migration: add enabled column if missing
+        cur = await db.execute("PRAGMA table_info(backends)")
+        cols = {r[1] for r in await cur.fetchall()}
+        if "enabled" not in cols:
+            await db.execute("ALTER TABLE backends ADD COLUMN enabled INTEGER NOT NULL DEFAULT 1")
         await db.commit()
     finally:
         await db.close()

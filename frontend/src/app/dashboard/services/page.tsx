@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { useAuth } from "@/context/AuthContext"
 import { apiFetch } from "@/lib/api"
 
@@ -12,6 +13,7 @@ interface Backend {
   models: string[]
   tags: Record<string, string>
   status: string
+  enabled: number
   input_price: number | null
   output_price: number | null
   is_public: number
@@ -88,6 +90,15 @@ export default function ServicesPage() {
     if (!confirm(`确定要删除后端 "${name}" 吗？`)) return
     await apiFetch(`/api/backends/${name}`, { method: "DELETE" })
     loadBackends()
+  }
+
+  const toggleBackend = async (name: string) => {
+    try {
+      await apiFetch(`/api/backends/${name}/toggle`, { method: "PUT" })
+      loadBackends()
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "操作失败")
+    }
   }
 
   if (!user) return null
@@ -202,17 +213,30 @@ export default function ServicesPage() {
 
       <div className="space-y-4">
         {backends.map((b) => (
-          <div key={b.id} className="bg-white rounded-lg border p-4">
+          <div key={b.id} className={`bg-white rounded-lg border p-4 ${!b.enabled ? "opacity-60" : ""}`}>
             <div className="flex justify-between items-start">
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className="font-semibold text-lg">{b.name}</h3>
+                  <span className={`px-2 py-0.5 rounded text-xs ${b.enabled ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>{b.enabled ? "已上线" : "已下线"}</span>
                   <span className={`px-2 py-0.5 rounded text-xs ${b.status === "online" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>{b.status}</span>
                   <span className="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600">{b.mode === "tunnel" ? "隧道" : "直连"}</span>
                   {!b.is_public && <span className="px-2 py-0.5 rounded text-xs bg-yellow-100 text-yellow-700">私有</span>}
                 </div>
                 {b.url && <p className="text-sm text-gray-500">URL: {b.url}</p>}
-                <p className="text-sm text-gray-500">模型: {b.models.length > 0 ? b.models.join(", ") : "未设置"}</p>
+                <div className="text-sm text-gray-500">
+                  模型:{" "}
+                  {b.models.length > 0
+                    ? b.models.map((m, i) => (
+                        <span key={m}>
+                          {i > 0 && ", "}
+                          <Link href={`/models/${encodeURIComponent(m)}?backend_id=${b.id}`} className="text-indigo-600 hover:text-indigo-800 hover:underline">
+                            {m}
+                          </Link>
+                        </span>
+                      ))
+                    : "未设置"}
+                </div>
                 {Object.keys(b.tags || {}).length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mt-1">
                     {Object.entries(b.tags).map(([k, v]) => (
@@ -226,7 +250,15 @@ export default function ServicesPage() {
                   <p className="text-sm text-gray-500">定价: ¥{b.input_price}/M 输入 / ¥{b.output_price}/M 输出</p>
                 )}
               </div>
-              <button onClick={() => deleteBackend(b.name)} className="text-red-500 hover:text-red-700 text-sm">删除</button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => toggleBackend(b.name)}
+                  className={`text-sm px-3 py-1 rounded ${b.enabled ? "bg-gray-100 text-gray-600 hover:bg-gray-200" : "bg-green-100 text-green-700 hover:bg-green-200"}`}
+                >
+                  {b.enabled ? "下线" : "上线"}
+                </button>
+                <button onClick={() => deleteBackend(b.name)} className="text-red-500 hover:text-red-700 text-sm">删除</button>
+              </div>
             </div>
           </div>
         ))}
