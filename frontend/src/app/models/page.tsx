@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { apiFetch } from "@/lib/api"
+import { useAuth } from "@/context/AuthContext"
 
 interface Model {
   id: string
@@ -15,17 +17,67 @@ interface Model {
   output_price: number | null
 }
 
+interface SubInfo {
+  id: number
+  model: string
+  backend_id: number
+}
+
 const MODEL_FAMILIES = ["Qwen", "THUDM", "deepseek-ai"]
 
 export default function ModelsPage() {
+  const { user } = useAuth()
+  const router = useRouter()
   const [models, setModels] = useState<Model[]>([])
   const [search, setSearch] = useState("")
   const [familyFilter, setFamilyFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState<"all" | "online" | "offline">("online")
+  const [subs, setSubs] = useState<SubInfo[]>([])
+  const [subLoading, setSubLoading] = useState<string | null>(null)
 
   useEffect(() => {
     apiFetch("/api/models").then(setModels).catch(() => {})
   }, [])
+
+  useEffect(() => {
+    if (!user) { setSubs([]); return }
+    apiFetch("/api/subscriptions")
+      .then((list: any[]) => setSubs(list.filter((s) => s.is_active).map((s) => ({ id: s.id, model: s.model, backend_id: s.backend_id }))))
+      .catch(() => {})
+  }, [user])
+
+  const isSubscribed = (m: Model) => subs.some((s) => s.model === m.id && s.backend_id === m.backend_id)
+
+  const handleSubscribe = async (e: React.MouseEvent, m: Model) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!user) { router.push("/login"); return }
+    const key = `${m.backend_id}-${m.id}`
+    setSubLoading(key)
+    try {
+      const res = await apiFetch("/api/subscriptions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: m.id, backend_id: m.backend_id }),
+      })
+      setSubs((prev) => [...prev, { id: res.id, model: m.id, backend_id: m.backend_id }])
+    } catch {}
+    setSubLoading(null)
+  }
+
+  const handleUnsubscribe = async (e: React.MouseEvent, m: Model) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const sub = subs.find((s) => s.model === m.id && s.backend_id === m.backend_id)
+    if (!sub) return
+    const key = `${m.backend_id}-${m.id}`
+    setSubLoading(key)
+    try {
+      await apiFetch(`/api/subscriptions/${sub.id}`, { method: "DELETE" })
+      setSubs((prev) => prev.filter((s) => s.id !== sub.id))
+    } catch {}
+    setSubLoading(null)
+  }
 
   const filtered = models.filter((m) => {
     if (familyFilter !== "all") {
@@ -146,6 +198,25 @@ export default function ModelsPage() {
                       <span className="text-gray-600">¥{m.input_price}/M · ¥{m.output_price}/M</span>
                     )}
                   </div>
+                )}
+              </div>
+              <div className="mt-3 pt-2 border-t border-gray-100">
+                {isSubscribed(m) ? (
+                  <button
+                    onClick={(e) => handleUnsubscribe(e, m)}
+                    disabled={subLoading === `${m.backend_id}-${m.id}`}
+                    className="w-full py-1.5 rounded-lg text-xs font-medium text-red-500 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-50"
+                  >
+                    {subLoading === `${m.backend_id}-${m.id}` ? "处理中..." : "取消订阅"}
+                  </button>
+                ) : (
+                  <button
+                    onClick={(e) => handleSubscribe(e, m)}
+                    disabled={subLoading === `${m.backend_id}-${m.id}` || m.status !== "online"}
+                    className="w-full py-1.5 rounded-lg text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {subLoading === `${m.backend_id}-${m.id}` ? "处理中..." : "订阅"}
+                  </button>
                 )}
               </div>
             </Link>
