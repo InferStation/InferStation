@@ -42,7 +42,7 @@ export default function DocsPage() {
   return (
     <div className="flex gap-8 min-h-[calc(100vh-8rem)]">
       {/* Left Sidebar */}
-      <aside className="w-48 shrink-0 sticky top-20 self-start">
+      <aside className="w-48 shrink-0 sticky top-24 self-start h-[calc(100vh-6rem)] overflow-y-auto">
         <nav className="space-y-1">
           {NAV_SECTIONS.map(({ id, label }) => (
             <button
