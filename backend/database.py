@@ -54,7 +54,7 @@ async def init_db():
             input_price REAL,
             output_price REAL,
             is_public INTEGER NOT NULL DEFAULT 1,
-            enabled INTEGER NOT NULL DEFAULT 1,
+            enabled INTEGER NOT NULL DEFAULT 0,
             updated_at TEXT NOT NULL DEFAULT (datetime('now')),
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
         );

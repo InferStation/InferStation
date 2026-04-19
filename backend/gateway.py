@@ -412,8 +412,8 @@ async def register_backend(req: RegisterBackendRequest, user=Depends(require_pro
             )
         else:
             await db.execute(
-                """INSERT INTO backends (name, owner_id, url, mode, models, tags, input_price, output_price, is_public, client_info)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                """INSERT INTO backends (name, owner_id, url, mode, models, tags, input_price, output_price, is_public, client_info, enabled)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)""",
                 (
                     req.name, user["id"], req.url, req.mode, json.dumps(req.models), json.dumps(req.tags),
                     req.input_price, req.output_price, 1 if req.is_public else 0, json.dumps(req.client_info),
