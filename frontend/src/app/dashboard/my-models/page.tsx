@@ -21,6 +21,7 @@ export default function MyModelsPage() {
   const [subs, setSubs] = useState<Sub[]>([])
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState("")
+  const [showHistory, setShowHistory] = useState(false)
 
   const fetchSubs = () => {
     apiFetch("/api/subscriptions")
@@ -111,7 +112,14 @@ export default function MyModelsPage() {
 
           {subs.filter((s) => !s.is_active).length > 0 && (
             <>
-              <h2 className="text-lg font-semibold text-gray-500 mb-3">历史订阅</h2>
+              <button
+                onClick={() => setShowHistory(!showHistory)}
+                className="flex items-center gap-2 text-lg font-semibold text-gray-500 mb-3 hover:text-gray-700"
+              >
+                <span className={`transition-transform ${showHistory ? "rotate-90" : ""}`}>▶</span>
+                历史订阅 ({subs.filter((s) => !s.is_active).length})
+              </button>
+              {showHistory && (
               <div className="space-y-3">
                 {subs.filter((s) => !s.is_active).map((s) => (
                   <div key={s.id} className="bg-gray-50 rounded-lg border border-gray-200 p-4 opacity-60">
@@ -129,6 +137,7 @@ export default function MyModelsPage() {
                   </div>
                 ))}
               </div>
+              )}
             </>
           )}
         </>
