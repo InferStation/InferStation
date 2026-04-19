@@ -248,6 +248,28 @@ async def change_password(req: ChangePasswordRequest, user=Depends(get_current_u
     return {"ok": True}
 
 
+class ChangeEmailRequest(BaseModel):
+    new_email: str
+
+
+@app.post("/api/auth/change-email")
+async def change_email(req: ChangeEmailRequest, user=Depends(get_current_user)):
+    import re
+    email = req.new_email.strip()
+    if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+        raise HTTPException(400, "邮箱格式不正确")
+    db = await get_db()
+    try:
+        existing = await db.execute("SELECT id FROM users WHERE email = ? AND id != ?", (email, user["id"]))
+        if await existing.fetchone():
+            raise HTTPException(400, "该邮箱已被其他账号使用")
+        await db.execute("UPDATE users SET email = ? WHERE id = ?", (email, user["id"]))
+        await db.commit()
+    finally:
+        await db.close()
+    return {"ok": True}
+
+
 @app.post("/api/user/upgrade-role")
 async def upgrade_role(req: UpgradeRequest, user=Depends(get_current_user)):
     if req.target_role not in ("provider", "both"):

@@ -6,15 +6,38 @@ import { apiFetch } from "@/lib/api"
 import PasswordInput, { checkStrength } from "@/components/PasswordInput"
 
 export default function AccountPage() {
-  const { user } = useAuth()
+  const { user, refreshUser } = useAuth()
   const [oldPw, setOldPw] = useState("")
   const [newPw, setNewPw] = useState("")
   const [confirmPw, setConfirmPw] = useState("")
   const [msg, setMsg] = useState("")
   const [error, setError] = useState("")
   const [saving, setSaving] = useState(false)
+  const [editingEmail, setEditingEmail] = useState(false)
+  const [newEmail, setNewEmail] = useState("")
+  const [emailMsg, setEmailMsg] = useState("")
+  const [emailError, setEmailError] = useState("")
+  const [emailSaving, setEmailSaving] = useState(false)
 
   if (!user) return null
+
+  const handleChangeEmail = async () => {
+    setEmailMsg(""); setEmailError("")
+    if (!newEmail.trim()) { setEmailError("请输入邮箱"); return }
+    setEmailSaving(true)
+    try {
+      await apiFetch("/api/auth/change-email", {
+        method: "POST",
+        body: JSON.stringify({ new_email: newEmail.trim() }),
+      })
+      setEmailMsg("邮箱修改成功")
+      setEditingEmail(false)
+      setNewEmail("")
+      await refreshUser()
+    } catch (err: unknown) {
+      setEmailError(err instanceof Error ? err.message : "修改失败")
+    } finally { setEmailSaving(false) }
+  }
 
   const handleChangePw = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -50,7 +73,28 @@ export default function AccountPage() {
           </div>
           <div>
             <span className="text-gray-500">邮箱：</span>
-            <span className="font-medium">{user.email}</span>
+            {editingEmail ? (
+              <span className="inline-flex items-center gap-2">
+                <input
+                  type="email"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder={user.email}
+                  className="border rounded px-2 py-0.5 text-sm w-48 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                />
+                <button onClick={handleChangeEmail} disabled={emailSaving} className="text-xs text-indigo-600 hover:text-indigo-800 disabled:opacity-50">
+                  {emailSaving ? "保存中" : "保存"}
+                </button>
+                <button onClick={() => { setEditingEmail(false); setNewEmail(""); setEmailError("") }} className="text-xs text-gray-400 hover:text-gray-600">取消</button>
+              </span>
+            ) : (
+              <span className="font-medium">
+                {user.email}
+                <button onClick={() => { setEditingEmail(true); setNewEmail(user.email) }} className="ml-2 text-xs text-indigo-500 hover:text-indigo-700">修改</button>
+              </span>
+            )}
+            {emailMsg && <span className="ml-2 text-xs text-green-600">{emailMsg}</span>}
+            {emailError && <span className="ml-2 text-xs text-red-500">{emailError}</span>}
           </div>
           <div>
             <span className="text-gray-500">余额：</span>
