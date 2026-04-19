@@ -459,6 +459,95 @@ async def list_backends(mine: bool = False, user=Depends(get_current_user)):
     return rows
 
 
+@app.get("/api/backends/{name}")
+async def get_backend_detail(name: str, user=Depends(require_provider)):
+    db = await get_db()
+    try:
+        if user["role"] == "admin":
+            cur = await db.execute(
+                "SELECT b.*, u.username as owner_name FROM backends b LEFT JOIN users u ON b.owner_id = u.id WHERE b.name = ?",
+                (name,),
+            )
+        else:
+            cur = await db.execute(
+                "SELECT b.*, u.username as owner_name FROM backends b LEFT JOIN users u ON b.owner_id = u.id WHERE b.name = ? AND b.owner_id = ?",
+                (name, user["id"]),
+            )
+        row = await cur.fetchone()
+    finally:
+        await db.close()
+    if not row:
+        raise HTTPException(404, "Backend not found")
+    r = dict(row)
+    r["models"] = json.loads(r["models"]) if r["models"] else []
+    r["tags"] = json.loads(r["tags"]) if r.get("tags") else {}
+    r["client_info"] = json.loads(r["client_info"]) if r["client_info"] else {}
+    return r
+
+
+class UpdateBackendRequest(BaseModel):
+    url: str | None = None
+    models: list[str] | None = None
+    tags: dict[str, str] | None = None
+    input_price: float | None = None
+    output_price: float | None = None
+    is_public: bool | None = None
+    clear_price: bool = False  # set True to clear pricing
+
+
+@app.put("/api/backends/{name}")
+async def update_backend(name: str, req: UpdateBackendRequest, user=Depends(require_provider)):
+    if req.models is not None:
+        for m in req.models:
+            family = m.split("/")[0] if "/" in m else m
+            if family not in ALLOWED_MODEL_FAMILIES:
+                raise HTTPException(400, f"模型 {m} 不在允许的大类中，当前支持: {', '.join(ALLOWED_MODEL_FAMILIES)}")
+
+    db = await get_db()
+    try:
+        if user["role"] == "admin":
+            cur = await db.execute("SELECT id FROM backends WHERE name = ?", (name,))
+        else:
+            cur = await db.execute("SELECT id FROM backends WHERE name = ? AND owner_id = ?", (name, user["id"]))
+        row = await cur.fetchone()
+        if not row:
+            raise HTTPException(404, "Backend not found")
+
+        updates = []
+        params = []
+        if req.url is not None:
+            updates.append("url = ?")
+            params.append(req.url)
+        if req.models is not None:
+            updates.append("models = ?")
+            params.append(json.dumps(req.models))
+        if req.tags is not None:
+            updates.append("tags = ?")
+            params.append(json.dumps(req.tags))
+        if req.is_public is not None:
+            updates.append("is_public = ?")
+            params.append(1 if req.is_public else 0)
+        if req.clear_price:
+            updates.append("input_price = NULL")
+            updates.append("output_price = NULL")
+        else:
+            if req.input_price is not None:
+                updates.append("input_price = ?")
+                params.append(req.input_price)
+            if req.output_price is not None:
+                updates.append("output_price = ?")
+                params.append(req.output_price)
+
+        if updates:
+            updates.append("updated_at = datetime('now')")
+            params.append(name)
+            await db.execute(f"UPDATE backends SET {', '.join(updates)} WHERE name = ?", params)
+            await db.commit()
+    finally:
+        await db.close()
+    return {"ok": True}
+
+
 @app.delete("/api/backends/{name}")
 async def delete_backend(name: str, user=Depends(require_provider)):
     db = await get_db()

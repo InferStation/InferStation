@@ -213,7 +213,7 @@ export default function ServicesPage() {
 
       <div className="space-y-4">
         {backends.map((b) => (
-          <div key={b.id} className={`bg-white rounded-lg border p-4 ${!b.enabled ? "opacity-60" : ""}`}>
+          <Link key={b.id} href={`/dashboard/services/${encodeURIComponent(b.name)}`} className={`block bg-white rounded-lg border p-4 hover:border-indigo-300 hover:shadow-sm transition-all ${!b.enabled ? "opacity-60" : ""}`}>
             <div className="flex justify-between items-start">
               <div>
                 <div className="flex items-center gap-2 mb-1">
@@ -223,20 +223,7 @@ export default function ServicesPage() {
                   <span className="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600">{b.mode === "tunnel" ? "隧道" : "直连"}</span>
                   {!b.is_public && <span className="px-2 py-0.5 rounded text-xs bg-yellow-100 text-yellow-700">私有</span>}
                 </div>
-                {b.url && <p className="text-sm text-gray-500">URL: {b.url}</p>}
-                <div className="text-sm text-gray-500">
-                  模型:{" "}
-                  {b.models.length > 0
-                    ? b.models.map((m, i) => (
-                        <span key={m}>
-                          {i > 0 && ", "}
-                          <Link href={`/models/${encodeURIComponent(m)}?backend_id=${b.id}`} className="text-indigo-600 hover:text-indigo-800 hover:underline">
-                            {m}
-                          </Link>
-                        </span>
-                      ))
-                    : "未设置"}
-                </div>
+                <p className="text-sm text-gray-500">模型: {b.models.length > 0 ? b.models.join(", ") : "未设置"}</p>
                 {Object.keys(b.tags || {}).length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mt-1">
                     {Object.entries(b.tags).map(([k, v]) => (
@@ -250,17 +237,17 @@ export default function ServicesPage() {
                   <p className="text-sm text-gray-500">定价: ¥{b.input_price}/M 输入 / ¥{b.output_price}/M 输出</p>
                 )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2" onClick={(e) => e.preventDefault()}>
                 <button
-                  onClick={() => toggleBackend(b.name)}
+                  onClick={(e) => { e.preventDefault(); toggleBackend(b.name) }}
                   className={`text-sm px-3 py-1 rounded ${b.enabled ? "bg-gray-100 text-gray-600 hover:bg-gray-200" : "bg-green-100 text-green-700 hover:bg-green-200"}`}
                 >
                   {b.enabled ? "下架" : "上架"}
                 </button>
-                <button onClick={() => deleteBackend(b.name)} className="text-red-500 hover:text-red-700 text-sm">删除</button>
+                <button onClick={(e) => { e.preventDefault(); deleteBackend(b.name) }} className="text-red-500 hover:text-red-700 text-sm">删除</button>
               </div>
             </div>
-          </div>
+          </Link>
         ))}
         {backends.length === 0 && <div className="text-center py-12 text-gray-500">暂无注册的后端服务</div>}
       </div>
