@@ -17,6 +17,9 @@ export default function Navbar() {
             <Link href="/models" className="text-gray-600 hover:text-gray-900">
               模型广场
             </Link>
+            <Link href="/docs" className="text-gray-600 hover:text-gray-900">
+              文档
+            </Link>
             {user && (
               <>
                 {user.role === "admin" && (
