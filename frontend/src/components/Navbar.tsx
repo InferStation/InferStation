@@ -19,9 +19,6 @@ export default function Navbar() {
             </Link>
             {user && (
               <>
-                <Link href="/dashboard" className="text-gray-600 hover:text-gray-900">
-                  个人中心
-                </Link>
                 {user.role === "admin" && (
                   <Link href="/admin" className="text-gray-600 hover:text-gray-900">
                     管理
@@ -33,10 +30,10 @@ export default function Navbar() {
           <div className="flex items-center gap-4">
             {user ? (
               <>
-                <span className="text-sm text-gray-500">
+                <Link href="/dashboard" className="text-sm text-gray-700 hover:text-indigo-600">
                   {user.username}
                   <span className="ml-2 text-green-600">¥{user.balance.toFixed(2)}</span>
-                </span>
+                </Link>
                 <button onClick={logout} className="text-sm text-red-500 hover:text-red-700">
                   退出
                 </button>
