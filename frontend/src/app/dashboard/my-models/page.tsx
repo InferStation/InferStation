@@ -87,7 +87,8 @@ export default function MyModelsPage() {
     setTimeout(() => setCopied(""), 2000)
   }
 
-  const baseUrl = typeof window !== "undefined" ? window.location.origin : ""
+  const baseUrl = process.env.NEXT_PUBLIC_PUBLIC_BASE_URL
+    || (typeof window !== "undefined" ? window.location.origin : "")
   const unifiedUrl = `${baseUrl}/v1/chat/completions`
   const activatedSubs = subs.filter((s) => s.is_active && s.is_activated)
 
