@@ -1054,8 +1054,9 @@ async def get_active_subscription_backend(user_id: int, auto_fallback: bool = Tr
                                           requested_model: str | None = None):
     """Pick a backend from the user's activated subscriptions.
 
-    - auto_fallback=True: ignore requested_model; try activated subs by priority,
-      use the first one whose backend is online. 503 if all offline.
+    - auto_fallback=True: prefer a sub whose model matches requested_model (if any);
+      if none match or the matching one is offline, fall back to activated subs by
+      priority and pick the first online. 503 if all offline.
     - auto_fallback=False: require requested_model to exactly match one of the
       user's activated subs; use that one. 404 if not matched; 503 if offline.
 
@@ -1080,6 +1081,13 @@ async def get_active_subscription_backend(user_id: int, auto_fallback: bool = Tr
         raise HTTPException(404, "你还没有激活任何订阅模型服务")
 
     if auto_fallback:
+        # 1) Try exact match on requested_model first (respects what the user asked for)
+        if requested_model:
+            for r in rows:
+                if r["model"] == requested_model and r.get("status") == "online":
+                    forced_model = r.pop("model")
+                    return r, forced_model
+        # 2) Fallback: first online by priority
         for r in rows:
             if r.get("status") == "online":
                 forced_model = r.pop("model")
