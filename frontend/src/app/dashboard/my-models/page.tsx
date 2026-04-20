@@ -120,11 +120,8 @@ export default function MyModelsPage() {
           </button>
         </div>
         <div className="text-sm text-gray-700 mt-3 space-y-1.5 leading-relaxed">
-          <p>
-            平台按<span className="font-semibold text-indigo-700">优先级</span>转发到<span className="font-semibold text-indigo-700">「已激活」</span>的模型服务，高优先级服务离线时<span className="font-semibold text-indigo-700">自动回退</span>到下一个。
-          </p>
           <p className="bg-amber-100 border border-amber-300 text-amber-900 rounded px-3 py-2 font-medium">
-            ⚠ 下方可通过「<span className="font-bold">↑ ↓</span>」按钮调整顺序，<span className="font-bold">顺序即转发优先级</span>（越靠上优先级越高）。
+            ⚠ 平台按<span className="font-bold">优先级</span>转发到<span className="font-bold">「已激活」</span>的模型服务，高优先级离线时<span className="font-bold">自动回退</span>到下一个；下方可通过「<span className="font-bold">↑ ↓</span>」按钮调整顺序，<span className="font-bold">越靠上优先级越高</span>。
           </p>
         </div>
       </div>
