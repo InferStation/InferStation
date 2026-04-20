@@ -23,6 +23,7 @@ interface Subscription {
   id: number
   sub_key: string
   model: string
+  is_owned?: boolean
 }
 
 export default function ModelDetailPage() {
@@ -53,7 +54,7 @@ export default function ModelDetailPage() {
     apiFetch("/api/subscriptions")
       .then((subs: any[]) => {
         const found = subs.find((s) => s.model === modelId && String(s.backend_id) === backendId && s.is_active)
-        if (found) setSub({ id: found.id, sub_key: found.sub_key, model: found.model })
+        if (found) setSub({ id: found.id, sub_key: found.sub_key, model: found.model, is_owned: !!found.is_owned })
       })
       .catch(() => {})
   }, [user, modelId, backendId])
@@ -195,14 +196,18 @@ export default function ModelDetailPage() {
               <div className="flex items-center justify-between mb-4">
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700">
                   <span className="w-2 h-2 rounded-full bg-green-500" />
-                  已订阅
+                  {sub.is_owned ? "自动订阅" : "已订阅"}
                 </span>
-                <button
-                  onClick={handleUnsubscribe}
-                  className="text-xs text-red-500 hover:text-red-700"
-                >
-                  取消订阅
-                </button>
+                {sub.is_owned ? (
+                  <span className="text-xs text-gray-400" title="自己注册的模型服务，无法取消订阅">自己的服务</span>
+                ) : (
+                  <button
+                    onClick={handleUnsubscribe}
+                    className="text-xs text-red-500 hover:text-red-700"
+                  >
+                    取消订阅
+                  </button>
+                )}
               </div>
 
               <div className="space-y-3">

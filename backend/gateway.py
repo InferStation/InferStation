@@ -106,6 +106,32 @@ async def lifespan(app: FastAPI):
     db = await get_db()
     try:
         await db.execute("UPDATE backends SET status = 'offline' WHERE mode = 'tunnel'")
+        # Backfill: ensure every backend owner is auto-subscribed to their own models
+        cur = await db.execute("SELECT id, owner_id, models FROM backends")
+        all_backends = await cur.fetchall()
+        for brow in all_backends:
+            bid, owner_id, models_json = brow[0], brow[1], brow[2]
+            if not owner_id or not models_json:
+                continue
+            try:
+                model_list = json.loads(models_json)
+            except Exception:
+                continue
+            for model_name in model_list:
+                cur = await db.execute(
+                    "SELECT id, is_active FROM subscriptions WHERE user_id = ? AND backend_id = ? AND model = ?",
+                    (owner_id, bid, model_name),
+                )
+                existing = await cur.fetchone()
+                if existing:
+                    if not existing[1]:
+                        await db.execute("UPDATE subscriptions SET is_active = 1 WHERE id = ?", (existing[0],))
+                else:
+                    sub_key = f"sub-{secrets.token_urlsafe(24)}"
+                    await db.execute(
+                        "INSERT INTO subscriptions (user_id, backend_id, model, sub_key) VALUES (?, ?, ?, ?)",
+                        (owner_id, bid, model_name, sub_key),
+                    )
         await db.commit()
     finally:
         await db.close()
@@ -421,6 +447,28 @@ async def register_backend(req: RegisterBackendRequest, user=Depends(require_pro
                 ),
             )
         await db.commit()
+
+        # Auto-subscribe the owner to all models of this backend (cannot be unsubscribed).
+        cur = await db.execute("SELECT id FROM backends WHERE name = ?", (req.name,))
+        brow = await cur.fetchone()
+        if brow:
+            backend_id = brow[0]
+            for model_name in req.models:
+                cur = await db.execute(
+                    "SELECT id, is_active FROM subscriptions WHERE user_id = ? AND backend_id = ? AND model = ?",
+                    (user["id"], backend_id, model_name),
+                )
+                existing = await cur.fetchone()
+                if existing:
+                    if not existing[1]:
+                        await db.execute("UPDATE subscriptions SET is_active = 1 WHERE id = ?", (existing[0],))
+                else:
+                    sub_key = f"sub-{secrets.token_urlsafe(24)}"
+                    await db.execute(
+                        "INSERT INTO subscriptions (user_id, backend_id, model, sub_key) VALUES (?, ?, ?, ?)",
+                        (user["id"], backend_id, model_name, sub_key),
+                    )
+            await db.commit()
     finally:
         await db.close()
     return {"ok": True, "name": req.name}
@@ -721,10 +769,11 @@ async def list_subscriptions(user=Depends(get_current_user)):
     try:
         cur = await db.execute(
             "SELECT s.id, s.backend_id, s.model, s.sub_key, s.is_active, s.created_at, "
-            "b.name as backend, b.status as backend_status, b.input_price, b.output_price "
+            "b.name as backend, b.status as backend_status, b.input_price, b.output_price, "
+            "CASE WHEN b.owner_id = ? THEN 1 ELSE 0 END as is_owned "
             "FROM subscriptions s JOIN backends b ON s.backend_id = b.id "
             "WHERE s.user_id = ? ORDER BY s.created_at DESC",
-            (user["id"],),
+            (user["id"], user["id"]),
         )
         rows = [dict(r) for r in await cur.fetchall()]
     finally:
@@ -736,6 +785,16 @@ async def list_subscriptions(user=Depends(get_current_user)):
 async def unsubscribe_model(sub_id: int, user=Depends(get_current_user)):
     db = await get_db()
     try:
+        cur = await db.execute(
+            "SELECT s.id, b.owner_id FROM subscriptions s JOIN backends b ON s.backend_id = b.id "
+            "WHERE s.id = ? AND s.user_id = ?",
+            (sub_id, user["id"]),
+        )
+        row = await cur.fetchone()
+        if not row:
+            raise HTTPException(404, "订阅不存在")
+        if row[1] == user["id"]:
+            raise HTTPException(400, "无法取消订阅自己注册的模型服务")
         await db.execute(
             "UPDATE subscriptions SET is_active = 0 WHERE id = ? AND user_id = ?",
             (sub_id, user["id"]),

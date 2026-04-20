@@ -15,6 +15,7 @@ interface Sub {
   backend_status: string
   input_price: number | null
   output_price: number | null
+  is_owned?: number | boolean
 }
 
 export default function MyModelsPage() {
@@ -151,6 +152,11 @@ export default function MyModelsPage() {
                             已激活
                           </span>
                         )}
+                        {s.is_owned && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200" title="自己注册的模型服务，无法取消订阅">
+                            自动订阅
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-3">
                         {isActive ? (
@@ -172,7 +178,9 @@ export default function MyModelsPage() {
                         )}
                         <button
                           onClick={() => handleUnsubscribe(s.id)}
-                          className="text-xs text-red-500 hover:text-red-700"
+                          disabled={!!s.is_owned}
+                          title={s.is_owned ? "自己注册的模型服务，无法取消订阅" : undefined}
+                          className="text-xs text-red-500 hover:text-red-700 disabled:text-gray-300 disabled:cursor-not-allowed disabled:hover:text-gray-300"
                         >
                           取消订阅
                         </button>

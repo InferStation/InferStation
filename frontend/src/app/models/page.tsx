@@ -22,6 +22,7 @@ interface SubInfo {
   model: string
   backend_id: number
   sub_key: string
+  is_owned?: boolean
 }
 
 const MODEL_FAMILIES = ["Qwen", "THUDM", "deepseek-ai"]
@@ -49,12 +50,13 @@ export default function ModelsPage() {
   useEffect(() => {
     if (!user) { setSubs([]); return }
     apiFetch("/api/subscriptions")
-      .then((list: any[]) => setSubs(list.filter((s) => s.is_active).map((s) => ({ id: s.id, model: s.model, backend_id: s.backend_id, sub_key: s.sub_key }))))
+      .then((list: any[]) => setSubs(list.filter((s) => s.is_active).map((s) => ({ id: s.id, model: s.model, backend_id: s.backend_id, sub_key: s.sub_key, is_owned: !!s.is_owned }))))
       .catch(() => {})
   }, [user])
 
   const isSubscribed = (m: Model) => subs.some((s) => s.model === m.id && s.backend_id === m.backend_id)
   const getSubKey = (m: Model) => subs.find((s) => s.model === m.id && s.backend_id === m.backend_id)?.sub_key
+  const isOwned = (m: Model) => !!subs.find((s) => s.model === m.id && s.backend_id === m.backend_id)?.is_owned
 
   const baseUrl = typeof window !== "undefined" ? window.location.origin : ""
 
@@ -230,13 +232,19 @@ export default function ModelsPage() {
                     >
                       {copied === `${m.backend_id}-${m.id}` ? "已复制 API" : "复制 API 地址"}
                     </button>
-                    <button
-                      onClick={(e) => handleUnsubscribe(e, m)}
-                      disabled={subLoading === `${m.backend_id}-${m.id}`}
-                      className="px-3 py-1.5 rounded-lg text-xs font-medium text-red-500 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-50"
-                    >
-                      {subLoading === `${m.backend_id}-${m.id}` ? "..." : "取消"}
-                    </button>
+                    {isOwned(m) ? (
+                      <span className="px-3 py-1.5 rounded-lg text-xs font-medium text-gray-500 bg-gray-100" title="自己注册的模型服务，无法取消订阅">
+                        自动订阅
+                      </span>
+                    ) : (
+                      <button
+                        onClick={(e) => handleUnsubscribe(e, m)}
+                        disabled={subLoading === `${m.backend_id}-${m.id}`}
+                        className="px-3 py-1.5 rounded-lg text-xs font-medium text-red-500 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-50"
+                      >
+                        {subLoading === `${m.backend_id}-${m.id}` ? "..." : "取消"}
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <button
