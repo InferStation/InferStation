@@ -445,6 +445,20 @@ class RegisterBackendRequest(BaseModel):
 ALLOWED_MODEL_FAMILIES = ["Qwen", "THUDM", "deepseek-ai"]
 
 
+def _sanitize_client_info(ci: dict, models: list[str]) -> dict:
+    """Drop model_map entries whose key is not an exact match to one of the
+    backend's declared models. Keys must be the full canonical name (e.g.
+    'Qwen/Qwen3.6-35B-A3B'), not a short/family-less form."""
+    if not isinstance(ci, dict):
+        return {}
+    ci = dict(ci)
+    mm = ci.get("model_map")
+    if isinstance(mm, dict) and models:
+        model_set = set(models)
+        ci["model_map"] = {k: v for k, v in mm.items() if k in model_set}
+    return ci
+
+
 @app.get("/api/model-families")
 async def get_model_families():
     return ALLOWED_MODEL_FAMILIES
@@ -460,6 +474,8 @@ async def register_backend(req: RegisterBackendRequest, user=Depends(require_pro
         family = m.split("/")[0] if "/" in m else m
         if family not in ALLOWED_MODEL_FAMILIES:
             raise HTTPException(400, f"模型 {m} 不在允许的大类中，当前支持: {', '.join(ALLOWED_MODEL_FAMILIES)}")
+
+    req.client_info = _sanitize_client_info(req.client_info, req.models)
 
     db = await get_db()
     try:
