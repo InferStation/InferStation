@@ -32,7 +32,7 @@ export default function ModelsPage() {
   const [models, setModels] = useState<Model[]>([])
   const [search, setSearch] = useState("")
   const [familyFilter, setFamilyFilter] = useState("all")
-  const [statusFilter, setStatusFilter] = useState<"all" | "online" | "offline">("all")
+  const [statusFilter, setStatusFilter] = useState<"all" | "online" | "offline">("online")
   const [subs, setSubs] = useState<SubInfo[]>([])
   const [subLoading, setSubLoading] = useState<string | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
