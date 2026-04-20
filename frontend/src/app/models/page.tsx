@@ -107,8 +107,7 @@ export default function ModelsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">模型广场</h1>
+      <div className="flex items-center justify-end">
         <span className="text-sm text-gray-400">{filtered.length} / {models.length} 个模型</span>
       </div>
 
