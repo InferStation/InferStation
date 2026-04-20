@@ -1251,6 +1251,15 @@ async def _handle_openai_request(request: Request, path: str, usage_keys: tuple[
     if model in model_map:
         body["model"] = model_map[model]
 
+    # For OpenAI chat/completions streaming, force include_usage so the final
+    # chunk carries token counts (vLLM/OpenAI omit usage in stream by default).
+    if stream and path in ("/v1/chat/completions", "/v1/completions"):
+        opts = body.get("stream_options")
+        if not isinstance(opts, dict):
+            opts = {}
+        opts.setdefault("include_usage", True)
+        body["stream_options"] = opts
+
     input_price, output_price = get_pricing(backend)
 
     if backend["mode"] == "tunnel":
