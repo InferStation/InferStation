@@ -29,9 +29,10 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [client] %(levelname
 logger = logging.getLogger("client")
 
 
-async def forward_to_local(local_url: str, request_data: dict, stream: bool = False):
+async def forward_to_local(local_url: str, request_data: dict, stream: bool = False,
+                            path: str = "/v1/chat/completions"):
     """Forward a request to the local vLLM/OpenAI-compatible server."""
-    url = f"{local_url.rstrip('/')}/v1/chat/completions"
+    url = f"{local_url.rstrip('/')}{path}"
     async with httpx.AsyncClient(timeout=120) as client:
         if stream:
             chunks = []
@@ -82,9 +83,11 @@ async def run_tunnel(gateway_ws_url: str, token: str, backend_name: str, local_u
                     msg_type = msg.get("type", "")
 
                     if msg_type == "request":
-                        asyncio.create_task(_handle_request(ws, req_id, local_url, msg["data"]))
+                        asyncio.create_task(_handle_request(ws, req_id, local_url, msg["data"],
+                                                             msg.get("path", "/v1/chat/completions")))
                     elif msg_type == "stream_request":
-                        asyncio.create_task(_handle_stream(ws, req_id, local_url, msg["data"]))
+                        asyncio.create_task(_handle_stream(ws, req_id, local_url, msg["data"],
+                                                            msg.get("path", "/v1/chat/completions")))
                     elif msg_type == "health_check":
                         asyncio.create_task(_handle_health_check(ws, req_id, local_url))
 
@@ -96,19 +99,19 @@ async def run_tunnel(gateway_ws_url: str, token: str, backend_name: str, local_u
             await asyncio.sleep(10)
 
 
-async def _handle_request(ws, req_id: str, local_url: str, data: dict):
+async def _handle_request(ws, req_id: str, local_url: str, data: dict, path: str = "/v1/chat/completions"):
     try:
-        result = await forward_to_local(local_url, data, stream=False)
+        result = await forward_to_local(local_url, data, stream=False, path=path)
         await ws.send(json.dumps({"id": req_id, "type": "response", "data": result}))
     except Exception as e:
         logger.error(f"Request {req_id} failed: {e}")
         await ws.send(json.dumps({"id": req_id, "type": "response", "data": {"error": str(e)}}))
 
 
-async def _handle_stream(ws, req_id: str, local_url: str, data: dict):
+async def _handle_stream(ws, req_id: str, local_url: str, data: dict, path: str = "/v1/chat/completions"):
     try:
         data["stream"] = True
-        chunks = await forward_to_local(local_url, data, stream=True)
+        chunks = await forward_to_local(local_url, data, stream=True, path=path)
         for chunk in chunks:
             await ws.send(json.dumps({"id": req_id, "type": "stream_chunk", "data": chunk}))
         await ws.send(json.dumps({"id": req_id, "type": "stream_end"}))

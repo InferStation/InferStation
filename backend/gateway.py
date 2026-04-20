@@ -1111,6 +1111,23 @@ async def openai_models(request: Request):
 
 @app.post("/v1/chat/completions")
 async def openai_chat(request: Request):
+    return await _handle_openai_request(request, "/v1/chat/completions",
+                                         usage_keys=("prompt_tokens", "completion_tokens"))
+
+
+@app.post("/v1/completions")
+async def openai_completions(request: Request):
+    return await _handle_openai_request(request, "/v1/completions",
+                                         usage_keys=("prompt_tokens", "completion_tokens"))
+
+
+@app.post("/v1/responses")
+async def openai_responses(request: Request):
+    return await _handle_openai_request(request, "/v1/responses",
+                                         usage_keys=("input_tokens", "output_tokens"))
+
+
+async def _handle_openai_request(request: Request, path: str, usage_keys: tuple[str, str]):
     api_user = await authenticate_api_key(request)
     body = await request.json()
     stream = body.get("stream", False)
@@ -1135,9 +1152,11 @@ async def openai_chat(request: Request):
     input_price, output_price = get_pricing(backend)
 
     if backend["mode"] == "tunnel":
-        return await _proxy_tunnel(api_user, backend, body, stream, input_price, output_price)
+        return await _proxy_tunnel(api_user, backend, body, stream, input_price, output_price,
+                                    path=path, usage_keys=usage_keys)
     else:
-        return await _proxy_direct(api_user, backend, body, stream, input_price, output_price)
+        return await _proxy_direct(api_user, backend, body, stream, input_price, output_price,
+                                    path=path, usage_keys=usage_keys)
 
 
 def _upstream_headers(backend) -> dict:
@@ -1148,13 +1167,14 @@ def _upstream_headers(backend) -> dict:
     return headers
 
 
-async def _proxy_direct(api_user, backend, body, stream, input_price, output_price):
-    url = f"{backend['url'].rstrip('/')}/v1/chat/completions"
+async def _proxy_direct(api_user, backend, body, stream, input_price, output_price,
+                         path="/v1/chat/completions", usage_keys=("prompt_tokens", "completion_tokens")):
+    url = f"{backend['url'].rstrip('/')}{path}"
     headers = _upstream_headers(backend)
 
     if stream:
         return StreamingResponse(
-            _stream_direct(api_user, backend, body, url, input_price, output_price, headers),
+            _stream_direct(api_user, backend, body, url, input_price, output_price, headers, usage_keys),
             media_type="text/event-stream",
         )
 
@@ -1162,12 +1182,13 @@ async def _proxy_direct(api_user, backend, body, stream, input_price, output_pri
         resp = await client.post(url, json=body, headers=headers)
         data = resp.json()
 
-    usage = data.get("usage", {})
-    await _record_usage(api_user, backend, body["model"], usage, input_price, output_price)
+    usage = _extract_usage(data, usage_keys)
+    await _record_usage(api_user, backend, body.get("model", ""), usage, input_price, output_price)
     return data
 
 
-async def _stream_direct(api_user, backend, body, url, input_price, output_price, headers=None):
+async def _stream_direct(api_user, backend, body, url, input_price, output_price, headers=None,
+                          usage_keys=("prompt_tokens", "completion_tokens")):
     total_input = 0
     total_output = 0
     async with httpx.AsyncClient(timeout=120) as client:
@@ -1180,53 +1201,75 @@ async def _stream_direct(api_user, backend, body, url, input_price, output_price
                         continue
                     try:
                         chunk = json.loads(chunk_data)
-                        usage = chunk.get("usage", {})
-                        if usage:
-                            total_input = usage.get("prompt_tokens", total_input)
-                            total_output = usage.get("completion_tokens", total_output)
+                        u = _extract_usage(chunk, usage_keys)
+                        if u["prompt_tokens"] or u["completion_tokens"]:
+                            total_input = u["prompt_tokens"] or total_input
+                            total_output = u["completion_tokens"] or total_output
                     except json.JSONDecodeError:
                         pass
 
     await _record_usage(
-        api_user, backend, body["model"],
+        api_user, backend, body.get("model", ""),
         {"prompt_tokens": total_input, "completion_tokens": total_output},
         input_price, output_price,
     )
 
 
-async def _proxy_tunnel(api_user, backend, body, stream, input_price, output_price):
+async def _proxy_tunnel(api_user, backend, body, stream, input_price, output_price,
+                         path="/v1/chat/completions", usage_keys=("prompt_tokens", "completion_tokens")):
     if not tunnel_manager.is_connected(backend["id"]):
         raise HTTPException(503, "Backend tunnel not connected")
 
     if stream:
         return StreamingResponse(
-            _stream_tunnel(api_user, backend, body, input_price, output_price),
+            _stream_tunnel(api_user, backend, body, input_price, output_price, path, usage_keys),
             media_type="text/event-stream",
         )
 
-    data = await tunnel_manager.forward_request(backend["id"], body)
-    usage = data.get("usage", {})
-    await _record_usage(api_user, backend, body["model"], usage, input_price, output_price)
+    data = await tunnel_manager.forward_request(backend["id"], body, path=path)
+    usage = _extract_usage(data, usage_keys)
+    await _record_usage(api_user, backend, body.get("model", ""), usage, input_price, output_price)
     return data
 
 
-async def _stream_tunnel(api_user, backend, body, input_price, output_price):
+async def _stream_tunnel(api_user, backend, body, input_price, output_price,
+                          path="/v1/chat/completions", usage_keys=("prompt_tokens", "completion_tokens")):
     total_input = 0
     total_output = 0
-    async for chunk in tunnel_manager.forward_stream(backend["id"], body):
+    async for chunk in tunnel_manager.forward_stream(backend["id"], body, path=path):
         line = f"data: {json.dumps(chunk)}\n\n"
         yield line
-        usage = chunk.get("usage", {})
-        if usage:
-            total_input = usage.get("prompt_tokens", total_input)
-            total_output = usage.get("completion_tokens", total_output)
+        u = _extract_usage(chunk, usage_keys)
+        if u["prompt_tokens"] or u["completion_tokens"]:
+            total_input = u["prompt_tokens"] or total_input
+            total_output = u["completion_tokens"] or total_output
     yield "data: [DONE]\n\n"
 
     await _record_usage(
-        api_user, backend, body["model"],
+        api_user, backend, body.get("model", ""),
         {"prompt_tokens": total_input, "completion_tokens": total_output},
         input_price, output_price,
     )
+
+
+def _extract_usage(obj: dict, usage_keys: tuple[str, str]) -> dict:
+    """Extract usage from a response/chunk, normalized to prompt/completion keys.
+
+    Looks under top-level `usage` first, then under `response.usage` (Responses API
+    final events), returning zeros when absent.
+    """
+    in_key, out_key = usage_keys
+    usage = obj.get("usage") if isinstance(obj, dict) else None
+    if not usage and isinstance(obj, dict):
+        resp_obj = obj.get("response")
+        if isinstance(resp_obj, dict):
+            usage = resp_obj.get("usage")
+    if not isinstance(usage, dict):
+        usage = {}
+    return {
+        "prompt_tokens": int(usage.get(in_key, 0) or 0),
+        "completion_tokens": int(usage.get(out_key, 0) or 0),
+    }
 
 
 async def _record_usage(api_user, backend, model, usage, input_price, output_price):
