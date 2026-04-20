@@ -100,7 +100,7 @@ export default function MyModelsPage() {
 
       <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-5 mb-8">
         <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-          <h2 className="text-sm font-semibold text-indigo-900">我的统一 API 链接</h2>
+          <h2 className="text-sm font-semibold text-indigo-900">API 链接</h2>
           {activatedSubs.length > 0 ? (
             <span className="text-xs text-indigo-700">
               已激活 {activatedSubs.length} 个服务，按优先级自动回退
@@ -122,7 +122,7 @@ export default function MyModelsPage() {
         </div>
         <div className="text-sm text-gray-700 mt-3 space-y-1.5 leading-relaxed">
           <p className="bg-amber-100 border border-amber-300 text-amber-900 rounded px-3 py-2 font-medium">
-            ⚠ 平台按<span className="font-bold">优先级</span>转发到<span className="font-bold">「已激活」</span>的模型服务，高优先级离线时<span className="font-bold">自动回退</span>到下一个；下方可通过「<span className="font-bold">↑ ↓</span>」按钮调整顺序，<span className="font-bold">越靠上优先级越高</span>。
+            ⚠ 使用你<span className="font-bold">自己的 API Key</span>调用上方 API 链接，即可访问你<span className="font-bold">已激活的订阅模型服务</span>；平台按<span className="font-bold">优先级</span>转发并在高优先级离线时<span className="font-bold">自动回退</span>，可通过「<span className="font-bold">↑ ↓</span>」调整顺序（<span className="font-bold">越靠上优先级越高</span>）。
           </p>
         </div>
       </div>
