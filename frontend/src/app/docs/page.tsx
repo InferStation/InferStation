@@ -6,6 +6,8 @@ const NAV_SECTIONS = [
   { id: "intro", label: "平台简介" },
   { id: "quickstart", label: "快速开始" },
   { id: "api-call", label: "API 调用" },
+  { id: "routing", label: "路由与失败转移" },
+  { id: "billing", label: "计费与账单" },
   { id: "api-ref", label: "API 端点参考" },
   { id: "tunnel", label: "隧道模式接入" },
 ]
@@ -69,7 +71,7 @@ export default function DocsPage() {
         <div className="bg-white rounded-lg border p-6 space-y-3 text-gray-700 text-sm leading-relaxed">
           <p>
             <strong>天枢</strong> 是一个模型服务聚合平台，连接 AI 消费者与模型提供者。
-            提供者可以将自己的 GPU 机器上运行的模型服务注册到平台，消费者则通过统一的 OpenAI 兼容 API 调用这些模型。
+            提供者将 GPU 机器上运行的模型服务注册到平台，消费者通过统一的 OpenAI 兼容 API 调用这些模型。
           </p>
           <p>平台支持两种接入模式：</p>
           <ul className="list-disc list-inside space-y-1 ml-2">
@@ -78,9 +80,10 @@ export default function DocsPage() {
           </ul>
           <p>核心特性：</p>
           <ul className="list-disc list-inside space-y-1 ml-2">
-            <li>完全兼容 OpenAI API 格式，可直接使用 OpenAI SDK</li>
-            <li>支持流式 (SSE) 和非流式响应</li>
-            <li>按 token 用量计费，提供者可自定义定价</li>
+            <li>完全兼容 OpenAI API，可直接使用 OpenAI SDK</li>
+            <li>支持流式 (SSE) 和非流式；流式响应自动回传 <code>usage</code> 用于计费</li>
+            <li>统一 <code>/v1</code> 入口：按用户激活订阅的<strong>优先级</strong>路由，可选失败转移</li>
+            <li>按 token 用量计费，提供者自定义每百万 token 单价，平台后付费月结</li>
             <li>自动健康检查，实时展示后端在线状态</li>
           </ul>
         </div>
@@ -95,49 +98,33 @@ export default function DocsPage() {
             <ol className="list-decimal list-inside space-y-1.5 ml-2">
               <li>注册账号并登录</li>
               <li>在「模型广场」浏览并订阅感兴趣的模型</li>
-              <li>获取专属 API 地址（订阅后自动生成）</li>
-              <li>使用 curl 或 OpenAI SDK 调用模型</li>
+              <li>进入「我的订阅」，点击<strong>激活</strong>需要使用的订阅，并按优先级排序</li>
+              <li>在「API Key」页面创建一个 key（格式 <code>sk-xxxx</code>）</li>
+              <li>使用 OpenAI SDK 调用 <code>/v1</code>，平台会按订阅优先级自动选择后端</li>
             </ol>
           </div>
           <div>
             <h3 className="font-semibold text-base text-gray-800 mb-2">提供者</h3>
             <ol className="list-decimal list-inside space-y-1.5 ml-2">
               <li>注册账号，在「我的服务」中激活提供者身份</li>
-              <li>注册后端服务（选择直连或隧道模式）</li>
-              <li>如果是隧道模式，在本地运行 client.py 建立连接</li>
+              <li>注册后端服务（选择直连或隧道模式），填写支持的模型与单价</li>
+              <li>如果是隧道模式，在本地运行 <code>tunnel_client.py</code> 建立连接</li>
               <li>手动点击「上架」，模型即在广场中可见</li>
             </ol>
           </div>
         </div>
       </section>
 
-      {/* API 调用方式 */}
+      {/* API 调用 */}
       <section id="api-call" className="mb-12 scroll-mt-20">
         <h2 className="text-2xl font-semibold text-gray-800 mb-4">API 调用</h2>
         <div className="space-y-6">
-          {/* 方式一：订阅 Key */}
-          <div className="bg-white rounded-lg border p-6">
-            <h3 className="font-semibold text-base text-gray-800 mb-3">方式一：通过订阅 Key 调用（推荐）</h3>
-            <p className="text-sm text-gray-600 mb-3">
-              在模型广场订阅模型后，会生成一个专属的 sub_key。使用该 key 构造 API 地址即可调用，无需额外鉴权。
-            </p>
-            <div className="bg-gray-900 text-gray-100 rounded-lg p-4 text-sm overflow-x-auto">
-              <pre>{`curl https://your-gateway/s/{sub_key}/v1/chat/completions \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "model": "Qwen/Qwen3-8B",
-    "messages": [{"role": "user", "content": "你好"}],
-    "stream": true
-  }'`}</pre>
-            </div>
-            <p className="text-xs text-gray-500 mt-2">其中 sub_key 可在「我的订阅」或模型详情页获取。</p>
-          </div>
 
-          {/* 方式二：API Key */}
+          {/* 方式一：API Key */}
           <div className="bg-white rounded-lg border p-6">
-            <h3 className="font-semibold text-base text-gray-800 mb-3">方式二：通过 API Key 调用</h3>
+            <h3 className="font-semibold text-base text-gray-800 mb-3">方式一：API Key + 统一 /v1（推荐）</h3>
             <p className="text-sm text-gray-600 mb-3">
-              在「API Key」页面创建 Key，通过标准 OpenAI 格式调用。平台会根据 model 参数自动路由到对应后端。
+              在「API Key」页面创建 key，通过标准 OpenAI 格式调用 <code>/v1</code>。平台会按你<strong>激活的订阅的优先级</strong>选择后端（详见下方「路由与失败转移」）。
             </p>
             <div className="bg-gray-900 text-gray-100 rounded-lg p-4 text-sm overflow-x-auto">
               <pre>{`curl https://your-gateway/v1/chat/completions \\
@@ -145,9 +132,13 @@ export default function DocsPage() {
   -H "Authorization: Bearer sk-your-api-key" \\
   -d '{
     "model": "Qwen/Qwen3-8B",
-    "messages": [{"role": "user", "content": "你好"}]
+    "messages": [{"role": "user", "content": "你好"}],
+    "stream": true
   }'`}</pre>
             </div>
+            <p className="text-xs text-gray-500 mt-2">
+              流式请求平台会自动注入 <code>stream_options.include_usage=true</code>，最后一条 chunk 会携带 token 统计。
+            </p>
           </div>
 
           {/* OpenAI SDK */}
@@ -156,29 +147,87 @@ export default function DocsPage() {
             <div className="bg-gray-900 text-gray-100 rounded-lg p-4 text-sm overflow-x-auto">
               <pre>{`from openai import OpenAI
 
-# 方式一：使用订阅 Key
-client = OpenAI(
-    base_url="https://your-gateway/s/{sub_key}/v1",
-    api_key="unused"  # 订阅 Key 模式无需 api_key
-)
-
-# 方式二：使用 API Key
 client = OpenAI(
     base_url="https://your-gateway/v1",
-    api_key="sk-your-api-key"
+    api_key="sk-your-api-key",
 )
 
-response = client.chat.completions.create(
+resp = client.chat.completions.create(
     model="Qwen/Qwen3-8B",
     messages=[{"role": "user", "content": "你好"}],
-    stream=True
+    stream=True,
 )
 
-for chunk in response:
-    if chunk.choices[0].delta.content:
+for chunk in resp:
+    if chunk.choices and chunk.choices[0].delta.content:
         print(chunk.choices[0].delta.content, end="")`}</pre>
             </div>
           </div>
+
+          {/* 方式二：sub_key 直达 */}
+          <div className="bg-white rounded-lg border p-6">
+            <h3 className="font-semibold text-base text-gray-800 mb-3">方式二：sub_key 直达（不经路由）</h3>
+            <p className="text-sm text-gray-600 mb-3">
+              订阅生成的 <code>sub_key</code> 可直接定位到某一个具体后端，<strong>不走</strong>优先级与失败转移。适合调试或强制指定某家提供者的场景。
+            </p>
+            <div className="bg-gray-900 text-gray-100 rounded-lg p-4 text-sm overflow-x-auto">
+              <pre>{`curl https://your-gateway/s/{sub_key}/v1/chat/completions \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "model": "Qwen/Qwen3-8B",
+    "messages": [{"role": "user", "content": "你好"}]
+  }'`}</pre>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">sub_key 可在「我的订阅」或模型详情页获取，无需 Authorization 头。</p>
+          </div>
+        </div>
+      </section>
+
+      {/* 路由与失败转移 */}
+      <section id="routing" className="mb-12 scroll-mt-20">
+        <h2 className="text-2xl font-semibold text-gray-800 mb-4">路由与失败转移</h2>
+        <div className="bg-white rounded-lg border p-6 space-y-3 text-sm text-gray-700 leading-relaxed">
+          <p>
+            调用 <code>/v1/chat/completions</code>、<code>/v1/completions</code>、<code>/v1/responses</code> 时，平台按以下规则选择后端：
+          </p>
+          <ol className="list-decimal list-inside space-y-1 ml-2">
+            <li>只考虑你在「我的订阅」中<strong>已激活</strong>的订阅</li>
+            <li>按订阅的<strong>优先级</strong>（可在订阅页拖拽排序）从高到低依次尝试</li>
+            <li>优先选择 <code>model</code> 参数匹配、且后端 <code>status=online</code> 的订阅</li>
+            <li>
+              如果用户开启了 <strong>auto_fallback</strong>（默认开启），在首选不可用时会继续向后尝试其他激活订阅；
+              关闭后则严格按最高优先级，单点失败时返回错误
+            </li>
+          </ol>
+          <p>
+            开关位于「我的订阅」页顶部，或通过 <code>POST /api/user/auto-fallback</code> 调整：
+          </p>
+          <div className="bg-gray-900 text-gray-100 rounded-lg p-4 text-sm overflow-x-auto">
+            <pre>{`curl -X POST https://your-gateway/api/user/auto-fallback \\
+  -H "Authorization: Bearer <web_token>" \\
+  -H "Content-Type: application/json" \\
+  -d '{"enabled": true}'`}</pre>
+          </div>
+          <p className="text-xs text-gray-500">
+            没有激活任何订阅时，<code>/v1</code> 会退化为按 <code>model</code> 参数在你<strong>自有或公开的 online 后端</strong>里查找。
+          </p>
+        </div>
+      </section>
+
+      {/* 计费与账单 */}
+      <section id="billing" className="mb-12 scroll-mt-20">
+        <h2 className="text-2xl font-semibold text-gray-800 mb-4">计费与账单</h2>
+        <div className="bg-white rounded-lg border p-6 space-y-3 text-sm text-gray-700 leading-relaxed">
+          <ul className="list-disc list-inside space-y-1 ml-2">
+            <li>
+              计费粒度：每次请求按返回的 <code>usage.prompt_tokens</code> / <code>usage.completion_tokens</code>（<code>/v1/responses</code> 为 <code>input_tokens</code> / <code>output_tokens</code>）×
+              后端单价结算
+            </li>
+            <li>单价由提供者在注册后端时设定，单位为「元 / 百万 token」，分输入与输出两档</li>
+            <li><strong>后付费月结</strong>：账单在每月 1 日自动生成，展示于「账单」页</li>
+            <li>未支付账单累计超出限额会暂停 API 调用，支付后自动恢复</li>
+            <li>实时用量与本月累计费用可在「仪表盘」和 <code>GET /api/billing/status</code> 查询</li>
+          </ul>
         </div>
       </section>
 
@@ -195,26 +244,38 @@ for chunk in response:
               </tr>
             </thead>
             <tbody className="divide-y">
-              <tr><td colSpan={3} className="px-4 py-2 bg-gray-50 font-semibold text-gray-600 text-xs">OpenAI 兼容</td></tr>
-              <tr>
-                <td className="px-4 py-2"><code className="text-indigo-600">POST</code></td>
-                <td className="px-4 py-2 font-mono text-xs">/s/&#123;sub_key&#125;/v1/chat/completions</td>
-                <td className="px-4 py-2 text-gray-600">通过订阅 Key 调用模型</td>
-              </tr>
-              <tr>
-                <td className="px-4 py-2"><code className="text-indigo-600">GET</code></td>
-                <td className="px-4 py-2 font-mono text-xs">/s/&#123;sub_key&#125;/v1/models</td>
-                <td className="px-4 py-2 text-gray-600">列出订阅绑定的模型</td>
-              </tr>
+              <tr><td colSpan={3} className="px-4 py-2 bg-gray-50 font-semibold text-gray-600 text-xs">OpenAI 兼容（统一 /v1，需 Bearer API Key）</td></tr>
               <tr>
                 <td className="px-4 py-2"><code className="text-indigo-600">POST</code></td>
                 <td className="px-4 py-2 font-mono text-xs">/v1/chat/completions</td>
-                <td className="px-4 py-2 text-gray-600">通过 API Key 调用（需 Bearer token）</td>
+                <td className="px-4 py-2 text-gray-600">聊天补全（按激活订阅优先级路由）</td>
               </tr>
               <tr>
-                <td className="px-4 py-2"><code className="text-indigo-600">GET</code></td>
+                <td className="px-4 py-2"><code className="text-indigo-600">POST</code></td>
+                <td className="px-4 py-2 font-mono text-xs">/v1/completions</td>
+                <td className="px-4 py-2 text-gray-600">文本补全</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-2"><code className="text-indigo-600">POST</code></td>
+                <td className="px-4 py-2 font-mono text-xs">/v1/responses</td>
+                <td className="px-4 py-2 text-gray-600">Responses API</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-2"><code className="text-green-600">GET</code></td>
                 <td className="px-4 py-2 font-mono text-xs">/v1/models</td>
-                <td className="px-4 py-2 text-gray-600">列出可用模型（需 Bearer token）</td>
+                <td className="px-4 py-2 text-gray-600">列出可用模型（优先返回已激活订阅绑定的模型）</td>
+              </tr>
+
+              <tr><td colSpan={3} className="px-4 py-2 bg-gray-50 font-semibold text-gray-600 text-xs">sub_key 直达</td></tr>
+              <tr>
+                <td className="px-4 py-2"><code className="text-indigo-600">POST</code></td>
+                <td className="px-4 py-2 font-mono text-xs">/s/&#123;sub_key&#125;/v1/chat/completions</td>
+                <td className="px-4 py-2 text-gray-600">直达订阅绑定的单个后端（不走路由）</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-2"><code className="text-green-600">GET</code></td>
+                <td className="px-4 py-2 font-mono text-xs">/s/&#123;sub_key&#125;/v1/models</td>
+                <td className="px-4 py-2 text-gray-600">列出订阅绑定的模型</td>
               </tr>
 
               <tr><td colSpan={3} className="px-4 py-2 bg-gray-50 font-semibold text-gray-600 text-xs">模型广场</td></tr>
@@ -243,7 +304,17 @@ for chunk in response:
               <tr>
                 <td className="px-4 py-2"><code className="text-green-600">GET</code></td>
                 <td className="px-4 py-2 font-mono text-xs">/api/subscriptions</td>
-                <td className="px-4 py-2 text-gray-600">列出我的订阅</td>
+                <td className="px-4 py-2 text-gray-600">列出我的订阅（含激活状态与优先级）</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-2"><code className="text-yellow-600">PUT</code></td>
+                <td className="px-4 py-2 font-mono text-xs">/api/subscriptions/&#123;id&#125;/activate</td>
+                <td className="px-4 py-2 text-gray-600">激活/取消激活某条订阅</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-2"><code className="text-yellow-600">PUT</code></td>
+                <td className="px-4 py-2 font-mono text-xs">/api/subscriptions/reorder</td>
+                <td className="px-4 py-2 text-gray-600">调整订阅优先级顺序</td>
               </tr>
               <tr>
                 <td className="px-4 py-2"><code className="text-red-600">DELETE</code></td>
@@ -251,16 +322,53 @@ for chunk in response:
                 <td className="px-4 py-2 text-gray-600">取消订阅</td>
               </tr>
 
+              <tr><td colSpan={3} className="px-4 py-2 bg-gray-50 font-semibold text-gray-600 text-xs">API Key 与账户</td></tr>
+              <tr>
+                <td className="px-4 py-2"><code className="text-indigo-600">POST</code></td>
+                <td className="px-4 py-2 font-mono text-xs">/api/keys</td>
+                <td className="px-4 py-2 text-gray-600">创建 API Key</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-2"><code className="text-green-600">GET</code></td>
+                <td className="px-4 py-2 font-mono text-xs">/api/keys</td>
+                <td className="px-4 py-2 text-gray-600">列出我的 API Key</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-2"><code className="text-yellow-600">PUT</code></td>
+                <td className="px-4 py-2 font-mono text-xs">/api/keys/&#123;key_id&#125;/toggle</td>
+                <td className="px-4 py-2 text-gray-600">启用/禁用 Key</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-2"><code className="text-red-600">DELETE</code></td>
+                <td className="px-4 py-2 font-mono text-xs">/api/keys/&#123;key_id&#125;</td>
+                <td className="px-4 py-2 text-gray-600">删除 Key</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-2"><code className="text-indigo-600">POST</code></td>
+                <td className="px-4 py-2 font-mono text-xs">/api/user/auto-fallback</td>
+                <td className="px-4 py-2 text-gray-600">开关自动失败转移</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-2"><code className="text-green-600">GET</code></td>
+                <td className="px-4 py-2 font-mono text-xs">/api/billing/status</td>
+                <td className="px-4 py-2 text-gray-600">查询本月用量与未付账单</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-2"><code className="text-green-600">GET</code></td>
+                <td className="px-4 py-2 font-mono text-xs">/api/usage</td>
+                <td className="px-4 py-2 text-gray-600">查询调用明细</td>
+              </tr>
+
               <tr><td colSpan={3} className="px-4 py-2 bg-gray-50 font-semibold text-gray-600 text-xs">后端管理（提供者）</td></tr>
               <tr>
                 <td className="px-4 py-2"><code className="text-indigo-600">POST</code></td>
                 <td className="px-4 py-2 font-mono text-xs">/api/backends</td>
-                <td className="px-4 py-2 text-gray-600">注册/更新后端</td>
+                <td className="px-4 py-2 text-gray-600">注册后端</td>
               </tr>
               <tr>
                 <td className="px-4 py-2"><code className="text-green-600">GET</code></td>
                 <td className="px-4 py-2 font-mono text-xs">/api/backends</td>
-                <td className="px-4 py-2 text-gray-600">列出后端（mine=true 仅自己）</td>
+                <td className="px-4 py-2 text-gray-600">列出后端（<code>mine=true</code> 仅自己）</td>
               </tr>
               <tr>
                 <td className="px-4 py-2"><code className="text-green-600">GET</code></td>
@@ -309,20 +417,20 @@ for chunk in response:
         <h2 className="text-2xl font-semibold text-gray-800 mb-4">隧道模式接入</h2>
         <div className="bg-white rounded-lg border p-6 space-y-4 text-sm text-gray-700">
           <p>
-            如果你的 GPU 机器在 NAT/内网环境中，没有公网 IP，可以使用隧道模式。
-            注册后端时选择「隧道」模式，然后在本地运行隧道客户端：
+            如果你的 GPU 机器在 NAT/内网，没有公网 IP，可以使用隧道模式。
+            在注册后端时选择「隧道」模式，然后在本地运行隧道客户端：
           </p>
           <div className="bg-gray-900 text-gray-100 rounded-lg p-4 text-sm overflow-x-auto">
-            <pre>{`python client.py \\
-  --gateway ws://GATEWAY_HOST:8080/ws/tunnel \\
-  --token sk-你的API-Key \\
+            <pre>{`python tunnel_client.py \\
+  --gateway wss://your-gateway/ws/tunnel \\
+  --token sk-你的-provider-token \\
   --backend-name 你的后端名称 \\
   --local-url http://localhost:8000`}</pre>
           </div>
-          <p>客户端会自动建立 WebSocket 连接，平台通过隧道转发请求到你的本地服务。</p>
           <ul className="list-disc list-inside space-y-1 ml-2">
-            <li>连接建立后后端自动标记为 online</li>
-            <li>连接断开后自动标记为 offline</li>
+            <li>连接建立后后端自动标记为 <code>online</code>，断开后自动 <code>offline</code></li>
+            <li>平台对每个 WebSocket 帧不设总超时（流式生成可任意长），仅对空闲做保护</li>
+            <li>SSE 流按行实时转发，首字延迟与直连接近</li>
             <li>平台定期发送健康探测验证后端可用性</li>
           </ul>
         </div>
