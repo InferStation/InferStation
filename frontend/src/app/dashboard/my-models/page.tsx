@@ -10,6 +10,7 @@ interface Sub {
   model: string
   sub_key: string
   is_active: number
+  is_activated?: number | boolean
   created_at: string
   backend: string
   backend_status: string
@@ -20,20 +21,15 @@ interface Sub {
 
 export default function MyModelsPage() {
   const [subs, setSubs] = useState<Sub[]>([])
-  const [activeId, setActiveId] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState("")
   const [showHistory, setShowHistory] = useState(false)
-  const [saving, setSaving] = useState(false)
+  const [saving, setSaving] = useState<number | null>(null)
 
   const fetchAll = async () => {
     try {
-      const [subsRes, me] = await Promise.all([
-        apiFetch("/api/subscriptions"),
-        apiFetch("/api/auth/me"),
-      ])
+      const subsRes = await apiFetch("/api/subscriptions")
       setSubs(subsRes)
-      setActiveId(me?.active_subscription_id ?? null)
     } catch {
       /* ignore */
     } finally {
@@ -72,16 +68,16 @@ export default function MyModelsPage() {
     }
   }
 
-  const handleActivate = async (id: number | null) => {
-    setSaving(true)
+  const handleToggleActivate = async (id: number, activated: boolean) => {
+    setSaving(id)
     try {
-      await apiFetch("/api/user/active-subscription", {
+      await apiFetch(`/api/subscriptions/${id}/activate`, {
         method: "PUT",
-        body: JSON.stringify({ subscription_id: id }),
+        body: JSON.stringify({ activated }),
       })
-      setActiveId(id)
+      setSubs((prev) => prev.map((s) => (s.id === id ? { ...s, is_activated: activated ? 1 : 0 } : s)))
     } finally {
-      setSaving(false)
+      setSaving(null)
     }
   }
 
@@ -93,7 +89,7 @@ export default function MyModelsPage() {
 
   const baseUrl = typeof window !== "undefined" ? window.location.origin : ""
   const unifiedUrl = `${baseUrl}/v1/chat/completions`
-  const activeSub = subs.find((s) => s.id === activeId && s.is_active)
+  const activatedSubs = subs.filter((s) => s.is_active && s.is_activated)
 
   if (loading) return <div className="text-center py-20 text-gray-500">加载中...</div>
 
@@ -103,14 +99,13 @@ export default function MyModelsPage() {
 
       <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-5 mb-8">
         <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-          <h2 className="text-sm font-semibold text-indigo-900">我的 API 链接</h2>
-          {activeSub ? (
+          <h2 className="text-sm font-semibold text-indigo-900">我的统一 API 链接</h2>
+          {activatedSubs.length > 0 ? (
             <span className="text-xs text-indigo-700">
-              当前转发至：<span className="font-mono font-medium">{activeSub.model}</span>
-              <span className="text-indigo-500">（{activeSub.backend}）</span>
+              已激活 {activatedSubs.length} 个服务，按优先级自动回退
             </span>
           ) : (
-            <span className="text-xs text-amber-600">尚未选择激活订阅，请在下方点击「设为激活」</span>
+            <span className="text-xs text-amber-600">尚未激活任何订阅，请在下方点击「激活」</span>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -125,7 +120,7 @@ export default function MyModelsPage() {
           </button>
         </div>
         <p className="text-xs text-gray-500 mt-2">
-          使用你的 API Key 调用该链接即可。所有请求将转发至「激活订阅」对应的模型服务，切换激活订阅即可切换后端模型。
+          使用你的 API Key 调用该链接即可。平台按优先级转发到「已激活」的模型服务，当高优先级服务离线时自动回退到下一个。下方可通过「↑ ↓」调整优先级。
         </p>
       </div>
 
@@ -139,12 +134,12 @@ export default function MyModelsPage() {
           {subs.filter((s) => s.is_active).length > 0 && (
             <div className="space-y-4 mb-8">
               {subs.filter((s) => s.is_active).map((s, idx, arr) => {
-                const isActive = s.id === activeId
+                const isActivated = !!s.is_activated
                 return (
                   <div
                     key={s.id}
                     className={`bg-white rounded-lg border p-5 ${
-                      isActive ? "border-indigo-400 ring-2 ring-indigo-100" : ""
+                      isActivated ? "border-indigo-400 ring-2 ring-indigo-100" : ""
                     }`}
                   >
                     <div className="flex items-start justify-between mb-3 flex-wrap gap-2">
@@ -169,9 +164,9 @@ export default function MyModelsPage() {
                           />
                           {s.backend_status === "online" ? "在线" : "离线"}
                         </span>
-                        {isActive && (
+                        {isActivated && (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-600 text-white">
-                            已激活
+                            优先级 {arr.filter((x, i) => i <= idx && x.is_activated).length}
                           </span>
                         )}
                         {s.is_owned && (
@@ -195,21 +190,21 @@ export default function MyModelsPage() {
                             className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-indigo-600 disabled:text-gray-200 disabled:cursor-not-allowed"
                           >↓</button>
                         </div>
-                        {isActive ? (
+                        {isActivated ? (
                           <button
-                            onClick={() => handleActivate(null)}
-                            disabled={saving}
+                            onClick={() => handleToggleActivate(s.id, false)}
+                            disabled={saving === s.id}
                             className="text-xs text-gray-500 hover:text-gray-700 disabled:opacity-50"
                           >
                             取消激活
                           </button>
                         ) : (
                           <button
-                            onClick={() => handleActivate(s.id)}
-                            disabled={saving}
+                            onClick={() => handleToggleActivate(s.id, true)}
+                            disabled={saving === s.id}
                             className="text-xs px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded disabled:opacity-50"
                           >
-                            设为激活
+                            激活
                           </button>
                         )}
                         <button

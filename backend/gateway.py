@@ -775,7 +775,7 @@ async def list_subscriptions(user=Depends(get_current_user)):
     db = await get_db()
     try:
         cur = await db.execute(
-            "SELECT s.id, s.backend_id, s.model, s.sub_key, s.is_active, s.created_at, s.sort_order, "
+            "SELECT s.id, s.backend_id, s.model, s.sub_key, s.is_active, s.is_activated, s.created_at, s.sort_order, "
             "b.name as backend, b.status as backend_status, b.input_price, b.output_price, "
             "CASE WHEN b.owner_id = ? THEN 1 ELSE 0 END as is_owned "
             "FROM subscriptions s JOIN backends b ON s.backend_id = b.id "
@@ -849,9 +849,34 @@ class ActiveSubRequest(BaseModel):
     subscription_id: int | None = None
 
 
+class ToggleActivateRequest(BaseModel):
+    activated: bool
+
+
+@app.put("/api/subscriptions/{sub_id}/activate")
+async def toggle_subscription_activated(sub_id: int, req: ToggleActivateRequest, user=Depends(get_current_user)):
+    """Toggle whether this subscription participates in unified /v1 routing."""
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            "SELECT id FROM subscriptions WHERE id = ? AND user_id = ? AND is_active = 1",
+            (sub_id, user["id"]),
+        )
+        if not await cur.fetchone():
+            raise HTTPException(404, "订阅不存在或已取消")
+        await db.execute(
+            "UPDATE subscriptions SET is_activated = ? WHERE id = ? AND user_id = ?",
+            (1 if req.activated else 0, sub_id, user["id"]),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+    return {"ok": True, "id": sub_id, "activated": req.activated}
+
+
 @app.put("/api/user/active-subscription")
 async def set_active_subscription(req: ActiveSubRequest, user=Depends(get_current_user)):
-    """Set the user's active subscription. API calls to /v1/* will be routed through it."""
+    """Legacy: exclusive activation. Activates only the given sub, deactivates all others."""
     db = await get_db()
     try:
         if req.subscription_id is not None:
@@ -861,6 +886,15 @@ async def set_active_subscription(req: ActiveSubRequest, user=Depends(get_curren
             )
             if not await cur.fetchone():
                 raise HTTPException(404, "订阅不存在或已取消")
+            await db.execute(
+                "UPDATE subscriptions SET is_activated = CASE WHEN id = ? THEN 1 ELSE 0 END WHERE user_id = ?",
+                (req.subscription_id, user["id"]),
+            )
+        else:
+            await db.execute(
+                "UPDATE subscriptions SET is_activated = 0 WHERE user_id = ?",
+                (user["id"],),
+            )
         await db.execute(
             "UPDATE users SET active_subscription_id = ? WHERE id = ?",
             (req.subscription_id, user["id"]),
@@ -978,26 +1012,41 @@ async def authenticate_api_key(request: Request):
 
 
 async def get_active_subscription_backend(user_id: int):
-    """If user has an active subscription, return (backend_row, forced_model). Else (None, None)."""
+    """Return (backend_row, forced_model) for the highest-priority online activated subscription.
+    None,None if user has no activated subs. Raises 503 if all activated subs are offline."""
     db = await get_db()
     try:
         cur = await db.execute(
-            "SELECT s.model, s.is_active as sub_active, b.* "
-            "FROM users u "
-            "JOIN subscriptions s ON s.id = u.active_subscription_id AND s.user_id = u.id "
-            "JOIN backends b ON b.id = s.backend_id "
-            "WHERE u.id = ?",
+            "SELECT s.model, b.* "
+            "FROM subscriptions s JOIN backends b ON b.id = s.backend_id "
+            "WHERE s.user_id = ? AND s.is_active = 1 AND s.is_activated = 1 "
+            "ORDER BY s.sort_order ASC, s.id ASC",
             (user_id,),
         )
-        row = await cur.fetchone()
+        rows = [dict(r) for r in await cur.fetchall()]
     finally:
         await db.close()
-    if not row or not row["sub_active"]:
+    if not rows:
         return None, None
-    d = dict(row)
-    forced_model = d.pop("model")
-    d.pop("sub_active", None)
-    return d, forced_model
+    for r in rows:
+        if r.get("status") == "online":
+            forced_model = r.pop("model")
+            return r, forced_model
+    raise HTTPException(503, "所有已激活的订阅模型服务都当前离线")
+
+
+async def get_activated_models(user_id: int) -> list[str]:
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            "SELECT DISTINCT s.model FROM subscriptions s "
+            "WHERE s.user_id = ? AND s.is_active = 1 AND s.is_activated = 1 "
+            "ORDER BY s.sort_order ASC",
+            (user_id,),
+        )
+        return [r[0] for r in await cur.fetchall()]
+    finally:
+        await db.close()
 
 
 async def find_backend_for_model(model: str, user_id: int):
@@ -1031,12 +1080,12 @@ def get_pricing(backend: dict) -> tuple[float, float]:
 @app.get("/v1/models")
 async def openai_models(request: Request):
     api_user = await authenticate_api_key(request)
-    # If user has an active subscription, only expose that model
-    _b, forced_model = await get_active_subscription_backend(api_user["user_id"])
-    if forced_model:
+    # If user has activated subscriptions, only expose those models
+    activated_models = await get_activated_models(api_user["user_id"])
+    if activated_models:
         return {
             "object": "list",
-            "data": [{"id": forced_model, "object": "model", "owned_by": "llm-gateway"}],
+            "data": [{"id": m, "object": "model", "owned_by": "llm-gateway"} for m in activated_models],
         }
 
     db = await get_db()
@@ -1066,13 +1115,11 @@ async def openai_chat(request: Request):
     body = await request.json()
     stream = body.get("stream", False)
 
-    # Prefer user's active subscription if set
+    # Prefer user's activated subscriptions (priority routing with failover)
     backend, forced_model = await get_active_subscription_backend(api_user["user_id"])
     if backend:
         body["model"] = forced_model
         model = forced_model
-        if backend["status"] != "online":
-            raise HTTPException(503, "激活订阅的后端当前离线")
     else:
         model = body.get("model", "")
         backend = await find_backend_for_model(model, api_user["user_id"])

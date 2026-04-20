@@ -106,6 +106,13 @@ async def init_db():
             await db.execute("ALTER TABLE subscriptions ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0")
             # Backfill sort_order by id (existing created_at order)
             await db.execute("UPDATE subscriptions SET sort_order = id WHERE sort_order = 0")
+        if "is_activated" not in scols:
+            await db.execute("ALTER TABLE subscriptions ADD COLUMN is_activated INTEGER NOT NULL DEFAULT 0")
+            # Backfill: migrate users.active_subscription_id -> that subscription's is_activated=1
+            await db.execute(
+                "UPDATE subscriptions SET is_activated = 1 "
+                "WHERE id IN (SELECT active_subscription_id FROM users WHERE active_subscription_id IS NOT NULL)"
+            )
         await db.commit()
     finally:
         await db.close()
