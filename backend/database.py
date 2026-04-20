@@ -94,6 +94,11 @@ async def init_db():
         cols = {r[1] for r in await cur.fetchall()}
         if "enabled" not in cols:
             await db.execute("ALTER TABLE backends ADD COLUMN enabled INTEGER NOT NULL DEFAULT 1")
+        # Migration: add active_subscription_id on users
+        cur = await db.execute("PRAGMA table_info(users)")
+        ucols = {r[1] for r in await cur.fetchall()}
+        if "active_subscription_id" not in ucols:
+            await db.execute("ALTER TABLE users ADD COLUMN active_subscription_id INTEGER")
         await db.commit()
     finally:
         await db.close()

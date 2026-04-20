@@ -212,6 +212,7 @@ async def me(user=Depends(get_current_user)):
         "role": user["role"],
         "balance": user["balance"],
         "verified": user["verified"],
+        "active_subscription_id": user["active_subscription_id"] if "active_subscription_id" in user.keys() else None,
     }
 
 
@@ -739,10 +740,42 @@ async def unsubscribe_model(sub_id: int, user=Depends(get_current_user)):
             "UPDATE subscriptions SET is_active = 0 WHERE id = ? AND user_id = ?",
             (sub_id, user["id"]),
         )
+        # Clear active subscription if it points to this one
+        await db.execute(
+            "UPDATE users SET active_subscription_id = NULL "
+            "WHERE id = ? AND active_subscription_id = ?",
+            (user["id"], sub_id),
+        )
         await db.commit()
     finally:
         await db.close()
     return {"ok": True}
+
+
+class ActiveSubRequest(BaseModel):
+    subscription_id: int | None = None
+
+
+@app.put("/api/user/active-subscription")
+async def set_active_subscription(req: ActiveSubRequest, user=Depends(get_current_user)):
+    """Set the user's active subscription. API calls to /v1/* will be routed through it."""
+    db = await get_db()
+    try:
+        if req.subscription_id is not None:
+            cur = await db.execute(
+                "SELECT id FROM subscriptions WHERE id = ? AND user_id = ? AND is_active = 1",
+                (req.subscription_id, user["id"]),
+            )
+            if not await cur.fetchone():
+                raise HTTPException(404, "订阅不存在或已取消")
+        await db.execute(
+            "UPDATE users SET active_subscription_id = ? WHERE id = ?",
+            (req.subscription_id, user["id"]),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+    return {"ok": True, "active_subscription_id": req.subscription_id}
 
 
 # ── Subscription proxy endpoint ────────────────────────
@@ -851,6 +884,29 @@ async def authenticate_api_key(request: Request):
     return row
 
 
+async def get_active_subscription_backend(user_id: int):
+    """If user has an active subscription, return (backend_row, forced_model). Else (None, None)."""
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            "SELECT s.model, s.is_active as sub_active, b.* "
+            "FROM users u "
+            "JOIN subscriptions s ON s.id = u.active_subscription_id AND s.user_id = u.id "
+            "JOIN backends b ON b.id = s.backend_id "
+            "WHERE u.id = ?",
+            (user_id,),
+        )
+        row = await cur.fetchone()
+    finally:
+        await db.close()
+    if not row or not row["sub_active"]:
+        return None, None
+    d = dict(row)
+    forced_model = d.pop("model")
+    d.pop("sub_active", None)
+    return d, forced_model
+
+
 async def find_backend_for_model(model: str, user_id: int):
     db = await get_db()
     try:
@@ -882,6 +938,14 @@ def get_pricing(backend: dict) -> tuple[float, float]:
 @app.get("/v1/models")
 async def openai_models(request: Request):
     api_user = await authenticate_api_key(request)
+    # If user has an active subscription, only expose that model
+    _b, forced_model = await get_active_subscription_backend(api_user["user_id"])
+    if forced_model:
+        return {
+            "object": "list",
+            "data": [{"id": forced_model, "object": "model", "owned_by": "llm-gateway"}],
+        }
+
     db = await get_db()
     try:
         cur = await db.execute(
@@ -907,12 +971,20 @@ async def openai_models(request: Request):
 async def openai_chat(request: Request):
     api_user = await authenticate_api_key(request)
     body = await request.json()
-    model = body.get("model", "")
     stream = body.get("stream", False)
 
-    backend = await find_backend_for_model(model, api_user["user_id"])
-    if not backend:
-        raise HTTPException(404, f"Model '{model}' not available")
+    # Prefer user's active subscription if set
+    backend, forced_model = await get_active_subscription_backend(api_user["user_id"])
+    if backend:
+        body["model"] = forced_model
+        model = forced_model
+        if backend["status"] != "online":
+            raise HTTPException(503, "激活订阅的后端当前离线")
+    else:
+        model = body.get("model", "")
+        backend = await find_backend_for_model(model, api_user["user_id"])
+        if not backend:
+            raise HTTPException(404, f"Model '{model}' not available")
 
     # Rewrite model name to served name if mapping exists
     client_info = json.loads(backend["client_info"]) if backend.get("client_info") else {}

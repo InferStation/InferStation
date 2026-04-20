@@ -14,7 +14,7 @@ export default function OtherPage() {
       <div className="bg-white rounded-lg border p-6">
         <h2 className="font-semibold mb-4">平台信息</h2>
         <div className="text-sm text-gray-600 space-y-2">
-          <p>天枢 — 模型服务聚合平台</p>
+          <p>LLM Gateway — 模型服务聚合平台</p>
           <p>支持 OpenAI 兼容 API、NAT 穿透隧道、按量计费</p>
         </div>
       </div>
