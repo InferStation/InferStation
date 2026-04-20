@@ -39,6 +39,7 @@ export default function ServiceDetailPage() {
   const [saving, setSaving] = useState(false)
   const [editForm, setEditForm] = useState({
     url: "",
+    family: "",
     models: "",
     tag_hardware: "",
     tag_framework: "",
@@ -56,13 +57,21 @@ export default function ServiceDetailPage() {
       })
       .catch(() => setError("后端不存在或无权访问"))
       .finally(() => setLoading(false))
-    apiFetch("/api/model-families").then((data: { families: string[] }) => setFamilies(data.families)).catch(() => {})
+    apiFetch("/api/model-families").then((data: string[] | { families: string[] }) => {
+      setFamilies(Array.isArray(data) ? data : data.families)
+    }).catch(() => {})
   }, [name])
 
   const populateForm = (b: Backend) => {
+    // Infer family from first model (everything before the first "/")
+    const firstModel = b.models[0] || ""
+    const inferredFamily = firstModel.includes("/") ? firstModel.split("/")[0] : ""
+    // Display bare names (strip "family/" prefix) so the user can edit just the names
+    const bareNames = b.models.map((m) => m.includes("/") ? m.split("/").slice(1).join("/") : m)
     setEditForm({
       url: b.url || "",
-      models: b.models.join(", "),
+      family: inferredFamily,
+      models: bareNames.join(", "),
       tag_hardware: b.tags?.hardware || "",
       tag_framework: b.tags?.framework || "",
       tag_quantization: b.tags?.quantization || "",
@@ -74,6 +83,14 @@ export default function ServiceDetailPage() {
 
   const handleSave = async () => {
     if (!backend) return
+    if (!editForm.family) {
+      alert("请选择模型系列")
+      return
+    }
+    if (!editForm.models.trim()) {
+      alert("请填写模型名")
+      return
+    }
     setSaving(true)
     try {
       const tags: Record<string, string> = {}
@@ -81,7 +98,10 @@ export default function ServiceDetailPage() {
       if (editForm.tag_framework.trim()) tags.framework = editForm.tag_framework.trim()
       if (editForm.tag_quantization.trim()) tags.quantization = editForm.tag_quantization.trim()
 
-      const models = editForm.models.split(",").map((s) => s.trim()).filter(Boolean)
+      // Strip any user-supplied prefix then re-join with selected family.
+      const rawModels = editForm.models.split(",").map((s) => s.trim()).filter(Boolean)
+      const bareNames = rawModels.map((m) => m.includes("/") ? m.split("/").slice(-1)[0] : m)
+      const models = bareNames.map((n) => `${editForm.family}/${n}`)
 
       await apiFetch(`/api/backends/${encodeURIComponent(name)}`, {
         method: "PUT",
@@ -184,8 +204,20 @@ export default function ServiceDetailPage() {
               </div>
             )}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">模型列表（逗号分隔）</label>
-              <input type="text" value={editForm.models} onChange={(e) => setEditForm({ ...editForm, models: e.target.value })} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">模型系列</label>
+              <select value={editForm.family} onChange={(e) => setEditForm({ ...editForm, family: e.target.value })} required className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <option value="">请选择模型系列</option>
+                {families.map((f) => (
+                  <option key={f} value={f}>{f}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">模型名（不含系列前缀；多个用逗号分隔）</label>
+              <input type="text" value={editForm.models} onChange={(e) => setEditForm({ ...editForm, models: e.target.value })} required className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+              {editForm.family && editForm.models.trim() && (
+                <p className="mt-1 text-xs text-gray-500">将保存为：{editForm.models.split(",").map((s) => s.trim()).filter(Boolean).map((m) => `${editForm.family}/${m.includes("/") ? m.split("/").slice(-1)[0] : m}`).join(", ")}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">标签</label>
