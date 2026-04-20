@@ -10,10 +10,11 @@ interface UserInfo {
   username: string
   email: string
   role: string
-  balance: number
   is_active: number
   verified: number
   created_at: string
+  unpaid_total: number
+  overdue_total: number
 }
 
 interface UsageStat {
@@ -25,43 +26,51 @@ interface UsageStat {
   requests: number
 }
 
+interface Invoice {
+  id: number
+  user_id: number
+  username: string
+  period_start: string
+  period_end: string
+  total_cost: number
+  status: "unpaid" | "paid" | "void"
+  due_date: string
+  created_at: string
+  paid_at: string | null
+}
+
 export default function AdminPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
   const [users, setUsers] = useState<UserInfo[]>([])
   const [usage, setUsage] = useState<UsageStat[]>([])
-  const [tab, setTab] = useState<"users" | "usage">("users")
-  const [adjustId, setAdjustId] = useState<number | null>(null)
-  const [adjustAmount, setAdjustAmount] = useState("")
+  const [invoices, setInvoices] = useState<Invoice[]>([])
+  const [tab, setTab] = useState<"users" | "usage" | "invoices">("users")
 
   useEffect(() => {
     if (!loading && (!user || user.role !== "admin")) router.push("/dashboard")
   }, [loading, user, router])
 
+  const reloadAll = () => {
+    apiFetch("/api/admin/users").then(setUsers).catch(() => {})
+    apiFetch("/api/admin/usage?days=30").then(setUsage).catch(() => {})
+    apiFetch("/api/admin/invoices").then(setInvoices).catch(() => {})
+  }
+
   useEffect(() => {
-    if (user?.role === "admin") {
-      apiFetch("/api/admin/users").then(setUsers).catch(() => {})
-      apiFetch("/api/admin/usage?days=30").then(setUsage).catch(() => {})
-    }
+    if (user?.role === "admin") reloadAll()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
   const toggleUser = async (id: number) => {
     await apiFetch(`/api/admin/users/${id}/toggle`, { method: "POST" })
-    const updated = await apiFetch("/api/admin/users")
-    setUsers(updated)
+    reloadAll()
   }
 
-  const adjustBalance = async (id: number) => {
-    const amount = parseFloat(adjustAmount)
-    if (isNaN(amount)) return
-    await apiFetch(`/api/admin/users/${id}/balance`, {
-      method: "POST",
-      body: JSON.stringify({ amount }),
-    })
-    setAdjustId(null)
-    setAdjustAmount("")
-    const updated = await apiFetch("/api/admin/users")
-    setUsers(updated)
+  const markPaid = async (invoiceId: number) => {
+    if (!confirm("确认将该账单标记为已付？")) return
+    await apiFetch(`/api/admin/invoices/${invoiceId}/pay`, { method: "POST" })
+    reloadAll()
   }
 
   if (loading || !user) return <div className="text-center py-20 text-gray-500">加载中...</div>
@@ -83,6 +92,12 @@ export default function AdminPage() {
         >
           用量统计
         </button>
+        <button
+          onClick={() => setTab("invoices")}
+          className={`px-4 py-2 rounded-lg text-sm ${tab === "invoices" ? "bg-indigo-600 text-white" : "bg-white border text-gray-600"}`}
+        >
+          账单 ({invoices.length})
+        </button>
       </div>
 
       {tab === "users" && (
@@ -94,7 +109,7 @@ export default function AdminPage() {
                 <th className="text-left px-4 py-3 font-medium">用户名</th>
                 <th className="text-left px-4 py-3 font-medium">邮箱</th>
                 <th className="text-left px-4 py-3 font-medium">角色</th>
-                <th className="text-right px-4 py-3 font-medium">余额</th>
+                <th className="text-right px-4 py-3 font-medium">未付 / 逾期</th>
                 <th className="text-left px-4 py-3 font-medium">状态</th>
                 <th className="text-right px-4 py-3 font-medium">操作</th>
               </tr>
@@ -108,28 +123,14 @@ export default function AdminPage() {
                   <td className="px-4 py-3">
                     <span className="px-2 py-0.5 rounded text-xs bg-gray-100">{u.role}</span>
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    {adjustId === u.id ? (
-                      <div className="flex items-center gap-1 justify-end">
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={adjustAmount}
-                          onChange={(e) => setAdjustAmount(e.target.value)}
-                          className="w-24 px-2 py-1 border rounded text-sm"
-                          placeholder="金额"
-                        />
-                        <button onClick={() => adjustBalance(u.id)} className="text-green-600 text-xs">确认</button>
-                        <button onClick={() => setAdjustId(null)} className="text-gray-400 text-xs">取消</button>
-                      </div>
-                    ) : (
-                      <span
-                        className="cursor-pointer text-green-600 hover:underline"
-                        onClick={() => { setAdjustId(u.id); setAdjustAmount("") }}
-                      >
-                        ¥{u.balance.toFixed(2)}
-                      </span>
-                    )}
+                  <td className="px-4 py-3 text-right font-mono text-xs">
+                    <span className={u.unpaid_total > 0 ? "text-amber-600" : "text-gray-400"}>
+                      ¥{(u.unpaid_total ?? 0).toFixed(6)}
+                    </span>
+                    <span className="mx-1 text-gray-300">/</span>
+                    <span className={u.overdue_total > 0 ? "text-red-600 font-semibold" : "text-gray-400"}>
+                      ¥{(u.overdue_total ?? 0).toFixed(6)}
+                    </span>
                   </td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded text-xs ${u.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
@@ -180,6 +181,63 @@ export default function AdminPage() {
               {usage.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-gray-500">暂无用量数据</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {tab === "invoices" && (
+        <div className="bg-white rounded-lg border overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="text-left px-4 py-3 font-medium">用户</th>
+                <th className="text-left px-4 py-3 font-medium">账期</th>
+                <th className="text-right px-4 py-3 font-medium">金额</th>
+                <th className="text-left px-4 py-3 font-medium">到期日</th>
+                <th className="text-left px-4 py-3 font-medium">状态</th>
+                <th className="text-left px-4 py-3 font-medium">付款时间</th>
+                <th className="text-right px-4 py-3 font-medium">操作</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {invoices.map((inv) => {
+                const today = new Date().toISOString().slice(0, 10)
+                const overdue = inv.status === "unpaid" && inv.due_date < today
+                return (
+                  <tr key={inv.id}>
+                    <td className="px-4 py-3 font-medium">{inv.username}</td>
+                    <td className="px-4 py-3">{inv.period_start.slice(0, 7)}</td>
+                    <td className="px-4 py-3 text-right font-mono">¥{inv.total_cost.toFixed(6)}</td>
+                    <td className="px-4 py-3">{inv.due_date}</td>
+                    <td className="px-4 py-3">
+                      {inv.status === "paid" ? (
+                        <span className="inline-flex px-2 py-0.5 rounded text-xs bg-green-50 text-green-700 border border-green-200">已付</span>
+                      ) : overdue ? (
+                        <span className="inline-flex px-2 py-0.5 rounded text-xs bg-red-50 text-red-700 border border-red-200">逾期</span>
+                      ) : (
+                        <span className="inline-flex px-2 py-0.5 rounded text-xs bg-amber-50 text-amber-700 border border-amber-200">待支付</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-500">{inv.paid_at || "—"}</td>
+                    <td className="px-4 py-3 text-right">
+                      {inv.status === "unpaid" && (
+                        <button
+                          onClick={() => markPaid(inv.id)}
+                          className="text-sm text-green-600 hover:text-green-800"
+                        >
+                          标记已付
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+              {invoices.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">暂无账单</td>
                 </tr>
               )}
             </tbody>

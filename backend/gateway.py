@@ -28,6 +28,12 @@ from auth import (
 )
 import auth
 from database import get_db, init_db
+from billing import (
+    get_billing_status,
+    is_user_suspended,
+    mark_invoice_paid,
+    ensure_invoices_for_user,
+)
 from tunnel import TunnelConnection, tunnel_manager
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s %(message)s")
@@ -226,23 +232,34 @@ async def login(req: LoginRequest):
     token = create_access_token(user["id"], user["role"])
     return {
         "token": token,
-        "user": {"id": user["id"], "username": user["username"], "role": user["role"], "balance": user["balance"]},
+        "user": {"id": user["id"], "username": user["username"], "role": user["role"]},
     }
 
 
 @app.get("/api/auth/me")
 async def me(user=Depends(get_current_user)):
     keys = user.keys()
+    billing = await get_billing_status(user["id"])
     return {
         "id": user["id"],
         "username": user["username"],
         "email": user["email"],
         "role": user["role"],
-        "balance": user["balance"],
         "verified": user["verified"],
         "active_subscription_id": user["active_subscription_id"] if "active_subscription_id" in keys else None,
         "auto_fallback": bool(user["auto_fallback"]) if "auto_fallback" in keys else True,
+        "billing": {
+            "current_month_cost": billing["current_month_cost"],
+            "unpaid_total": billing["unpaid_total"],
+            "overdue_total": billing["overdue_total"],
+            "is_suspended": billing["is_suspended"],
+        },
     }
+
+
+@app.get("/api/billing/status")
+async def billing_status(user=Depends(get_current_user)):
+    return await get_billing_status(user["id"])
 
 
 class AutoFallbackRequest(BaseModel):
@@ -933,7 +950,7 @@ async def sub_chat(sub_key: str, request: Request):
     db = await get_db()
     try:
         cur = await db.execute(
-            "SELECT s.*, u.balance, u.is_active as user_active "
+            "SELECT s.*, u.is_active as user_active "
             "FROM subscriptions s JOIN users u ON s.user_id = u.id "
             "WHERE s.sub_key = ? AND s.is_active = 1",
             (sub_key,),
@@ -944,8 +961,9 @@ async def sub_chat(sub_key: str, request: Request):
         sub = dict(sub)
         if not sub["user_active"]:
             raise HTTPException(403, "User account disabled")
-        if sub["balance"] <= 0:
-            raise HTTPException(402, "Insufficient balance")
+        suspended, overdue_total = await is_user_suspended(sub["user_id"])
+        if suspended:
+            raise HTTPException(402, f"服务已停用：有逾期未付账单 (累计 ¥{overdue_total:.6f})")
 
         cur = await db.execute("SELECT * FROM backends WHERE id = ?", (sub["backend_id"],))
         backend = await cur.fetchone()
@@ -1026,8 +1044,9 @@ async def authenticate_api_key(request: Request):
     row = dict(row)
     if not row["is_active"]:
         raise HTTPException(403, "User account disabled")
-    if row["balance"] <= 0:
-        raise HTTPException(402, "Insufficient balance")
+    suspended, overdue_total = await is_user_suspended(row["user_id"])
+    if suspended:
+        raise HTTPException(402, f"服务已停用：有逾期未付账单 (累计 ¥{overdue_total:.6f})，请结清后继续使用")
     return row
 
 
@@ -1336,7 +1355,7 @@ async def _record_usage(api_user, backend, model, usage, input_price, output_pri
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
             (api_user["user_id"], api_user["key_id"], backend["id"], model, input_tokens, output_tokens, cost),
         )
-        await db.execute("UPDATE users SET balance = balance - ? WHERE id = ?", (cost, api_user["user_id"]))
+        # Post-paid monthly billing: do NOT touch users.balance (deprecated).
         await db.commit()
     finally:
         await db.close()
@@ -1456,28 +1475,62 @@ async def admin_list_users(admin=Depends(require_admin)):
     db = await get_db()
     try:
         cur = await db.execute(
-            "SELECT id, username, email, role, balance, is_active, verified, created_at FROM users ORDER BY id"
+            "SELECT id, username, email, role, is_active, verified, created_at FROM users ORDER BY id"
         )
+        users = [dict(r) for r in await cur.fetchall()]
+    finally:
+        await db.close()
+    # Attach billing summary
+    for u in users:
+        try:
+            await ensure_invoices_for_user(u["id"])
+        except Exception:
+            pass
+    db = await get_db()
+    try:
+        for u in users:
+            cur = await db.execute(
+                "SELECT COALESCE(SUM(total_cost),0) FROM invoices "
+                "WHERE user_id = ? AND status = 'unpaid'",
+                (u["id"],),
+            )
+            u["unpaid_total"] = float((await cur.fetchone())[0] or 0.0)
+            cur = await db.execute(
+                "SELECT COALESCE(SUM(total_cost),0) FROM invoices "
+                "WHERE user_id = ? AND status = 'unpaid' AND due_date < date('now')",
+                (u["id"],),
+            )
+            u["overdue_total"] = float((await cur.fetchone())[0] or 0.0)
+    finally:
+        await db.close()
+    return users
+
+
+@app.get("/api/admin/invoices")
+async def admin_list_invoices(admin=Depends(require_admin), status: str | None = None, user_id: int | None = None):
+    db = await get_db()
+    try:
+        sql = ("SELECT i.*, u.username FROM invoices i JOIN users u ON u.id = i.user_id WHERE 1=1")
+        params: list = []
+        if status:
+            sql += " AND i.status = ?"
+            params.append(status)
+        if user_id:
+            sql += " AND i.user_id = ?"
+            params.append(user_id)
+        sql += " ORDER BY i.period_start DESC, i.user_id"
+        cur = await db.execute(sql, params)
         return [dict(r) for r in await cur.fetchall()]
     finally:
         await db.close()
 
 
-class AdjustBalanceRequest(BaseModel):
-    amount: float
-
-
-@app.post("/api/admin/users/{user_id}/balance")
-async def admin_adjust_balance(user_id: int, req: AdjustBalanceRequest, admin=Depends(require_admin)):
-    db = await get_db()
-    try:
-        await db.execute("UPDATE users SET balance = balance + ? WHERE id = ?", (req.amount, user_id))
-        await db.commit()
-        cur = await db.execute("SELECT balance FROM users WHERE id = ?", (user_id,))
-        row = await cur.fetchone()
-    finally:
-        await db.close()
-    return {"balance": row["balance"] if row else 0}
+@app.post("/api/admin/invoices/{invoice_id}/pay")
+async def admin_mark_invoice_paid(invoice_id: int, admin=Depends(require_admin)):
+    inv = await mark_invoice_paid(invoice_id)
+    if not inv:
+        raise HTTPException(404, "Invoice not found")
+    return inv
 
 
 @app.post("/api/admin/users/{user_id}/toggle")

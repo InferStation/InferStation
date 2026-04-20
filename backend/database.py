@@ -88,6 +88,20 @@ async def init_db():
 
         CREATE UNIQUE INDEX IF NOT EXISTS idx_sub_user_model ON subscriptions(user_id, model);
         CREATE INDEX IF NOT EXISTS idx_sub_key ON subscriptions(sub_key);
+
+        CREATE TABLE IF NOT EXISTS invoices (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            period_start TEXT NOT NULL,   -- YYYY-MM-01 (inclusive)
+            period_end   TEXT NOT NULL,   -- next month YYYY-MM-01 (exclusive)
+            total_cost   REAL NOT NULL DEFAULT 0,
+            status       TEXT NOT NULL DEFAULT 'unpaid',  -- unpaid | paid | void
+            due_date     TEXT NOT NULL,   -- YYYY-MM-DD
+            created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+            paid_at      TEXT
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_invoice_user_period ON invoices(user_id, period_start);
+        CREATE INDEX IF NOT EXISTS idx_invoice_status ON invoices(status);
         """)
         # Migration: add enabled column if missing
         cur = await db.execute("PRAGMA table_info(backends)")

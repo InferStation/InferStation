@@ -35,7 +35,16 @@ export default function Navbar() {
               <>
                 <span className="text-sm text-gray-500">
                   {user.username}
-                  <span className="ml-2 text-green-600">¥{user.balance.toFixed(2)}</span>
+                  {user.billing && (
+                    <span className={`ml-2 ${user.billing.is_suspended ? "text-red-600" : "text-gray-600"}`}>
+                      本月 ¥{user.billing.current_month_cost.toFixed(6)}
+                      {user.billing.unpaid_total > 0 && (
+                        <span className="ml-1 text-amber-600">
+                          · 欠 ¥{user.billing.unpaid_total.toFixed(6)}
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </span>
                 <button onClick={logout} className="text-sm text-red-500 hover:text-red-700">
                   退出

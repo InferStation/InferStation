@@ -11,13 +11,20 @@ import {
 
 const API = process.env.NEXT_PUBLIC_API_URL || ""
 
+interface BillingSummary {
+  current_month_cost: number
+  unpaid_total: number
+  overdue_total: number
+  is_suspended: boolean
+}
+
 interface User {
   id: number
   email: string
   username: string
   role: string
-  balance: number
   verified: number
+  billing?: BillingSummary
 }
 
 interface AuthCtx {
