@@ -1222,6 +1222,9 @@ async def _handle_openai_request(request: Request, path: str, usage_keys: tuple[
         if not backend:
             raise HTTPException(404, f"Model '{model}' not available")
 
+    # Remember the user-facing model name for usage logging (before rewrite)
+    display_model = model
+
     # Rewrite model name to served name if mapping exists
     client_info = json.loads(backend["client_info"]) if backend.get("client_info") else {}
     model_map = client_info.get("model_map", {})
@@ -1232,10 +1235,10 @@ async def _handle_openai_request(request: Request, path: str, usage_keys: tuple[
 
     if backend["mode"] == "tunnel":
         return await _proxy_tunnel(api_user, backend, body, stream, input_price, output_price,
-                                    path=path, usage_keys=usage_keys)
+                                    path=path, usage_keys=usage_keys, display_model=display_model)
     else:
         return await _proxy_direct(api_user, backend, body, stream, input_price, output_price,
-                                    path=path, usage_keys=usage_keys)
+                                    path=path, usage_keys=usage_keys, display_model=display_model)
 
 
 def _upstream_headers(backend) -> dict:
@@ -1247,13 +1250,15 @@ def _upstream_headers(backend) -> dict:
 
 
 async def _proxy_direct(api_user, backend, body, stream, input_price, output_price,
-                         path="/v1/chat/completions", usage_keys=("prompt_tokens", "completion_tokens")):
+                         path="/v1/chat/completions", usage_keys=("prompt_tokens", "completion_tokens"),
+                         display_model=None):
     url = f"{backend['url'].rstrip('/')}{path}"
     headers = _upstream_headers(backend)
+    log_model = display_model or body.get("model", "")
 
     if stream:
         return StreamingResponse(
-            _stream_direct(api_user, backend, body, url, input_price, output_price, headers, usage_keys),
+            _stream_direct(api_user, backend, body, url, input_price, output_price, headers, usage_keys, log_model),
             media_type="text/event-stream",
         )
 
@@ -1262,12 +1267,12 @@ async def _proxy_direct(api_user, backend, body, stream, input_price, output_pri
         data = resp.json()
 
     usage = _extract_usage(data, usage_keys)
-    await _record_usage(api_user, backend, body.get("model", ""), usage, input_price, output_price)
+    await _record_usage(api_user, backend, log_model, usage, input_price, output_price)
     return data
 
 
 async def _stream_direct(api_user, backend, body, url, input_price, output_price, headers=None,
-                          usage_keys=("prompt_tokens", "completion_tokens")):
+                          usage_keys=("prompt_tokens", "completion_tokens"), log_model=None):
     total_input = 0
     total_output = 0
     async with httpx.AsyncClient(timeout=120) as client:
@@ -1288,31 +1293,34 @@ async def _stream_direct(api_user, backend, body, url, input_price, output_price
                         pass
 
     await _record_usage(
-        api_user, backend, body.get("model", ""),
+        api_user, backend, log_model or body.get("model", ""),
         {"prompt_tokens": total_input, "completion_tokens": total_output},
         input_price, output_price,
     )
 
 
 async def _proxy_tunnel(api_user, backend, body, stream, input_price, output_price,
-                         path="/v1/chat/completions", usage_keys=("prompt_tokens", "completion_tokens")):
+                         path="/v1/chat/completions", usage_keys=("prompt_tokens", "completion_tokens"),
+                         display_model=None):
     if not tunnel_manager.is_connected(backend["id"]):
         raise HTTPException(503, "Backend tunnel not connected")
+    log_model = display_model or body.get("model", "")
 
     if stream:
         return StreamingResponse(
-            _stream_tunnel(api_user, backend, body, input_price, output_price, path, usage_keys),
+            _stream_tunnel(api_user, backend, body, input_price, output_price, path, usage_keys, log_model),
             media_type="text/event-stream",
         )
 
     data = await tunnel_manager.forward_request(backend["id"], body, path=path)
     usage = _extract_usage(data, usage_keys)
-    await _record_usage(api_user, backend, body.get("model", ""), usage, input_price, output_price)
+    await _record_usage(api_user, backend, log_model, usage, input_price, output_price)
     return data
 
 
 async def _stream_tunnel(api_user, backend, body, input_price, output_price,
-                          path="/v1/chat/completions", usage_keys=("prompt_tokens", "completion_tokens")):
+                          path="/v1/chat/completions", usage_keys=("prompt_tokens", "completion_tokens"),
+                          log_model=None):
     total_input = 0
     total_output = 0
     async for chunk in tunnel_manager.forward_stream(backend["id"], body, path=path):
@@ -1325,7 +1333,7 @@ async def _stream_tunnel(api_user, backend, body, input_price, output_price,
     yield "data: [DONE]\n\n"
 
     await _record_usage(
-        api_user, backend, body.get("model", ""),
+        api_user, backend, log_model or body.get("model", ""),
         {"prompt_tokens": total_input, "completion_tokens": total_output},
         input_price, output_price,
     )
