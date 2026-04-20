@@ -99,6 +99,9 @@ async def init_db():
         ucols = {r[1] for r in await cur.fetchall()}
         if "active_subscription_id" not in ucols:
             await db.execute("ALTER TABLE users ADD COLUMN active_subscription_id INTEGER")
+        if "auto_fallback" not in ucols:
+            # Default ON to preserve existing behavior for current users
+            await db.execute("ALTER TABLE users ADD COLUMN auto_fallback INTEGER NOT NULL DEFAULT 1")
         # Migration: add sort_order on subscriptions
         cur = await db.execute("PRAGMA table_info(subscriptions)")
         scols = {r[1] for r in await cur.fetchall()}

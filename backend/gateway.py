@@ -232,6 +232,7 @@ async def login(req: LoginRequest):
 
 @app.get("/api/auth/me")
 async def me(user=Depends(get_current_user)):
+    keys = user.keys()
     return {
         "id": user["id"],
         "username": user["username"],
@@ -239,8 +240,27 @@ async def me(user=Depends(get_current_user)):
         "role": user["role"],
         "balance": user["balance"],
         "verified": user["verified"],
-        "active_subscription_id": user["active_subscription_id"] if "active_subscription_id" in user.keys() else None,
+        "active_subscription_id": user["active_subscription_id"] if "active_subscription_id" in keys else None,
+        "auto_fallback": bool(user["auto_fallback"]) if "auto_fallback" in keys else True,
     }
+
+
+class AutoFallbackRequest(BaseModel):
+    enabled: bool
+
+
+@app.post("/api/user/auto-fallback")
+async def set_auto_fallback(req: AutoFallbackRequest, user=Depends(get_current_user)):
+    db = await get_db()
+    try:
+        await db.execute(
+            "UPDATE users SET auto_fallback = ? WHERE id = ?",
+            (1 if req.enabled else 0, user["id"]),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+    return {"ok": True, "auto_fallback": req.enabled}
 
 
 # ══════════════════════════════════════════════════════════
@@ -992,7 +1012,7 @@ async def authenticate_api_key(request: Request):
     db = await get_db()
     try:
         cur = await db.execute(
-            "SELECT ak.id as key_id, ak.user_id, u.balance, u.is_active "
+            "SELECT ak.id as key_id, ak.user_id, u.balance, u.is_active, u.auto_fallback "
             "FROM api_keys ak JOIN users u ON ak.user_id = u.id "
             "WHERE ak.key_hash = ? AND ak.is_active = 1",
             (key_hash,),
@@ -1011,9 +1031,17 @@ async def authenticate_api_key(request: Request):
     return row
 
 
-async def get_active_subscription_backend(user_id: int):
-    """Return (backend_row, forced_model) for the highest-priority online activated subscription.
-    None,None if user has no activated subs. Raises 503 if all activated subs are offline."""
+async def get_active_subscription_backend(user_id: int, auto_fallback: bool = True,
+                                          requested_model: str | None = None):
+    """Pick a backend from the user's activated subscriptions.
+
+    - auto_fallback=True: ignore requested_model; try activated subs by priority,
+      use the first one whose backend is online. 503 if all offline.
+    - auto_fallback=False: require requested_model to exactly match one of the
+      user's activated subs; use that one. 404 if not matched; 503 if offline.
+
+    Returns (backend_row, forced_model) or (None, None) if user has no activated subs
+    AND auto_fallback=True (caller may then fall back to public backends)."""
     db = await get_db()
     try:
         cur = await db.execute(
@@ -1026,13 +1054,34 @@ async def get_active_subscription_backend(user_id: int):
         rows = [dict(r) for r in await cur.fetchall()]
     finally:
         await db.close()
+
     if not rows:
-        return None, None
-    for r in rows:
-        if r.get("status") == "online":
-            forced_model = r.pop("model")
-            return r, forced_model
-    raise HTTPException(503, "所有已激活的订阅模型服务都当前离线")
+        if auto_fallback:
+            return None, None
+        raise HTTPException(404, "你还没有激活任何订阅模型服务")
+
+    if auto_fallback:
+        for r in rows:
+            if r.get("status") == "online":
+                forced_model = r.pop("model")
+                return r, forced_model
+        raise HTTPException(503, "所有已激活的订阅模型服务都当前离线")
+
+    # Manual mode: user must specify the model
+    if not requested_model:
+        available = sorted({r["model"] for r in rows})
+        raise HTTPException(400,
+            f"自动回退已关闭，请在请求中显式指定 model，可用：{available}")
+    matches = [r for r in rows if r["model"] == requested_model]
+    if not matches:
+        available = sorted({r["model"] for r in rows})
+        raise HTTPException(404,
+            f"模型 '{requested_model}' 不在你已激活的订阅中。可用：{available}")
+    r = matches[0]
+    if r.get("status") != "online":
+        raise HTTPException(503, f"模型 '{requested_model}' 的订阅服务当前离线（自动回退已关闭）")
+    forced_model = r.pop("model")
+    return r, forced_model
 
 
 async def get_activated_models(user_id: int) -> list[str]:
@@ -1132,8 +1181,11 @@ async def _handle_openai_request(request: Request, path: str, usage_keys: tuple[
     body = await request.json()
     stream = body.get("stream", False)
 
-    # Prefer user's activated subscriptions (priority routing with failover)
-    backend, forced_model = await get_active_subscription_backend(api_user["user_id"])
+    # Prefer user's activated subscriptions (priority routing with optional failover)
+    auto_fallback = bool(api_user.get("auto_fallback", 1))
+    requested_model = body.get("model", "")
+    backend, forced_model = await get_active_subscription_backend(
+        api_user["user_id"], auto_fallback, requested_model)
     if backend:
         body["model"] = forced_model
         model = forced_model
