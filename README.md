@@ -68,12 +68,20 @@ llm-gateway/
 ## 功能
 
 - **模型市场**：浏览/搜索所有在线模型
-- **OpenAI 兼容 API**：`/v1/models`、`/v1/chat/completions`（含流式）
+- **OpenAI 兼容 API**：`/v1/models`、`/v1/chat/completions`、`/v1/completions`、`/v1/responses`（均支持流式）
 - **双模式后端接入**：
   - **直连**：后端有公网 IP，网关直接 HTTP 转发
   - **隧道**：后端在 NAT 后，运行 client.py 建立 WebSocket 长连接
+- **订阅 + 多激活 + 优先级回退**：
+  - 用户在模型市场订阅 Backend 的某个模型 → 获得独立的 `sub_key`
+  - 同一个用户可**同时激活多个订阅**；平台按用户设置的优先级依次尝试
+  - 高优先级订阅的 Backend 离线或失败时，**自动回退**到下一个
+  - 自动订阅：Provider 注册 Backend 后，自身自动激活该订阅（方便测试）
+- **两种调用方式**：
+  - **统一入口**：用自己的 API Key 调 `/v1/*`，按优先级自动路由到已激活订阅
+  - **指定订阅**：用 `sub_key` 调 `/s/{sub_key}/v1/*`，强制使用该订阅
 - **API Key 管理**：创建、查看、吊销
-- **按量计费**：按 token 计费，余额扣减，余额不足拒绝请求
+- **按量计费**：按 token 计费，余额扣减，余额不足拒绝请求；`/v1/responses` 自动归一 `input_tokens`/`output_tokens`
 - **定价优先级**：Backend 定价 > 配置模型定价 > 全局默认
 - **管理面板**：用户管理、余额充值、用量统计、启用/禁用用户
 
@@ -94,8 +102,16 @@ python gateway.py
 ```bash
 cd frontend
 npm install
-echo "NEXT_PUBLIC_API_URL=http://localhost:8080" > .env.local
+# 可选：在 URL 展示框中显示自定义域名（否则使用当前访问地址）
+echo "NEXT_PUBLIC_API_URL=" > .env.local
+echo "NEXT_PUBLIC_PUBLIC_BASE_URL=https://your-domain" >> .env.local
 npm run dev
+# 生产构建（本项目为 output: "standalone"）
+npm run build
+node .next/standalone/server.js
+# 注意：standalone 构建下首次启动需将静态资源拷入：
+#   cp -r .next/static .next/standalone/.next/
+#   cp -r public      .next/standalone/public        # 如有 public
 ```
 
 ### 提供者客户端
@@ -111,26 +127,62 @@ python client.py \
   --local-url http://localhost:8000
 ```
 
+> **隧道协议更新（2026-04）**：WebSocket 消息新增可选 `path` 字段，用于支持 `/v1/completions`、`/v1/responses` 等非 chat 路径。若 `path` 缺省，兼容默认回落到 `/v1/chat/completions`。老版 `client.py` 仍可服务 chat 场景，如需完整 OpenAI 兼容，请拉取最新版。
+
 ## 使用
 
 ### 作为消费者
+
+#### 1. 统一入口（推荐）
+
+用你自己在"API Keys"里创建的 Key，调用网关的 `/v1/*`；平台会按你"我的订阅"里的优先级顺序，自动选择一个**已激活**的订阅转发，高优先级失败时自动回退到下一个。
 
 ```python
 from openai import OpenAI
 
 client = OpenAI(
-    base_url="http://GATEWAY_HOST:8080/v1",
-    api_key="sk-xxxxx"
+    base_url="https://your-gateway/v1",   # 或 http://IP:8080/v1
+    api_key="sk-你的API-Key"
 )
 
+# model 可填 "auto"，由网关按优先级选；也可填某个已激活订阅里的模型名
 resp = client.chat.completions.create(
-    model="Qwen3-8B",
+    model="auto",
     messages=[{"role": "user", "content": "Hello"}],
     stream=True
 )
 for chunk in resp:
     print(chunk.choices[0].delta.content or "", end="")
 ```
+
+支持的 OpenAI 兼容端点：
+
+| 路径 | 用途 |
+|------|------|
+| `GET  /v1/models` | 列出当前用户可用模型 |
+| `POST /v1/chat/completions` | Chat 对话（含流式）|
+| `POST /v1/completions` | 旧版 Completion（含流式）|
+| `POST /v1/responses` | Responses API（含流式；usage 自动归一）|
+
+> 自签证书场景（直接用 IP 访问）需要在客户端跳过证书校验，例如 `curl -k`；使用配置好的域名则不需要。
+
+#### 2. 指定订阅（sub_key）
+
+每个订阅有独立 `sub_key`，可以用来强制走某一个 Backend，路径前缀为 `/s/{sub_key}`：
+
+```bash
+curl https://your-gateway/s/SUB_KEY/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model":"Qwen3-8B","messages":[{"role":"user","content":"hi"}]}'
+```
+
+> `sub_key` 本身即携带身份和计费归属，无需再带 `Authorization`。
+
+#### 3. 订阅管理与优先级（前端 /dashboard/my-models）
+
+- "激活/停用"：控制该订阅是否参与统一入口的自动路由
+- "↑ / ↓"：调整已激活订阅的优先级（越靠上越优先）
+- 页面显示的 API 链接使用当前访问域名动态生成，可直接复制给 SDK 使用
 
 ### API 端点
 
@@ -148,6 +200,12 @@ for chunk in resp:
 | GET | `/api/usage` | 用户用量统计 | JWT |
 | GET | `/v1/models` | OpenAI 兼容模型列表 | API Key |
 | POST | `/v1/chat/completions` | OpenAI 兼容对话 | API Key |
+| POST | `/v1/completions` | OpenAI 兼容 Completion | API Key |
+| POST | `/v1/responses` | OpenAI Responses API | API Key |
+| ALL | `/s/{sub_key}/v1/*` | 指定订阅的 OpenAI 调用 | sub_key（免 Authorization）|
+| GET/POST/DELETE | `/api/subscriptions` | 订阅列表/创建/退订 | JWT |
+| POST | `/api/subscriptions/{id}/activate` | 激活/停用订阅 | JWT |
+| POST | `/api/subscriptions/reorder` | 调整激活订阅优先级 | JWT |
 | WS | `/ws/tunnel` | 提供者隧道连接 | API Key |
 | GET | `/api/admin/users` | 用户列表 | JWT (Admin) |
 | POST | `/api/admin/users/{id}/balance` | 调整余额 | JWT (Admin) |
