@@ -17,26 +17,19 @@ export default function Navbar() {
             <Link href="/models" className="text-gray-600 hover:text-gray-900">
               模型广场
             </Link>
-            {user && (
-              <>
-                <Link href="/dashboard" className="text-gray-600 hover:text-gray-900">
-                  个人中心
-                </Link>
-                {user.role === "admin" && (
-                  <Link href="/admin" className="text-gray-600 hover:text-gray-900">
-                    管理
-                  </Link>
-                )}
-              </>
+            {user && user.role === "admin" && (
+              <Link href="/admin" className="text-gray-600 hover:text-gray-900">
+                管理
+              </Link>
             )}
           </div>
           <div className="flex items-center gap-4">
             {user ? (
               <>
-                <span className="text-sm text-gray-500">
-                  {user.username}
+                <Link href="/dashboard" className="text-sm text-gray-600 hover:text-indigo-600">
+                  <span className="font-medium">{user.username}</span>
                   {user.billing && (
-                    <span className={`ml-2 ${user.billing.is_suspended ? "text-red-600" : "text-gray-600"}`}>
+                    <span className={`ml-2 ${user.billing.is_suspended ? "text-red-600" : "text-gray-500"}`}>
                       本月 ¥{user.billing.current_month_cost.toFixed(6)}
                       {user.billing.unpaid_total > 0 && (
                         <span className="ml-1 text-amber-600">
@@ -45,7 +38,7 @@ export default function Navbar() {
                       )}
                     </span>
                   )}
-                </span>
+                </Link>
                 <button onClick={logout} className="text-sm text-red-500 hover:text-red-700">
                   退出
                 </button>
