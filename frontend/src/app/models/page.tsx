@@ -38,7 +38,12 @@ export default function ModelsPage() {
   const [copied, setCopied] = useState<string | null>(null)
 
   useEffect(() => {
-    apiFetch("/api/models").then(setModels).catch(() => {})
+    apiFetch("/api/models")
+      .then((data) => {
+        if (Array.isArray(data)) setModels(data)
+        else console.error("[models] unexpected response", data)
+      })
+      .catch((e) => console.error("[models] fetch failed", e))
   }, [])
 
   useEffect(() => {
