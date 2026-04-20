@@ -176,18 +176,18 @@ export default function MyModelsPage() {
                         )}
                       </div>
                       <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-0.5">
+                        <div className="flex items-center gap-1">
                           <button
                             onClick={() => handleMove(s.id, -1)}
                             disabled={idx === 0}
-                            title="上移"
-                            className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-indigo-600 disabled:text-gray-200 disabled:cursor-not-allowed"
+                            title="上移（提高优先级）"
+                            className="w-8 h-8 flex items-center justify-center text-lg font-bold rounded border border-gray-200 text-gray-600 bg-white hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-300 disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
                           >↑</button>
                           <button
                             onClick={() => handleMove(s.id, 1)}
                             disabled={idx === arr.length - 1}
-                            title="下移"
-                            className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-indigo-600 disabled:text-gray-200 disabled:cursor-not-allowed"
+                            title="下移（降低优先级）"
+                            className="w-8 h-8 flex items-center justify-center text-lg font-bold rounded border border-gray-200 text-gray-600 bg-white hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-300 disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
                           >↓</button>
                         </div>
                         {isActivated ? (
