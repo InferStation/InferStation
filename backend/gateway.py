@@ -129,8 +129,9 @@ async def lifespan(app: FastAPI):
                 else:
                     sub_key = f"sub-{secrets.token_urlsafe(24)}"
                     await db.execute(
-                        "INSERT INTO subscriptions (user_id, backend_id, model, sub_key) VALUES (?, ?, ?, ?)",
-                        (owner_id, bid, model_name, sub_key),
+                        "INSERT INTO subscriptions (user_id, backend_id, model, sub_key, sort_order) "
+                        "VALUES (?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order),0)+1 FROM subscriptions WHERE user_id = ?))",
+                        (owner_id, bid, model_name, sub_key, owner_id),
                     )
         await db.commit()
     finally:
@@ -465,8 +466,9 @@ async def register_backend(req: RegisterBackendRequest, user=Depends(require_pro
                 else:
                     sub_key = f"sub-{secrets.token_urlsafe(24)}"
                     await db.execute(
-                        "INSERT INTO subscriptions (user_id, backend_id, model, sub_key) VALUES (?, ?, ?, ?)",
-                        (user["id"], backend_id, model_name, sub_key),
+                        "INSERT INTO subscriptions (user_id, backend_id, model, sub_key, sort_order) "
+                        "VALUES (?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order),0)+1 FROM subscriptions WHERE user_id = ?))",
+                        (user["id"], backend_id, model_name, sub_key, user["id"]),
                     )
             await db.commit()
     finally:
@@ -752,9 +754,14 @@ async def subscribe_model(req: SubscribeRequest, user=Depends(get_current_user))
             return {"sub_key": existing["sub_key"], "model": req.model}
 
         sub_key = f"sub-{secrets.token_urlsafe(24)}"
+        cur = await db.execute(
+            "SELECT COALESCE(MAX(sort_order), 0) FROM subscriptions WHERE user_id = ?",
+            (user["id"],),
+        )
+        max_order = (await cur.fetchone())[0] or 0
         await db.execute(
-            "INSERT INTO subscriptions (user_id, backend_id, model, sub_key) VALUES (?, ?, ?, ?)",
-            (user["id"], req.backend_id, req.model, sub_key),
+            "INSERT INTO subscriptions (user_id, backend_id, model, sub_key, sort_order) VALUES (?, ?, ?, ?, ?)",
+            (user["id"], req.backend_id, req.model, sub_key, max_order + 1),
         )
         await db.commit()
     finally:
@@ -768,17 +775,44 @@ async def list_subscriptions(user=Depends(get_current_user)):
     db = await get_db()
     try:
         cur = await db.execute(
-            "SELECT s.id, s.backend_id, s.model, s.sub_key, s.is_active, s.created_at, "
+            "SELECT s.id, s.backend_id, s.model, s.sub_key, s.is_active, s.created_at, s.sort_order, "
             "b.name as backend, b.status as backend_status, b.input_price, b.output_price, "
             "CASE WHEN b.owner_id = ? THEN 1 ELSE 0 END as is_owned "
             "FROM subscriptions s JOIN backends b ON s.backend_id = b.id "
-            "WHERE s.user_id = ? ORDER BY s.created_at DESC",
+            "WHERE s.user_id = ? ORDER BY s.sort_order ASC, s.id ASC",
             (user["id"], user["id"]),
         )
         rows = [dict(r) for r in await cur.fetchall()]
     finally:
         await db.close()
     return rows
+
+
+class ReorderSubscriptionsRequest(BaseModel):
+    ids: list[int]
+
+
+@app.put("/api/subscriptions/reorder")
+async def reorder_subscriptions(req: ReorderSubscriptionsRequest, user=Depends(get_current_user)):
+    """Reorder the user's subscriptions. `ids` is the full list of subscription ids in desired order."""
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            "SELECT id FROM subscriptions WHERE user_id = ?",
+            (user["id"],),
+        )
+        owned = {r[0] for r in await cur.fetchall()}
+        if set(req.ids) - owned:
+            raise HTTPException(400, "包含不属于当前用户的订阅")
+        for order, sub_id in enumerate(req.ids, start=1):
+            await db.execute(
+                "UPDATE subscriptions SET sort_order = ? WHERE id = ? AND user_id = ?",
+                (order, sub_id, user["id"]),
+            )
+        await db.commit()
+    finally:
+        await db.close()
+    return {"ok": True}
 
 
 @app.delete("/api/subscriptions/{sub_id}")

@@ -50,6 +50,28 @@ export default function MyModelsPage() {
     fetchAll()
   }
 
+  const handleMove = async (id: number, dir: -1 | 1) => {
+    const active = subs.filter((s) => s.is_active)
+    const inactive = subs.filter((s) => !s.is_active)
+    const idx = active.findIndex((s) => s.id === id)
+    if (idx < 0) return
+    const newIdx = idx + dir
+    if (newIdx < 0 || newIdx >= active.length) return
+    const reordered = [...active]
+    const [m] = reordered.splice(idx, 1)
+    reordered.splice(newIdx, 0, m)
+    const newSubs = [...reordered, ...inactive]
+    setSubs(newSubs)
+    try {
+      await apiFetch("/api/subscriptions/reorder", {
+        method: "PUT",
+        body: JSON.stringify({ ids: newSubs.map((s) => s.id) }),
+      })
+    } catch {
+      fetchAll()
+    }
+  }
+
   const handleActivate = async (id: number | null) => {
     setSaving(true)
     try {
@@ -116,7 +138,7 @@ export default function MyModelsPage() {
         <>
           {subs.filter((s) => s.is_active).length > 0 && (
             <div className="space-y-4 mb-8">
-              {subs.filter((s) => s.is_active).map((s) => {
+              {subs.filter((s) => s.is_active).map((s, idx, arr) => {
                 const isActive = s.id === activeId
                 return (
                   <div
@@ -159,6 +181,20 @@ export default function MyModelsPage() {
                         )}
                       </div>
                       <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-0.5">
+                          <button
+                            onClick={() => handleMove(s.id, -1)}
+                            disabled={idx === 0}
+                            title="上移"
+                            className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-indigo-600 disabled:text-gray-200 disabled:cursor-not-allowed"
+                          >↑</button>
+                          <button
+                            onClick={() => handleMove(s.id, 1)}
+                            disabled={idx === arr.length - 1}
+                            title="下移"
+                            className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-indigo-600 disabled:text-gray-200 disabled:cursor-not-allowed"
+                          >↓</button>
+                        </div>
                         {isActive ? (
                           <button
                             onClick={() => handleActivate(null)}

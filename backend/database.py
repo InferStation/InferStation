@@ -99,6 +99,13 @@ async def init_db():
         ucols = {r[1] for r in await cur.fetchall()}
         if "active_subscription_id" not in ucols:
             await db.execute("ALTER TABLE users ADD COLUMN active_subscription_id INTEGER")
+        # Migration: add sort_order on subscriptions
+        cur = await db.execute("PRAGMA table_info(subscriptions)")
+        scols = {r[1] for r in await cur.fetchall()}
+        if "sort_order" not in scols:
+            await db.execute("ALTER TABLE subscriptions ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0")
+            # Backfill sort_order by id (existing created_at order)
+            await db.execute("UPDATE subscriptions SET sort_order = id WHERE sort_order = 0")
         await db.commit()
     finally:
         await db.close()
