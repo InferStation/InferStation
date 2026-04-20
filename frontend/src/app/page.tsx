@@ -3,7 +3,7 @@ import Link from "next/link"
 export default function Home() {
   return (
     <div className="text-center py-16">
-      <h1 className="text-4xl font-bold text-gray-900 mb-4">LLM Gateway</h1>
+      <h1 className="text-4xl font-bold text-gray-900 mb-4">天枢</h1>
       <p className="text-lg text-gray-600 mb-10">模型服务聚合平台 — 连接 AI 消费者与模型提供者</p>
 
       <div className="flex justify-center gap-4 mb-16">

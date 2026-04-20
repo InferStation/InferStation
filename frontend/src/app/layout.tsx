@@ -4,8 +4,8 @@ import { AuthProvider } from "@/context/AuthContext"
 import Navbar from "@/components/Navbar"
 
 export const metadata: Metadata = {
-  title: "LLM Gateway - 模型服务聚合平台",
-  description: "轻量级 LLM API 网关，连接消费者与模型提供者",
+  title: "天枢 - 模型服务聚合平台",
+  description: "天枢 · 轻量级 LLM API 网关，连接消费者与模型提供者",
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
