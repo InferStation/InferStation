@@ -17,6 +17,9 @@ export default function Navbar() {
             <Link href="/models" className="text-gray-600 hover:text-gray-900">
               模型广场
             </Link>
+            <Link href="/docs" className="text-gray-600 hover:text-gray-900">
+              文档
+            </Link>
             {user && user.role === "admin" && (
               <Link href="/admin" className="text-gray-600 hover:text-gray-900">
                 管理
@@ -26,7 +29,10 @@ export default function Navbar() {
           <div className="flex items-center gap-4">
             {user ? (
               <>
-                <Link href="/dashboard" className="text-sm text-gray-600 hover:text-indigo-600">
+                <Link href="/dashboard" className="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-indigo-600">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-gray-500">
+                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                  </svg>
                   <span className="font-medium">{user.username}</span>
                   {user.billing && (
                     <span className={`ml-2 ${user.billing.is_suspended ? "text-red-600" : "text-gray-500"}`}>
