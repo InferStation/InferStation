@@ -29,27 +29,18 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [client] %(levelname
 logger = logging.getLogger("client")
 
 
-async def forward_to_local(local_url: str, request_data: dict, stream: bool = False,
-                            path: str = "/v1/chat/completions"):
-    """Forward a request to the local vLLM/OpenAI-compatible server."""
+# Long-running inference: reasonable connect/write/pool timeouts but NO read timeout,
+# otherwise httpx will kill the request 120s after the last byte regardless of actual progress.
+_LOCAL_TIMEOUT = httpx.Timeout(connect=15.0, write=30.0, pool=30.0, read=None)
+
+
+async def forward_to_local(local_url: str, request_data: dict,
+                            path: str = "/v1/chat/completions") -> dict:
+    """Forward a non-streaming request to the local vLLM/OpenAI-compatible server."""
     url = f"{local_url.rstrip('/')}{path}"
-    async with httpx.AsyncClient(timeout=120) as client:
-        if stream:
-            chunks = []
-            async with client.stream("POST", url, json=request_data) as resp:
-                async for line in resp.aiter_lines():
-                    if line.startswith("data: "):
-                        chunk_str = line[6:]
-                        if chunk_str.strip() == "[DONE]":
-                            break
-                        try:
-                            chunks.append(json.loads(chunk_str))
-                        except json.JSONDecodeError:
-                            pass
-            return chunks
-        else:
-            resp = await client.post(url, json=request_data)
-            return resp.json()
+    async with httpx.AsyncClient(timeout=_LOCAL_TIMEOUT) as client:
+        resp = await client.post(url, json=request_data)
+        return resp.json()
 
 
 async def health_check_local(local_url: str) -> int:
@@ -101,7 +92,7 @@ async def run_tunnel(gateway_ws_url: str, token: str, backend_name: str, local_u
 
 async def _handle_request(ws, req_id: str, local_url: str, data: dict, path: str = "/v1/chat/completions"):
     try:
-        result = await forward_to_local(local_url, data, stream=False, path=path)
+        result = await forward_to_local(local_url, data, path=path)
         await ws.send(json.dumps({"id": req_id, "type": "response", "data": result}))
     except Exception as e:
         logger.error(f"Request {req_id} failed: {e}")
@@ -109,15 +100,30 @@ async def _handle_request(ws, req_id: str, local_url: str, data: dict, path: str
 
 
 async def _handle_stream(ws, req_id: str, local_url: str, data: dict, path: str = "/v1/chat/completions"):
+    """Stream chunks from local server to gateway as they arrive (no buffering)."""
+    data["stream"] = True
+    url = f"{local_url.rstrip('/')}{path}"
     try:
-        data["stream"] = True
-        chunks = await forward_to_local(local_url, data, stream=True, path=path)
-        for chunk in chunks:
-            await ws.send(json.dumps({"id": req_id, "type": "stream_chunk", "data": chunk}))
+        async with httpx.AsyncClient(timeout=_LOCAL_TIMEOUT) as client:
+            async with client.stream("POST", url, json=data) as resp:
+                async for line in resp.aiter_lines():
+                    if not line.startswith("data: "):
+                        continue
+                    chunk_str = line[6:]
+                    if chunk_str.strip() == "[DONE]":
+                        break
+                    try:
+                        chunk = json.loads(chunk_str)
+                    except json.JSONDecodeError:
+                        continue
+                    await ws.send(json.dumps({"id": req_id, "type": "stream_chunk", "data": chunk}))
         await ws.send(json.dumps({"id": req_id, "type": "stream_end"}))
     except Exception as e:
         logger.error(f"Stream {req_id} failed: {e}")
-        await ws.send(json.dumps({"id": req_id, "type": "stream_end"}))
+        try:
+            await ws.send(json.dumps({"id": req_id, "type": "stream_end"}))
+        except Exception:
+            pass
 
 
 async def _handle_health_check(ws, req_id: str, local_url: str):

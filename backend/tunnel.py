@@ -59,7 +59,7 @@ class TunnelManager:
                     fut.set_exception(ConnectionError("Tunnel disconnected"))
             logger.info(f"Tunnel disconnected: {conn.backend_name} (id={backend_id})")
 
-    async def forward_request(self, backend_id: int, request_data: dict, timeout: float = 120,
+    async def forward_request(self, backend_id: int, request_data: dict, timeout: float = 600,
                                path: str = "/v1/chat/completions") -> dict:
         conn = self._tunnels.get(backend_id)
         if not conn:
@@ -77,8 +77,9 @@ class TunnelManager:
         finally:
             conn.pending.pop(req_id, None)
 
-    async def forward_stream(self, backend_id: int, request_data: dict, timeout: float = 120,
+    async def forward_stream(self, backend_id: int, request_data: dict, timeout: float = 300,
                               path: str = "/v1/chat/completions"):
+        """Stream chunks from the tunneled backend. `timeout` is per-chunk idle timeout."""
         conn = self._tunnels.get(backend_id)
         if not conn:
             raise ConnectionError(f"No tunnel for backend {backend_id}")

@@ -39,6 +39,10 @@ from tunnel import TunnelConnection, tunnel_manager
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s %(message)s")
 logger = logging.getLogger("gateway")
 
+# Upstream timeouts: connect/write/pool bounded; no read timeout so long generations
+# are bounded only by the client's disconnect, not by a hardcoded wall clock.
+UPSTREAM_TIMEOUT = httpx.Timeout(connect=15.0, write=30.0, pool=30.0, read=None)
+
 # ── Config ──────────────────────────────────────────────
 CONFIG = {}
 
@@ -1278,7 +1282,7 @@ async def _proxy_direct(api_user, backend, body, stream, input_price, output_pri
             media_type="text/event-stream",
         )
 
-    async with httpx.AsyncClient(timeout=120) as client:
+    async with httpx.AsyncClient(timeout=UPSTREAM_TIMEOUT) as client:
         resp = await client.post(url, json=body, headers=headers)
         data = resp.json()
 
@@ -1291,7 +1295,7 @@ async def _stream_direct(api_user, backend, body, url, input_price, output_price
                           usage_keys=("prompt_tokens", "completion_tokens"), log_model=None):
     total_input = 0
     total_output = 0
-    async with httpx.AsyncClient(timeout=120) as client:
+    async with httpx.AsyncClient(timeout=UPSTREAM_TIMEOUT) as client:
         async with client.stream("POST", url, json=body, headers=headers) as resp:
             async for line in resp.aiter_lines():
                 if line.startswith("data: "):
