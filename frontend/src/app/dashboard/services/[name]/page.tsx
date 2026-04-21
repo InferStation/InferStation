@@ -254,6 +254,7 @@ export default function ServiceDetailPage() {
               <p className="mt-1 text-xs text-gray-500">
                 网关转发请求时，会把 OpenAI 请求的 model 字段改为此值再传给你的服务。同一 URL 可用不同后端名注册多个模型。
               </p>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">标签</label>
               <div className="grid gap-3 md:grid-cols-3">
