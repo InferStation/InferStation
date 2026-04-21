@@ -79,6 +79,12 @@ export default function RegisterPage() {
             {loading ? "注册中..." : "注册"}
           </button>
         </form>
+        <p className="text-xs text-gray-500 text-center mt-3">
+          注册即表示您已阅读并同意
+          <Link href="/terms" className="text-indigo-600 hover:underline mx-1">服务条款</Link>
+          与
+          <Link href="/privacy" className="text-indigo-600 hover:underline mx-1">隐私政策</Link>
+        </p>
         <p className="text-center text-sm text-gray-500 mt-4">
           已有账号？<Link href="/login" className="text-indigo-600 hover:underline">登录</Link>
         </p>

@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import "./globals.css"
 import { AuthProvider } from "@/context/AuthContext"
 import Navbar from "@/components/Navbar"
+import Footer from "@/components/Footer"
 
 export const metadata: Metadata = {
   title: "天枢 - 模型服务聚合平台",
@@ -17,6 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
             {children}
           </main>
+          <Footer />
         </AuthProvider>
       </body>
     </html>
