@@ -57,6 +57,7 @@ export default function ServicesPage() {
   })
   const [families, setFamilies] = useState<string[]>([])
   const [catalog, setCatalog] = useState<Record<string, string[]>>({})
+  const [tunnelNoticeOpen, setTunnelNoticeOpen] = useState(false)
 
   const isProvider = user && ["provider", "both", "admin"].includes(user.role)
 
@@ -205,12 +206,23 @@ export default function ServicesPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">接入模式</label>
-                <select value={form.mode} onChange={(e) => setForm({ ...form, mode: e.target.value })} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <select
+                  value={form.mode}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    setForm({ ...form, mode: v })
+                    if (v === "tunnel") setTunnelNoticeOpen(true)
+                  }}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                >
                   <option value="direct">直连（公网可达）</option>
                   <option value="tunnel">隧道（NAT 内网，需客户端注册）</option>
                 </select>
                 {form.mode === "tunnel" && (
-                  <p className="mt-1 text-xs text-red-600">隧道模式不能在网页注册，请使用提供方客户端。</p>
+                  <p className="mt-1 text-xs text-red-600">
+                    隧道模式暂不支持网页注册，
+                    <button type="button" onClick={() => setTunnelNoticeOpen(true)} className="underline hover:text-red-700">查看接入说明</button>
+                  </p>
                 )}
               </div>
             </div>
@@ -388,6 +400,38 @@ export default function ServicesPage() {
         })}
         {backends.length === 0 && <div className="text-center py-12 text-gray-500">暂无注册的后端服务</div>}
       </div>
+
+      {tunnelNoticeOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setTunnelNoticeOpen(false)}>
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-4 mb-3">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">隧道模式暂不支持网页注册</h3>
+                <p className="text-sm text-gray-500 mt-1">请在提供方机器上通过客户端命令行注册。</p>
+              </div>
+              <button onClick={() => setTunnelNoticeOpen(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+            </div>
+            <div className="rounded-lg bg-gray-900 text-gray-100 text-xs font-mono p-4 overflow-x-auto mb-3">
+              <pre className="whitespace-pre">{`python tunnel_client.py \\
+  --gateway wss://llm.jours.art/ws/tunnel \\
+  --token sk-你的API-Key \\
+  --backend-name 后端名称 \\
+  --local-url http://localhost:8000`}</pre>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <Link href="/docs#tunnel" target="_blank" className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
+                查看完整接入文档 →
+              </Link>
+              <button
+                onClick={() => { setTunnelNoticeOpen(false); setForm((f) => ({ ...f, mode: "direct" })) }}
+                className="px-4 py-1.5 rounded-md bg-indigo-600 text-white text-sm hover:bg-indigo-700"
+              >
+                切回直连
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
