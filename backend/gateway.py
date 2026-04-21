@@ -516,27 +516,20 @@ async def register_backend(req: RegisterBackendRequest, user=Depends(require_pro
 
     db = await get_db()
     try:
-        cur = await db.execute("SELECT id FROM backends WHERE name = ?", (req.name,))
+        cur = await db.execute("SELECT id, owner_id FROM backends WHERE name = ?", (req.name,))
         existing = await cur.fetchone()
         if existing:
-            # Update
-            await db.execute(
-                """UPDATE backends SET url=?, mode=?, models=?, tags=?, input_price=?, output_price=?,
-                   is_public=?, client_info=?, updated_at=datetime('now') WHERE name=? AND owner_id=?""",
-                (
-                    req.url, req.mode, json.dumps(req.models), json.dumps(req.tags), req.input_price, req.output_price,
-                    1 if req.is_public else 0, json.dumps(req.client_info), req.name, user["id"],
-                ),
-            )
-        else:
-            await db.execute(
-                """INSERT INTO backends (name, owner_id, url, mode, models, tags, input_price, output_price, is_public, client_info, enabled)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)""",
-                (
-                    req.name, user["id"], req.url, req.mode, json.dumps(req.models), json.dumps(req.tags),
-                    req.input_price, req.output_price, 1 if req.is_public else 0, json.dumps(req.client_info),
-                ),
-            )
+            if existing["owner_id"] == user["id"]:
+                raise HTTPException(409, f"后端名 '{req.name}' 已存在，请改用编辑页修改，或换一个名字再注册")
+            raise HTTPException(409, f"后端名 '{req.name}' 已被其他用户占用")
+        await db.execute(
+            """INSERT INTO backends (name, owner_id, url, mode, models, tags, input_price, output_price, is_public, client_info, enabled)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)""",
+            (
+                req.name, user["id"], req.url, req.mode, json.dumps(req.models), json.dumps(req.tags),
+                req.input_price, req.output_price, 1 if req.is_public else 0, json.dumps(req.client_info),
+            ),
+        )
         await db.commit()
 
         # Auto-subscribe the owner to all models of this backend (cannot be unsubscribed).
