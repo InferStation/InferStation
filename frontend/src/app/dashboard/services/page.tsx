@@ -300,7 +300,6 @@ export default function ServicesPage() {
                   <span className="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600">{b.mode === "tunnel" ? "隧道" : "直连"}</span>
                   {!b.is_public && <span className="px-2 py-0.5 rounded text-xs bg-yellow-100 text-yellow-700">私有</span>}
                 </div>
-                <p className="text-sm text-gray-500">模型: {b.models.length > 0 ? b.models.join(", ") : "未设置"}</p>
                 {Object.keys(b.tags || {}).length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mt-1">
                     {Object.entries(b.tags).map(([k, v]) => (
@@ -310,15 +309,14 @@ export default function ServicesPage() {
                     ))}
                   </div>
                 )}
-                {(b.input_price != null || b.output_price != null) && (
-                  <p className="text-sm text-gray-500">定价: ¥{b.input_price}/M 输入 / ¥{b.output_price}/M 输出</p>
-                )}
                 {b.models.length > 0 && (
                   <div className="mt-2 overflow-x-auto" onClick={(e) => e.preventDefault()}>
                     <table className="text-xs border border-gray-200 rounded">
                       <thead className="bg-gray-50 text-gray-600">
                         <tr>
                           <th className="px-2 py-1 text-left font-medium">模型</th>
+                          <th className="px-2 py-1 text-right font-medium">输入价(¥/M)</th>
+                          <th className="px-2 py-1 text-right font-medium">输出价(¥/M)</th>
                           <th className="px-2 py-1 text-right font-medium">订阅数</th>
                           <th className="px-2 py-1 text-right font-medium">请求数</th>
                           <th className="px-2 py-1 text-right font-medium">输入 tokens</th>
@@ -332,6 +330,8 @@ export default function ServicesPage() {
                           return (
                             <tr key={m} className="border-t">
                               <td className="px-2 py-1 font-mono">{m}</td>
+                              <td className="px-2 py-1 text-right">{b.input_price ?? "-"}</td>
+                              <td className="px-2 py-1 text-right">{b.output_price ?? "-"}</td>
                               <td className="px-2 py-1 text-right">{s?.subscribers ?? 0}</td>
                               <td className="px-2 py-1 text-right">{s?.requests ?? 0}</td>
                               <td className="px-2 py-1 text-right">{(s?.input_tokens ?? 0).toLocaleString()}</td>
@@ -358,16 +358,6 @@ export default function ServicesPage() {
           </Link>
         ))}
         {backends.length === 0 && <div className="text-center py-12 text-gray-500">暂无注册的后端服务</div>}
-      </div>
-
-      <div className="mt-8 bg-gray-50 rounded-lg border p-6">
-        <h2 className="font-semibold mb-3">隧道模式使用说明</h2>
-        <p className="text-sm text-gray-600 mb-3">如果你的机器在 NAT/内网后面，选择「隧道」模式注册后端，然后在机器上运行 client.py：</p>
-        <pre className="text-sm bg-white p-4 rounded border overflow-x-auto">{`python client.py \\
-  --gateway ws://GATEWAY_HOST:8080/ws/tunnel \\
-  --token sk-你的API-Key \\
-  --backend-name 你的后端名称 \\
-  --local-url http://localhost:8000`}</pre>
       </div>
     </div>
   )
