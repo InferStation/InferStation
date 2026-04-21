@@ -301,6 +301,18 @@ export default function ServicesPage() {
                   {!b.is_public && <span className="px-2 py-0.5 rounded text-xs bg-yellow-100 text-yellow-700">私有</span>}
                 </div>
                 <p className="text-sm text-gray-500">模型: {b.models.length > 0 ? b.models.join(", ") : "未设置"}</p>
+                {Object.keys(b.tags || {}).length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    {Object.entries(b.tags).map(([k, v]) => (
+                      <span key={k} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+                        {v}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {(b.input_price != null || b.output_price != null) && (
+                  <p className="text-sm text-gray-500">定价: ¥{b.input_price}/M 输入 / ¥{b.output_price}/M 输出</p>
+                )}
                 {b.models.length > 0 && (
                   <div className="mt-2 overflow-x-auto" onClick={(e) => e.preventDefault()}>
                     <table className="text-xs border border-gray-200 rounded">
@@ -311,7 +323,7 @@ export default function ServicesPage() {
                           <th className="px-2 py-1 text-right font-medium">请求数</th>
                           <th className="px-2 py-1 text-right font-medium">输入 tokens</th>
                           <th className="px-2 py-1 text-right font-medium">输出 tokens</th>
-                          <th className="px-2 py-1 text-right font-medium">收入(¥)</th>
+                          <th className="px-2 py-1 text-right font-medium">预期收入(¥)</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -324,25 +336,13 @@ export default function ServicesPage() {
                               <td className="px-2 py-1 text-right">{s?.requests ?? 0}</td>
                               <td className="px-2 py-1 text-right">{(s?.input_tokens ?? 0).toLocaleString()}</td>
                               <td className="px-2 py-1 text-right">{(s?.output_tokens ?? 0).toLocaleString()}</td>
-                              <td className="px-2 py-1 text-right">{(s?.cost ?? 0).toFixed(4)}</td>
+                              <td className="px-2 py-1 text-right">{(s?.cost ?? 0).toFixed(6)}</td>
                             </tr>
                           )
                         })}
                       </tbody>
                     </table>
                   </div>
-                )}
-                {Object.keys(b.tags || {}).length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mt-1">
-                    {Object.entries(b.tags).map(([k, v]) => (
-                      <span key={k} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
-                        {v}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {(b.input_price != null || b.output_price != null) && (
-                  <p className="text-sm text-gray-500">定价: ¥{b.input_price}/M 输入 / ¥{b.output_price}/M 输出</p>
                 )}
               </div>
               <div className="flex items-center gap-2" onClick={(e) => e.preventDefault()}>
