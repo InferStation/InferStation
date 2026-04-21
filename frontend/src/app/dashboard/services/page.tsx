@@ -54,7 +54,6 @@ export default function ServicesPage() {
     tag_quantization: "",
     input_price: "",
     output_price: "",
-    is_public: true,
   })
   const [families, setFamilies] = useState<string[]>([])
   const [catalog, setCatalog] = useState<Record<string, string[]>>({})
@@ -118,12 +117,12 @@ export default function ServicesPage() {
           tags,
           input_price: form.input_price ? parseFloat(form.input_price) : null,
           output_price: form.output_price ? parseFloat(form.output_price) : null,
-          is_public: form.is_public,
+          is_public: false,
           client_info,
         }),
       })
       setShowForm(false)
-      setForm({ name: "", url: "", mode: "direct", family: "", model: "", served_as: "", tag_hardware: "", tag_framework: "", tag_quantization: "", input_price: "", output_price: "", is_public: true })
+      setForm({ name: "", url: "", mode: "direct", family: "", model: "", served_as: "", tag_hardware: "", tag_framework: "", tag_quantization: "", input_price: "", output_price: "" })
       loadBackends()
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : "操作失败")
@@ -274,9 +273,8 @@ export default function ServicesPage() {
                 <input type="number" step="0.01" value={form.output_price} onChange={(e) => setForm({ ...form, output_price: e.target.value })} placeholder="默认" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
               </div>
             </div>
-            <div className="flex items-center">
-              <input type="checkbox" checked={form.is_public} onChange={(e) => setForm({ ...form, is_public: e.target.checked })} className="mr-2" />
-              <span className="text-sm text-gray-600">公开可见（所有用户可调用）</span>
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+              注册后服务默认为 <b>未上架 · 私有</b>。请在详情页确认配置后点击「上架」，及选择是否「公开可见」。
             </div>
             <button type="submit" className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700">提交</button>
           </form>
