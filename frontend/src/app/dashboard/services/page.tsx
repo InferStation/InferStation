@@ -261,6 +261,7 @@ export default function ServicesPage() {
               <p className="mt-1 text-xs text-gray-500">
                 仅直连模式需要。网关转发请求时，会把 OpenAI 请求的 model 字段改为此值后再传给你的服务。同一个 URL 可以用不同后端名注册多个模型（每个走不同的 served 名）。
               </p>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">标签（均为可选）</label>
               <div className="grid gap-3 md:grid-cols-3">
