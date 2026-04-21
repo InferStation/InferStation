@@ -289,107 +289,103 @@ export default function ServicesPage() {
       )}
 
       <div className="space-y-4">
-        {backends.map((b) => (
-          <Link
-            key={b.id}
-            href={`/dashboard/services/${encodeURIComponent(b.name)}`}
-            className={`block bg-white rounded-xl border border-gray-200 hover:border-indigo-300 hover:shadow-md transition-all overflow-hidden ${!b.enabled ? "opacity-60" : ""}`}
-          >
-            {/* Header */}
-            <div className="flex justify-between items-start gap-4 px-5 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50/50 to-transparent">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-semibold text-lg text-gray-900 truncate">{b.name}</h3>
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${b.enabled ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200" : "bg-gray-100 text-gray-500 ring-1 ring-gray-200"}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${b.enabled ? "bg-emerald-500" : "bg-gray-400"}`}></span>
-                    {b.enabled ? "已上架" : "已下架"}
-                  </span>
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${b.status === "online" ? "bg-green-50 text-green-700 ring-1 ring-green-200" : "bg-red-50 text-red-700 ring-1 ring-red-200"}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${b.status === "online" ? "bg-green-500 animate-pulse" : "bg-red-500"}`}></span>
-                    {b.status}
-                  </span>
-                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-50 text-slate-600 ring-1 ring-slate-200">
-                    {b.mode === "tunnel" ? "隧道" : "直连"}
-                  </span>
-                  {!b.is_public && (
-                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 ring-1 ring-amber-200">私有</span>
+        {backends.flatMap((b) => {
+          const rows = b.models.length > 0 ? b.models : [null]
+          return rows.map((m, idx) => {
+            const s = m ? (statsMap[b.id] || []).find((x) => x.model === m) : undefined
+            return (
+              <Link
+                key={`${b.id}-${m ?? "_"}`}
+                href={`/dashboard/services/${encodeURIComponent(b.name)}`}
+                className={`block bg-white rounded-xl border border-gray-200 hover:border-indigo-300 hover:shadow-md transition-all overflow-hidden ${!b.enabled ? "opacity-60" : ""}`}
+              >
+                {/* Header */}
+                <div className="flex justify-between items-start gap-4 px-5 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50/50 to-transparent">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-semibold text-lg text-gray-900 truncate font-mono">{m ?? "未设置模型"}</h3>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${b.enabled ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200" : "bg-gray-100 text-gray-500 ring-1 ring-gray-200"}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${b.enabled ? "bg-emerald-500" : "bg-gray-400"}`}></span>
+                        {b.enabled ? "已上架" : "已下架"}
+                      </span>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${b.status === "online" ? "bg-green-50 text-green-700 ring-1 ring-green-200" : "bg-red-50 text-red-700 ring-1 ring-red-200"}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${b.status === "online" ? "bg-green-500 animate-pulse" : "bg-red-500"}`}></span>
+                        {b.status}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-50 text-slate-600 ring-1 ring-slate-200">
+                        {b.mode === "tunnel" ? "隧道" : "直连"}
+                      </span>
+                      {!b.is_public && (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 ring-1 ring-amber-200">私有</span>
+                      )}
+                    </div>
+                    <div className="mt-1.5 flex items-center gap-2 text-xs text-gray-500">
+                      <span className="text-gray-400">后端</span>
+                      <span className="text-gray-700">{b.name}</span>
+                      {Object.entries(b.tags || {}).map(([k, v]) => (
+                        <span key={k} className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+                          {v}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  {idx === 0 && (
+                    <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.preventDefault()}>
+                      <button
+                        onClick={(e) => { e.preventDefault(); toggleBackend(b.name) }}
+                        className={`text-sm px-3 py-1.5 rounded-md font-medium transition-colors ${b.enabled ? "bg-gray-100 text-gray-700 hover:bg-gray-200" : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"}`}
+                      >
+                        {b.enabled ? "下架" : "上架"}
+                      </button>
+                      <button
+                        onClick={(e) => { e.preventDefault(); deleteBackend(b.name) }}
+                        className="text-sm px-3 py-1.5 rounded-md font-medium text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        删除
+                      </button>
+                    </div>
                   )}
                 </div>
-                {Object.keys(b.tags || {}).length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    {Object.entries(b.tags).map(([k, v]) => (
-                      <span key={k} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
-                        {v}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.preventDefault()}>
-                <button
-                  onClick={(e) => { e.preventDefault(); toggleBackend(b.name) }}
-                  className={`text-sm px-3 py-1.5 rounded-md font-medium transition-colors ${b.enabled ? "bg-gray-100 text-gray-700 hover:bg-gray-200" : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"}`}
-                >
-                  {b.enabled ? "下架" : "上架"}
-                </button>
-                <button
-                  onClick={(e) => { e.preventDefault(); deleteBackend(b.name) }}
-                  className="text-sm px-3 py-1.5 rounded-md font-medium text-red-600 hover:bg-red-50 transition-colors"
-                >
-                  删除
-                </button>
-              </div>
-            </div>
 
-            {/* Models */}
-            {b.models.length > 0 ? (
-              <div className="divide-y divide-gray-100">
-                {b.models.map((m) => {
-                  const s = (statsMap[b.id] || []).find((x) => x.model === m)
-                  return (
-                    <div key={m} className="px-5 py-4">
-                      <div className="flex items-center justify-between gap-3 mb-3">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100">模型</span>
-                          <code className="text-sm font-mono text-gray-800 truncate">{m}</code>
-                        </div>
-                        <div className="flex items-center gap-3 text-xs text-gray-500 shrink-0">
-                          <span>输入 <span className="font-semibold text-gray-900">¥{b.input_price ?? "-"}</span>/M</span>
-                          <span className="text-gray-300">·</span>
-                          <span>输出 <span className="font-semibold text-gray-900">¥{b.output_price ?? "-"}</span>/M</span>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                        <div className="rounded-lg bg-gray-50 px-3 py-2">
-                          <div className="text-[11px] text-gray-500">订阅数</div>
-                          <div className="text-base font-semibold text-gray-900 mt-0.5">{s?.subscribers ?? 0}</div>
-                        </div>
-                        <div className="rounded-lg bg-gray-50 px-3 py-2">
-                          <div className="text-[11px] text-gray-500">请求数</div>
-                          <div className="text-base font-semibold text-gray-900 mt-0.5">{(s?.requests ?? 0).toLocaleString()}</div>
-                        </div>
-                        <div className="rounded-lg bg-gray-50 px-3 py-2">
-                          <div className="text-[11px] text-gray-500">输入 tokens</div>
-                          <div className="text-base font-semibold text-gray-900 mt-0.5">{(s?.input_tokens ?? 0).toLocaleString()}</div>
-                        </div>
-                        <div className="rounded-lg bg-gray-50 px-3 py-2">
-                          <div className="text-[11px] text-gray-500">输出 tokens</div>
-                          <div className="text-base font-semibold text-gray-900 mt-0.5">{(s?.output_tokens ?? 0).toLocaleString()}</div>
-                        </div>
-                        <div className="rounded-lg bg-emerald-50 px-3 py-2 ring-1 ring-emerald-100 col-span-2 sm:col-span-1">
-                          <div className="text-[11px] text-emerald-700">预期收入</div>
-                          <div className="text-base font-semibold text-emerald-900 mt-0.5">¥{(s?.cost ?? 0).toFixed(6)}</div>
-                        </div>
-                      </div>
+                {/* Stats */}
+                {m ? (
+                  <div className="px-5 py-4 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+                    <div className="rounded-lg bg-gray-50 px-3 py-2">
+                      <div className="text-[11px] text-gray-500">输入价</div>
+                      <div className="text-base font-semibold text-gray-900 mt-0.5">¥{b.input_price ?? "-"}<span className="text-[11px] font-normal text-gray-500">/M</span></div>
                     </div>
-                  )
-                })}
-              </div>
-            ) : (
-              <div className="px-5 py-6 text-center text-sm text-gray-400">未设置模型</div>
-            )}
-          </Link>
-        ))}
+                    <div className="rounded-lg bg-gray-50 px-3 py-2">
+                      <div className="text-[11px] text-gray-500">输出价</div>
+                      <div className="text-base font-semibold text-gray-900 mt-0.5">¥{b.output_price ?? "-"}<span className="text-[11px] font-normal text-gray-500">/M</span></div>
+                    </div>
+                    <div className="rounded-lg bg-gray-50 px-3 py-2">
+                      <div className="text-[11px] text-gray-500">订阅数</div>
+                      <div className="text-base font-semibold text-gray-900 mt-0.5">{s?.subscribers ?? 0}</div>
+                    </div>
+                    <div className="rounded-lg bg-gray-50 px-3 py-2">
+                      <div className="text-[11px] text-gray-500">请求数</div>
+                      <div className="text-base font-semibold text-gray-900 mt-0.5">{(s?.requests ?? 0).toLocaleString()}</div>
+                    </div>
+                    <div className="rounded-lg bg-gray-50 px-3 py-2">
+                      <div className="text-[11px] text-gray-500">输入 tokens</div>
+                      <div className="text-base font-semibold text-gray-900 mt-0.5">{(s?.input_tokens ?? 0).toLocaleString()}</div>
+                    </div>
+                    <div className="rounded-lg bg-gray-50 px-3 py-2">
+                      <div className="text-[11px] text-gray-500">输出 tokens</div>
+                      <div className="text-base font-semibold text-gray-900 mt-0.5">{(s?.output_tokens ?? 0).toLocaleString()}</div>
+                    </div>
+                    <div className="rounded-lg bg-emerald-50 px-3 py-2 ring-1 ring-emerald-100 col-span-2 sm:col-span-1">
+                      <div className="text-[11px] text-emerald-700">预期收入</div>
+                      <div className="text-base font-semibold text-emerald-900 mt-0.5">¥{(s?.cost ?? 0).toFixed(6)}</div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="px-5 py-6 text-center text-sm text-gray-400">未设置模型</div>
+                )}
+              </Link>
+            )
+          })
+        })}
         {backends.length === 0 && <div className="text-center py-12 text-gray-500">暂无注册的后端服务</div>}
       </div>
     </div>
