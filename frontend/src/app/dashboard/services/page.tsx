@@ -47,7 +47,7 @@ export default function ServicesPage() {
     url: "",
     mode: "direct",
     family: "",
-    models: "",
+    models: [] as string[],
     tag_hardware: "",
     tag_framework: "",
     tag_quantization: "",
@@ -56,6 +56,7 @@ export default function ServicesPage() {
     is_public: true,
   })
   const [families, setFamilies] = useState<string[]>([])
+  const [catalog, setCatalog] = useState<Record<string, string[]>>({})
 
   const isProvider = user && ["provider", "both", "admin"].includes(user.role)
 
@@ -63,6 +64,9 @@ export default function ServicesPage() {
     if (isProvider) loadBackends()
     apiFetch("/api/model-families").then((data: string[] | { families: string[] }) => {
       setFamilies(Array.isArray(data) ? data : data.families)
+    }).catch(() => {})
+    apiFetch("/api/model-catalog").then((data: Record<string, string[]>) => {
+      setCatalog(data || {})
     }).catch(() => {})
   }, [user])
 
@@ -87,8 +91,8 @@ export default function ServicesPage() {
       alert("请选择模型系列")
       return
     }
-    if (!form.models.trim()) {
-      alert("请填写模型名")
+    if (form.models.length === 0) {
+      alert("请选择至少一个模型")
       return
     }
     try {
@@ -97,11 +101,7 @@ export default function ServicesPage() {
       if (form.tag_framework.trim()) tags.framework = form.tag_framework.trim()
       if (form.tag_quantization.trim()) tags.quantization = form.tag_quantization.trim()
 
-      // Accept comma-separated model names; strip any user-supplied family prefix
-      // and re-join with the selected family so we always store canonical "family/name".
-      const rawModels = form.models.split(",").map((s) => s.trim()).filter(Boolean)
-      const bareNames = rawModels.map((m) => m.includes("/") ? m.split("/").slice(-1)[0] : m)
-      const models = bareNames.map((n) => `${form.family}/${n}`)
+      const models = form.models.map((n) => `${form.family}/${n}`)
 
       await apiFetch("/api/backends", {
         method: "POST",
@@ -117,7 +117,7 @@ export default function ServicesPage() {
         }),
       })
       setShowForm(false)
-      setForm({ name: "", url: "", mode: "direct", family: "", models: "", tag_hardware: "", tag_framework: "", tag_quantization: "", input_price: "", output_price: "", is_public: true })
+      setForm({ name: "", url: "", mode: "direct", family: "", models: [], tag_hardware: "", tag_framework: "", tag_quantization: "", input_price: "", output_price: "", is_public: true })
       loadBackends()
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : "操作失败")
@@ -211,7 +211,7 @@ export default function ServicesPage() {
             )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">模型系列</label>
-              <select value={form.family} onChange={(e) => setForm({ ...form, family: e.target.value })} required className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              <select value={form.family} onChange={(e) => setForm({ ...form, family: e.target.value, models: [] })} required className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 <option value="">请选择模型系列</option>
                 {families.map((f) => (
                   <option key={f} value={f}>{f}</option>
@@ -219,10 +219,37 @@ export default function ServicesPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">模型名（不含系列前缀；多个用逗号分隔）</label>
-              <input type="text" value={form.models} onChange={(e) => setForm({ ...form, models: e.target.value })} required placeholder={form.family ? `如 ${form.family === "Qwen" ? "Qwen3-8B, Qwen3.5-4B" : form.family === "THUDM" ? "glm-4-9b-chat" : "DeepSeek-R1-Distill-Qwen-7B"}` : "先选择模型系列"} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
-              {form.family && form.models.trim() && (
-                <p className="mt-1 text-xs text-gray-500">将保存为：{form.models.split(",").map((s) => s.trim()).filter(Boolean).map((m) => `${form.family}/${m.includes("/") ? m.split("/").slice(-1)[0] : m}`).join(", ")}</p>
+              <label className="block text-sm font-medium text-gray-700 mb-1">模型（可多选）</label>
+              {!form.family ? (
+                <p className="text-sm text-gray-400">请先选择模型系列</p>
+              ) : (catalog[form.family] || []).length === 0 ? (
+                <p className="text-sm text-gray-400">该系列暂无可选模型</p>
+              ) : (
+                <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3 max-h-60 overflow-y-auto border rounded-lg p-3">
+                  {(catalog[form.family] || []).map((name) => {
+                    const checked = form.models.includes(name)
+                    return (
+                      <label key={name} className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => {
+                            setForm((f) => ({
+                              ...f,
+                              models: e.target.checked
+                                ? [...f.models, name]
+                                : f.models.filter((x) => x !== name),
+                            }))
+                          }}
+                        />
+                        <span className="font-mono">{name}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+              )}
+              {form.family && form.models.length > 0 && (
+                <p className="mt-1 text-xs text-gray-500">将保存为：{form.models.map((n) => `${form.family}/${n}`).join(", ")}</p>
               )}
             </div>
             <div>

@@ -448,6 +448,31 @@ class RegisterBackendRequest(BaseModel):
 
 ALLOWED_MODEL_FAMILIES = ["Qwen", "THUDM", "deepseek-ai"]
 
+# Whitelisted models per family for the registration UI. Keep these as plain
+# model names (no family prefix); the UI joins them with the selected family.
+ALLOWED_MODELS_BY_FAMILY: dict[str, list[str]] = {
+    "Qwen": [
+        "Qwen3-0.6B", "Qwen3-1.7B", "Qwen3-4B", "Qwen3-8B",
+        "Qwen3-14B", "Qwen3-32B",
+        "Qwen3-30B-A3B", "Qwen3-235B-A22B",
+        "Qwen3.5-4B", "Qwen3.5-8B", "Qwen3.5-14B", "Qwen3.5-32B",
+        "Qwen3.6-35B-A3B",
+        "Qwen2.5-7B-Instruct", "Qwen2.5-14B-Instruct", "Qwen2.5-32B-Instruct", "Qwen2.5-72B-Instruct",
+        "Qwen2.5-Coder-7B-Instruct", "Qwen2.5-Coder-14B-Instruct", "Qwen2.5-Coder-32B-Instruct",
+    ],
+    "THUDM": [
+        "glm-4-9b-chat",
+        "GLM-4-32B-0414", "GLM-4-9B-0414",
+        "GLM-Z1-32B-0414", "GLM-Z1-9B-0414",
+    ],
+    "deepseek-ai": [
+        "DeepSeek-R1",
+        "DeepSeek-R1-Distill-Qwen-7B", "DeepSeek-R1-Distill-Qwen-14B",
+        "DeepSeek-R1-Distill-Qwen-32B", "DeepSeek-R1-Distill-Llama-70B",
+        "DeepSeek-V3", "DeepSeek-V3.2-Exp",
+    ],
+}
+
 
 def _sanitize_client_info(ci: dict, models: list[str]) -> dict:
     """Drop model_map entries whose key is not an exact match to one of the
@@ -468,6 +493,11 @@ async def get_model_families():
     return ALLOWED_MODEL_FAMILIES
 
 
+@app.get("/api/model-catalog")
+async def get_model_catalog():
+    return ALLOWED_MODELS_BY_FAMILY
+
+
 @app.post("/api/backends")
 async def register_backend(req: RegisterBackendRequest, user=Depends(require_provider)):
     if req.mode not in ("direct", "tunnel"):
@@ -478,6 +508,9 @@ async def register_backend(req: RegisterBackendRequest, user=Depends(require_pro
         family = m.split("/")[0] if "/" in m else m
         if family not in ALLOWED_MODEL_FAMILIES:
             raise HTTPException(400, f"模型 {m} 不在允许的大类中，当前支持: {', '.join(ALLOWED_MODEL_FAMILIES)}")
+        short = m.split("/", 1)[1] if "/" in m else m
+        if short not in ALLOWED_MODELS_BY_FAMILY.get(family, []):
+            raise HTTPException(400, f"模型 {m} 不在 {family} 的白名单中")
 
     req.client_info = _sanitize_client_info(req.client_info, req.models)
 
@@ -676,6 +709,9 @@ async def update_backend(name: str, req: UpdateBackendRequest, user=Depends(requ
             family = m.split("/")[0] if "/" in m else m
             if family not in ALLOWED_MODEL_FAMILIES:
                 raise HTTPException(400, f"模型 {m} 不在允许的大类中，当前支持: {', '.join(ALLOWED_MODEL_FAMILIES)}")
+            short = m.split("/", 1)[1] if "/" in m else m
+            if short not in ALLOWED_MODELS_BY_FAMILY.get(family, []):
+                raise HTTPException(400, f"模型 {m} 不在 {family} 的白名单中")
 
     db = await get_db()
     try:
