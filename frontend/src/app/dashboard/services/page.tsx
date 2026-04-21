@@ -47,7 +47,7 @@ export default function ServicesPage() {
     url: "",
     mode: "direct",
     family: "",
-    models: [] as string[],
+    model: "",
     tag_hardware: "",
     tag_framework: "",
     tag_quantization: "",
@@ -91,8 +91,8 @@ export default function ServicesPage() {
       alert("请选择模型系列")
       return
     }
-    if (form.models.length === 0) {
-      alert("请选择至少一个模型")
+    if (!form.model) {
+      alert("请选择一个模型")
       return
     }
     try {
@@ -101,7 +101,7 @@ export default function ServicesPage() {
       if (form.tag_framework.trim()) tags.framework = form.tag_framework.trim()
       if (form.tag_quantization.trim()) tags.quantization = form.tag_quantization.trim()
 
-      const models = form.models.map((n) => `${form.family}/${n}`)
+      const models = [`${form.family}/${form.model}`]
 
       await apiFetch("/api/backends", {
         method: "POST",
@@ -117,7 +117,7 @@ export default function ServicesPage() {
         }),
       })
       setShowForm(false)
-      setForm({ name: "", url: "", mode: "direct", family: "", models: [], tag_hardware: "", tag_framework: "", tag_quantization: "", input_price: "", output_price: "", is_public: true })
+      setForm({ name: "", url: "", mode: "direct", family: "", model: "", tag_hardware: "", tag_framework: "", tag_quantization: "", input_price: "", output_price: "", is_public: true })
       loadBackends()
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : "操作失败")
@@ -211,7 +211,7 @@ export default function ServicesPage() {
             )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">模型系列</label>
-              <select value={form.family} onChange={(e) => setForm({ ...form, family: e.target.value, models: [] })} required className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              <select value={form.family} onChange={(e) => setForm({ ...form, family: e.target.value, model: "" })} required className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 <option value="">请选择模型系列</option>
                 {families.map((f) => (
                   <option key={f} value={f}>{f}</option>
@@ -219,37 +219,21 @@ export default function ServicesPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">模型（可多选）</label>
-              {!form.family ? (
-                <p className="text-sm text-gray-400">请先选择模型系列</p>
-              ) : (catalog[form.family] || []).length === 0 ? (
-                <p className="text-sm text-gray-400">该系列暂无可选模型</p>
-              ) : (
-                <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3 max-h-60 overflow-y-auto border rounded-lg p-3">
-                  {(catalog[form.family] || []).map((name) => {
-                    const checked = form.models.includes(name)
-                    return (
-                      <label key={name} className="flex items-center gap-2 text-sm cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={(e) => {
-                            setForm((f) => ({
-                              ...f,
-                              models: e.target.checked
-                                ? [...f.models, name]
-                                : f.models.filter((x) => x !== name),
-                            }))
-                          }}
-                        />
-                        <span className="font-mono">{name}</span>
-                      </label>
-                    )
-                  })}
-                </div>
-              )}
-              {form.family && form.models.length > 0 && (
-                <p className="mt-1 text-xs text-gray-500">将保存为：{form.models.map((n) => `${form.family}/${n}`).join(", ")}</p>
+              <label className="block text-sm font-medium text-gray-700 mb-1">模型</label>
+              <select
+                value={form.model}
+                onChange={(e) => setForm({ ...form, model: e.target.value })}
+                required
+                disabled={!form.family}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400"
+              >
+                <option value="">{form.family ? "请选择模型" : "请先选择模型系列"}</option>
+                {(catalog[form.family] || []).map((name) => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
+              {form.family && form.model && (
+                <p className="mt-1 text-xs text-gray-500">将保存为：{form.family}/{form.model}</p>
               )}
             </div>
             <div>

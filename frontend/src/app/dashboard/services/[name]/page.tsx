@@ -41,7 +41,7 @@ export default function ServiceDetailPage() {
   const [editForm, setEditForm] = useState({
     url: "",
     family: "",
-    models: [] as string[],
+    model: "",
     tag_hardware: "",
     tag_framework: "",
     tag_quantization: "",
@@ -75,7 +75,7 @@ export default function ServiceDetailPage() {
     setEditForm({
       url: b.url || "",
       family: inferredFamily,
-      models: bareNames,
+      model: bareNames[0] || "",
       tag_hardware: b.tags?.hardware || "",
       tag_framework: b.tags?.framework || "",
       tag_quantization: b.tags?.quantization || "",
@@ -91,8 +91,8 @@ export default function ServiceDetailPage() {
       alert("请选择模型系列")
       return
     }
-    if (editForm.models.length === 0) {
-      alert("请选择至少一个模型")
+    if (!editForm.model) {
+      alert("请选择一个模型")
       return
     }
     setSaving(true)
@@ -102,7 +102,7 @@ export default function ServiceDetailPage() {
       if (editForm.tag_framework.trim()) tags.framework = editForm.tag_framework.trim()
       if (editForm.tag_quantization.trim()) tags.quantization = editForm.tag_quantization.trim()
 
-      const models = editForm.models.map((n) => `${editForm.family}/${n}`)
+      const models = [`${editForm.family}/${editForm.model}`]
 
       await apiFetch(`/api/backends/${encodeURIComponent(name)}`, {
         method: "PUT",
@@ -206,7 +206,7 @@ export default function ServiceDetailPage() {
             )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">模型系列</label>
-              <select value={editForm.family} onChange={(e) => setEditForm({ ...editForm, family: e.target.value, models: [] })} required className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              <select value={editForm.family} onChange={(e) => setEditForm({ ...editForm, family: e.target.value, model: "" })} required className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 <option value="">请选择模型系列</option>
                 {families.map((f) => (
                   <option key={f} value={f}>{f}</option>
@@ -214,37 +214,21 @@ export default function ServiceDetailPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">模型（可多选）</label>
-              {!editForm.family ? (
-                <p className="text-sm text-gray-400">请先选择模型系列</p>
-              ) : (catalog[editForm.family] || []).length === 0 ? (
-                <p className="text-sm text-gray-400">该系列暂无可选模型</p>
-              ) : (
-                <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3 max-h-60 overflow-y-auto border rounded-lg p-3">
-                  {(catalog[editForm.family] || []).map((name) => {
-                    const checked = editForm.models.includes(name)
-                    return (
-                      <label key={name} className="flex items-center gap-2 text-sm cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={(e) => {
-                            setEditForm((f) => ({
-                              ...f,
-                              models: e.target.checked
-                                ? [...f.models, name]
-                                : f.models.filter((x) => x !== name),
-                            }))
-                          }}
-                        />
-                        <span className="font-mono">{name}</span>
-                      </label>
-                    )
-                  })}
-                </div>
-              )}
-              {editForm.family && editForm.models.length > 0 && (
-                <p className="mt-1 text-xs text-gray-500">将保存为：{editForm.models.map((n) => `${editForm.family}/${n}`).join(", ")}</p>
+              <label className="block text-sm font-medium text-gray-700 mb-1">模型</label>
+              <select
+                value={editForm.model}
+                onChange={(e) => setEditForm({ ...editForm, model: e.target.value })}
+                required
+                disabled={!editForm.family}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400"
+              >
+                <option value="">{editForm.family ? "请选择模型" : "请先选择模型系列"}</option>
+                {(catalog[editForm.family] || []).map((name) => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
+              {editForm.family && editForm.model && (
+                <p className="mt-1 text-xs text-gray-500">将保存为：{editForm.family}/{editForm.model}</p>
               )}
             </div>
             <div>
