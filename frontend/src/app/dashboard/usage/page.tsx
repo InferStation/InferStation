@@ -58,7 +58,7 @@ export default function UsagePage() {
         </div>
         <div className="bg-white rounded-lg border p-4">
           <div className="text-sm text-gray-500">总花费</div>
-          <div className="text-2xl font-bold text-orange-600">¥{totalCost.toFixed(4)}</div>
+          <div className="text-2xl font-bold text-orange-600">¥{totalCost.toFixed(6)}</div>
         </div>
       </div>
 
@@ -83,7 +83,7 @@ export default function UsagePage() {
                   <td className="px-4 py-3 text-right">{u.requests}</td>
                   <td className="px-4 py-3 text-right">{u.total_input.toLocaleString()}</td>
                   <td className="px-4 py-3 text-right">{u.total_output.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-right text-green-600">¥{u.total_cost.toFixed(4)}</td>
+                  <td className="px-4 py-3 text-right text-green-600">¥{u.total_cost.toFixed(6)}</td>
                 </tr>
               ))}
             </tbody>

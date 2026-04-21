@@ -442,7 +442,6 @@ class RegisterBackendRequest(BaseModel):
     tags: dict[str, str] = {}  # e.g. {"hardware": "MI300X", "framework": "vLLM"}
     input_price: float | None = None
     output_price: float | None = None
-    is_public: bool = True
     client_info: dict = {}
 
 
@@ -524,10 +523,10 @@ async def register_backend(req: RegisterBackendRequest, user=Depends(require_pro
             raise HTTPException(409, f"后端名 '{req.name}' 已被其他用户占用")
         await db.execute(
             """INSERT INTO backends (name, owner_id, url, mode, models, tags, input_price, output_price, is_public, client_info, enabled)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)""",
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 0)""",
             (
                 req.name, user["id"], req.url, req.mode, json.dumps(req.models), json.dumps(req.tags),
-                req.input_price, req.output_price, 1 if req.is_public else 0, json.dumps(req.client_info),
+                req.input_price, req.output_price, json.dumps(req.client_info),
             ),
         )
         await db.commit()

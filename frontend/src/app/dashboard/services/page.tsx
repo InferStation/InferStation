@@ -117,7 +117,6 @@ export default function ServicesPage() {
           tags,
           input_price: form.input_price ? parseFloat(form.input_price) : null,
           output_price: form.output_price ? parseFloat(form.output_price) : null,
-          is_public: false,
           client_info,
         }),
       })
