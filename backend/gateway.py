@@ -567,6 +567,72 @@ async def list_backends(mine: bool = False, user=Depends(get_current_user)):
     return rows
 
 
+@app.get("/api/backends/stats")
+async def my_backend_stats(user=Depends(require_provider)):
+    """Per-(backend, model) subscription count + usage aggregates for backends owned by caller."""
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            "SELECT id, name, models FROM backends WHERE owner_id = ?",
+            (user["id"],),
+        )
+        owned = [dict(r) for r in await cur.fetchall()]
+        if not owned:
+            return []
+        ids = [b["id"] for b in owned]
+        placeholders = ",".join(["?"] * len(ids))
+
+        cur = await db.execute(
+            f"SELECT backend_id, model, COUNT(*) AS subs FROM subscriptions "
+            f"WHERE backend_id IN ({placeholders}) GROUP BY backend_id, model",
+            ids,
+        )
+        sub_rows = await cur.fetchall()
+
+        cur = await db.execute(
+            f"SELECT backend_id, model, COUNT(*) AS requests, "
+            f"SUM(input_tokens) AS input_tokens, SUM(output_tokens) AS output_tokens, "
+            f"SUM(cost) AS cost FROM usage_logs "
+            f"WHERE backend_id IN ({placeholders}) GROUP BY backend_id, model",
+            ids,
+        )
+        usage_rows = await cur.fetchall()
+    finally:
+        await db.close()
+
+    sub_map: dict[tuple[int, str], int] = {}
+    for r in sub_rows:
+        sub_map[(r["backend_id"], r["model"])] = r["subs"]
+
+    usage_map: dict[tuple[int, str], dict] = {}
+    for r in usage_rows:
+        usage_map[(r["backend_id"], r["model"])] = {
+            "requests": r["requests"] or 0,
+            "input_tokens": r["input_tokens"] or 0,
+            "output_tokens": r["output_tokens"] or 0,
+            "cost": round(r["cost"] or 0.0, 6),
+        }
+
+    result = []
+    for b in owned:
+        models = json.loads(b["models"]) if b["models"] else []
+        per_model = []
+        for m in models:
+            # usage_logs stores the user-facing model name which may be the bare
+            # short name (e.g. "Qwen3-8B") rather than "family/Qwen3-8B". Try both.
+            short = m.split("/", 1)[1] if "/" in m else m
+            u = usage_map.get((b["id"], m)) or usage_map.get((b["id"], short)) or {
+                "requests": 0, "input_tokens": 0, "output_tokens": 0, "cost": 0.0,
+            }
+            per_model.append({
+                "model": m,
+                "subscribers": sub_map.get((b["id"], m), 0),
+                **u,
+            })
+        result.append({"id": b["id"], "name": b["name"], "models": per_model})
+    return result
+
+
 @app.get("/api/backends/{name}")
 async def get_backend_detail(name: str, user=Depends(require_provider)):
     db = await get_db()

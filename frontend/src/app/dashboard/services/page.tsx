@@ -21,9 +21,25 @@ interface Backend {
   updated_at: string
 }
 
+interface ModelStat {
+  model: string
+  subscribers: number
+  requests: number
+  input_tokens: number
+  output_tokens: number
+  cost: number
+}
+
+interface BackendStats {
+  id: number
+  name: string
+  models: ModelStat[]
+}
+
 export default function ServicesPage() {
   const { user, refreshUser } = useAuth()
   const [backends, setBackends] = useState<Backend[]>([])
+  const [statsMap, setStatsMap] = useState<Record<number, ModelStat[]>>({})
   const [showForm, setShowForm] = useState(false)
   const [upgrading, setUpgrading] = useState(false)
   const [form, setForm] = useState({
@@ -51,6 +67,19 @@ export default function ServicesPage() {
   }, [user])
 
   const loadBackends = () => apiFetch("/api/backends?mine=true").then(setBackends).catch(() => {})
+
+  const loadStats = () =>
+    apiFetch("/api/backends/stats")
+      .then((rows: BackendStats[]) => {
+        const m: Record<number, ModelStat[]> = {}
+        for (const r of rows) m[r.id] = r.models
+        setStatsMap(m)
+      })
+      .catch(() => {})
+
+  useEffect(() => {
+    if (isProvider) loadStats()
+  }, [isProvider, backends])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -236,6 +265,37 @@ export default function ServicesPage() {
                   {!b.is_public && <span className="px-2 py-0.5 rounded text-xs bg-yellow-100 text-yellow-700">私有</span>}
                 </div>
                 <p className="text-sm text-gray-500">模型: {b.models.length > 0 ? b.models.join(", ") : "未设置"}</p>
+                {b.models.length > 0 && (
+                  <div className="mt-2 overflow-x-auto" onClick={(e) => e.preventDefault()}>
+                    <table className="text-xs border border-gray-200 rounded">
+                      <thead className="bg-gray-50 text-gray-600">
+                        <tr>
+                          <th className="px-2 py-1 text-left font-medium">模型</th>
+                          <th className="px-2 py-1 text-right font-medium">订阅数</th>
+                          <th className="px-2 py-1 text-right font-medium">请求数</th>
+                          <th className="px-2 py-1 text-right font-medium">输入 tokens</th>
+                          <th className="px-2 py-1 text-right font-medium">输出 tokens</th>
+                          <th className="px-2 py-1 text-right font-medium">收入(¥)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {b.models.map((m) => {
+                          const s = (statsMap[b.id] || []).find((x) => x.model === m)
+                          return (
+                            <tr key={m} className="border-t">
+                              <td className="px-2 py-1 font-mono">{m}</td>
+                              <td className="px-2 py-1 text-right">{s?.subscribers ?? 0}</td>
+                              <td className="px-2 py-1 text-right">{s?.requests ?? 0}</td>
+                              <td className="px-2 py-1 text-right">{(s?.input_tokens ?? 0).toLocaleString()}</td>
+                              <td className="px-2 py-1 text-right">{(s?.output_tokens ?? 0).toLocaleString()}</td>
+                              <td className="px-2 py-1 text-right">{(s?.cost ?? 0).toFixed(4)}</td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
                 {Object.keys(b.tags || {}).length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mt-1">
                     {Object.entries(b.tags).map(([k, v]) => (
