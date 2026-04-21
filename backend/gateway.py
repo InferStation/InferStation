@@ -692,6 +692,7 @@ class UpdateBackendRequest(BaseModel):
     input_price: float | None = None
     output_price: float | None = None
     is_public: bool | None = None
+    client_info: dict | None = None
     clear_price: bool = False  # set True to clear pricing
 
 
@@ -730,6 +731,16 @@ async def update_backend(name: str, req: UpdateBackendRequest, user=Depends(requ
         if req.is_public is not None:
             updates.append("is_public = ?")
             params.append(1 if req.is_public else 0)
+        if req.client_info is not None:
+            if req.models is not None:
+                effective_models = req.models
+            else:
+                cur = await db.execute("SELECT models FROM backends WHERE name = ?", (name,))
+                r = await cur.fetchone()
+                effective_models = json.loads(r["models"]) if r and r["models"] else []
+            sanitized = _sanitize_client_info(req.client_info, effective_models)
+            updates.append("client_info = ?")
+            params.append(json.dumps(sanitized))
         if req.clear_price:
             updates.append("input_price = NULL")
             updates.append("output_price = NULL")

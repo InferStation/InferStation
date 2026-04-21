@@ -48,6 +48,7 @@ export default function ServicesPage() {
     mode: "direct",
     family: "",
     model: "",
+    served_as: "",
     tag_hardware: "",
     tag_framework: "",
     tag_quantization: "",
@@ -102,6 +103,10 @@ export default function ServicesPage() {
       if (form.tag_quantization.trim()) tags.quantization = form.tag_quantization.trim()
 
       const models = [`${form.family}/${form.model}`]
+      const client_info: Record<string, unknown> = {}
+      if (form.served_as.trim()) {
+        client_info.model_map = { [models[0]]: form.served_as.trim() }
+      }
 
       await apiFetch("/api/backends", {
         method: "POST",
@@ -114,10 +119,11 @@ export default function ServicesPage() {
           input_price: form.input_price ? parseFloat(form.input_price) : null,
           output_price: form.output_price ? parseFloat(form.output_price) : null,
           is_public: form.is_public,
+          client_info,
         }),
       })
       setShowForm(false)
-      setForm({ name: "", url: "", mode: "direct", family: "", model: "", tag_hardware: "", tag_framework: "", tag_quantization: "", input_price: "", output_price: "", is_public: true })
+      setForm({ name: "", url: "", mode: "direct", family: "", model: "", served_as: "", tag_hardware: "", tag_framework: "", tag_quantization: "", input_price: "", output_price: "", is_public: true })
       loadBackends()
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : "操作失败")
@@ -236,6 +242,20 @@ export default function ServicesPage() {
                 <p className="mt-1 text-xs text-gray-500">将保存为：{form.family}/{form.model}</p>
               )}
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                你的 URL 上的模型名（可选）
+              </label>
+              <input
+                type="text"
+                value={form.served_as}
+                onChange={(e) => setForm({ ...form, served_as: e.target.value })}
+                placeholder={form.model ? `默认用 ${form.model}` : "例如 qwen3-8b-awq"}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                仅直连模式需要。网关转发请求时，会把 OpenAI 请求的 model 字段改为此值后再传给你的服务。同一个 URL 可以用不同后端名注册多个模型（每个走不同的 served 名）。
+              </p>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">标签（均为可选）</label>
               <div className="grid gap-3 md:grid-cols-3">

@@ -21,6 +21,7 @@ interface Backend {
   owner_name: string
   updated_at: string
   created_at: string
+  client_info?: { model_map?: Record<string, string> }
 }
 
 export default function ServiceDetailPage() {
@@ -42,6 +43,7 @@ export default function ServiceDetailPage() {
     url: "",
     family: "",
     model: "",
+    served_as: "",
     tag_hardware: "",
     tag_framework: "",
     tag_quantization: "",
@@ -76,6 +78,7 @@ export default function ServiceDetailPage() {
       url: b.url || "",
       family: inferredFamily,
       model: bareNames[0] || "",
+      served_as: b.client_info?.model_map?.[b.models[0]] || "",
       tag_hardware: b.tags?.hardware || "",
       tag_framework: b.tags?.framework || "",
       tag_quantization: b.tags?.quantization || "",
@@ -103,6 +106,13 @@ export default function ServiceDetailPage() {
       if (editForm.tag_quantization.trim()) tags.quantization = editForm.tag_quantization.trim()
 
       const models = [`${editForm.family}/${editForm.model}`]
+      const existingCi = (backend.client_info || {}) as Record<string, unknown>
+      const client_info: Record<string, unknown> = { ...existingCi }
+      if (editForm.served_as.trim()) {
+        client_info.model_map = { [models[0]]: editForm.served_as.trim() }
+      } else {
+        delete client_info.model_map
+      }
 
       await apiFetch(`/api/backends/${encodeURIComponent(name)}`, {
         method: "PUT",
@@ -113,6 +123,7 @@ export default function ServiceDetailPage() {
           input_price: editForm.input_price ? parseFloat(editForm.input_price) : undefined,
           output_price: editForm.output_price ? parseFloat(editForm.output_price) : undefined,
           is_public: editForm.is_public,
+          client_info,
           clear_price: !editForm.input_price && !editForm.output_price,
         }),
       })
@@ -231,6 +242,18 @@ export default function ServiceDetailPage() {
                 <p className="mt-1 text-xs text-gray-500">将保存为：{editForm.family}/{editForm.model}</p>
               )}
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">你的 URL 上的模型名（可选）</label>
+              <input
+                type="text"
+                value={editForm.served_as}
+                onChange={(e) => setEditForm({ ...editForm, served_as: e.target.value })}
+                placeholder={editForm.model ? `默认用 ${editForm.model}` : "例如 qwen3-8b-awq"}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                网关转发请求时，会把 OpenAI 请求的 model 字段改为此值再传给你的服务。同一 URL 可用不同后端名注册多个模型。
+              </p>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">标签</label>
               <div className="grid gap-3 md:grid-cols-3">
