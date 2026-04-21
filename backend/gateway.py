@@ -504,8 +504,6 @@ async def register_backend(req: RegisterBackendRequest, user=Depends(require_pro
         raise HTTPException(400, "mode must be 'direct' or 'tunnel'")
     if req.mode == "direct" and not req.url:
         raise HTTPException(400, "url required for direct mode")
-    if len(req.models) != 1:
-        raise HTTPException(400, "每个后端只允许注册一个模型")
     for m in req.models:
         family = m.split("/")[0] if "/" in m else m
         if family not in ALLOWED_MODEL_FAMILIES:
@@ -707,8 +705,6 @@ class UpdateBackendRequest(BaseModel):
 @app.put("/api/backends/{name}")
 async def update_backend(name: str, req: UpdateBackendRequest, user=Depends(require_provider)):
     if req.models is not None:
-        if len(req.models) != 1:
-            raise HTTPException(400, "每个后端只允许注册一个模型")
         for m in req.models:
             family = m.split("/")[0] if "/" in m else m
             if family not in ALLOWED_MODEL_FAMILIES:
