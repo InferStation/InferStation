@@ -449,7 +449,7 @@ class RegisterBackendRequest(BaseModel):
     client_info: dict = {}
 
 
-ALLOWED_MODEL_FAMILIES = ["Qwen", "THUDM", "deepseek-ai", "google", "openai"]
+ALLOWED_MODEL_FAMILIES = ["Qwen", "THUDM", "deepseek-ai", "google", "OpenAI"]
 
 # Pricing currencies accepted by /api/backends; UI shows the matching symbol.
 ALLOWED_CURRENCIES = ["CNY", "USD"]
@@ -481,8 +481,8 @@ ALLOWED_MODELS_BY_FAMILY: dict[str, list[str]] = {
     "google": [
         "gemma-4-31B-it",
     ],
-    "openai": [
-        "gpt-5.4",
+    "OpenAI": [
+        "GPT-5.4",
     ],
 }
 
