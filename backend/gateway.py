@@ -43,6 +43,20 @@ logger = logging.getLogger("gateway")
 # are bounded only by the client's disconnect, not by a hardcoded wall clock.
 UPSTREAM_TIMEOUT = httpx.Timeout(connect=15.0, write=30.0, pool=30.0, read=None)
 
+# Retry transient network errors on the upstream leg (fetch failed / connection
+# reset / DNS blip / tunnel hang-up). Only applied when safe: full-body responses
+# always, streaming only before the first byte has been yielded to the client.
+UPSTREAM_RETRIES = 2
+UPSTREAM_RETRY_BACKOFF = 0.5  # seconds, doubled each attempt
+_RETRYABLE_HTTPX_EXC = (
+    httpx.ConnectError,
+    httpx.ConnectTimeout,
+    httpx.ReadError,
+    httpx.WriteError,
+    httpx.RemoteProtocolError,
+    httpx.PoolTimeout,
+)
+
 # ── Config ──────────────────────────────────────────────
 CONFIG = {}
 
@@ -1422,7 +1436,24 @@ async def _proxy_direct(api_user, backend, body, stream, input_price, output_pri
         )
 
     async with httpx.AsyncClient(timeout=UPSTREAM_TIMEOUT) as client:
-        resp = await client.post(url, json=body, headers=headers)
+        resp = None
+        last_exc = None
+        for attempt in range(UPSTREAM_RETRIES + 1):
+            try:
+                resp = await client.post(url, json=body, headers=headers)
+                break
+            except _RETRYABLE_HTTPX_EXC as exc:
+                last_exc = exc
+                if attempt >= UPSTREAM_RETRIES:
+                    break
+                delay = UPSTREAM_RETRY_BACKOFF * (2 ** attempt)
+                logger.warning(
+                    "upstream %s transient error (attempt %d/%d): %s — retrying in %.1fs",
+                    url, attempt + 1, UPSTREAM_RETRIES + 1, exc, delay,
+                )
+                await asyncio.sleep(delay)
+        if resp is None:
+            raise HTTPException(502, f"Upstream connection error after retries: {last_exc}")
         data = resp.json()
 
     usage = _extract_usage(data, usage_keys)
@@ -1435,13 +1466,58 @@ async def _stream_direct(api_user, backend, body, url, input_price, output_price
     total_input = 0
     total_output = 0
     async with httpx.AsyncClient(timeout=UPSTREAM_TIMEOUT) as client:
-        async with client.stream("POST", url, json=body, headers=headers) as resp:
-            async for line in resp.aiter_lines():
-                if line.startswith("data: "):
-                    yield line + "\n\n"
-                    chunk_data = line[6:]
-                    if chunk_data.strip() == "[DONE]":
-                        continue
+        # Retry the initial POST + first byte only; once we have yielded any
+        # chunk to the client, we can't replay.
+        first_line = None
+        resp_cm = None
+        resp = None
+        line_iter = None
+        last_exc = None
+        for attempt in range(UPSTREAM_RETRIES + 1):
+            try:
+                resp_cm = client.stream("POST", url, json=body, headers=headers)
+                resp = await resp_cm.__aenter__()
+                line_iter = resp.aiter_lines()
+                first_line = await line_iter.__anext__()
+                break
+            except StopAsyncIteration:
+                # Upstream closed with zero bytes — treat as retryable
+                last_exc = RuntimeError("upstream closed stream with no data")
+                try:
+                    if resp_cm is not None:
+                        await resp_cm.__aexit__(None, None, None)
+                except Exception:
+                    pass
+                resp_cm = resp = line_iter = None
+                if attempt >= UPSTREAM_RETRIES:
+                    break
+                await asyncio.sleep(UPSTREAM_RETRY_BACKOFF * (2 ** attempt))
+            except _RETRYABLE_HTTPX_EXC as exc:
+                last_exc = exc
+                try:
+                    if resp_cm is not None:
+                        await resp_cm.__aexit__(type(exc), exc, exc.__traceback__)
+                except Exception:
+                    pass
+                resp_cm = resp = line_iter = None
+                if attempt >= UPSTREAM_RETRIES:
+                    break
+                delay = UPSTREAM_RETRY_BACKOFF * (2 ** attempt)
+                logger.warning(
+                    "upstream stream %s transient error (attempt %d/%d): %s — retrying in %.1fs",
+                    url, attempt + 1, UPSTREAM_RETRIES + 1, exc, delay,
+                )
+                await asyncio.sleep(delay)
+        if line_iter is None:
+            raise HTTPException(502, f"Upstream stream connection error after retries: {last_exc}")
+
+        try:
+            def _consume(line: str):
+                nonlocal total_input, total_output
+                if not line.startswith("data: "):
+                    return None
+                chunk_data = line[6:]
+                if chunk_data.strip() != "[DONE]":
                     try:
                         chunk = json.loads(chunk_data)
                         u = _extract_usage(chunk, usage_keys)
@@ -1450,6 +1526,20 @@ async def _stream_direct(api_user, backend, body, url, input_price, output_price
                             total_output = u["completion_tokens"] or total_output
                     except json.JSONDecodeError:
                         pass
+                return line + "\n\n"
+
+            out = _consume(first_line)
+            if out is not None:
+                yield out
+            async for line in line_iter:
+                out = _consume(line)
+                if out is not None:
+                    yield out
+        finally:
+            try:
+                await resp_cm.__aexit__(None, None, None)
+            except Exception:
+                pass
 
     await _record_usage(
         api_user, backend, log_model or body.get("model", ""),
