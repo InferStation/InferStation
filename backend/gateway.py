@@ -445,7 +445,7 @@ class RegisterBackendRequest(BaseModel):
     client_info: dict = {}
 
 
-ALLOWED_MODEL_FAMILIES = ["Qwen", "THUDM", "deepseek-ai", "google"]
+ALLOWED_MODEL_FAMILIES = ["Qwen", "THUDM", "deepseek-ai", "google", "openai"]
 
 # Whitelisted models per family for the registration UI. Keep these as plain
 # model names (no family prefix); the UI joins them with the selected family.
@@ -472,6 +472,9 @@ ALLOWED_MODELS_BY_FAMILY: dict[str, list[str]] = {
     ],
     "google": [
         "gemma-4-31B-it",
+    ],
+    "openai": [
+        "gpt-5.4",
     ],
 }
 
