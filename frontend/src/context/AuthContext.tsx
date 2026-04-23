@@ -13,8 +13,11 @@ const API = process.env.NEXT_PUBLIC_API_URL || ""
 
 interface BillingSummary {
   current_month_cost: number
+  current_month_by_currency?: Record<string, number>
   unpaid_total: number
+  unpaid_by_currency?: Record<string, number>
   overdue_total: number
+  overdue_by_currency?: Record<string, number>
   is_suspended: boolean
 }
 

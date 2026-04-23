@@ -17,6 +17,7 @@ interface Backend {
   enabled: number
   input_price: number | null
   output_price: number | null
+  currency: string
   is_public: number
   owner_name: string
   updated_at: string
@@ -49,6 +50,7 @@ export default function ServiceDetailPage() {
     tag_quantization: "",
     input_price: "",
     output_price: "",
+    currency: "CNY",
     is_public: true,
   })
 
@@ -84,6 +86,7 @@ export default function ServiceDetailPage() {
       tag_quantization: b.tags?.quantization || "",
       input_price: b.input_price != null ? String(b.input_price) : "",
       output_price: b.output_price != null ? String(b.output_price) : "",
+      currency: b.currency || "CNY",
       is_public: !!b.is_public,
     })
   }
@@ -122,6 +125,7 @@ export default function ServiceDetailPage() {
           tags,
           input_price: editForm.input_price ? parseFloat(editForm.input_price) : undefined,
           output_price: editForm.output_price ? parseFloat(editForm.output_price) : undefined,
+          currency: editForm.currency,
           is_public: editForm.is_public,
           client_info,
           clear_price: !editForm.input_price && !editForm.output_price,
@@ -263,13 +267,20 @@ export default function ServiceDetailPage() {
                 <input type="text" value={editForm.tag_quantization} onChange={(e) => setEditForm({ ...editForm, tag_quantization: e.target.value })} placeholder="量化，如 AWQ / FP16" className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm" />
               </div>
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">输入定价（元/百万token）</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">货币</label>
+                <select value={editForm.currency} onChange={(e) => setEditForm({ ...editForm, currency: e.target.value })} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                  <option value="CNY">CNY (¥)</option>
+                  <option value="USD">USD ($)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">输入定价（{editForm.currency === "USD" ? "$" : "¥"}/百万token）</label>
                 <input type="number" step="0.01" value={editForm.input_price} onChange={(e) => setEditForm({ ...editForm, input_price: e.target.value })} placeholder="留空为免费" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">输出定价（元/百万token）</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">输出定价（{editForm.currency === "USD" ? "$" : "¥"}/百万token）</label>
                 <input type="number" step="0.01" value={editForm.output_price} onChange={(e) => setEditForm({ ...editForm, output_price: e.target.value })} placeholder="留空为免费" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
               </div>
             </div>
@@ -315,7 +326,7 @@ export default function ServiceDetailPage() {
                   ) : backend.input_price === 0 && backend.output_price === 0 ? (
                     <span className="text-green-600">Free</span>
                   ) : (
-                    <>¥{backend.input_price}/M 输入 / ¥{backend.output_price}/M 输出</>
+                    <>{backend.currency === "USD" ? "$" : "¥"}{backend.input_price}/M 输入 / {backend.currency === "USD" ? "$" : "¥"}{backend.output_price}/M 输出 <span className="text-xs text-gray-500">({backend.currency || "CNY"})</span></>
                   )}
                 </p>
               </div>

@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react"
 import { apiFetch } from "@/lib/api"
+import { formatByCurrency, symbolOf } from "@/lib/currency"
 
 interface Invoice {
   id: number
   period_start: string
   period_end: string
   total_cost: number
+  currency: string
   status: "unpaid" | "paid" | "void"
   due_date: string
   created_at: string
@@ -16,10 +18,13 @@ interface Invoice {
 
 interface BillingStatus {
   current_month_cost: number
+  current_month_by_currency?: Record<string, number>
   current_month_period: { start: string; end: string }
   invoices: Invoice[]
   unpaid_total: number
+  unpaid_by_currency?: Record<string, number>
   overdue_total: number
+  overdue_by_currency?: Record<string, number>
   is_suspended: boolean
   grace_days: number
 }
@@ -52,13 +57,13 @@ export default function InvoicesPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="bg-white border rounded-lg p-5">
           <div className="text-xs text-gray-500 mb-1">本月累计用量</div>
-          <div className="text-2xl font-semibold">¥{data.current_month_cost.toFixed(6)}</div>
+          <div className="text-2xl font-semibold">{formatByCurrency(data.current_month_by_currency ?? { CNY: data.current_month_cost })}</div>
           <div className="text-xs text-gray-400 mt-1">{fmtMonth(data.current_month_period.start)} · 每月 1 日出账</div>
         </div>
         <div className="bg-white border rounded-lg p-5">
           <div className="text-xs text-gray-500 mb-1">未付账单</div>
           <div className={`text-2xl font-semibold ${data.unpaid_total > 0 ? "text-amber-600" : "text-gray-400"}`}>
-            ¥{data.unpaid_total.toFixed(6)}
+            {formatByCurrency(data.unpaid_by_currency ?? { CNY: data.unpaid_total })}
           </div>
           <div className="text-xs text-gray-400 mt-1">
             {data.unpaid_total > 0 ? `${data.invoices.filter((i) => i.status === "unpaid").length} 张` : "无"}
@@ -67,7 +72,7 @@ export default function InvoicesPage() {
         <div className={`border rounded-lg p-5 ${data.is_suspended ? "bg-red-50 border-red-200" : "bg-white"}`}>
           <div className={`text-xs mb-1 ${data.is_suspended ? "text-red-700" : "text-gray-500"}`}>逾期金额</div>
           <div className={`text-2xl font-semibold ${data.is_suspended ? "text-red-600" : "text-gray-400"}`}>
-            ¥{data.overdue_total.toFixed(6)}
+            {formatByCurrency(data.overdue_by_currency ?? { CNY: data.overdue_total })}
           </div>
           <div className={`text-xs mt-1 ${data.is_suspended ? "text-red-700" : "text-gray-400"}`}>
             {data.is_suspended ? "⚠ 服务已暂停，结清后恢复" : `到期后 ${data.grace_days} 天内付清`}
@@ -90,6 +95,7 @@ export default function InvoicesPage() {
           <thead className="bg-gray-50 text-xs text-gray-500">
             <tr>
               <th className="text-left px-4 py-3 font-medium">账期</th>
+              <th className="text-left px-4 py-3 font-medium">货币</th>
               <th className="text-right px-4 py-3 font-medium">金额</th>
               <th className="text-left px-4 py-3 font-medium">到期日</th>
               <th className="text-left px-4 py-3 font-medium">状态</th>
@@ -100,7 +106,7 @@ export default function InvoicesPage() {
           <tbody>
             {data.invoices.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center py-10 text-gray-400">暂无账单（首个账单将于下月 1 日生成）</td>
+                <td colSpan={7} className="text-center py-10 text-gray-400">暂无账单（首个账单将于下月 1 日生成）</td>
               </tr>
             ) : (
               data.invoices.map((inv) => {
@@ -108,7 +114,8 @@ export default function InvoicesPage() {
                 return (
                   <tr key={inv.id} className="border-t">
                     <td className="px-4 py-3 font-medium">{fmtMonth(inv.period_start)}</td>
-                    <td className="px-4 py-3 text-right font-mono">¥{inv.total_cost.toFixed(6)}</td>
+                    <td className="px-4 py-3 text-xs text-gray-500">{inv.currency || "CNY"}</td>
+                    <td className="px-4 py-3 text-right font-mono">{symbolOf(inv.currency)}{inv.total_cost.toFixed(6)}</td>
                     <td className="px-4 py-3">{inv.due_date}</td>
                     <td className="px-4 py-3">
                       {inv.status === "paid" ? (

@@ -15,6 +15,7 @@ interface ModelDetail {
   tags: Record<string, string>
   input_price: number | null
   output_price: number | null
+  currency: string
   created_at: string
   updated_at: string
 }
@@ -172,9 +173,10 @@ export default function ModelDetailPage() {
                 <span className="text-green-600">Free</span>
               ) : (
                 <>
-                  <span className="text-green-600">¥{model.input_price}/M 输入</span>
+                  <span className="text-green-600">{model.currency === "USD" ? "$" : "¥"}{model.input_price}/M 输入</span>
                   {" / "}
-                  <span className="text-green-600">¥{model.output_price}/M 输出</span>
+                  <span className="text-green-600">{model.currency === "USD" ? "$" : "¥"}{model.output_price}/M 输出</span>
+                  <span className="ml-1 text-xs text-gray-500">({model.currency || "CNY"})</span>
                 </>
               )}
             </p>

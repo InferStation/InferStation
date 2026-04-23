@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useAuth } from "@/context/AuthContext"
+import { formatByCurrency } from "@/lib/currency"
 
 export default function Navbar() {
   const { user, logout } = useAuth()
@@ -36,10 +37,10 @@ export default function Navbar() {
                   <span className="font-medium">{user.username}</span>
                   {user.billing && (
                     <span className={`ml-2 ${user.billing.is_suspended ? "text-red-600" : "text-gray-500"}`}>
-                      本月 ¥{user.billing.current_month_cost.toFixed(6)}
+                      本月 {formatByCurrency(user.billing.current_month_by_currency ?? { CNY: user.billing.current_month_cost })}
                       {user.billing.unpaid_total > 0 && (
                         <span className="ml-1 text-amber-600">
-                          · 欠 ¥{user.billing.unpaid_total.toFixed(6)}
+                          · 欠 {formatByCurrency(user.billing.unpaid_by_currency ?? { CNY: user.billing.unpaid_total })}
                         </span>
                       )}
                     </span>

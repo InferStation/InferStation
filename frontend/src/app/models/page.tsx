@@ -15,6 +15,7 @@ interface Model {
   tags: Record<string, string>
   input_price: number | null
   output_price: number | null
+  currency: string
 }
 
 interface SubInfo {
@@ -218,7 +219,7 @@ export default function ModelsPage() {
                     {m.input_price === 0 && m.output_price === 0 ? (
                       <span className="text-emerald-600 font-semibold">Free</span>
                     ) : (
-                      <span className="text-gray-600">¥{m.input_price}/M · ¥{m.output_price}/M</span>
+                      <span className="text-gray-600">{m.currency === "USD" ? "$" : "¥"}{m.input_price}/M · {m.currency === "USD" ? "$" : "¥"}{m.output_price}/M <span className="text-[10px] text-gray-400">{m.currency || "CNY"}</span></span>
                     )}
                   </div>
                 )}

@@ -16,6 +16,7 @@ interface Sub {
   backend_status: string
   input_price: number | null
   output_price: number | null
+  currency: string
   is_owned?: number | boolean
 }
 
@@ -272,7 +273,7 @@ export default function MyModelsPage() {
                         <span>
                           {s.input_price === 0 && s.output_price === 0
                             ? "Free"
-                            : `¥${s.input_price}/M 输入 / ¥${s.output_price}/M 输出`}
+                            : `${s.currency === "USD" ? "$" : "¥"}${s.input_price}/M 输入 / ${s.currency === "USD" ? "$" : "¥"}${s.output_price}/M 输出 (${s.currency || "CNY"})`}
                         </span>
                       )}
                     </div>

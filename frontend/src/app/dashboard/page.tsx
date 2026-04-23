@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { useAuth } from "@/context/AuthContext"
 import { apiFetch } from "@/lib/api"
+import { formatByCurrency } from "@/lib/currency"
 import PasswordInput, { checkStrength } from "@/components/PasswordInput"
 
 export default function AccountPage() {
@@ -99,14 +100,14 @@ export default function AccountPage() {
           </div>
           <div>
             <span className="text-gray-500">本月用量：</span>
-            <span className="font-medium">¥{(user.billing?.current_month_cost ?? 0).toFixed(6)}</span>
+            <span className="font-medium">{formatByCurrency(user.billing?.current_month_by_currency ?? { CNY: user.billing?.current_month_cost ?? 0 })}</span>
             <span className="ml-2 text-xs text-gray-400">（每月 1 日结算出账）</span>
           </div>
           {user.billing && user.billing.unpaid_total > 0 && (
             <div>
               <span className="text-gray-500">未付账单：</span>
               <span className={`font-medium ${user.billing.is_suspended ? "text-red-600" : "text-amber-600"}`}>
-                ¥{user.billing.unpaid_total.toFixed(6)}
+                {formatByCurrency(user.billing.unpaid_by_currency ?? { CNY: user.billing.unpaid_total })}
               </span>
               {user.billing.is_suspended && (
                 <span className="ml-2 text-xs text-red-600">⚠ 已逾期，服务已暂停</span>

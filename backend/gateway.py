@@ -254,8 +254,11 @@ async def me(user=Depends(get_current_user)):
         "auto_fallback": bool(user["auto_fallback"]) if "auto_fallback" in keys else True,
         "billing": {
             "current_month_cost": billing["current_month_cost"],
+            "current_month_by_currency": billing["current_month_by_currency"],
             "unpaid_total": billing["unpaid_total"],
+            "unpaid_by_currency": billing["unpaid_by_currency"],
             "overdue_total": billing["overdue_total"],
+            "overdue_by_currency": billing["overdue_by_currency"],
             "is_suspended": billing["is_suspended"],
         },
     }
@@ -442,10 +445,15 @@ class RegisterBackendRequest(BaseModel):
     tags: dict[str, str] = {}  # e.g. {"hardware": "MI300X", "framework": "vLLM"}
     input_price: float | None = None
     output_price: float | None = None
+    currency: str = "CNY"
     client_info: dict = {}
 
 
 ALLOWED_MODEL_FAMILIES = ["Qwen", "THUDM", "deepseek-ai", "google", "openai"]
+
+# Pricing currencies accepted by /api/backends; UI shows the matching symbol.
+ALLOWED_CURRENCIES = ["CNY", "USD"]
+CURRENCY_SYMBOLS = {"CNY": "¥", "USD": "$"}
 
 # Whitelisted models per family for the registration UI. Keep these as plain
 # model names (no family prefix); the UI joins them with the selected family.
@@ -509,6 +517,9 @@ async def register_backend(req: RegisterBackendRequest, user=Depends(require_pro
         raise HTTPException(400, "mode must be 'direct' or 'tunnel'")
     if req.mode == "direct" and not req.url:
         raise HTTPException(400, "url required for direct mode")
+    currency = (req.currency or "CNY").upper()
+    if currency not in ALLOWED_CURRENCIES:
+        raise HTTPException(400, f"currency must be one of {ALLOWED_CURRENCIES}")
     for m in req.models:
         family = m.split("/")[0] if "/" in m else m
         if family not in ALLOWED_MODEL_FAMILIES:
@@ -528,11 +539,11 @@ async def register_backend(req: RegisterBackendRequest, user=Depends(require_pro
                 raise HTTPException(409, f"后端名 '{req.name}' 已存在，请改用编辑页修改，或换一个名字再注册")
             raise HTTPException(409, f"后端名 '{req.name}' 已被其他用户占用")
         await db.execute(
-            """INSERT INTO backends (name, owner_id, url, mode, models, tags, input_price, output_price, is_public, client_info, enabled)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 0)""",
+            """INSERT INTO backends (name, owner_id, url, mode, models, tags, input_price, output_price, currency, is_public, client_info, enabled)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 0)""",
             (
                 req.name, user["id"], req.url, req.mode, json.dumps(req.models), json.dumps(req.tags),
-                req.input_price, req.output_price, json.dumps(req.client_info),
+                req.input_price, req.output_price, currency, json.dumps(req.client_info),
             ),
         )
         await db.commit()
@@ -696,6 +707,7 @@ class UpdateBackendRequest(BaseModel):
     tags: dict[str, str] | None = None
     input_price: float | None = None
     output_price: float | None = None
+    currency: str | None = None
     is_public: bool | None = None
     client_info: dict | None = None
     clear_price: bool = False  # set True to clear pricing
@@ -711,6 +723,8 @@ async def update_backend(name: str, req: UpdateBackendRequest, user=Depends(requ
             short = m.split("/", 1)[1] if "/" in m else m
             if short not in ALLOWED_MODELS_BY_FAMILY.get(family, []):
                 raise HTTPException(400, f"模型 {m} 不在 {family} 的白名单中")
+    if req.currency is not None and req.currency.upper() not in ALLOWED_CURRENCIES:
+        raise HTTPException(400, f"currency must be one of {ALLOWED_CURRENCIES}")
 
     db = await get_db()
     try:
@@ -756,6 +770,9 @@ async def update_backend(name: str, req: UpdateBackendRequest, user=Depends(requ
             if req.output_price is not None:
                 updates.append("output_price = ?")
                 params.append(req.output_price)
+        if req.currency is not None:
+            updates.append("currency = ?")
+            params.append(req.currency.upper())
 
         if updates:
             updates.append("updated_at = datetime('now')")
@@ -813,7 +830,7 @@ async def list_models():
     db = await get_db()
     try:
         cur = await db.execute(
-            "SELECT b.id as backend_id, b.name as backend, b.models, b.tags, b.status, b.input_price, b.output_price, u.username as provider "
+            "SELECT b.id as backend_id, b.name as backend, b.models, b.tags, b.status, b.input_price, b.output_price, b.currency, u.username as provider "
             "FROM backends b LEFT JOIN users u ON b.owner_id = u.id WHERE b.is_public = 1 AND b.enabled = 1"
         )
         rows = [dict(r) for r in await cur.fetchall()]
@@ -833,6 +850,7 @@ async def list_models():
                 "tags": json.loads(r["tags"]) if r.get("tags") else {},
                 "input_price": r["input_price"],
                 "output_price": r["output_price"],
+                "currency": r["currency"] or "CNY",
             })
     return result
 
@@ -843,14 +861,14 @@ async def get_model_detail(model_id: str, backend_id: int | None = None):
     try:
         if backend_id is not None:
             cur = await db.execute(
-                "SELECT b.id as backend_id, b.name as backend, b.models, b.tags, b.status, b.input_price, b.output_price, "
+                "SELECT b.id as backend_id, b.name as backend, b.models, b.tags, b.status, b.input_price, b.output_price, b.currency, "
                 "b.mode, b.created_at, b.updated_at, u.username as provider "
                 "FROM backends b LEFT JOIN users u ON b.owner_id = u.id WHERE b.id = ? AND b.is_public = 1 AND b.enabled = 1",
                 (backend_id,),
             )
         else:
             cur = await db.execute(
-                "SELECT b.id as backend_id, b.name as backend, b.models, b.tags, b.status, b.input_price, b.output_price, "
+                "SELECT b.id as backend_id, b.name as backend, b.models, b.tags, b.status, b.input_price, b.output_price, b.currency, "
                 "b.mode, b.created_at, b.updated_at, u.username as provider "
                 "FROM backends b LEFT JOIN users u ON b.owner_id = u.id WHERE b.is_public = 1 AND b.enabled = 1"
             )
@@ -876,6 +894,7 @@ async def get_model_detail(model_id: str, backend_id: int | None = None):
         "tags": json.loads(best["tags"]) if best.get("tags") else {},
         "input_price": best["input_price"],
         "output_price": best["output_price"],
+        "currency": best["currency"] or "CNY",
         "created_at": best["created_at"],
         "updated_at": best["updated_at"],
     }
@@ -944,7 +963,7 @@ async def list_subscriptions(user=Depends(get_current_user)):
     try:
         cur = await db.execute(
             "SELECT s.id, s.backend_id, s.model, s.sub_key, s.is_active, s.is_activated, s.created_at, s.sort_order, "
-            "b.name as backend, b.status as backend_status, b.input_price, b.output_price, "
+            "b.name as backend, b.status as backend_status, b.input_price, b.output_price, b.currency, "
             "CASE WHEN b.owner_id = ? THEN 1 ELSE 0 END as is_owned "
             "FROM subscriptions s JOIN backends b ON s.backend_id = b.id "
             "WHERE s.user_id = ? ORDER BY s.sort_order ASC, s.id ASC",
@@ -1503,13 +1522,14 @@ async def _record_usage(api_user, backend, model, usage, input_price, output_pri
     input_tokens = usage.get("prompt_tokens", 0)
     output_tokens = usage.get("completion_tokens", 0)
     cost = (input_tokens * input_price + output_tokens * output_price) / 1_000_000
+    currency = backend.get("currency") or "CNY"
 
     db = await get_db()
     try:
         await db.execute(
-            "INSERT INTO usage_logs (user_id, api_key_id, backend_id, model, input_tokens, output_tokens, cost) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (api_user["user_id"], api_user["key_id"], backend["id"], model, input_tokens, output_tokens, cost),
+            "INSERT INTO usage_logs (user_id, api_key_id, backend_id, model, input_tokens, output_tokens, cost, currency) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (api_user["user_id"], api_user["key_id"], backend["id"], model, input_tokens, output_tokens, cost, currency),
         )
         # Post-paid monthly billing: do NOT touch users.balance (deprecated).
         await db.commit()
@@ -1610,10 +1630,10 @@ async def get_usage(days: int = Query(7, ge=1, le=365), user=Depends(get_current
     db = await get_db()
     try:
         cur = await db.execute(
-            """SELECT model, SUM(input_tokens) as total_input, SUM(output_tokens) as total_output,
+            """SELECT model, currency, SUM(input_tokens) as total_input, SUM(output_tokens) as total_output,
                SUM(cost) as total_cost, COUNT(*) as requests
                FROM usage_logs WHERE user_id = ? AND created_at >= datetime('now', ?)
-               GROUP BY model ORDER BY total_cost DESC""",
+               GROUP BY model, currency ORDER BY total_cost DESC""",
             (user["id"], f"-{days} days"),
         )
         rows = [dict(r) for r in await cur.fetchall()]
@@ -1646,17 +1666,23 @@ async def admin_list_users(admin=Depends(require_admin)):
     try:
         for u in users:
             cur = await db.execute(
-                "SELECT COALESCE(SUM(total_cost),0) FROM invoices "
-                "WHERE user_id = ? AND status = 'unpaid'",
+                "SELECT COALESCE(currency,'CNY') AS currency, COALESCE(SUM(total_cost),0) AS total "
+                "FROM invoices WHERE user_id = ? AND status = 'unpaid' "
+                "GROUP BY COALESCE(currency,'CNY')",
                 (u["id"],),
             )
-            u["unpaid_total"] = float((await cur.fetchone())[0] or 0.0)
+            unpaid_by_currency = {(r["currency"] or "CNY"): float(r["total"] or 0.0) for r in await cur.fetchall()}
+            u["unpaid_by_currency"] = unpaid_by_currency
+            u["unpaid_total"] = sum(unpaid_by_currency.values())
             cur = await db.execute(
-                "SELECT COALESCE(SUM(total_cost),0) FROM invoices "
-                "WHERE user_id = ? AND status = 'unpaid' AND due_date < date('now')",
+                "SELECT COALESCE(currency,'CNY') AS currency, COALESCE(SUM(total_cost),0) AS total "
+                "FROM invoices WHERE user_id = ? AND status = 'unpaid' AND due_date < date('now') "
+                "GROUP BY COALESCE(currency,'CNY')",
                 (u["id"],),
             )
-            u["overdue_total"] = float((await cur.fetchone())[0] or 0.0)
+            overdue_by_currency = {(r["currency"] or "CNY"): float(r["total"] or 0.0) for r in await cur.fetchall()}
+            u["overdue_by_currency"] = overdue_by_currency
+            u["overdue_total"] = sum(overdue_by_currency.values())
     finally:
         await db.close()
     return users
@@ -1705,11 +1731,12 @@ async def admin_usage(days: int = Query(7, ge=1, le=365), admin=Depends(require_
     db = await get_db()
     try:
         cur = await db.execute(
-            """SELECT u.username, ul.model, SUM(ul.input_tokens) as total_input,
+            """SELECT u.username, ul.model, COALESCE(ul.currency,'CNY') as currency,
+               SUM(ul.input_tokens) as total_input,
                SUM(ul.output_tokens) as total_output, SUM(ul.cost) as total_cost, COUNT(*) as requests
                FROM usage_logs ul JOIN users u ON ul.user_id = u.id
                WHERE ul.created_at >= datetime('now', ?)
-               GROUP BY u.username, ul.model ORDER BY total_cost DESC""",
+               GROUP BY u.username, ul.model, COALESCE(ul.currency,'CNY') ORDER BY total_cost DESC""",
             (f"-{days} days",),
         )
         return [dict(r) for r in await cur.fetchall()]

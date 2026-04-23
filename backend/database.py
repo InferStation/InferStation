@@ -53,6 +53,7 @@ async def init_db():
             client_info TEXT NOT NULL DEFAULT '{}',
             input_price REAL,
             output_price REAL,
+            currency TEXT NOT NULL DEFAULT 'CNY',
             is_public INTEGER NOT NULL DEFAULT 1,
             enabled INTEGER NOT NULL DEFAULT 0,
             updated_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -68,6 +69,7 @@ async def init_db():
             input_tokens INTEGER NOT NULL DEFAULT 0,
             output_tokens INTEGER NOT NULL DEFAULT 0,
             cost REAL NOT NULL DEFAULT 0.0,
+            currency TEXT NOT NULL DEFAULT 'CNY',
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
 
@@ -95,12 +97,13 @@ async def init_db():
             period_start TEXT NOT NULL,   -- YYYY-MM-01 (inclusive)
             period_end   TEXT NOT NULL,   -- next month YYYY-MM-01 (exclusive)
             total_cost   REAL NOT NULL DEFAULT 0,
+            currency     TEXT NOT NULL DEFAULT 'CNY',
             status       TEXT NOT NULL DEFAULT 'unpaid',  -- unpaid | paid | void
             due_date     TEXT NOT NULL,   -- YYYY-MM-DD
             created_at   TEXT NOT NULL DEFAULT (datetime('now')),
             paid_at      TEXT
         );
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_invoice_user_period ON invoices(user_id, period_start);
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_invoice_user_period_cur ON invoices(user_id, period_start, currency);
         CREATE INDEX IF NOT EXISTS idx_invoice_status ON invoices(status);
         """)
         # Migration: add enabled column if missing
@@ -129,6 +132,29 @@ async def init_db():
             await db.execute(
                 "UPDATE subscriptions SET is_activated = 1 "
                 "WHERE id IN (SELECT active_subscription_id FROM users WHERE active_subscription_id IS NOT NULL)"
+            )
+        # Migration: per-backend pricing currency (CNY default for back-compat)
+        if "currency" not in cols:
+            await db.execute("ALTER TABLE backends ADD COLUMN currency TEXT NOT NULL DEFAULT 'CNY'")
+        # Migration: usage_logs records the backend's pricing currency at the time
+        cur = await db.execute("PRAGMA table_info(usage_logs)")
+        ulcols = {r[1] for r in await cur.fetchall()}
+        if "currency" not in ulcols:
+            await db.execute("ALTER TABLE usage_logs ADD COLUMN currency TEXT NOT NULL DEFAULT 'CNY'")
+        # Migration: invoices stored in their backend's currency. One invoice
+        # per (user, period, currency).
+        cur = await db.execute("PRAGMA table_info(invoices)")
+        icols = {r[1] for r in await cur.fetchall()}
+        if "currency" not in icols:
+            await db.execute("ALTER TABLE invoices ADD COLUMN currency TEXT NOT NULL DEFAULT 'CNY'")
+            # Replace the (user, period) unique index with one that includes currency.
+            try:
+                await db.execute("DROP INDEX IF EXISTS idx_invoice_user_period")
+            except Exception:
+                pass
+            await db.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_invoice_user_period_cur "
+                "ON invoices(user_id, period_start, currency)"
             )
         await db.commit()
     finally:

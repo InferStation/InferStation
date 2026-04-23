@@ -41,7 +41,8 @@ def _month_range_labels(start_ym: str, end_excl_ym: str) -> Iterable[tuple[str, 
 
 
 async def ensure_invoices_for_user(user_id: int) -> None:
-    """Generate any missing invoices for months that have fully elapsed."""
+    """Generate any missing invoices for months that have fully elapsed.
+    One invoice is generated per (user, month, currency)."""
     db = await get_db()
     try:
         # Earliest usage month for this user
@@ -59,40 +60,44 @@ async def ensure_invoices_for_user(user_id: int) -> None:
         if earliest_ym >= current_ym:
             return  # no elapsed month yet
 
-        # Existing invoice periods
+        # Existing invoice (period, currency) pairs
         cur = await db.execute(
-            "SELECT strftime('%Y-%m', period_start) FROM invoices WHERE user_id = ?",
+            "SELECT strftime('%Y-%m', period_start), currency FROM invoices WHERE user_id = ?",
             (user_id,),
         )
-        existing = {r[0] for r in await cur.fetchall()}
+        existing = {(r[0], r[1] or "CNY") for r in await cur.fetchall()}
 
         for period_start, period_end in _month_range_labels(earliest_ym, current_ym):
             ym = period_start[:7]
-            if ym in existing:
-                continue
-            # Sum usage for that month
+            # Sum usage for that month, grouped by currency
             cur = await db.execute(
-                "SELECT COALESCE(SUM(cost),0) FROM usage_logs "
-                "WHERE user_id = ? AND created_at >= ? AND created_at < ?",
+                "SELECT COALESCE(currency,'CNY') AS currency, COALESCE(SUM(cost),0) AS total "
+                "FROM usage_logs WHERE user_id = ? AND created_at >= ? AND created_at < ? "
+                "GROUP BY COALESCE(currency,'CNY')",
                 (user_id, period_start, period_end),
             )
-            total = float((await cur.fetchone())[0] or 0.0)
+            sums = await cur.fetchall()
             pe = date.fromisoformat(period_end)
             due_date = (pe - timedelta(days=1) + timedelta(days=GRACE_DAYS)).isoformat()
-            status = "paid" if total <= 0 else "unpaid"
-            paid_at = datetime.utcnow().isoformat(sep=" ", timespec="seconds") if total <= 0 else None
-            await db.execute(
-                "INSERT INTO invoices (user_id, period_start, period_end, total_cost, status, due_date, paid_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (user_id, period_start, period_end, total, status, due_date, paid_at),
-            )
+            for r in sums:
+                currency = r["currency"] or "CNY"
+                if (ym, currency) in existing:
+                    continue
+                total = float(r["total"] or 0.0)
+                status = "paid" if total <= 0 else "unpaid"
+                paid_at = datetime.utcnow().isoformat(sep=" ", timespec="seconds") if total <= 0 else None
+                await db.execute(
+                    "INSERT INTO invoices (user_id, period_start, period_end, total_cost, currency, status, due_date, paid_at) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    (user_id, period_start, period_end, total, currency, status, due_date, paid_at),
+                )
         await db.commit()
     finally:
         await db.close()
 
 
 async def get_billing_status(user_id: int) -> dict:
-    """Return current-month running cost and list of unpaid invoices."""
+    """Return current-month running cost (per currency) and unpaid invoices."""
     await ensure_invoices_for_user(user_id)
     db = await get_db()
     try:
@@ -100,29 +105,51 @@ async def get_billing_status(user_id: int) -> dict:
         month_start = _month_first(today).isoformat()
         next_month = _next_month_first(today).isoformat()
         cur = await db.execute(
-            "SELECT COALESCE(SUM(cost),0) FROM usage_logs "
-            "WHERE user_id = ? AND created_at >= ? AND created_at < ?",
+            "SELECT COALESCE(currency,'CNY') AS currency, COALESCE(SUM(cost),0) AS total "
+            "FROM usage_logs WHERE user_id = ? AND created_at >= ? AND created_at < ? "
+            "GROUP BY COALESCE(currency,'CNY')",
             (user_id, month_start, next_month),
         )
-        current_month_cost = float((await cur.fetchone())[0] or 0.0)
+        cm_rows = await cur.fetchall()
+        current_month_by_currency: dict[str, float] = {
+            (r["currency"] or "CNY"): float(r["total"] or 0.0) for r in cm_rows
+        }
 
         cur = await db.execute(
-            "SELECT id, period_start, period_end, total_cost, status, due_date, created_at, paid_at "
-            "FROM invoices WHERE user_id = ? ORDER BY period_start DESC",
+            "SELECT id, period_start, period_end, total_cost, COALESCE(currency,'CNY') AS currency, "
+            "status, due_date, created_at, paid_at "
+            "FROM invoices WHERE user_id = ? ORDER BY period_start DESC, currency ASC",
             (user_id,),
         )
         invoices = [dict(r) for r in await cur.fetchall()]
         today_s = today.isoformat()
         unpaid = [i for i in invoices if i["status"] == "unpaid"]
         overdue = [i for i in unpaid if i["due_date"] < today_s]
-        unpaid_total = sum(i["total_cost"] for i in unpaid)
-        overdue_total = sum(i["total_cost"] for i in overdue)
+
+        unpaid_by_currency: dict[str, float] = {}
+        for i in unpaid:
+            c = i.get("currency") or "CNY"
+            unpaid_by_currency[c] = unpaid_by_currency.get(c, 0.0) + float(i["total_cost"] or 0.0)
+        overdue_by_currency: dict[str, float] = {}
+        for i in overdue:
+            c = i.get("currency") or "CNY"
+            overdue_by_currency[c] = overdue_by_currency.get(c, 0.0) + float(i["total_cost"] or 0.0)
+
+        # Legacy single-number fields kept for backward compatibility.
+        # They sum across currencies (numerically meaningless for mixed-currency
+        # users, but UIs should prefer the *_by_currency dicts).
+        current_month_cost = sum(current_month_by_currency.values())
+        unpaid_total = sum(unpaid_by_currency.values())
+        overdue_total = sum(overdue_by_currency.values())
         return {
             "current_month_cost": current_month_cost,
+            "current_month_by_currency": current_month_by_currency,
             "current_month_period": {"start": month_start, "end": next_month},
             "invoices": invoices,
             "unpaid_total": unpaid_total,
+            "unpaid_by_currency": unpaid_by_currency,
             "overdue_total": overdue_total,
+            "overdue_by_currency": overdue_by_currency,
             "is_suspended": len(overdue) > 0,
             "grace_days": GRACE_DAYS,
         }

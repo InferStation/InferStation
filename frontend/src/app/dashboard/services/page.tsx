@@ -16,6 +16,7 @@ interface Backend {
   enabled: number
   input_price: number | null
   output_price: number | null
+  currency: string
   is_public: number
   owner_name: string
   updated_at: string
@@ -54,6 +55,7 @@ export default function ServicesPage() {
     tag_quantization: "",
     input_price: "",
     output_price: "",
+    currency: "CNY",
   })
   const [families, setFamilies] = useState<string[]>([])
   const [catalog, setCatalog] = useState<Record<string, string[]>>({})
@@ -122,11 +124,12 @@ export default function ServicesPage() {
           tags,
           input_price: form.input_price ? parseFloat(form.input_price) : null,
           output_price: form.output_price ? parseFloat(form.output_price) : null,
+          currency: form.currency,
           client_info,
         }),
       })
       setShowForm(false)
-      setForm({ name: "", url: "", mode: "direct", family: "", model: "", served_as: "", tag_hardware: "", tag_framework: "", tag_quantization: "", input_price: "", output_price: "" })
+      setForm({ name: "", url: "", mode: "direct", family: "", model: "", served_as: "", tag_hardware: "", tag_framework: "", tag_quantization: "", input_price: "", output_price: "", currency: "CNY" })
       loadBackends()
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : "操作失败")
@@ -282,13 +285,20 @@ export default function ServicesPage() {
                 <input type="text" value={form.tag_quantization} onChange={(e) => setForm({ ...form, tag_quantization: e.target.value })} placeholder="量化，如 AWQ / FP16" className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm" />
               </div>
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">输入定价（元/百万token）</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">货币</label>
+                <select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                  <option value="CNY">CNY (¥)</option>
+                  <option value="USD">USD ($)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">输入定价（{form.currency === "USD" ? "$" : "¥"}/百万token）</label>
                 <input type="number" step="0.01" value={form.input_price} onChange={(e) => setForm({ ...form, input_price: e.target.value })} placeholder="默认" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">输出定价（元/百万token）</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">输出定价（{form.currency === "USD" ? "$" : "¥"}/百万token）</label>
                 <input type="number" step="0.01" value={form.output_price} onChange={(e) => setForm({ ...form, output_price: e.target.value })} placeholder="默认" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
               </div>
             </div>
@@ -364,11 +374,11 @@ export default function ServicesPage() {
                   <div className="px-5 py-4 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
                     <div className="rounded-lg bg-gray-50 px-3 py-2">
                       <div className="text-[11px] text-gray-500">输入价</div>
-                      <div className="text-base font-semibold text-gray-900 mt-0.5">¥{b.input_price ?? "-"}<span className="text-[11px] font-normal text-gray-500">/M</span></div>
+                      <div className="text-base font-semibold text-gray-900 mt-0.5">{b.currency === "USD" ? "$" : "¥"}{b.input_price ?? "-"}<span className="text-[11px] font-normal text-gray-500">/M</span></div>
                     </div>
                     <div className="rounded-lg bg-gray-50 px-3 py-2">
                       <div className="text-[11px] text-gray-500">输出价</div>
-                      <div className="text-base font-semibold text-gray-900 mt-0.5">¥{b.output_price ?? "-"}<span className="text-[11px] font-normal text-gray-500">/M</span></div>
+                      <div className="text-base font-semibold text-gray-900 mt-0.5">{b.currency === "USD" ? "$" : "¥"}{b.output_price ?? "-"}<span className="text-[11px] font-normal text-gray-500">/M</span></div>
                     </div>
                     <div className="rounded-lg bg-gray-50 px-3 py-2">
                       <div className="text-[11px] text-gray-500">订阅数</div>
@@ -388,7 +398,7 @@ export default function ServicesPage() {
                     </div>
                     <div className="rounded-lg bg-emerald-50 px-3 py-2 ring-1 ring-emerald-100 col-span-2 sm:col-span-1">
                       <div className="text-[11px] text-emerald-700">预期收入</div>
-                      <div className="text-base font-semibold text-emerald-900 mt-0.5">¥{(s?.cost ?? 0).toFixed(6)}</div>
+                      <div className="text-base font-semibold text-emerald-900 mt-0.5">{b.currency === "USD" ? "$" : "¥"}{(s?.cost ?? 0).toFixed(6)}</div>
                     </div>
                   </div>
                 ) : (

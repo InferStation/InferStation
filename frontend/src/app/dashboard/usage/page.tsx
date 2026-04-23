@@ -6,6 +6,7 @@ import { apiFetch } from "@/lib/api"
 
 interface UsageStat {
   model: string
+  currency: string
   total_input: number
   total_output: number
   total_cost: number
@@ -23,10 +24,21 @@ export default function UsagePage() {
 
   if (!user) return null
 
-  const totalCost = usage.reduce((s, u) => s + u.total_cost, 0)
   const totalRequests = usage.reduce((s, u) => s + u.requests, 0)
   const totalInput = usage.reduce((s, u) => s + u.total_input, 0)
   const totalOutput = usage.reduce((s, u) => s + u.total_output, 0)
+  // Sum cost per currency so mixed-currency totals stay accurate.
+  const costByCurrency = usage.reduce<Record<string, number>>((acc, u) => {
+    const cur = u.currency || "CNY"
+    acc[cur] = (acc[cur] || 0) + u.total_cost
+    return acc
+  }, {})
+  const symbol = (c: string) => (c === "USD" ? "$" : "¥")
+  const totalCostStr = Object.keys(costByCurrency).length === 0
+    ? "¥0.000000"
+    : Object.entries(costByCurrency)
+        .map(([c, v]) => `${symbol(c)}${v.toFixed(6)}`)
+        .join(" + ")
 
   return (
     <div>
@@ -58,7 +70,7 @@ export default function UsagePage() {
         </div>
         <div className="bg-white rounded-lg border p-4">
           <div className="text-sm text-gray-500">总花费</div>
-          <div className="text-2xl font-bold text-orange-600">¥{totalCost.toFixed(6)}</div>
+          <div className="text-2xl font-bold text-orange-600">{totalCostStr}</div>
         </div>
       </div>
 
@@ -83,7 +95,7 @@ export default function UsagePage() {
                   <td className="px-4 py-3 text-right">{u.requests}</td>
                   <td className="px-4 py-3 text-right">{u.total_input.toLocaleString()}</td>
                   <td className="px-4 py-3 text-right">{u.total_output.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-right text-green-600">¥{u.total_cost.toFixed(6)}</td>
+                  <td className="px-4 py-3 text-right text-green-600">{symbol(u.currency || "CNY")}{u.total_cost.toFixed(6)} <span className="text-xs text-gray-400">{u.currency || "CNY"}</span></td>
                 </tr>
               ))}
             </tbody>
