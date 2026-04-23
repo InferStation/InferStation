@@ -52,7 +52,7 @@ export function RotatingAmount({
   const safeIdx = idx % entries.length
   const [cur, val] = entries[safeIdx]
   return (
-    <span title={entries.map(([k, v]) => `${symbolOf(k)}${v.toFixed(digits)}`).join(" + ")}>
+    <span title={entries.map(([k, v]) => `${symbolOf(k)}${v.toFixed(digits)}`).join("\n")}>
       {prefix}
       {symbolOf(cur)}
       {val.toFixed(digits)}
