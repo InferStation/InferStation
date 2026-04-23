@@ -103,7 +103,6 @@ async def init_db():
             created_at   TEXT NOT NULL DEFAULT (datetime('now')),
             paid_at      TEXT
         );
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_invoice_user_period_cur ON invoices(user_id, period_start, currency);
         CREATE INDEX IF NOT EXISTS idx_invoice_status ON invoices(status);
         """)
         # Migration: add enabled column if missing
@@ -152,10 +151,12 @@ async def init_db():
                 await db.execute("DROP INDEX IF EXISTS idx_invoice_user_period")
             except Exception:
                 pass
-            await db.execute(
-                "CREATE UNIQUE INDEX IF NOT EXISTS idx_invoice_user_period_cur "
-                "ON invoices(user_id, period_start, currency)"
-            )
+        # Always (re)create the currency-aware unique index, now that the
+        # column is guaranteed to exist on both fresh and migrated DBs.
+        await db.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_invoice_user_period_cur "
+            "ON invoices(user_id, period_start, currency)"
+        )
         await db.commit()
     finally:
         await db.close()
