@@ -2,7 +2,6 @@
 
 import Link from "next/link"
 import { useAuth } from "@/context/AuthContext"
-import { RotatingAmount } from "@/components/RotatingAmount"
 
 export default function Navbar() {
   const { user, logout } = useAuth()
@@ -35,22 +34,8 @@ export default function Navbar() {
                     <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                   </svg>
                   <span className="font-medium">{user.username}</span>
-                  {user.billing && (
-                    <span className={`ml-2 ${user.billing.is_suspended ? "text-red-600" : "text-gray-500"}`}>
-                      <RotatingAmount
-                        map={user.billing.current_month_by_currency ?? { CNY: user.billing.current_month_cost }}
-                        prefix="本月 "
-                      />
-                      {user.billing.unpaid_total > 0 && (
-                        <span className="ml-1 text-amber-600">
-                          ·{" "}
-                          <RotatingAmount
-                            map={user.billing.unpaid_by_currency ?? { CNY: user.billing.unpaid_total }}
-                            prefix="欠 "
-                          />
-                        </span>
-                      )}
-                    </span>
+                  {user.billing?.is_suspended && (
+                    <span className="ml-2 text-xs text-red-600">⚠ 已暂停</span>
                   )}
                 </Link>
                 <button onClick={logout} className="text-sm text-red-500 hover:text-red-700">
