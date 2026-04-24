@@ -4,7 +4,7 @@ export default function SlaPage() {
   return (
     <article className="max-w-3xl mx-auto prose prose-sm text-gray-700">
       <h1 className="text-2xl font-semibold text-gray-800 mb-2">服务等级说明</h1>
-      <p className="text-xs text-gray-500 mb-6">最后更新：2026-04-20</p>
+      <p className="text-xs text-gray-500 mb-6">最后更新：2026-04-24</p>
 
       <section className="space-y-3">
         <p>

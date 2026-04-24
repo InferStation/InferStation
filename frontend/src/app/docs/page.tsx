@@ -8,6 +8,7 @@ const NAV_SECTIONS = [
   { id: "api-call", label: "API 调用" },
   { id: "routing", label: "路由与失败转移" },
   { id: "billing", label: "计费与账单" },
+  { id: "account", label: "账户与邮箱验证" },
   { id: "api-ref", label: "API 端点参考" },
   { id: "tunnel", label: "隧道模式接入" },
 ]
@@ -96,7 +97,7 @@ export default function DocsPage() {
           <div>
             <h3 className="font-semibold text-base text-gray-800 mb-2">消费者</h3>
             <ol className="list-decimal list-inside space-y-1.5 ml-2">
-              <li>注册账号并登录</li>
+              <li>填写用户名、邮箱，获取 6 位邮箱验证码完成注册；登录同样需 要输入邮箱验证码 + 密码</li>
               <li>在「模型广场」浏览并订阅感兴趣的模型</li>
               <li>进入「我的订阅」，点击<strong>激活</strong>需要使用的订阅，并按优先级排序</li>
               <li>在「API Key」页面创建一个 key（格式 <code>sk-xxxx</code>）</li>
@@ -239,6 +240,46 @@ for chunk in resp:
             <li>未支付账单累计超出限额会暂停 API 调用，支付后自动恢复</li>
             <li>实时用量与本月累计费用可在「仪表盘」、<code>GET /api/billing/status</code>、<code>GET /api/usage</code>（按模型汇总）、<code>GET /api/usage/hourly</code>（今日按小时）、<code>GET /api/usage/daily?days=N</code>（历史按天）查询</li>
           </ul>
+        </div>
+      </section>
+
+      {/* 账户与邮箱验证 */}
+      <section id="account" className="mb-12 scroll-mt-20">
+        <h2 className="text-2xl font-semibold text-gray-800 mb-4">账户与邮箱验证</h2>
+        <div className="bg-white rounded-lg border p-6 space-y-3 text-sm text-gray-700 leading-relaxed">
+          <p>
+            平台所有敏感账户操作都需要通过<strong>邮箱 6 位验证码</strong>二次确认，包括：
+          </p>
+          <ul className="list-disc list-inside space-y-1 ml-2">
+            <li><strong>注册</strong>（<code>purpose: "register"</code>）：验证邮箱所有权</li>
+            <li><strong>登录</strong>（<code>purpose: "login"</code>）：密码 + 验证码双因子</li>
+            <li><strong>修改邮箱</strong>（<code>purpose: "change-email"</code>）：发送到<strong>新</strong>邮箱</li>
+            <li><strong>注销账号</strong>（<code>purpose: "delete-account"</code>）：发送到当前绑定邮箱</li>
+          </ul>
+          <p>
+            验证码规则：
+          </p>
+          <ul className="list-disc list-inside space-y-1 ml-2">
+            <li>长度 6 位数字，单条有效期 <strong>10 分钟</strong></li>
+            <li>发送限流：同一邮箱同一用途 <strong>60 秒内</strong>最多 1 条；<strong>1 小时内</strong>最多 3 条</li>
+            <li>每条验证码最多尝试 <strong>5 次</strong>，超限或过期自动作废，需重新发送</li>
+            <li>登录用途的 <code>send-code</code> 入参可填<strong>用户名或邮箱</strong>，系统会自动发到账号绑定的邮箱</li>
+          </ul>
+          <div className="bg-gray-900 text-gray-100 rounded-lg p-4 text-sm overflow-x-auto">
+            <pre>{`# 1. 登录前先索取验证码
+curl -X POST https://your-gateway/api/auth/send-code \
+  -H "Content-Type: application/json" \
+  -d '{"email": "you@example.com", "purpose": "login"}'
+# => {"ok": true}
+
+# 2. 带验证码登录
+curl -X POST https://your-gateway/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"login": "you@example.com", "password": "xxxxx", "code": "123456"}'`}</pre>
+          </div>
+          <p>
+            <strong>修改密码 / 注销账号</strong> 均在个人中心「账号密码」页完成 ：修改密码弹窗要求原密码，注销账号需依次输入当前密码、邮箱验证码并键入 <code>DELETE</code> 三重确认；admin、存在未付账单、或名下仍有上架中/审核中后端的账号会被拒绝注销。
+          </p>
         </div>
       </section>
 
@@ -412,21 +453,41 @@ for chunk in resp:
                 <td className="px-4 py-2 text-gray-600">删除后端</td>
               </tr>
 
-              <tr><td colSpan={3} className="px-4 py-2 bg-gray-50 font-semibold text-gray-600 text-xs">认证</td></tr>
+              <tr><td colSpan={3} className="px-4 py-2 bg-gray-50 font-semibold text-gray-600 text-xs">认证与账户</td></tr>
+              <tr>
+                <td className="px-4 py-2"><code className="text-indigo-600">POST</code></td>
+                <td className="px-4 py-2 font-mono text-xs">/api/auth/send-code</td>
+                <td className="px-4 py-2 text-gray-600">索取邮箱验证码（purpose: register / login / change-email / delete-account）</td>
+              </tr>
               <tr>
                 <td className="px-4 py-2"><code className="text-indigo-600">POST</code></td>
                 <td className="px-4 py-2 font-mono text-xs">/api/auth/register</td>
-                <td className="px-4 py-2 text-gray-600">注册</td>
+                <td className="px-4 py-2 text-gray-600">注册（需先调用 send-code 并带上 <code>code</code>）</td>
               </tr>
               <tr>
                 <td className="px-4 py-2"><code className="text-indigo-600">POST</code></td>
                 <td className="px-4 py-2 font-mono text-xs">/api/auth/login</td>
-                <td className="px-4 py-2 text-gray-600">登录</td>
+                <td className="px-4 py-2 text-gray-600">登录：<code>login</code> + <code>password</code> + <code>code</code></td>
               </tr>
               <tr>
                 <td className="px-4 py-2"><code className="text-green-600">GET</code></td>
                 <td className="px-4 py-2 font-mono text-xs">/api/auth/me</td>
                 <td className="px-4 py-2 text-gray-600">获取当前用户信息</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-2"><code className="text-indigo-600">POST</code></td>
+                <td className="px-4 py-2 font-mono text-xs">/api/auth/change-password</td>
+                <td className="px-4 py-2 text-gray-600">修改密码（<code>old_password</code> + <code>new_password</code>）</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-2"><code className="text-indigo-600">POST</code></td>
+                <td className="px-4 py-2 font-mono text-xs">/api/auth/change-email</td>
+                <td className="px-4 py-2 text-gray-600">修改邮箱（需 <code>change-email</code> 用途的验证码）</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-2"><code className="text-indigo-600">POST</code></td>
+                <td className="px-4 py-2 font-mono text-xs">/api/auth/delete-account</td>
+                <td className="px-4 py-2 text-gray-600">自助注销（<code>password</code> + <code>code</code> + <code>confirm: "DELETE"</code>，软删除）</td>
               </tr>
             </tbody>
           </table>

@@ -4,7 +4,7 @@ export default function PrivacyPage() {
   return (
     <article className="max-w-3xl mx-auto prose prose-sm text-gray-700">
       <h1 className="text-2xl font-semibold text-gray-800 mb-2">隐私政策</h1>
-      <p className="text-xs text-gray-500 mb-6">最后更新：2026-04-20</p>
+      <p className="text-xs text-gray-500 mb-6">最后更新：2026-04-24</p>
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-gray-800">1. 我们收集的信息</h2>
@@ -68,7 +68,8 @@ export default function PrivacyPage() {
         <ul className="list-disc list-inside space-y-1">
           <li>可随时在「账户设置」中修改邮箱、密码</li>
           <li>可随时撤销或删除 API Key / 订阅</li>
-          <li>可通过邮件申请注销账户与导出个人相关数据</li>
+          <li>可在「账号密码」页底部自助注销账户（需密码 + 邮箱验证码 + 键入 <code>DELETE</code> 三重确认，软删除保留审计底账；未付账单需先结清）</li>
+          <li>可通过邮件申请导出个人相关数据</li>
         </ul>
 
         <h2 className="text-lg font-semibold text-gray-800">8. 联系方式</h2>
