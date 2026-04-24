@@ -312,7 +312,7 @@ export default function ServicesPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">缓存命中定价（{form.currency === "USD" ? "$" : "¥"}/百万token）</label>
-                <input type="number" step="0.01" value={form.cache_price} onChange={(e) => setForm({ ...form, cache_price: e.target.value })} placeholder="留空=沿用输入价" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+                <input type="number" step="0.01" value={form.cache_price} onChange={(e) => setForm({ ...form, cache_price: e.target.value })} placeholder="留空=输入价×10%" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
               </div>
             </div>
             <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">

@@ -230,7 +230,7 @@ for chunk in resp:
               <strong>价格生效时间</strong>：首次注册后端的价格立即生效；注册后通过「我的服务」修改价格/货币一律在<strong>次日 00:00（CST, UTC+8）</strong>生效。当前挂起的价格会在服务卡片上以「次日生效」徽标展示
             </li>
             <li>
-              <strong>缓存命中统计</strong>：若上游返回 <code>usage.prompt_tokens_details.cached_tokens</code>（OpenAI / vLLM 前缀缓存）、<code>prompt_cache_hit_tokens</code>（DeepSeek）或 <code>cache_read_input_tokens</code>（Anthropic），网关会累计到 <code>cached_tokens</code>，并在使用明细与「我的服务」卡片上展示命中率。如果服务提供者设置了 <code>cache_price</code>，则缓存命中部分按缓存价计费、其余输入按 <code>input_price</code> 计费；若未设置，则缓存命中回退为按输入价计费（无折扣）。缓存价同样支持「次日 00:00 CST 生效」。
+              <strong>缓存命中统计</strong>：若上游返回 <code>usage.prompt_tokens_details.cached_tokens</code>（OpenAI / vLLM 前缀缓存）、<code>prompt_cache_hit_tokens</code>（DeepSeek）或 <code>cache_read_input_tokens</code>（Anthropic），网关会累计到 <code>cached_tokens</code>，并在使用明细与「我的服务」卡片上展示命中率。如果服务提供者设置了 <code>cache_price</code>，则缓存命中部分按缓存价计费、其余输入按 <code>input_price</code> 计费；若未设置，则默认按输入价的 10% 计费（对齐 OpenAI / Anthropic / DeepSeek / 阿里百炼显式缓存的行业通行折扣）。缓存价同样支持「次日 00:00 CST 生效」。
             </li>
             <li><strong>后付费月结</strong>：账单在每月 1 日自动生成，展示于「账单」页，多货币分账单单独结算</li>
             <li>未支付账单累计超出限额会暂停 API 调用，支付后自动恢复</li>

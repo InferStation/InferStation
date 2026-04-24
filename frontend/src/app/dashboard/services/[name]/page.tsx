@@ -290,10 +290,10 @@ export default function ServiceDetailPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">缓存命中定价（{editForm.currency === "USD" ? "$" : "¥"}/百万token）</label>
-                <input type="number" step="0.01" value={editForm.cache_price} onChange={(e) => setEditForm({ ...editForm, cache_price: e.target.value })} placeholder="留空=沿用输入价" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+                <input type="number" step="0.01" value={editForm.cache_price} onChange={(e) => setEditForm({ ...editForm, cache_price: e.target.value })} placeholder="留空=输入价×10%" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
               </div>
             </div>
-            <p className="text-xs text-gray-500 -mt-2">缓存命中部分按缓存价计费；留空时则按输入价计费，无折扣。</p>
+            <p className="text-xs text-gray-500 -mt-2">缓存命中部分按缓存价计费；留空时按输入价×10%（行业通行折扣）计费。</p>
             <div className="flex items-center">
               <input type="checkbox" checked={editForm.is_public} onChange={(e) => setEditForm({ ...editForm, is_public: e.target.checked })} className="mr-2" />
               <span className="text-sm text-gray-600">公开可见（所有用户可调用）</span>
@@ -336,7 +336,7 @@ export default function ServiceDetailPage() {
                   ) : backend.input_price === 0 && backend.output_price === 0 ? (
                     <span className="text-green-600">Free</span>
                   ) : (
-                    <>{backend.currency === "USD" ? "$" : "¥"}{backend.input_price}/M 输入 / {backend.currency === "USD" ? "$" : "¥"}{backend.output_price}/M 输出 / {backend.cache_price != null ? `${backend.currency === "USD" ? "$" : "¥"}${backend.cache_price}/M 缓存` : `缓存沿用输入价`} <span className="text-xs text-gray-500">({backend.currency || "CNY"})</span></>
+                    <>{backend.currency === "USD" ? "$" : "¥"}{backend.input_price}/M 输入 / {backend.currency === "USD" ? "$" : "¥"}{backend.output_price}/M 输出 / {backend.cache_price != null ? `${backend.currency === "USD" ? "$" : "¥"}${backend.cache_price}/M 缓存` : `缓存默认按输入价×10%`} <span className="text-xs text-gray-500">({backend.currency || "CNY"})</span></>
                   )}
                 </p>
               </div>

@@ -1427,8 +1427,10 @@ async def find_backend_for_model(model: str, user_id: int):
 def get_pricing(backend: dict) -> tuple[float, float, float]:
     """Return (input_price, output_price, cache_price).
 
-    ``cache_price`` defaults to ``input_price`` when unset so a backend that
-    does not configure a cache discount charges cache hits as normal input."""
+    ``cache_price`` defaults to ``0.1 * input_price`` when unset, matching the
+    10% cache-hit discount used by OpenAI, Anthropic, DeepSeek V4-Flash and
+    Aliyun Bailian 显式缓存.  Providers that want a different ratio can set
+    ``cache_price`` explicitly."""
     default = CONFIG.get("pricing", {}).get("default", {})
     inp = backend.get("input_price")
     out = backend.get("output_price")
@@ -1438,7 +1440,7 @@ def get_pricing(backend: dict) -> tuple[float, float, float]:
     if out is None:
         out = default.get("output", 3.0)
     if cache is None:
-        cache = inp
+        cache = inp * 0.1
     return inp, out, cache
 
 
@@ -1685,11 +1687,11 @@ async def _record_usage(api_user, backend, model, usage, input_price, output_pri
     input_tokens = usage.get("prompt_tokens", 0)
     output_tokens = usage.get("completion_tokens", 0)
     cached_tokens = usage.get("cached_tokens", 0) or 0
-    # cache_price defaults to input_price (no discount).  Cost splits the
-    # prompt into non-cached (billed at input_price) + cached (billed at
-    # cache_price) so providers can offer a discount on prompt-cache hits.
+    # cache_price defaults to 10% of input_price (industry-standard hit
+    # discount).  Cost splits the prompt into non-cached (billed at
+    # input_price) + cached (billed at cache_price).
     if cache_price is None:
-        cache_price = input_price
+        cache_price = input_price * 0.1
     billable_input = max(input_tokens - cached_tokens, 0)
     cost = (billable_input * input_price
             + cached_tokens * cache_price
