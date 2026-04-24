@@ -224,10 +224,10 @@ for chunk in resp:
             </li>
             <li>单价由提供者在注册后端时设定，单位为「货币 / 百万 token」，分输入与输出两档；货币支持 CNY / USD</li>
             <li>
-              <strong>时区与计量颗粒度</strong>：所有时间按 <code>Asia/Shanghai</code> 统计。每次请求实时写入<strong>小时桶</strong>（<code>usage_hourly</code>），每日 00:00 把前一日的小时桶聚合归档到日表（<code>usage_daily</code>）
+              <strong>时区与计量颗粒度</strong>：所有时间按 <code>CST（UTC+8）</code> 统计。每次请求实时写入<strong>小时桶</strong>（<code>usage_hourly</code>），每日 00:00 把前一日的小时桶聚合归档到日表（<code>usage_daily</code>）
             </li>
             <li>
-              <strong>价格生效时间</strong>：首次注册后端的价格立即生效；注册后通过「我的服务」修改价格/货币一律在<strong>次日 00:00（Asia/Shanghai）</strong>生效。当前挂起的价格会在服务卡片上以「次日生效」徽标展示
+              <strong>价格生效时间</strong>：首次注册后端的价格立即生效；注册后通过「我的服务」修改价格/货币一律在<strong>次日 00:00（CST, UTC+8）</strong>生效。当前挂起的价格会在服务卡片上以「次日生效」徽标展示
             </li>
             <li><strong>后付费月结</strong>：账单在每月 1 日自动生成，展示于「账单」页，多货币分账单单独结算</li>
             <li>未支付账单累计超出限额会暂停 API 调用，支付后自动恢复</li>
@@ -366,7 +366,7 @@ for chunk in resp:
               <tr>
                 <td className="px-4 py-2"><code className="text-green-600">GET</code></td>
                 <td className="px-4 py-2 font-mono text-xs">/api/usage/hourly</td>
-                <td className="px-4 py-2 text-gray-600">今日按小时桶（Asia/Shanghai）</td>
+                <td className="px-4 py-2 text-gray-600">今日按小时桶（CST, UTC+8）</td>
               </tr>
               <tr>
                 <td className="px-4 py-2"><code className="text-green-600">GET</code></td>

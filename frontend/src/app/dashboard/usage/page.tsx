@@ -103,7 +103,7 @@ export default function UsagePage() {
       </div>
 
       <p className="text-xs text-gray-400 mb-4">
-        所有时间按 <span className="font-medium">Asia/Shanghai</span> 统计；每日 00:00 归档前一日数据并刷新计价价格。
+        所有时间按 <span className="font-medium">CST（UTC+8）</span> 统计；每日 00:00 归档前一日数据并刷新计价价格。
       </p>
 
       {tab === "summary" && (
@@ -193,7 +193,7 @@ export default function UsagePage() {
 
       {tab === "daily" && (
         daily.length === 0 ? (
-          <p className="text-gray-500">暂无归档数据（每日 00:00 Asia/Shanghai 归档一次）</p>
+          <p className="text-gray-500">暂无归档数据（每日 00:00 CST（UTC+8） 归档一次）</p>
         ) : (
           <div className="bg-white rounded-lg border overflow-hidden">
             <table className="w-full text-sm">
