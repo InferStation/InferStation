@@ -49,7 +49,7 @@ export default function UsagePage() {
 
   useEffect(() => {
     if (!user) return
-    if (tab === "summary") apiFetch(`/api/usage?days=${days}`).then(setUsage).catch(() => {})
+    if (tab === "summary") apiFetch(`/api/usage`).then(setUsage).catch(() => {})
     else if (tab === "hourly") apiFetch(`/api/usage/hourly`).then(setHourly).catch(() => {})
     else if (tab === "daily") apiFetch(`/api/usage/daily?days=${days}`).then(setDaily).catch(() => {})
   }, [user, days, tab])
@@ -81,7 +81,7 @@ export default function UsagePage() {
       <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
         <h1 className="text-2xl font-bold">使用明细</h1>
         <div className="flex items-center gap-2">
-          {(tab === "summary" || tab === "daily") && (
+          {tab === "daily" && (
             <select
               value={days}
               onChange={(e) => setDays(Number(e.target.value))}
@@ -108,33 +108,33 @@ export default function UsagePage() {
       </div>
 
       <p className="text-xs text-gray-400 mb-4">
-        所有时间按 <span className="font-medium">CST（UTC+8）</span> 统计；每日 00:00 归档前一日数据并刷新计价价格。
+        所有时间按 <span className="font-medium">CST（UTC+8）</span> 统计；每日 00:00 归档前一日数据并刷新计价价格；<span className="font-medium">「按模型汇总」仅统计本月用量，每月 1 日 00:00 归档结算后归零</span>。
       </p>
 
       {tab === "summary" && (
         <>
           <div className="grid gap-4 md:grid-cols-5 mb-6">
             <div className="bg-white rounded-lg border p-4">
-              <div className="text-sm text-gray-500">请求数</div>
+              <div className="text-sm text-gray-500">本月请求数</div>
               <div className="text-2xl font-bold">{totalRequests}</div>
             </div>
             <div className="bg-white rounded-lg border p-4">
-              <div className="text-sm text-gray-500">输入 tokens</div>
+              <div className="text-sm text-gray-500">本月输入 tokens</div>
               <div className="text-2xl font-bold">{formatTokens(totalInput)}</div>
             </div>
             <div className="bg-white rounded-lg border p-4">
-              <div className="text-sm text-gray-500">输出 tokens</div>
+              <div className="text-sm text-gray-500">本月输出 tokens</div>
               <div className="text-2xl font-bold">{formatTokens(totalOutput)}</div>
             </div>
             <div className="bg-white rounded-lg border p-4">
-              <div className="text-sm text-gray-500">缓存命中 tokens</div>
+              <div className="text-sm text-gray-500">本月缓存命中 tokens</div>
               <div className="text-2xl font-bold text-sky-600">{formatTokens(totalCached)}</div>
               <div className="text-xs text-gray-400 mt-1">
                 {totalInput > 0 ? `${((totalCached / totalInput) * 100).toFixed(1)}% 命中率` : "—"}
               </div>
             </div>
             <div className="bg-white rounded-lg border p-4">
-              <div className="text-sm text-gray-500">总花费</div>
+              <div className="text-sm text-gray-500">本月总花费</div>
               <div className="text-2xl font-bold text-orange-600">{totalCostStr}</div>
             </div>
           </div>

@@ -75,7 +75,7 @@ export default function AdminPage() {
 
   const reloadAll = () => {
     apiFetch("/api/admin/users").then(setUsers).catch(() => {})
-    apiFetch("/api/admin/usage?days=30").then(setUsage).catch(() => {})
+    apiFetch("/api/admin/usage").then(setUsage).catch(() => {})
     apiFetch("/api/admin/invoices").then(setInvoices).catch(() => {})
     apiFetch("/api/admin/backends/pending").then(setPending).catch(() => {})
   }
@@ -198,15 +198,16 @@ export default function AdminPage() {
 
       {tab === "usage" && (
         <div className="bg-white rounded-lg border overflow-hidden">
+          <div className="px-4 py-2 text-xs text-gray-500 bg-amber-50 border-b border-amber-100">本月用量汇总（CST，每月 1 日 00:00 归档结算后归零）</div>
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
                 <th className="text-left px-4 py-3 font-medium">用户</th>
                 <th className="text-left px-4 py-3 font-medium">模型</th>
-                <th className="text-right px-4 py-3 font-medium">请求数</th>
-                <th className="text-right px-4 py-3 font-medium">输入 tokens</th>
-                <th className="text-right px-4 py-3 font-medium">输出 tokens</th>
-                <th className="text-right px-4 py-3 font-medium">花费</th>
+                <th className="text-right px-4 py-3 font-medium">本月请求数</th>
+                <th className="text-right px-4 py-3 font-medium">本月输入 tokens</th>
+                <th className="text-right px-4 py-3 font-medium">本月输出 tokens</th>
+                <th className="text-right px-4 py-3 font-medium">本月花费</th>
               </tr>
             </thead>
             <tbody className="divide-y">

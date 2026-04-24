@@ -82,6 +82,13 @@ def sh_day(dt: datetime | None = None) -> str:
     return dt.strftime("%Y-%m-%d")
 
 
+def sh_month_start(dt: datetime | None = None) -> str:
+    """YYYY-MM-01 string for the current month's first day (Asia/Shanghai).
+    Monthly totals reset at 00:00 on the 1st of each month."""
+    dt = (dt or sh_now()).astimezone(SHANGHAI)
+    return dt.strftime("%Y-%m-01")
+
+
 def seconds_until_next_sh_midnight() -> float:
     now = sh_now()
     tomorrow = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
@@ -726,7 +733,9 @@ async def my_backend_stats(user=Depends(require_provider)):
         )
         sub_rows = await cur.fetchall()
 
-        # Stats pulled from hourly (today) + daily archive (past days).
+        # Stats scoped to current month (Asia/Shanghai); resets on the 1st.
+        month_start = sh_month_start()
+        today = sh_day()
         cur = await db.execute(
             f"SELECT backend_id, model, "
             f"SUM(requests) AS requests, "
@@ -734,12 +743,12 @@ async def my_backend_stats(user=Depends(require_provider)):
             f"SUM(cached_tokens) AS cached_tokens, "
             f"SUM(cost) AS cost FROM ("
             f"  SELECT backend_id, model, requests, input_tokens, output_tokens, cached_tokens, cost "
-            f"  FROM usage_hourly WHERE backend_id IN ({placeholders}) "
+            f"  FROM usage_hourly WHERE backend_id IN ({placeholders}) AND substr(hour_start, 1, 10) >= ? "
             f"  UNION ALL "
             f"  SELECT backend_id, model, requests, input_tokens, output_tokens, cached_tokens, cost "
-            f"  FROM usage_daily WHERE backend_id IN ({placeholders})"
+            f"  FROM usage_daily WHERE backend_id IN ({placeholders}) AND day >= ? AND day < ?"
             f") GROUP BY backend_id, model",
-            ids + ids,
+            ids + [month_start] + ids + [month_start, today],
         )
         usage_rows = await cur.fetchall()
     finally:
@@ -1924,11 +1933,12 @@ async def tunnel_ws(ws: WebSocket):
 # ══════════════════════════════════════════════════════════
 
 @app.get("/api/usage")
-async def get_usage(days: int = Query(7, ge=1, le=365), user=Depends(get_current_user)):
-    """Per-model usage summary. Today's data comes from usage_hourly,
-       older days from usage_daily (archived at 00:00 Asia/Shanghai)."""
+async def get_usage(user=Depends(get_current_user)):
+    """Per-model usage summary for the CURRENT MONTH (Asia/Shanghai).
+       Totals reset at 00:00 on the 1st of each month (previous month is
+       settled and archived — kept in usage_daily but excluded from totals)."""
     today = sh_day()
-    earliest_day = sh_day(sh_now() - timedelta(days=days - 1))
+    month_start = sh_month_start()
     db = await get_db()
     try:
         cur = await db.execute(
@@ -1943,11 +1953,11 @@ async def get_usage(days: int = Query(7, ge=1, le=365), user=Depends(get_current
                    FROM usage_daily WHERE user_id = ? AND day >= ? AND day < ?
                    UNION ALL
                    SELECT model, currency, input_tokens, output_tokens, cached_tokens, cost, requests
-                   FROM usage_hourly WHERE user_id = ? AND substr(hour_start, 1, 10) = ?
+                   FROM usage_hourly WHERE user_id = ? AND substr(hour_start, 1, 10) >= ?
                )
                GROUP BY model, currency
                ORDER BY total_cost DESC""",
-            (user["id"], earliest_day, today, user["id"], today),
+            (user["id"], month_start, today, user["id"], month_start),
         )
         rows = [dict(r) for r in await cur.fetchall()]
     finally:
@@ -2091,10 +2101,11 @@ async def admin_toggle_user(user_id: int, admin=Depends(require_admin)):
 
 
 @app.get("/api/admin/usage")
-async def admin_usage(days: int = Query(7, ge=1, le=365), admin=Depends(require_admin)):
-    """Admin aggregate usage from usage_hourly (today) + usage_daily (past)."""
+async def admin_usage(admin=Depends(require_admin)):
+    """Admin aggregate usage for the CURRENT MONTH (Asia/Shanghai).
+       Totals reset at 00:00 on the 1st of each month."""
     today = sh_day()
-    earliest_day = sh_day(sh_now() - timedelta(days=days - 1))
+    month_start = sh_month_start()
     db = await get_db()
     try:
         cur = await db.execute(
@@ -2109,12 +2120,12 @@ async def admin_usage(days: int = Query(7, ge=1, le=365), admin=Depends(require_
                    FROM usage_daily WHERE day >= ? AND day < ?
                    UNION ALL
                    SELECT user_id, model, currency, input_tokens, output_tokens, cached_tokens, cost, requests
-                   FROM usage_hourly WHERE substr(hour_start, 1, 10) = ?
+                   FROM usage_hourly WHERE substr(hour_start, 1, 10) >= ?
                ) t
                JOIN users u ON u.id = t.user_id
                GROUP BY u.username, t.model, COALESCE(t.currency,'CNY')
                ORDER BY total_cost DESC""",
-            (earliest_day, today, today),
+            (month_start, today, month_start),
         )
         return [dict(r) for r in await cur.fetchall()]
     finally:
