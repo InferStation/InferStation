@@ -232,7 +232,10 @@ for chunk in resp:
             <li>
               <strong>缓存命中统计</strong>：若上游返回 <code>usage.prompt_tokens_details.cached_tokens</code>（OpenAI / vLLM 前缀缓存）、<code>prompt_cache_hit_tokens</code>（DeepSeek）或 <code>cache_read_input_tokens</code>（Anthropic），网关会累计到 <code>cached_tokens</code>，并在使用明细与「我的服务」卡片上展示命中率。如果服务提供者设置了 <code>cache_price</code>，则缓存命中部分按缓存价计费、其余输入按 <code>input_price</code> 计费；若未设置，则默认按输入价的 10% 计费（对齐 OpenAI / Anthropic / DeepSeek / 阿里百炼显式缓存的行业通行折扣）。缓存价同样支持「次日 00:00 CST 生效」。
             </li>
-            <li><strong>后付费月结</strong>：账单在每月 1 日自动生成，展示于「账单」页，多货币分账单单独结算</li>
+            <li><strong>后付费月结</strong>：账单在每月 1 日自动生成，展示于「账单」页，多货币分账单单独结算；「本月用量/花费」汇总以本月为统计窗口，归档结算后自动归零，历史底账仍可在 <code>/api/usage/daily</code> 回看</li>
+            <li>
+              <strong>平台服务费</strong>：网关按消费者账单金额的 <strong>1%</strong> 作为平台服务费，从消费者本月账单中额外收取（或在服务提供者结算时按结算金额的 1% 扣除，取决于结算模式）。<span className="text-emerald-700 font-medium">试运营期间，平台服务费减免 100%，用户与服务提供者均不产生额外费用</span>。试运营结束后将在本页面提前公告生效日期。
+            </li>
             <li>未支付账单累计超出限额会暂停 API 调用，支付后自动恢复</li>
             <li>实时用量与本月累计费用可在「仪表盘」、<code>GET /api/billing/status</code>、<code>GET /api/usage</code>（按模型汇总）、<code>GET /api/usage/hourly</code>（今日按小时）、<code>GET /api/usage/daily?days=N</code>（历史按天）查询</li>
           </ul>
