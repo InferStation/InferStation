@@ -374,32 +374,41 @@ export default function ServicesPage() {
                       ))}
                     </div>
                   </div>
-                  {idx === 0 && (
-                    <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.preventDefault()}>
-                      {(() => {
-                        const st = b.listing_status || (b.enabled ? "listed" : "offline")
-                        const cfg = st === "listed"
-                          ? { cls: "bg-gray-100 text-gray-700 hover:bg-gray-200", label: "下架" }
-                          : st === "pending"
-                          ? { cls: "bg-amber-100 text-amber-800 hover:bg-amber-200", label: "撤回申请" }
-                          : { cls: "bg-emerald-100 text-emerald-700 hover:bg-emerald-200", label: "申请上架" }
-                        return (
-                          <button
-                            onClick={(e) => { e.preventDefault(); toggleBackend(b.name) }}
-                            className={`text-sm px-3 py-1.5 rounded-md font-medium transition-colors ${cfg.cls}`}
-                          >
-                            {cfg.label}
-                          </button>
-                        )
-                      })()}
-                      <button
-                        onClick={(e) => { e.preventDefault(); deleteBackend(b.name) }}
-                        className="text-sm px-3 py-1.5 rounded-md font-medium text-red-600 hover:bg-red-50 transition-colors"
-                      >
-                        删除
-                      </button>
-                    </div>
-                  )}
+                  {idx === 0 && (() => {
+                    const st = b.listing_status || (b.enabled ? "listed" : "offline")
+                    const canApply = st === "offline"
+                    const canTakedown = st === "listed" || st === "pending"
+                    const canDelete = st === "offline"
+                    const base = "text-sm px-3 py-1.5 rounded-md font-medium transition-colors"
+                    const disabled = "bg-gray-50 text-gray-300 cursor-not-allowed"
+                    return (
+                      <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.preventDefault()}>
+                        <button
+                          disabled={!canApply}
+                          onClick={(e) => { e.preventDefault(); if (canApply) toggleBackend(b.name) }}
+                          className={`${base} ${canApply ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : disabled}`}
+                        >
+                          申请上架
+                        </button>
+                        <button
+                          disabled={!canTakedown}
+                          onClick={(e) => { e.preventDefault(); if (canTakedown) toggleBackend(b.name) }}
+                          className={`${base} ${canTakedown ? "bg-gray-100 text-gray-700 hover:bg-gray-200" : disabled}`}
+                          title={st === "pending" ? "下架将撤回本次上架申请" : undefined}
+                        >
+                          下架
+                        </button>
+                        <button
+                          disabled={!canDelete}
+                          onClick={(e) => { e.preventDefault(); if (canDelete) deleteBackend(b.name) }}
+                          className={`${base} ${canDelete ? "text-red-600 hover:bg-red-50" : disabled}`}
+                          title={!canDelete ? "请先下架后再删除" : undefined}
+                        >
+                          删除
+                        </button>
+                      </div>
+                    )
+                  })()}
                 </div>
 
                 {b.listing_status === "offline" && b.review_note && idx === 0 && (
