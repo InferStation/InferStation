@@ -53,6 +53,7 @@ async def init_db():
             client_info TEXT NOT NULL DEFAULT '{}',
             input_price REAL,
             output_price REAL,
+            cache_price REAL,
             currency TEXT NOT NULL DEFAULT 'CNY',
             is_public INTEGER NOT NULL DEFAULT 1,
             enabled INTEGER NOT NULL DEFAULT 0,
@@ -181,6 +182,10 @@ async def init_db():
             await db.execute("ALTER TABLE backends ADD COLUMN pending_currency TEXT")
         if "pending_effective_at" not in cols:
             await db.execute("ALTER TABLE backends ADD COLUMN pending_effective_at TEXT")
+        if "cache_price" not in cols:
+            await db.execute("ALTER TABLE backends ADD COLUMN cache_price REAL")
+        if "pending_cache_price" not in cols:
+            await db.execute("ALTER TABLE backends ADD COLUMN pending_cache_price REAL")
         # Migration: usage_logs records the backend's pricing currency at the time
         cur = await db.execute("PRAGMA table_info(usage_logs)")
         ulcols = {r[1] for r in await cur.fetchall()}

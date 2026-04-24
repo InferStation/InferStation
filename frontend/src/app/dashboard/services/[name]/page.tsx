@@ -17,6 +17,7 @@ interface Backend {
   enabled: number
   input_price: number | null
   output_price: number | null
+  cache_price: number | null
   currency: string
   is_public: number
   owner_name: string
@@ -50,6 +51,7 @@ export default function ServiceDetailPage() {
     tag_quantization: "",
     input_price: "",
     output_price: "",
+    cache_price: "",
     currency: "CNY",
     is_public: true,
   })
@@ -86,6 +88,7 @@ export default function ServiceDetailPage() {
       tag_quantization: b.tags?.quantization || "",
       input_price: b.input_price != null ? String(b.input_price) : "",
       output_price: b.output_price != null ? String(b.output_price) : "",
+      cache_price: b.cache_price != null ? String(b.cache_price) : "",
       currency: b.currency || "CNY",
       is_public: !!b.is_public,
     })
@@ -125,6 +128,8 @@ export default function ServiceDetailPage() {
           tags,
           input_price: editForm.input_price ? parseFloat(editForm.input_price) : undefined,
           output_price: editForm.output_price ? parseFloat(editForm.output_price) : undefined,
+          cache_price: editForm.cache_price ? parseFloat(editForm.cache_price) : undefined,
+          clear_cache_price: !editForm.cache_price,
           currency: editForm.currency,
           is_public: editForm.is_public,
           client_info,
@@ -267,7 +272,7 @@ export default function ServiceDetailPage() {
                 <input type="text" value={editForm.tag_quantization} onChange={(e) => setEditForm({ ...editForm, tag_quantization: e.target.value })} placeholder="量化，如 AWQ / FP16" className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm" />
               </div>
             </div>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">货币</label>
                 <select value={editForm.currency} onChange={(e) => setEditForm({ ...editForm, currency: e.target.value })} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
@@ -283,7 +288,12 @@ export default function ServiceDetailPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">输出定价（{editForm.currency === "USD" ? "$" : "¥"}/百万token）</label>
                 <input type="number" step="0.01" value={editForm.output_price} onChange={(e) => setEditForm({ ...editForm, output_price: e.target.value })} placeholder="留空为免费" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">缓存命中定价（{editForm.currency === "USD" ? "$" : "¥"}/百万token）</label>
+                <input type="number" step="0.01" value={editForm.cache_price} onChange={(e) => setEditForm({ ...editForm, cache_price: e.target.value })} placeholder="留空=沿用输入价" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+              </div>
             </div>
+            <p className="text-xs text-gray-500 -mt-2">缓存命中部分按缓存价计费；留空时则按输入价计费，无折扣。</p>
             <div className="flex items-center">
               <input type="checkbox" checked={editForm.is_public} onChange={(e) => setEditForm({ ...editForm, is_public: e.target.checked })} className="mr-2" />
               <span className="text-sm text-gray-600">公开可见（所有用户可调用）</span>
@@ -326,7 +336,7 @@ export default function ServiceDetailPage() {
                   ) : backend.input_price === 0 && backend.output_price === 0 ? (
                     <span className="text-green-600">Free</span>
                   ) : (
-                    <>{backend.currency === "USD" ? "$" : "¥"}{backend.input_price}/M 输入 / {backend.currency === "USD" ? "$" : "¥"}{backend.output_price}/M 输出 <span className="text-xs text-gray-500">({backend.currency || "CNY"})</span></>
+                    <>{backend.currency === "USD" ? "$" : "¥"}{backend.input_price}/M 输入 / {backend.currency === "USD" ? "$" : "¥"}{backend.output_price}/M 输出 / {backend.cache_price != null ? `${backend.currency === "USD" ? "$" : "¥"}${backend.cache_price}/M 缓存` : `缓存沿用输入价`} <span className="text-xs text-gray-500">({backend.currency || "CNY"})</span></>
                   )}
                 </p>
               </div>

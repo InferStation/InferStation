@@ -91,7 +91,7 @@ def seconds_until_next_sh_midnight() -> float:
 # ── Daily 00:00 Asia/Shanghai job: promote pending prices + archive usage ────
 async def daily_rollover_loop():
     """Run once per Asia/Shanghai midnight:
-       1. Promote backends.pending_{input_price,output_price,currency} to live.
+       1. Promote backends.pending_{input_price,output_price,cache_price,currency} to live.
        2. Archive prior-day usage_hourly rows into usage_daily, then delete them.
     """
     while True:
@@ -115,9 +115,11 @@ async def run_daily_rollover():
             """UPDATE backends SET
                  input_price  = COALESCE(pending_input_price,  input_price),
                  output_price = COALESCE(pending_output_price, output_price),
+                 cache_price  = COALESCE(pending_cache_price,  cache_price),
                  currency     = COALESCE(pending_currency,     currency),
                  pending_input_price = NULL,
                  pending_output_price = NULL,
+                 pending_cache_price = NULL,
                  pending_currency = NULL,
                  pending_effective_at = NULL,
                  updated_at = datetime('now')
@@ -537,6 +539,7 @@ class RegisterBackendRequest(BaseModel):
     tags: dict[str, str] = {}  # e.g. {"hardware": "MI300X", "framework": "vLLM"}
     input_price: float | None = None
     output_price: float | None = None
+    cache_price: float | None = None
     currency: str = "CNY"
     client_info: dict = {}
 
@@ -631,11 +634,11 @@ async def register_backend(req: RegisterBackendRequest, user=Depends(require_pro
                 raise HTTPException(409, f"后端名 '{req.name}' 已存在，请改用编辑页修改，或换一个名字再注册")
             raise HTTPException(409, f"后端名 '{req.name}' 已被其他用户占用")
         await db.execute(
-            """INSERT INTO backends (name, owner_id, url, mode, models, tags, input_price, output_price, currency, is_public, client_info, enabled)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 0)""",
+            """INSERT INTO backends (name, owner_id, url, mode, models, tags, input_price, output_price, cache_price, currency, is_public, client_info, enabled)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 0)""",
             (
                 req.name, user["id"], req.url, req.mode, json.dumps(req.models), json.dumps(req.tags),
-                req.input_price, req.output_price, currency, json.dumps(req.client_info),
+                req.input_price, req.output_price, req.cache_price, currency, json.dumps(req.client_info),
             ),
         )
         await db.commit()
@@ -808,6 +811,8 @@ class UpdateBackendRequest(BaseModel):
     tags: dict[str, str] | None = None
     input_price: float | None = None
     output_price: float | None = None
+    cache_price: float | None = None
+    clear_cache_price: bool = False  # explicit clear of cache_price
     currency: str | None = None
     is_public: bool | None = None
     client_info: dict | None = None
@@ -868,8 +873,10 @@ async def update_backend(name: str, req: UpdateBackendRequest, user=Depends(requ
         if req.clear_price:
             updates.append("input_price = NULL")
             updates.append("output_price = NULL")
+            updates.append("cache_price = NULL")
             updates.append("pending_input_price = NULL")
             updates.append("pending_output_price = NULL")
+            updates.append("pending_cache_price = NULL")
             updates.append("pending_effective_at = NULL")
         else:
             if req.input_price is not None:
@@ -879,6 +886,13 @@ async def update_backend(name: str, req: UpdateBackendRequest, user=Depends(requ
             if req.output_price is not None:
                 updates.append("pending_output_price = ?")
                 params.append(req.output_price)
+                pending_touched = True
+            if req.clear_cache_price:
+                updates.append("cache_price = NULL")
+                updates.append("pending_cache_price = NULL")
+            elif req.cache_price is not None:
+                updates.append("pending_cache_price = ?")
+                params.append(req.cache_price)
                 pending_touched = True
         if req.currency is not None:
             updates.append("pending_currency = ?")
@@ -944,7 +958,7 @@ async def list_models():
     db = await get_db()
     try:
         cur = await db.execute(
-            "SELECT b.id as backend_id, b.name as backend, b.models, b.tags, b.status, b.input_price, b.output_price, b.currency, u.username as provider "
+            "SELECT b.id as backend_id, b.name as backend, b.models, b.tags, b.status, b.input_price, b.output_price, b.cache_price, b.currency, u.username as provider "
             "FROM backends b LEFT JOIN users u ON b.owner_id = u.id WHERE b.is_public = 1 AND b.enabled = 1"
         )
         rows = [dict(r) for r in await cur.fetchall()]
@@ -964,6 +978,7 @@ async def list_models():
                 "tags": json.loads(r["tags"]) if r.get("tags") else {},
                 "input_price": r["input_price"],
                 "output_price": r["output_price"],
+                "cache_price": r["cache_price"],
                 "currency": r["currency"] or "CNY",
             })
     return result
@@ -975,14 +990,14 @@ async def get_model_detail(model_id: str, backend_id: int | None = None):
     try:
         if backend_id is not None:
             cur = await db.execute(
-                "SELECT b.id as backend_id, b.name as backend, b.models, b.tags, b.status, b.input_price, b.output_price, b.currency, "
+                "SELECT b.id as backend_id, b.name as backend, b.models, b.tags, b.status, b.input_price, b.output_price, b.cache_price, b.currency, "
                 "b.mode, b.created_at, b.updated_at, u.username as provider "
                 "FROM backends b LEFT JOIN users u ON b.owner_id = u.id WHERE b.id = ? AND b.is_public = 1 AND b.enabled = 1",
                 (backend_id,),
             )
         else:
             cur = await db.execute(
-                "SELECT b.id as backend_id, b.name as backend, b.models, b.tags, b.status, b.input_price, b.output_price, b.currency, "
+                "SELECT b.id as backend_id, b.name as backend, b.models, b.tags, b.status, b.input_price, b.output_price, b.cache_price, b.currency, "
                 "b.mode, b.created_at, b.updated_at, u.username as provider "
                 "FROM backends b LEFT JOIN users u ON b.owner_id = u.id WHERE b.is_public = 1 AND b.enabled = 1"
             )
@@ -1008,6 +1023,7 @@ async def get_model_detail(model_id: str, backend_id: int | None = None):
         "tags": json.loads(best["tags"]) if best.get("tags") else {},
         "input_price": best["input_price"],
         "output_price": best["output_price"],
+        "cache_price": best["cache_price"],
         "currency": best["currency"] or "CNY",
         "created_at": best["created_at"],
         "updated_at": best["updated_at"],
@@ -1077,7 +1093,7 @@ async def list_subscriptions(user=Depends(get_current_user)):
     try:
         cur = await db.execute(
             "SELECT s.id, s.backend_id, s.model, s.sub_key, s.is_active, s.is_activated, s.created_at, s.sort_order, "
-            "b.name as backend, b.status as backend_status, b.input_price, b.output_price, b.currency, "
+            "b.name as backend, b.status as backend_status, b.input_price, b.output_price, b.cache_price, b.currency, "
             "CASE WHEN b.owner_id = ? THEN 1 ELSE 0 END as is_owned "
             "FROM subscriptions s JOIN backends b ON s.backend_id = b.id "
             "WHERE s.user_id = ? ORDER BY s.sort_order ASC, s.id ASC",
@@ -1250,13 +1266,15 @@ async def sub_chat(sub_key: str, request: Request):
     if sub["model"] in model_map:
         body["model"] = model_map[sub["model"]]
 
-    input_price, output_price = get_pricing(backend)
+    input_price, output_price, cache_price = get_pricing(backend)
     api_user = {"user_id": sub["user_id"], "key_id": 0}
 
     if backend["mode"] == "tunnel":
-        return await _proxy_tunnel(api_user, backend, body, stream, input_price, output_price)
+        return await _proxy_tunnel(api_user, backend, body, stream, input_price, output_price,
+                                    cache_price=cache_price)
     else:
-        return await _proxy_direct(api_user, backend, body, stream, input_price, output_price)
+        return await _proxy_direct(api_user, backend, body, stream, input_price, output_price,
+                                    cache_price=cache_price)
 
 
 @app.get("/s/{sub_key}/v1/models")
@@ -1406,15 +1424,22 @@ async def find_backend_for_model(model: str, user_id: int):
     return None
 
 
-def get_pricing(backend: dict) -> tuple[float, float]:
+def get_pricing(backend: dict) -> tuple[float, float, float]:
+    """Return (input_price, output_price, cache_price).
+
+    ``cache_price`` defaults to ``input_price`` when unset so a backend that
+    does not configure a cache discount charges cache hits as normal input."""
     default = CONFIG.get("pricing", {}).get("default", {})
     inp = backend.get("input_price")
     out = backend.get("output_price")
+    cache = backend.get("cache_price")
     if inp is None:
         inp = default.get("input", 1.0)
     if out is None:
         out = default.get("output", 3.0)
-    return inp, out
+    if cache is None:
+        cache = inp
+    return inp, out, cache
 
 
 @app.get("/v1/models")
@@ -1504,14 +1529,16 @@ async def _handle_openai_request(request: Request, path: str, usage_keys: tuple[
         opts.setdefault("include_usage", True)
         body["stream_options"] = opts
 
-    input_price, output_price = get_pricing(backend)
+    input_price, output_price, cache_price = get_pricing(backend)
 
     if backend["mode"] == "tunnel":
         return await _proxy_tunnel(api_user, backend, body, stream, input_price, output_price,
-                                    path=path, usage_keys=usage_keys, display_model=display_model)
+                                    path=path, usage_keys=usage_keys, display_model=display_model,
+                                    cache_price=cache_price)
     else:
         return await _proxy_direct(api_user, backend, body, stream, input_price, output_price,
-                                    path=path, usage_keys=usage_keys, display_model=display_model)
+                                    path=path, usage_keys=usage_keys, display_model=display_model,
+                                    cache_price=cache_price)
 
 
 def _upstream_headers(backend) -> dict:
@@ -1524,14 +1551,15 @@ def _upstream_headers(backend) -> dict:
 
 async def _proxy_direct(api_user, backend, body, stream, input_price, output_price,
                          path="/v1/chat/completions", usage_keys=("prompt_tokens", "completion_tokens"),
-                         display_model=None):
+                         display_model=None, cache_price=None):
     url = f"{backend['url'].rstrip('/')}{path}"
     headers = _upstream_headers(backend)
     log_model = display_model or body.get("model", "")
 
     if stream:
         return StreamingResponse(
-            _stream_direct(api_user, backend, body, url, input_price, output_price, headers, usage_keys, log_model),
+            _stream_direct(api_user, backend, body, url, input_price, output_price, headers, usage_keys, log_model,
+                           cache_price=cache_price),
             media_type="text/event-stream",
         )
 
@@ -1540,12 +1568,13 @@ async def _proxy_direct(api_user, backend, body, stream, input_price, output_pri
         data = resp.json()
 
     usage = _extract_usage(data, usage_keys)
-    await _record_usage(api_user, backend, log_model, usage, input_price, output_price)
+    await _record_usage(api_user, backend, log_model, usage, input_price, output_price,
+                        cache_price=cache_price)
     return data
 
 
 async def _stream_direct(api_user, backend, body, url, input_price, output_price, headers=None,
-                          usage_keys=("prompt_tokens", "completion_tokens"), log_model=None):
+                          usage_keys=("prompt_tokens", "completion_tokens"), log_model=None, cache_price=None):
     total_input = 0
     total_output = 0
     total_cached = 0
@@ -1571,32 +1600,34 @@ async def _stream_direct(api_user, backend, body, url, input_price, output_price
         api_user, backend, log_model or body.get("model", ""),
         {"prompt_tokens": total_input, "completion_tokens": total_output,
          "cached_tokens": total_cached},
-        input_price, output_price,
+        input_price, output_price, cache_price=cache_price,
     )
 
 
 async def _proxy_tunnel(api_user, backend, body, stream, input_price, output_price,
                          path="/v1/chat/completions", usage_keys=("prompt_tokens", "completion_tokens"),
-                         display_model=None):
+                         display_model=None, cache_price=None):
     if not tunnel_manager.is_connected(backend["id"]):
         raise HTTPException(503, "Backend tunnel not connected")
     log_model = display_model or body.get("model", "")
 
     if stream:
         return StreamingResponse(
-            _stream_tunnel(api_user, backend, body, input_price, output_price, path, usage_keys, log_model),
+            _stream_tunnel(api_user, backend, body, input_price, output_price, path, usage_keys, log_model,
+                           cache_price=cache_price),
             media_type="text/event-stream",
         )
 
     data = await tunnel_manager.forward_request(backend["id"], body, path=path)
     usage = _extract_usage(data, usage_keys)
-    await _record_usage(api_user, backend, log_model, usage, input_price, output_price)
+    await _record_usage(api_user, backend, log_model, usage, input_price, output_price,
+                        cache_price=cache_price)
     return data
 
 
 async def _stream_tunnel(api_user, backend, body, input_price, output_price,
                           path="/v1/chat/completions", usage_keys=("prompt_tokens", "completion_tokens"),
-                          log_model=None):
+                          log_model=None, cache_price=None):
     total_input = 0
     total_output = 0
     total_cached = 0
@@ -1614,7 +1645,7 @@ async def _stream_tunnel(api_user, backend, body, input_price, output_price,
         api_user, backend, log_model or body.get("model", ""),
         {"prompt_tokens": total_input, "completion_tokens": total_output,
          "cached_tokens": total_cached},
-        input_price, output_price,
+        input_price, output_price, cache_price=cache_price,
     )
 
 
@@ -1650,11 +1681,19 @@ def _extract_usage(obj: dict, usage_keys: tuple[str, str]) -> dict:
     }
 
 
-async def _record_usage(api_user, backend, model, usage, input_price, output_price):
+async def _record_usage(api_user, backend, model, usage, input_price, output_price, cache_price=None):
     input_tokens = usage.get("prompt_tokens", 0)
     output_tokens = usage.get("completion_tokens", 0)
     cached_tokens = usage.get("cached_tokens", 0) or 0
-    cost = (input_tokens * input_price + output_tokens * output_price) / 1_000_000
+    # cache_price defaults to input_price (no discount).  Cost splits the
+    # prompt into non-cached (billed at input_price) + cached (billed at
+    # cache_price) so providers can offer a discount on prompt-cache hits.
+    if cache_price is None:
+        cache_price = input_price
+    billable_input = max(input_tokens - cached_tokens, 0)
+    cost = (billable_input * input_price
+            + cached_tokens * cache_price
+            + output_tokens * output_price) / 1_000_000
     currency = backend.get("currency") or "CNY"
     hour_start = sh_hour_start()
 

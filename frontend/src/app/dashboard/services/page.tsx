@@ -16,9 +16,11 @@ interface Backend {
   enabled: number
   input_price: number | null
   output_price: number | null
+  cache_price: number | null
   currency: string
   pending_input_price: number | null
   pending_output_price: number | null
+  pending_cache_price: number | null
   pending_currency: string | null
   pending_effective_at: string | null
   is_public: number
@@ -60,6 +62,7 @@ export default function ServicesPage() {
     tag_quantization: "",
     input_price: "",
     output_price: "",
+    cache_price: "",
     currency: "CNY",
   })
   const [families, setFamilies] = useState<string[]>([])
@@ -129,12 +132,13 @@ export default function ServicesPage() {
           tags,
           input_price: form.input_price ? parseFloat(form.input_price) : null,
           output_price: form.output_price ? parseFloat(form.output_price) : null,
+          cache_price: form.cache_price ? parseFloat(form.cache_price) : null,
           currency: form.currency,
           client_info,
         }),
       })
       setShowForm(false)
-      setForm({ name: "", url: "", mode: "direct", family: "", model: "", served_as: "", tag_hardware: "", tag_framework: "", tag_quantization: "", input_price: "", output_price: "", currency: "CNY" })
+      setForm({ name: "", url: "", mode: "direct", family: "", model: "", served_as: "", tag_hardware: "", tag_framework: "", tag_quantization: "", input_price: "", output_price: "", cache_price: "", currency: "CNY" })
       loadBackends()
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : "操作失败")
@@ -290,7 +294,7 @@ export default function ServicesPage() {
                 <input type="text" value={form.tag_quantization} onChange={(e) => setForm({ ...form, tag_quantization: e.target.value })} placeholder="量化，如 AWQ / FP16" className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm" />
               </div>
             </div>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">货币</label>
                 <select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
@@ -305,6 +309,10 @@ export default function ServicesPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">输出定价（{form.currency === "USD" ? "$" : "¥"}/百万token）</label>
                 <input type="number" step="0.01" value={form.output_price} onChange={(e) => setForm({ ...form, output_price: e.target.value })} placeholder="默认" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">缓存命中定价（{form.currency === "USD" ? "$" : "¥"}/百万token）</label>
+                <input type="number" step="0.01" value={form.cache_price} onChange={(e) => setForm({ ...form, cache_price: e.target.value })} placeholder="留空=沿用输入价" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
               </div>
             </div>
             <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
@@ -376,7 +384,7 @@ export default function ServicesPage() {
 
                 {/* Stats */}
                 {m ? (
-                  <div className="px-5 py-4 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+                  <div className="px-5 py-4 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
                     <div className="rounded-lg bg-gray-50 px-3 py-2">
                       <div className="text-[11px] text-gray-500">输入价</div>
                       <div className="text-base font-semibold text-gray-900 mt-0.5">{b.currency === "USD" ? "$" : "¥"}{b.input_price ?? "-"}<span className="text-[11px] font-normal text-gray-500">/M</span></div>
@@ -389,6 +397,13 @@ export default function ServicesPage() {
                       <div className="text-base font-semibold text-gray-900 mt-0.5">{b.currency === "USD" ? "$" : "¥"}{b.output_price ?? "-"}<span className="text-[11px] font-normal text-gray-500">/M</span></div>
                       {b.pending_output_price != null && (
                         <div className="text-[10px] text-amber-600 mt-0.5">次日生效 {(b.pending_currency ?? b.currency) === "USD" ? "$" : "¥"}{b.pending_output_price}</div>
+                      )}
+                    </div>
+                    <div className="rounded-lg bg-sky-50 px-3 py-2">
+                      <div className="text-[11px] text-sky-700">缓存价</div>
+                      <div className="text-base font-semibold text-gray-900 mt-0.5">{b.cache_price != null ? `${b.currency === "USD" ? "$" : "¥"}${b.cache_price}` : "—"}<span className="text-[11px] font-normal text-gray-500">/M</span></div>
+                      {b.pending_cache_price != null && (
+                        <div className="text-[10px] text-amber-600 mt-0.5">次日生效 {(b.pending_currency ?? b.currency) === "USD" ? "$" : "¥"}{b.pending_cache_price}</div>
                       )}
                     </div>
                     <div className="rounded-lg bg-gray-50 px-3 py-2">
