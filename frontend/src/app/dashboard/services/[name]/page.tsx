@@ -202,12 +202,14 @@ export default function ServiceDetailPage() {
             <div className="flex items-center gap-2 mt-2">
               {(() => {
                 const st = backend.listing_status || (backend.enabled ? "listed" : "offline")
-                const badge = st === "listed"
-                  ? { cls: "bg-green-100 text-green-700", label: "已上架" }
-                  : st === "pending"
+                const badge = st === "pending"
                   ? { cls: "bg-amber-100 text-amber-700", label: "审核中" }
                   : st === "rejected"
                   ? { cls: "bg-rose-100 text-rose-700", label: "已驳回" }
+                  : st === "listed" && backend.is_public
+                  ? { cls: "bg-green-100 text-green-700", label: "已上架" }
+                  : st === "listed"
+                  ? { cls: "bg-sky-100 text-sky-700", label: "仅私有" }
                   : { cls: "bg-gray-100 text-gray-500", label: "已下架" }
                 return (
                   <span className={`px-2 py-0.5 rounded text-xs ${badge.cls}`}>{badge.label}</span>
@@ -219,7 +221,7 @@ export default function ServiceDetailPage() {
               <span className="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600">
                 {backend.mode === "tunnel" ? "隧道" : "直连"}
               </span>
-              {!backend.is_public && <span className="px-2 py-0.5 rounded text-xs bg-yellow-100 text-yellow-700">私有</span>}
+              {!backend.is_public && (backend.listing_status || (backend.enabled ? "listed" : "offline")) !== "listed" && <span className="px-2 py-0.5 rounded text-xs bg-yellow-100 text-yellow-700">私有</span>}
             </div>
           </div>
           <div className="flex items-center gap-2">
