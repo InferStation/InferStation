@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { formatTokens } from "@/lib/format"
 import { useAuth } from "@/context/AuthContext"
 import { apiFetch } from "@/lib/api"
 
@@ -119,15 +120,15 @@ export default function UsagePage() {
             </div>
             <div className="bg-white rounded-lg border p-4">
               <div className="text-sm text-gray-500">输入 tokens</div>
-              <div className="text-2xl font-bold">{totalInput.toLocaleString()}</div>
+              <div className="text-2xl font-bold">{formatTokens(totalInput)}</div>
             </div>
             <div className="bg-white rounded-lg border p-4">
               <div className="text-sm text-gray-500">输出 tokens</div>
-              <div className="text-2xl font-bold">{totalOutput.toLocaleString()}</div>
+              <div className="text-2xl font-bold">{formatTokens(totalOutput)}</div>
             </div>
             <div className="bg-white rounded-lg border p-4">
               <div className="text-sm text-gray-500">缓存命中 tokens</div>
-              <div className="text-2xl font-bold text-sky-600">{totalCached.toLocaleString()}</div>
+              <div className="text-2xl font-bold text-sky-600">{formatTokens(totalCached)}</div>
               <div className="text-xs text-gray-400 mt-1">
                 {totalInput > 0 ? `${((totalCached / totalInput) * 100).toFixed(1)}% 命中率` : "—"}
               </div>
@@ -158,10 +159,10 @@ export default function UsagePage() {
                     <tr key={i}>
                       <td className="px-4 py-3 font-mono">{u.model}</td>
                       <td className="px-4 py-3 text-right">{u.requests}</td>
-                      <td className="px-4 py-3 text-right">{u.total_input.toLocaleString()}</td>
-                      <td className="px-4 py-3 text-right">{u.total_output.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right">{formatTokens(u.total_input)}</td>
+                      <td className="px-4 py-3 text-right">{formatTokens(u.total_output)}</td>
                       <td className="px-4 py-3 text-right text-sky-600">
-                        {(u.total_cached || 0).toLocaleString()}
+                        {formatTokens(u.total_cached || 0)}
                         {u.total_input > 0 && (
                           <span className="text-xs text-gray-400 ml-1">({((u.total_cached / u.total_input) * 100).toFixed(0)}%)</span>
                         )}
@@ -199,9 +200,9 @@ export default function UsagePage() {
                     <td className="px-4 py-3 font-mono text-xs text-gray-600">{r.hour_start}</td>
                     <td className="px-4 py-3 font-mono">{r.model}</td>
                     <td className="px-4 py-3 text-right">{r.requests}</td>
-                    <td className="px-4 py-3 text-right">{r.total_input.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-right">{r.total_output.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-right text-sky-600">{(r.total_cached || 0).toLocaleString()}</td>
+                    <td className="px-4 py-3 text-right">{formatTokens(r.total_input)}</td>
+                    <td className="px-4 py-3 text-right">{formatTokens(r.total_output)}</td>
+                    <td className="px-4 py-3 text-right text-sky-600">{formatTokens(r.total_cached || 0)}</td>
                     <td className="px-4 py-3 text-right text-green-600">{fmtCost(r.total_cost, r.currency || "CNY")}</td>
                   </tr>
                 ))}
@@ -234,9 +235,9 @@ export default function UsagePage() {
                     <td className="px-4 py-3 font-mono text-xs text-gray-600">{r.day}</td>
                     <td className="px-4 py-3 font-mono">{r.model}</td>
                     <td className="px-4 py-3 text-right">{r.requests}</td>
-                    <td className="px-4 py-3 text-right">{r.total_input.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-right">{r.total_output.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-right text-sky-600">{(r.total_cached || 0).toLocaleString()}</td>
+                    <td className="px-4 py-3 text-right">{formatTokens(r.total_input)}</td>
+                    <td className="px-4 py-3 text-right">{formatTokens(r.total_output)}</td>
+                    <td className="px-4 py-3 text-right text-sky-600">{formatTokens(r.total_cached || 0)}</td>
                     <td className="px-4 py-3 text-right text-green-600">{fmtCost(r.total_cost, r.currency || "CNY")}</td>
                   </tr>
                 ))}

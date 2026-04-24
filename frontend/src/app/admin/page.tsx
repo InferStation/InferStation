@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { formatTokens } from "@/lib/format"
 import { useAuth } from "@/context/AuthContext"
 import { apiFetch } from "@/lib/api"
 import { useRouter } from "next/navigation"
@@ -214,8 +215,8 @@ export default function AdminPage() {
                   <td className="px-4 py-3 font-medium">{u.username}</td>
                   <td className="px-4 py-3 font-mono">{u.model}</td>
                   <td className="px-4 py-3 text-right">{u.requests}</td>
-                  <td className="px-4 py-3 text-right">{u.total_input.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-right">{u.total_output.toLocaleString()}</td>
+                  <td className="px-4 py-3 text-right">{formatTokens(u.total_input)}</td>
+                  <td className="px-4 py-3 text-right">{formatTokens(u.total_output)}</td>
                   <td className="px-4 py-3 text-right text-green-600">{symbolOf(u.currency)}{u.total_cost.toFixed(4)} <span className="text-xs text-gray-400">{u.currency || "CNY"}</span></td>
                 </tr>
               ))}

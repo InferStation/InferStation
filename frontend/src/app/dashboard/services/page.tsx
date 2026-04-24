@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { formatTokens } from "@/lib/format"
 import Link from "next/link"
 import { useAuth } from "@/context/AuthContext"
 import { apiFetch } from "@/lib/api"
@@ -451,16 +452,16 @@ export default function ServicesPage() {
                     </div>
                     <div className="rounded-lg bg-gray-50 px-3 py-2">
                       <div className="text-[11px] text-gray-500">输入 tokens</div>
-                      <div className="text-base font-semibold text-gray-900 mt-0.5">{(s?.input_tokens ?? 0).toLocaleString()}</div>
+                      <div className="text-base font-semibold text-gray-900 mt-0.5">{formatTokens(s?.input_tokens ?? 0)}</div>
                     </div>
                     <div className="rounded-lg bg-gray-50 px-3 py-2">
                       <div className="text-[11px] text-gray-500">输出 tokens</div>
-                      <div className="text-base font-semibold text-gray-900 mt-0.5">{(s?.output_tokens ?? 0).toLocaleString()}</div>
+                      <div className="text-base font-semibold text-gray-900 mt-0.5">{formatTokens(s?.output_tokens ?? 0)}</div>
                     </div>
                     <div className="rounded-lg bg-sky-50 px-3 py-2 ring-1 ring-sky-100">
                       <div className="text-[11px] text-sky-700">缓存命中 tokens</div>
                       <div className="text-base font-semibold text-sky-900 mt-0.5">
-                        {(s?.cached_tokens ?? 0).toLocaleString()}
+                        {formatTokens(s?.cached_tokens ?? 0)}
                         {(s?.input_tokens ?? 0) > 0 && (
                           <span className="text-[11px] text-sky-600 ml-1">({(((s?.cached_tokens ?? 0) / (s?.input_tokens ?? 1)) * 100).toFixed(0)}%)</span>
                         )}
