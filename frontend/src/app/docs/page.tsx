@@ -229,6 +229,9 @@ for chunk in resp:
             <li>
               <strong>价格生效时间</strong>：首次注册后端的价格立即生效；注册后通过「我的服务」修改价格/货币一律在<strong>次日 00:00（CST, UTC+8）</strong>生效。当前挂起的价格会在服务卡片上以「次日生效」徽标展示
             </li>
+            <li>
+              <strong>缓存命中统计</strong>：若上游返回 <code>usage.prompt_tokens_details.cached_tokens</code>（OpenAI / vLLM 前缀缓存）、<code>prompt_cache_hit_tokens</code>（DeepSeek）或 <code>cache_read_input_tokens</code>（Anthropic），网关会累计到 <code>cached_tokens</code>，并在使用明细与「我的服务」卡片上展示命中率（缓存命中不另作折扣，仍按输入价计费，仅作观测指标）
+            </li>
             <li><strong>后付费月结</strong>：账单在每月 1 日自动生成，展示于「账单」页，多货币分账单单独结算</li>
             <li>未支付账单累计超出限额会暂停 API 调用，支付后自动恢复</li>
             <li>实时用量与本月累计费用可在「仪表盘」、<code>GET /api/billing/status</code>、<code>GET /api/usage</code>（按模型汇总）、<code>GET /api/usage/hourly</code>（今日按小时）、<code>GET /api/usage/daily?days=N</code>（历史按天）查询</li>

@@ -9,6 +9,7 @@ interface UsageStat {
   currency: string
   total_input: number
   total_output: number
+  total_cached: number
   total_cost: number
   requests: number
 }
@@ -19,6 +20,7 @@ interface HourlyRow {
   currency: string
   total_input: number
   total_output: number
+  total_cached: number
   total_cost: number
   requests: number
 }
@@ -29,6 +31,7 @@ interface DailyRow {
   currency: string
   total_input: number
   total_output: number
+  total_cached: number
   total_cost: number
   requests: number
 }
@@ -62,6 +65,7 @@ export default function UsagePage() {
   const totalRequests = usage.reduce((s, u) => s + u.requests, 0)
   const totalInput = usage.reduce((s, u) => s + u.total_input, 0)
   const totalOutput = usage.reduce((s, u) => s + u.total_output, 0)
+  const totalCached = usage.reduce((s, u) => s + (u.total_cached || 0), 0)
   const costByCurrency = usage.reduce<Record<string, number>>((acc, u) => {
     const cur = u.currency || "CNY"
     acc[cur] = (acc[cur] || 0) + u.total_cost
@@ -108,7 +112,7 @@ export default function UsagePage() {
 
       {tab === "summary" && (
         <>
-          <div className="grid gap-4 md:grid-cols-4 mb-6">
+          <div className="grid gap-4 md:grid-cols-5 mb-6">
             <div className="bg-white rounded-lg border p-4">
               <div className="text-sm text-gray-500">请求数</div>
               <div className="text-2xl font-bold">{totalRequests}</div>
@@ -120,6 +124,13 @@ export default function UsagePage() {
             <div className="bg-white rounded-lg border p-4">
               <div className="text-sm text-gray-500">输出 tokens</div>
               <div className="text-2xl font-bold">{totalOutput.toLocaleString()}</div>
+            </div>
+            <div className="bg-white rounded-lg border p-4">
+              <div className="text-sm text-gray-500">缓存命中 tokens</div>
+              <div className="text-2xl font-bold text-sky-600">{totalCached.toLocaleString()}</div>
+              <div className="text-xs text-gray-400 mt-1">
+                {totalInput > 0 ? `${((totalCached / totalInput) * 100).toFixed(1)}% 命中率` : "—"}
+              </div>
             </div>
             <div className="bg-white rounded-lg border p-4">
               <div className="text-sm text-gray-500">总花费</div>
@@ -138,6 +149,7 @@ export default function UsagePage() {
                     <th className="text-right px-4 py-3 font-medium">请求数</th>
                     <th className="text-right px-4 py-3 font-medium">输入 tokens</th>
                     <th className="text-right px-4 py-3 font-medium">输出 tokens</th>
+                    <th className="text-right px-4 py-3 font-medium">缓存命中</th>
                     <th className="text-right px-4 py-3 font-medium">花费</th>
                   </tr>
                 </thead>
@@ -148,6 +160,12 @@ export default function UsagePage() {
                       <td className="px-4 py-3 text-right">{u.requests}</td>
                       <td className="px-4 py-3 text-right">{u.total_input.toLocaleString()}</td>
                       <td className="px-4 py-3 text-right">{u.total_output.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right text-sky-600">
+                        {(u.total_cached || 0).toLocaleString()}
+                        {u.total_input > 0 && (
+                          <span className="text-xs text-gray-400 ml-1">({((u.total_cached / u.total_input) * 100).toFixed(0)}%)</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-right text-green-600">{fmtCost(u.total_cost, u.currency || "CNY")} <span className="text-xs text-gray-400">{u.currency || "CNY"}</span></td>
                     </tr>
                   ))}
@@ -171,6 +189,7 @@ export default function UsagePage() {
                   <th className="text-right px-4 py-3 font-medium">请求数</th>
                   <th className="text-right px-4 py-3 font-medium">输入</th>
                   <th className="text-right px-4 py-3 font-medium">输出</th>
+                  <th className="text-right px-4 py-3 font-medium">缓存命中</th>
                   <th className="text-right px-4 py-3 font-medium">花费</th>
                 </tr>
               </thead>
@@ -182,6 +201,7 @@ export default function UsagePage() {
                     <td className="px-4 py-3 text-right">{r.requests}</td>
                     <td className="px-4 py-3 text-right">{r.total_input.toLocaleString()}</td>
                     <td className="px-4 py-3 text-right">{r.total_output.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-right text-sky-600">{(r.total_cached || 0).toLocaleString()}</td>
                     <td className="px-4 py-3 text-right text-green-600">{fmtCost(r.total_cost, r.currency || "CNY")}</td>
                   </tr>
                 ))}
@@ -204,6 +224,7 @@ export default function UsagePage() {
                   <th className="text-right px-4 py-3 font-medium">请求数</th>
                   <th className="text-right px-4 py-3 font-medium">输入</th>
                   <th className="text-right px-4 py-3 font-medium">输出</th>
+                  <th className="text-right px-4 py-3 font-medium">缓存命中</th>
                   <th className="text-right px-4 py-3 font-medium">花费</th>
                 </tr>
               </thead>
@@ -215,6 +236,7 @@ export default function UsagePage() {
                     <td className="px-4 py-3 text-right">{r.requests}</td>
                     <td className="px-4 py-3 text-right">{r.total_input.toLocaleString()}</td>
                     <td className="px-4 py-3 text-right">{r.total_output.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-right text-sky-600">{(r.total_cached || 0).toLocaleString()}</td>
                     <td className="px-4 py-3 text-right text-green-600">{fmtCost(r.total_cost, r.currency || "CNY")}</td>
                   </tr>
                 ))}

@@ -68,6 +68,7 @@ async def init_db():
             model TEXT NOT NULL,
             input_tokens INTEGER NOT NULL DEFAULT 0,
             output_tokens INTEGER NOT NULL DEFAULT 0,
+            cached_tokens INTEGER NOT NULL DEFAULT 0,
             cost REAL NOT NULL DEFAULT 0.0,
             currency TEXT NOT NULL DEFAULT 'CNY',
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -84,6 +85,7 @@ async def init_db():
             requests INTEGER NOT NULL DEFAULT 0,
             input_tokens INTEGER NOT NULL DEFAULT 0,
             output_tokens INTEGER NOT NULL DEFAULT 0,
+            cached_tokens INTEGER NOT NULL DEFAULT 0,
             cost REAL NOT NULL DEFAULT 0.0,
             PRIMARY KEY (user_id, backend_id, model, currency, hour_start)
         );
@@ -100,6 +102,7 @@ async def init_db():
             requests INTEGER NOT NULL DEFAULT 0,
             input_tokens INTEGER NOT NULL DEFAULT 0,
             output_tokens INTEGER NOT NULL DEFAULT 0,
+            cached_tokens INTEGER NOT NULL DEFAULT 0,
             cost REAL NOT NULL DEFAULT 0.0,
             PRIMARY KEY (user_id, backend_id, model, currency, day)
         );
@@ -183,6 +186,17 @@ async def init_db():
         ulcols = {r[1] for r in await cur.fetchall()}
         if "currency" not in ulcols:
             await db.execute("ALTER TABLE usage_logs ADD COLUMN currency TEXT NOT NULL DEFAULT 'CNY'")
+        # Migration: cached_tokens (prompt-cache hits) on usage tables.
+        if "cached_tokens" not in ulcols:
+            await db.execute("ALTER TABLE usage_logs ADD COLUMN cached_tokens INTEGER NOT NULL DEFAULT 0")
+        cur = await db.execute("PRAGMA table_info(usage_hourly)")
+        uhcols = {r[1] for r in await cur.fetchall()}
+        if "cached_tokens" not in uhcols:
+            await db.execute("ALTER TABLE usage_hourly ADD COLUMN cached_tokens INTEGER NOT NULL DEFAULT 0")
+        cur = await db.execute("PRAGMA table_info(usage_daily)")
+        udcols = {r[1] for r in await cur.fetchall()}
+        if "cached_tokens" not in udcols:
+            await db.execute("ALTER TABLE usage_daily ADD COLUMN cached_tokens INTEGER NOT NULL DEFAULT 0")
         # Migration: invoices stored in their backend's currency. One invoice
         # per (user, period, currency).
         cur = await db.execute("PRAGMA table_info(invoices)")

@@ -32,6 +32,7 @@ interface ModelStat {
   requests: number
   input_tokens: number
   output_tokens: number
+  cached_tokens: number
   cost: number
 }
 
@@ -405,6 +406,15 @@ export default function ServicesPage() {
                     <div className="rounded-lg bg-gray-50 px-3 py-2">
                       <div className="text-[11px] text-gray-500">输出 tokens</div>
                       <div className="text-base font-semibold text-gray-900 mt-0.5">{(s?.output_tokens ?? 0).toLocaleString()}</div>
+                    </div>
+                    <div className="rounded-lg bg-sky-50 px-3 py-2 ring-1 ring-sky-100">
+                      <div className="text-[11px] text-sky-700">缓存命中 tokens</div>
+                      <div className="text-base font-semibold text-sky-900 mt-0.5">
+                        {(s?.cached_tokens ?? 0).toLocaleString()}
+                        {(s?.input_tokens ?? 0) > 0 && (
+                          <span className="text-[11px] text-sky-600 ml-1">({(((s?.cached_tokens ?? 0) / (s?.input_tokens ?? 1)) * 100).toFixed(0)}%)</span>
+                        )}
+                      </div>
                     </div>
                     <div className="rounded-lg bg-emerald-50 px-3 py-2 ring-1 ring-emerald-100 col-span-2 sm:col-span-1">
                       <div className="text-[11px] text-emerald-700">预期收入</div>

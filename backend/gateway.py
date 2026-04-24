@@ -128,9 +128,9 @@ async def run_daily_rollover():
         # 2. Archive yesterday's hourly rows into daily, then delete.
         await db.execute(
             """INSERT INTO usage_daily(user_id, backend_id, model, currency, day,
-                                       requests, input_tokens, output_tokens, cost)
+                                       requests, input_tokens, output_tokens, cached_tokens, cost)
                SELECT user_id, backend_id, model, currency, ?,
-                      SUM(requests), SUM(input_tokens), SUM(output_tokens), SUM(cost)
+                      SUM(requests), SUM(input_tokens), SUM(output_tokens), SUM(cached_tokens), SUM(cost)
                FROM usage_hourly
                WHERE substr(hour_start, 1, 10) = ?
                GROUP BY user_id, backend_id, model, currency
@@ -138,6 +138,7 @@ async def run_daily_rollover():
                    requests      = usage_daily.requests      + excluded.requests,
                    input_tokens  = usage_daily.input_tokens  + excluded.input_tokens,
                    output_tokens = usage_daily.output_tokens + excluded.output_tokens,
+                   cached_tokens = usage_daily.cached_tokens + excluded.cached_tokens,
                    cost          = usage_daily.cost          + excluded.cost""",
             (yesterday, yesterday),
         )
@@ -727,11 +728,12 @@ async def my_backend_stats(user=Depends(require_provider)):
             f"SELECT backend_id, model, "
             f"SUM(requests) AS requests, "
             f"SUM(input_tokens) AS input_tokens, SUM(output_tokens) AS output_tokens, "
+            f"SUM(cached_tokens) AS cached_tokens, "
             f"SUM(cost) AS cost FROM ("
-            f"  SELECT backend_id, model, requests, input_tokens, output_tokens, cost "
+            f"  SELECT backend_id, model, requests, input_tokens, output_tokens, cached_tokens, cost "
             f"  FROM usage_hourly WHERE backend_id IN ({placeholders}) "
             f"  UNION ALL "
-            f"  SELECT backend_id, model, requests, input_tokens, output_tokens, cost "
+            f"  SELECT backend_id, model, requests, input_tokens, output_tokens, cached_tokens, cost "
             f"  FROM usage_daily WHERE backend_id IN ({placeholders})"
             f") GROUP BY backend_id, model",
             ids + ids,
@@ -750,6 +752,7 @@ async def my_backend_stats(user=Depends(require_provider)):
             "requests": r["requests"] or 0,
             "input_tokens": r["input_tokens"] or 0,
             "output_tokens": r["output_tokens"] or 0,
+            "cached_tokens": r["cached_tokens"] or 0,
             "cost": round(r["cost"] or 0.0, 6),
         }
 
@@ -762,7 +765,7 @@ async def my_backend_stats(user=Depends(require_provider)):
             # short name (e.g. "Qwen3-8B") rather than "family/Qwen3-8B". Try both.
             short = m.split("/", 1)[1] if "/" in m else m
             u = usage_map.get((b["id"], m)) or usage_map.get((b["id"], short)) or {
-                "requests": 0, "input_tokens": 0, "output_tokens": 0, "cost": 0.0,
+                "requests": 0, "input_tokens": 0, "output_tokens": 0, "cached_tokens": 0, "cost": 0.0,
             }
             per_model.append({
                 "model": m,
@@ -1545,6 +1548,7 @@ async def _stream_direct(api_user, backend, body, url, input_price, output_price
                           usage_keys=("prompt_tokens", "completion_tokens"), log_model=None):
     total_input = 0
     total_output = 0
+    total_cached = 0
     async with httpx.AsyncClient(timeout=UPSTREAM_TIMEOUT) as client:
         async with client.stream("POST", url, json=body, headers=headers) as resp:
             async for line in resp.aiter_lines():
@@ -1559,12 +1563,14 @@ async def _stream_direct(api_user, backend, body, url, input_price, output_price
                         if u["prompt_tokens"] or u["completion_tokens"]:
                             total_input = u["prompt_tokens"] or total_input
                             total_output = u["completion_tokens"] or total_output
+                            total_cached = u["cached_tokens"] or total_cached
                     except json.JSONDecodeError:
                         pass
 
     await _record_usage(
         api_user, backend, log_model or body.get("model", ""),
-        {"prompt_tokens": total_input, "completion_tokens": total_output},
+        {"prompt_tokens": total_input, "completion_tokens": total_output,
+         "cached_tokens": total_cached},
         input_price, output_price,
     )
 
@@ -1593,6 +1599,7 @@ async def _stream_tunnel(api_user, backend, body, input_price, output_price,
                           log_model=None):
     total_input = 0
     total_output = 0
+    total_cached = 0
     async for chunk in tunnel_manager.forward_stream(backend["id"], body, path=path):
         line = f"data: {json.dumps(chunk)}\n\n"
         yield line
@@ -1600,11 +1607,13 @@ async def _stream_tunnel(api_user, backend, body, input_price, output_price,
         if u["prompt_tokens"] or u["completion_tokens"]:
             total_input = u["prompt_tokens"] or total_input
             total_output = u["completion_tokens"] or total_output
+            total_cached = u["cached_tokens"] or total_cached
     yield "data: [DONE]\n\n"
 
     await _record_usage(
         api_user, backend, log_model or body.get("model", ""),
-        {"prompt_tokens": total_input, "completion_tokens": total_output},
+        {"prompt_tokens": total_input, "completion_tokens": total_output,
+         "cached_tokens": total_cached},
         input_price, output_price,
     )
 
@@ -1623,15 +1632,28 @@ def _extract_usage(obj: dict, usage_keys: tuple[str, str]) -> dict:
             usage = resp_obj.get("usage")
     if not isinstance(usage, dict):
         usage = {}
+    cached = 0
+    # OpenAI / vLLM: usage.prompt_tokens_details.cached_tokens
+    details = usage.get("prompt_tokens_details") if isinstance(usage, dict) else None
+    if isinstance(details, dict):
+        cached = int(details.get("cached_tokens", 0) or 0)
+    # DeepSeek: usage.prompt_cache_hit_tokens
+    if not cached and isinstance(usage, dict):
+        cached = int(usage.get("prompt_cache_hit_tokens", 0) or 0)
+    # Anthropic: usage.cache_read_input_tokens
+    if not cached and isinstance(usage, dict):
+        cached = int(usage.get("cache_read_input_tokens", 0) or 0)
     return {
         "prompt_tokens": int(usage.get(in_key, 0) or 0),
         "completion_tokens": int(usage.get(out_key, 0) or 0),
+        "cached_tokens": cached,
     }
 
 
 async def _record_usage(api_user, backend, model, usage, input_price, output_price):
     input_tokens = usage.get("prompt_tokens", 0)
     output_tokens = usage.get("completion_tokens", 0)
+    cached_tokens = usage.get("cached_tokens", 0) or 0
     cost = (input_tokens * input_price + output_tokens * output_price) / 1_000_000
     currency = backend.get("currency") or "CNY"
     hour_start = sh_hour_start()
@@ -1639,22 +1661,23 @@ async def _record_usage(api_user, backend, model, usage, input_price, output_pri
     db = await get_db()
     try:
         await db.execute(
-            "INSERT INTO usage_logs (user_id, api_key_id, backend_id, model, input_tokens, output_tokens, cost, currency) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (api_user["user_id"], api_user["key_id"], backend["id"], model, input_tokens, output_tokens, cost, currency),
+            "INSERT INTO usage_logs (user_id, api_key_id, backend_id, model, input_tokens, output_tokens, cached_tokens, cost, currency) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (api_user["user_id"], api_user["key_id"], backend["id"], model, input_tokens, output_tokens, cached_tokens, cost, currency),
         )
         # Hourly rollup (Asia/Shanghai).
         await db.execute(
             """INSERT INTO usage_hourly(user_id, backend_id, model, currency, hour_start,
-                                        requests, input_tokens, output_tokens, cost)
-               VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)
+                                        requests, input_tokens, output_tokens, cached_tokens, cost)
+               VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
                ON CONFLICT(user_id, backend_id, model, currency, hour_start) DO UPDATE SET
                    requests      = requests      + 1,
                    input_tokens  = input_tokens  + excluded.input_tokens,
                    output_tokens = output_tokens + excluded.output_tokens,
+                   cached_tokens = cached_tokens + excluded.cached_tokens,
                    cost          = cost          + excluded.cost""",
             (api_user["user_id"], backend["id"], model, currency, hour_start,
-             input_tokens, output_tokens, cost),
+             input_tokens, output_tokens, cached_tokens, cost),
         )
         await db.commit()
     finally:
@@ -1761,13 +1784,14 @@ async def get_usage(days: int = Query(7, ge=1, le=365), user=Depends(get_current
             """SELECT model, currency,
                       SUM(input_tokens) AS total_input,
                       SUM(output_tokens) AS total_output,
+                      SUM(cached_tokens) AS total_cached,
                       SUM(cost) AS total_cost,
                       SUM(requests) AS requests
                FROM (
-                   SELECT model, currency, input_tokens, output_tokens, cost, requests
+                   SELECT model, currency, input_tokens, output_tokens, cached_tokens, cost, requests
                    FROM usage_daily WHERE user_id = ? AND day >= ? AND day < ?
                    UNION ALL
-                   SELECT model, currency, input_tokens, output_tokens, cost, requests
+                   SELECT model, currency, input_tokens, output_tokens, cached_tokens, cost, requests
                    FROM usage_hourly WHERE user_id = ? AND substr(hour_start, 1, 10) = ?
                )
                GROUP BY model, currency
@@ -1792,6 +1816,7 @@ async def get_usage_hourly(user=Depends(get_current_user)):
                       SUM(requests) AS requests,
                       SUM(input_tokens) AS total_input,
                       SUM(output_tokens) AS total_output,
+                      SUM(cached_tokens) AS total_cached,
                       SUM(cost) AS total_cost
                FROM usage_hourly
                WHERE user_id = ? AND substr(hour_start, 1, 10) = ?
@@ -1817,6 +1842,7 @@ async def get_usage_daily(days: int = Query(30, ge=1, le=365), user=Depends(get_
                       SUM(requests) AS requests,
                       SUM(input_tokens) AS total_input,
                       SUM(output_tokens) AS total_output,
+                      SUM(cached_tokens) AS total_cached,
                       SUM(cost) AS total_cost
                FROM usage_daily
                WHERE user_id = ? AND day >= ? AND day < ?
@@ -1924,13 +1950,14 @@ async def admin_usage(days: int = Query(7, ge=1, le=365), admin=Depends(require_
             """SELECT u.username, t.model, COALESCE(t.currency,'CNY') AS currency,
                       SUM(t.input_tokens) AS total_input,
                       SUM(t.output_tokens) AS total_output,
+                      SUM(t.cached_tokens) AS total_cached,
                       SUM(t.cost) AS total_cost,
                       SUM(t.requests) AS requests
                FROM (
-                   SELECT user_id, model, currency, input_tokens, output_tokens, cost, requests
+                   SELECT user_id, model, currency, input_tokens, output_tokens, cached_tokens, cost, requests
                    FROM usage_daily WHERE day >= ? AND day < ?
                    UNION ALL
-                   SELECT user_id, model, currency, input_tokens, output_tokens, cost, requests
+                   SELECT user_id, model, currency, input_tokens, output_tokens, cached_tokens, cost, requests
                    FROM usage_hourly WHERE substr(hour_start, 1, 10) = ?
                ) t
                JOIN users u ON u.id = t.user_id
