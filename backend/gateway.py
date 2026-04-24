@@ -4,6 +4,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import secrets
 import sys
 import time
@@ -29,6 +30,7 @@ from auth import (
     verify_password,
 )
 import auth
+import email_service
 from database import get_db, init_db
 from billing import (
     get_billing_status,
@@ -62,6 +64,8 @@ def load_config():
     auth.JWT_SECRET = jwt_cfg.get("secret_key", os.environ.get("JWT_SECRET", "dev-secret-change-me"))
     auth.JWT_ALGORITHM = jwt_cfg.get("algorithm", "HS256")
     auth.JWT_EXPIRE_MINUTES = jwt_cfg.get("access_token_expire_minutes", 1440)
+    # Apply SMTP config
+    email_service.configure(CONFIG.get("smtp"))
 
 
 # ── Asia/Shanghai day/hour helpers ──────────────────────
@@ -292,6 +296,7 @@ class RegisterRequest(BaseModel):
     username: str
     email: str
     password: str
+    code: str
 
 
 class LoginRequest(BaseModel):
@@ -299,18 +304,117 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class SendCodeRequest(BaseModel):
+    email: str
+    purpose: str  # "register" | "change-email"
+
+
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+async def _issue_verification_code(email: str, purpose: str) -> str:
+    """Create a 6-digit code, rate-limit 60s, keep only one active per (email, purpose)."""
+    if purpose not in ("register", "change-email"):
+        raise HTTPException(400, "Invalid purpose")
+    if not _EMAIL_RE.match(email):
+        raise HTTPException(400, "邮箱格式不正确")
+    db = await get_db()
+    try:
+        # Rate-limit: reject if the last unconsumed code was issued < 60s ago.
+        cur = await db.execute(
+            "SELECT id, created_at FROM email_verifications "
+            "WHERE email=? AND purpose=? AND consumed=0 "
+            "AND datetime(created_at) > datetime(\'now\', \'-60 seconds\') "
+            "ORDER BY id DESC LIMIT 1",
+            (email, purpose),
+        )
+        if await cur.fetchone():
+            raise HTTPException(429, "发送过于频繁，请稍后再试（60 秒限流）")
+        # Invalidate older unconsumed codes.
+        await db.execute(
+            "UPDATE email_verifications SET consumed=1 WHERE email=? AND purpose=? AND consumed=0",
+            (email, purpose),
+        )
+        code = email_service.generate_code(6)
+        await db.execute(
+            "INSERT INTO email_verifications (email, code, purpose, expires_at) "
+            "VALUES (?, ?, ?, datetime(\'now\', \'+10 minutes\'))",
+            (email, code, purpose),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+    await email_service.send_verification_code(email, code, purpose)
+    return code
+
+
+async def _consume_verification_code(email: str, purpose: str, code: str) -> None:
+    code = (code or "").strip()
+    if not code:
+        raise HTTPException(400, "请填写邮箱验证码")
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            "SELECT id, code, attempts FROM email_verifications "
+            "WHERE email=? AND purpose=? AND consumed=0 "
+            "AND datetime(expires_at) > datetime(\'now\') "
+            "ORDER BY id DESC LIMIT 1",
+            (email, purpose),
+        )
+        row = await cur.fetchone()
+        if not row:
+            raise HTTPException(400, "验证码已过期或未发送，请重新获取")
+        if row["attempts"] >= 5:
+            await db.execute("UPDATE email_verifications SET consumed=1 WHERE id=?", (row["id"],))
+            await db.commit()
+            raise HTTPException(400, "验证码尝试次数过多，请重新获取")
+        if row["code"] != code:
+            await db.execute("UPDATE email_verifications SET attempts=attempts+1 WHERE id=?", (row["id"],))
+            await db.commit()
+            raise HTTPException(400, "验证码错误")
+        await db.execute("UPDATE email_verifications SET consumed=1 WHERE id=?", (row["id"],))
+        await db.commit()
+    finally:
+        await db.close()
+
+
+@app.post("/api/auth/send-code")
+async def send_code(req: SendCodeRequest):
+    email = req.email.strip().lower()
+    purpose = req.purpose
+    db = await get_db()
+    try:
+        cur = await db.execute("SELECT id FROM users WHERE email = ?", (email,))
+        existing = await cur.fetchone()
+    finally:
+        await db.close()
+    if purpose == "register" and existing:
+        raise HTTPException(400, "该邮箱已被注册")
+    if purpose == "change-email" and existing:
+        raise HTTPException(400, "该邮箱已被其他账号使用")
+    code = await _issue_verification_code(email, purpose)
+    resp = {"ok": True}
+    if email_service.expose_dev_code():
+        resp["dev_code"] = code
+    return resp
+
+
 @app.post("/api/auth/register")
 async def register(req: RegisterRequest):
     if len(req.password) < 6:
         raise HTTPException(400, "Password must be at least 6 characters")
+    email = req.email.strip().lower()
+    if not _EMAIL_RE.match(email):
+        raise HTTPException(400, "邮箱格式不正确")
+    await _consume_verification_code(email, "register", req.code)
     db = await get_db()
     try:
-        cur = await db.execute("SELECT id FROM users WHERE username = ? OR email = ?", (req.username, req.email))
+        cur = await db.execute("SELECT id FROM users WHERE username = ? OR email = ?", (req.username, email))
         if await cur.fetchone():
             raise HTTPException(400, "Username or email already exists")
         cur = await db.execute(
-            "INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, 'consumer')",
-            (req.username, req.email, hash_password(req.password)),
+            "INSERT INTO users (username, email, password_hash, role, verified) VALUES (?, ?, ?, 'consumer', 1)",
+            (req.username, email, hash_password(req.password)),
         )
         await db.commit()
         user_id = cur.lastrowid
@@ -423,14 +527,15 @@ async def change_password(req: ChangePasswordRequest, user=Depends(get_current_u
 
 class ChangeEmailRequest(BaseModel):
     new_email: str
+    code: str
 
 
 @app.post("/api/auth/change-email")
 async def change_email(req: ChangeEmailRequest, user=Depends(get_current_user)):
-    import re
-    email = req.new_email.strip()
-    if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+    email = req.new_email.strip().lower()
+    if not _EMAIL_RE.match(email):
         raise HTTPException(400, "邮箱格式不正确")
+    await _consume_verification_code(email, "change-email", req.code)
     db = await get_db()
     try:
         existing = await db.execute("SELECT id FROM users WHERE email = ? AND id != ?", (email, user["id"]))

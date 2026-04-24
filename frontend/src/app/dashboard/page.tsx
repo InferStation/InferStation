@@ -17,24 +17,49 @@ export default function AccountPage() {
   const [saving, setSaving] = useState(false)
   const [editingEmail, setEditingEmail] = useState(false)
   const [newEmail, setNewEmail] = useState("")
+  const [emailCode, setEmailCode] = useState("")
   const [emailMsg, setEmailMsg] = useState("")
   const [emailError, setEmailError] = useState("")
   const [emailSaving, setEmailSaving] = useState(false)
+  const [emailSending, setEmailSending] = useState(false)
+  const [emailCooldown, setEmailCooldown] = useState(0)
 
   if (!user) return null
+
+  const handleSendEmailCode = async () => {
+    setEmailMsg(""); setEmailError("")
+    const target = newEmail.trim().toLowerCase()
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(target)) { setEmailError("请输入有效的邮箱"); return }
+    setEmailSending(true)
+    try {
+      const data = await apiFetch("/api/auth/send-code", {
+        method: "POST",
+        body: JSON.stringify({ email: target, purpose: "change-email" }),
+      })
+      setEmailMsg(data?.dev_code ? `验证码已生成（开发模式：${data.dev_code}）` : "验证码已发送，请查收邮箱")
+      setEmailCooldown(60)
+      const iv = setInterval(() => {
+        setEmailCooldown((c) => { if (c <= 1) { clearInterval(iv); return 0 } ; return c - 1 })
+      }, 1000)
+    } catch (err: unknown) {
+      setEmailError(err instanceof Error ? err.message : "发送失败")
+    } finally { setEmailSending(false) }
+  }
 
   const handleChangeEmail = async () => {
     setEmailMsg(""); setEmailError("")
     if (!newEmail.trim()) { setEmailError("请输入邮箱"); return }
+    if (!/^\d{6}$/.test(emailCode.trim())) { setEmailError("请输入 6 位验证码"); return }
     setEmailSaving(true)
     try {
       await apiFetch("/api/auth/change-email", {
         method: "POST",
-        body: JSON.stringify({ new_email: newEmail.trim() }),
+        body: JSON.stringify({ new_email: newEmail.trim().toLowerCase(), code: emailCode.trim() }),
       })
       setEmailMsg("邮箱修改成功")
       setEditingEmail(false)
       setNewEmail("")
+      setEmailCode("")
       await refreshUser()
     } catch (err: unknown) {
       setEmailError(err instanceof Error ? err.message : "修改失败")
@@ -76,7 +101,7 @@ export default function AccountPage() {
           <div>
             <span className="text-gray-500">邮箱：</span>
             {editingEmail ? (
-              <span className="inline-flex items-center gap-2">
+              <span className="inline-flex flex-wrap items-center gap-2">
                 <input
                   type="email"
                   value={newEmail}
@@ -84,10 +109,26 @@ export default function AccountPage() {
                   placeholder={user.email}
                   className="border rounded px-2 py-0.5 text-sm w-48 focus:outline-none focus:ring-1 focus:ring-indigo-400"
                 />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={emailCode}
+                  onChange={(e) => setEmailCode(e.target.value.replace(/\D/g, ""))}
+                  placeholder="验证码"
+                  className="border rounded px-2 py-0.5 text-sm w-24 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                />
+                <button
+                  onClick={handleSendEmailCode}
+                  disabled={emailSending || emailCooldown > 0}
+                  className="text-xs text-indigo-600 hover:text-indigo-800 disabled:text-gray-400 disabled:cursor-not-allowed"
+                >
+                  {emailCooldown > 0 ? `${emailCooldown}s` : emailSending ? "发送中" : "发送验证码"}
+                </button>
                 <button onClick={handleChangeEmail} disabled={emailSaving} className="text-xs text-indigo-600 hover:text-indigo-800 disabled:opacity-50">
                   {emailSaving ? "保存中" : "保存"}
                 </button>
-                <button onClick={() => { setEditingEmail(false); setNewEmail(""); setEmailError("") }} className="text-xs text-gray-400 hover:text-gray-600">取消</button>
+                <button onClick={() => { setEditingEmail(false); setNewEmail(""); setEmailCode(""); setEmailError("") }} className="text-xs text-gray-400 hover:text-gray-600">取消</button>
               </span>
             ) : (
               <span className="font-medium">

@@ -238,6 +238,23 @@ async def init_db():
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_invoice_user_period_cur "
             "ON invoices(user_id, period_start, currency)"
         )
+        # Email verification codes (register / change-email).
+        await db.execute("""
+        CREATE TABLE IF NOT EXISTS email_verifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL,
+            code TEXT NOT NULL,
+            purpose TEXT NOT NULL,
+            attempts INTEGER NOT NULL DEFAULT 0,
+            consumed INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            expires_at TEXT NOT NULL
+        )
+        """)
+        await db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_email_verif_lookup "
+            "ON email_verifications(email, purpose, consumed)"
+        )
         await db.commit()
     finally:
         await db.close()
