@@ -302,6 +302,7 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     login: str  # username or email
     password: str
+    code: str
 
 
 class SendCodeRequest(BaseModel):
@@ -313,8 +314,8 @@ _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 async def _issue_verification_code(email: str, purpose: str) -> str:
-    """Create a 6-digit code, rate-limit 60s, keep only one active per (email, purpose)."""
-    if purpose not in ("register", "change-email", "delete-account"):
+    """Create a 6-digit code, rate-limit 60s, max 3/hour, keep only one active per (email, purpose)."""
+    if purpose not in ("register", "change-email", "delete-account", "login"):
         raise HTTPException(400, "Invalid purpose")
     if not _EMAIL_RE.match(email):
         raise HTTPException(400, "邮箱格式不正确")
@@ -330,6 +331,16 @@ async def _issue_verification_code(email: str, purpose: str) -> str:
         )
         if await cur.fetchone():
             raise HTTPException(429, "发送过于频繁，请稍后再试（60 秒限流）")
+        # Hourly cap: max 3 codes per (email, purpose) in the last hour.
+        cur = await db.execute(
+            "SELECT COUNT(*) AS n FROM email_verifications "
+            "WHERE email=? AND purpose=? "
+            "AND datetime(created_at) > datetime(\'now\', \'-1 hour\')",
+            (email, purpose),
+        )
+        row = await cur.fetchone()
+        if row and row["n"] >= 3:
+            raise HTTPException(429, "该邮箱 1 小时内验证码发送已达上限（3 次），请稍后再试")
         # Invalidate older unconsumed codes.
         await db.execute(
             "UPDATE email_verifications SET consumed=1 WHERE email=? AND purpose=? AND consumed=0",
@@ -380,8 +391,30 @@ async def _consume_verification_code(email: str, purpose: str, code: str) -> Non
 
 @app.post("/api/auth/send-code")
 async def send_code(req: SendCodeRequest):
-    email = req.email.strip().lower()
+    raw = (req.email or "").strip()
     purpose = req.purpose
+    if purpose == "login":
+        # For login, the input may be username or email; look up the user and
+        # send to the user\'s registered email.
+        login_id = raw.lower()
+        db = await get_db()
+        try:
+            cur = await db.execute(
+                "SELECT id, email FROM users WHERE (username = ? OR email = ?) AND is_active = 1",
+                (raw, login_id),
+            )
+            row = await cur.fetchone()
+        finally:
+            await db.close()
+        if not row:
+            raise HTTPException(400, "账号不存在")
+        target_email = (row["email"] or "").lower()
+        code = await _issue_verification_code(target_email, "login")
+        resp = {"ok": True}
+        if email_service.expose_dev_code():
+            resp["dev_code"] = code
+        return resp
+    email = raw.lower()
     db = await get_db()
     try:
         cur = await db.execute("SELECT id FROM users WHERE email = ?", (email,))
@@ -440,6 +473,7 @@ async def login(req: LoginRequest):
     if not user or not verify_password(req.password, user["password_hash"]):
         raise HTTPException(401, "Invalid credentials")
     user = dict(user)
+    await _consume_verification_code((user["email"] or "").lower(), "login", req.code)
     token = create_access_token(user["id"], user["role"])
     return {
         "token": token,
