@@ -14,6 +14,8 @@ interface Backend {
   tags: Record<string, string>
   status: string
   enabled: number
+  listing_status?: string | null
+  review_note?: string | null
   input_price: number | null
   output_price: number | null
   cache_price: number | null
@@ -316,7 +318,7 @@ export default function ServicesPage() {
               </div>
             </div>
             <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-              注册后服务默认为 <b>未上架 · 私有</b>。请在详情页确认配置后点击「上架」，及选择是否「公开可见」。
+              注册后服务默认为 <b>未上架 · 私有</b>。请在详情页确认配置后点击「申请上架」，提交管理员审核通过后才能正式上架；上架前可选择「公开可见」。
             </div>
             <button type="submit" className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700">提交</button>
           </form>
@@ -339,10 +341,22 @@ export default function ServicesPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-semibold text-lg text-gray-900 truncate font-mono">{m ?? "未设置模型"}</h3>
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${b.enabled ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200" : "bg-gray-100 text-gray-500 ring-1 ring-gray-200"}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${b.enabled ? "bg-emerald-500" : "bg-gray-400"}`}></span>
-                        {b.enabled ? "已上架" : "已下架"}
-                      </span>
+                      {(() => {
+                        const st = b.listing_status || (b.enabled ? "listed" : "offline")
+                        const badge = st === "listed"
+                          ? { cls: "bg-emerald-50 text-emerald-700 ring-emerald-200", dot: "bg-emerald-500", label: "已上架" }
+                          : st === "pending"
+                          ? { cls: "bg-amber-50 text-amber-700 ring-amber-200", dot: "bg-amber-500", label: "审核中" }
+                          : st === "rejected"
+                          ? { cls: "bg-rose-50 text-rose-700 ring-rose-200", dot: "bg-rose-500", label: "已驳回" }
+                          : { cls: "bg-gray-100 text-gray-500 ring-gray-200", dot: "bg-gray-400", label: "已下架" }
+                        return (
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ring-1 ${badge.cls}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`}></span>
+                            {badge.label}
+                          </span>
+                        )
+                      })()}
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${b.status === "online" ? "bg-green-50 text-green-700 ring-1 ring-green-200" : "bg-red-50 text-red-700 ring-1 ring-red-200"}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${b.status === "online" ? "bg-green-500 animate-pulse" : "bg-red-500"}`}></span>
                         {b.status}
@@ -366,12 +380,22 @@ export default function ServicesPage() {
                   </div>
                   {idx === 0 && (
                     <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.preventDefault()}>
-                      <button
-                        onClick={(e) => { e.preventDefault(); toggleBackend(b.name) }}
-                        className={`text-sm px-3 py-1.5 rounded-md font-medium transition-colors ${b.enabled ? "bg-gray-100 text-gray-700 hover:bg-gray-200" : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"}`}
-                      >
-                        {b.enabled ? "下架" : "上架"}
-                      </button>
+                      {(() => {
+                        const st = b.listing_status || (b.enabled ? "listed" : "offline")
+                        const cfg = st === "listed"
+                          ? { cls: "bg-gray-100 text-gray-700 hover:bg-gray-200", label: "下架" }
+                          : st === "pending"
+                          ? { cls: "bg-amber-100 text-amber-800 hover:bg-amber-200", label: "撤回申请" }
+                          : { cls: "bg-emerald-100 text-emerald-700 hover:bg-emerald-200", label: "申请上架" }
+                        return (
+                          <button
+                            onClick={(e) => { e.preventDefault(); toggleBackend(b.name) }}
+                            className={`text-sm px-3 py-1.5 rounded-md font-medium transition-colors ${cfg.cls}`}
+                          >
+                            {cfg.label}
+                          </button>
+                        )
+                      })()}
                       <button
                         onClick={(e) => { e.preventDefault(); deleteBackend(b.name) }}
                         className="text-sm px-3 py-1.5 rounded-md font-medium text-red-600 hover:bg-red-50 transition-colors"
@@ -381,6 +405,12 @@ export default function ServicesPage() {
                     </div>
                   )}
                 </div>
+
+                {b.listing_status === "rejected" && b.review_note && idx === 0 && (
+                  <div className="px-5 py-2 text-xs text-rose-700 bg-rose-50 border-b border-rose-100">
+                    驳回原因：{b.review_note}
+                  </div>
+                )}
 
                 {/* Stats */}
                 {m ? (

@@ -929,24 +929,134 @@ async def delete_backend(name: str, user=Depends(require_provider)):
 
 @app.put("/api/backends/{name}/toggle")
 async def toggle_backend(name: str, user=Depends(require_provider)):
+    """Provider-facing listing toggle with review workflow.
+
+    - listed    -> offline  (立即下架)
+    - offline   -> pending  (提交审核)
+    - rejected  -> pending  (修改后重新提交)
+    - pending   -> offline  (撤回申请)
+    Admins bypass review and flip listed<->offline directly.
+    """
     db = await get_db()
     try:
         if user["role"] == "admin":
-            cur = await db.execute("SELECT enabled FROM backends WHERE name = ?", (name,))
+            cur = await db.execute(
+                "SELECT enabled, listing_status FROM backends WHERE name = ?", (name,))
         else:
-            cur = await db.execute("SELECT enabled FROM backends WHERE name = ? AND owner_id = ?", (name, user["id"]))
+            cur = await db.execute(
+                "SELECT enabled, listing_status FROM backends WHERE name = ? AND owner_id = ?",
+                (name, user["id"]))
         row = await cur.fetchone()
         if not row:
             raise HTTPException(404, "Backend not found")
-        new_val = 0 if row[0] else 1
+        status = row["listing_status"] or ("listed" if row["enabled"] else "offline")
+        now = sh_now().strftime("%Y-%m-%d %H:%M:%S")
         if user["role"] == "admin":
-            await db.execute("UPDATE backends SET enabled = ? WHERE name = ?", (new_val, name))
+            # Admin toggle: flip listed<->offline directly, skip review.
+            if status == "listed":
+                new_status, new_enabled = "offline", 0
+            else:
+                new_status, new_enabled = "listed", 1
+            await db.execute(
+                """UPDATE backends SET enabled = ?, listing_status = ?,
+                   reviewed_at = ?, reviewed_by = ? WHERE name = ?""",
+                (new_enabled, new_status, now, user["id"], name),
+            )
         else:
-            await db.execute("UPDATE backends SET enabled = ? WHERE name = ? AND owner_id = ?", (new_val, name, user["id"]))
+            if status == "listed":
+                # Take offline immediately.
+                await db.execute(
+                    """UPDATE backends SET enabled = 0, listing_status = 'offline'
+                       WHERE name = ? AND owner_id = ?""",
+                    (name, user["id"]),
+                )
+                new_status, new_enabled = "offline", 0
+            elif status == "pending":
+                # Withdraw the pending request.
+                await db.execute(
+                    """UPDATE backends SET listing_status = 'offline',
+                       review_requested_at = NULL WHERE name = ? AND owner_id = ?""",
+                    (name, user["id"]),
+                )
+                new_status, new_enabled = "offline", 0
+            else:
+                # offline / rejected -> pending review.
+                await db.execute(
+                    """UPDATE backends SET listing_status = 'pending',
+                       review_requested_at = ?, review_note = NULL
+                       WHERE name = ? AND owner_id = ?""",
+                    (now, name, user["id"]),
+                )
+                new_status, new_enabled = "pending", 0
         await db.commit()
     finally:
         await db.close()
-    return {"ok": True, "enabled": bool(new_val)}
+    return {"ok": True, "enabled": bool(new_enabled), "listing_status": new_status}
+
+
+@app.get("/api/admin/backends/pending")
+async def admin_list_pending_backends(admin=Depends(require_admin)):
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            """SELECT b.*, u.username as owner_name
+               FROM backends b LEFT JOIN users u ON b.owner_id = u.id
+               WHERE b.listing_status = 'pending'
+               ORDER BY b.review_requested_at ASC""")
+        rows = [dict(r) for r in await cur.fetchall()]
+    finally:
+        await db.close()
+    for r in rows:
+        r["models"] = json.loads(r["models"]) if r["models"] else []
+        r["tags"] = json.loads(r["tags"]) if r.get("tags") else {}
+        r["client_info"] = json.loads(r["client_info"]) if r["client_info"] else {}
+    return rows
+
+
+class ReviewDecisionRequest(BaseModel):
+    note: str | None = None
+
+
+@app.post("/api/admin/backends/{name}/approve")
+async def admin_approve_backend(name: str, req: ReviewDecisionRequest = ReviewDecisionRequest(), admin=Depends(require_admin)):
+    db = await get_db()
+    try:
+        cur = await db.execute("SELECT id FROM backends WHERE name = ?", (name,))
+        row = await cur.fetchone()
+        if not row:
+            raise HTTPException(404, "Backend not found")
+        now = sh_now().strftime("%Y-%m-%d %H:%M:%S")
+        await db.execute(
+            """UPDATE backends SET enabled = 1, listing_status = 'listed',
+               reviewed_at = ?, reviewed_by = ?, review_note = ? WHERE name = ?""",
+            (now, admin["id"], req.note, name),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+    return {"ok": True, "listing_status": "listed"}
+
+
+@app.post("/api/admin/backends/{name}/reject")
+async def admin_reject_backend(name: str, req: ReviewDecisionRequest, admin=Depends(require_admin)):
+    if not req.note:
+        raise HTTPException(400, "驳回时必须填写原因 (note)")
+    db = await get_db()
+    try:
+        cur = await db.execute("SELECT id FROM backends WHERE name = ?", (name,))
+        row = await cur.fetchone()
+        if not row:
+            raise HTTPException(404, "Backend not found")
+        now = sh_now().strftime("%Y-%m-%d %H:%M:%S")
+        await db.execute(
+            """UPDATE backends SET enabled = 0, listing_status = 'rejected',
+               reviewed_at = ?, reviewed_by = ?, review_note = ? WHERE name = ?""",
+            (now, admin["id"], req.note, name),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+    return {"ok": True, "listing_status": "rejected"}
 
 
 # ══════════════════════════════════════════════════════════

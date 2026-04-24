@@ -15,6 +15,8 @@ interface Backend {
   tags: Record<string, string>
   status: string
   enabled: number
+  listing_status?: string | null
+  review_note?: string | null
   input_price: number | null
   output_price: number | null
   cache_price: number | null
@@ -181,15 +183,36 @@ export default function ServiceDetailPage() {
         ← 返回我的服务
       </button>
 
+      {backend.listing_status === "rejected" && backend.review_note && (
+        <div className="mb-4 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+          <b>审核驳回：</b>{backend.review_note}
+        </div>
+      )}
+      {backend.listing_status === "pending" && (
+        <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          上架申请已提交，等待管理员审核。审核通过后自动上架。
+        </div>
+      )}
+
       <div className="bg-white rounded-lg border border-gray-200 p-8">
         {/* Header */}
         <div className="flex items-start justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{backend.name}</h1>
             <div className="flex items-center gap-2 mt-2">
-              <span className={`px-2 py-0.5 rounded text-xs ${backend.enabled ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                {backend.enabled ? "已上架" : "已下架"}
-              </span>
+              {(() => {
+                const st = backend.listing_status || (backend.enabled ? "listed" : "offline")
+                const badge = st === "listed"
+                  ? { cls: "bg-green-100 text-green-700", label: "已上架" }
+                  : st === "pending"
+                  ? { cls: "bg-amber-100 text-amber-700", label: "审核中" }
+                  : st === "rejected"
+                  ? { cls: "bg-rose-100 text-rose-700", label: "已驳回" }
+                  : { cls: "bg-gray-100 text-gray-500", label: "已下架" }
+                return (
+                  <span className={`px-2 py-0.5 rounded text-xs ${badge.cls}`}>{badge.label}</span>
+                )
+              })()}
               <span className={`px-2 py-0.5 rounded text-xs ${backend.status === "online" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                 {backend.status}
               </span>
@@ -202,9 +225,19 @@ export default function ServiceDetailPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={handleToggle}
-              className={`text-sm px-3 py-1.5 rounded ${backend.enabled ? "bg-gray-100 text-gray-600 hover:bg-gray-200" : "bg-green-100 text-green-700 hover:bg-green-200"}`}
+              className={(() => {
+                const st = backend.listing_status || (backend.enabled ? "listed" : "offline")
+                if (st === "listed") return "text-sm px-3 py-1.5 rounded bg-gray-100 text-gray-600 hover:bg-gray-200"
+                if (st === "pending") return "text-sm px-3 py-1.5 rounded bg-amber-100 text-amber-800 hover:bg-amber-200"
+                return "text-sm px-3 py-1.5 rounded bg-green-100 text-green-700 hover:bg-green-200"
+              })()}
             >
-              {backend.enabled ? "下架" : "上架"}
+              {(() => {
+                const st = backend.listing_status || (backend.enabled ? "listed" : "offline")
+                if (st === "listed") return "下架"
+                if (st === "pending") return "撤回申请"
+                return "申请上架"
+              })()}
             </button>
             {!editing && (
               <button onClick={() => setEditing(true)} className="text-sm px-3 py-1.5 rounded bg-indigo-100 text-indigo-700 hover:bg-indigo-200">

@@ -30,6 +30,21 @@ interface UsageStat {
   requests: number
 }
 
+interface PendingBackend {
+  id: number
+  name: string
+  owner_name: string
+  mode: string
+  url?: string | null
+  models: string[]
+  tags: Record<string, string>
+  input_price: number | null
+  output_price: number | null
+  cache_price: number | null
+  currency: string
+  review_requested_at: string | null
+}
+
 interface Invoice {
   id: number
   user_id: number
@@ -50,7 +65,8 @@ export default function AdminPage() {
   const [users, setUsers] = useState<UserInfo[]>([])
   const [usage, setUsage] = useState<UsageStat[]>([])
   const [invoices, setInvoices] = useState<Invoice[]>([])
-  const [tab, setTab] = useState<"users" | "usage" | "invoices">("users")
+  const [pending, setPending] = useState<PendingBackend[]>([])
+  const [tab, setTab] = useState<"users" | "usage" | "invoices" | "review">("users")
 
   useEffect(() => {
     if (!loading && (!user || user.role !== "admin")) router.push("/dashboard")
@@ -60,6 +76,20 @@ export default function AdminPage() {
     apiFetch("/api/admin/users").then(setUsers).catch(() => {})
     apiFetch("/api/admin/usage?days=30").then(setUsage).catch(() => {})
     apiFetch("/api/admin/invoices").then(setInvoices).catch(() => {})
+    apiFetch("/api/admin/backends/pending").then(setPending).catch(() => {})
+  }
+
+  const approveBackend = async (name: string) => {
+    if (!confirm(`通过「${name}」的上架申请？`)) return
+    await apiFetch(`/api/admin/backends/${encodeURIComponent(name)}/approve`, { method: "POST", body: JSON.stringify({}) })
+    reloadAll()
+  }
+
+  const rejectBackend = async (name: string) => {
+    const note = prompt(`驳回「${name}」的上架申请，请填写原因：`)
+    if (!note) return
+    await apiFetch(`/api/admin/backends/${encodeURIComponent(name)}/reject`, { method: "POST", body: JSON.stringify({ note }) })
+    reloadAll()
   }
 
   useEffect(() => {
@@ -102,6 +132,12 @@ export default function AdminPage() {
           className={`px-4 py-2 rounded-lg text-sm ${tab === "invoices" ? "bg-indigo-600 text-white" : "bg-white border text-gray-600"}`}
         >
           账单 ({invoices.length})
+        </button>
+        <button
+          onClick={() => setTab("review")}
+          className={`px-4 py-2 rounded-lg text-sm ${tab === "review" ? "bg-indigo-600 text-white" : "bg-white border text-gray-600"} ${pending.length > 0 ? "ring-2 ring-amber-400" : ""}`}
+        >
+          服务审核 ({pending.length})
         </button>
       </div>
 
@@ -243,6 +279,52 @@ export default function AdminPage() {
               {invoices.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-gray-500">暂无账单</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {tab === "review" && (
+        <div className="bg-white rounded-lg border overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="text-left px-4 py-3 font-medium">服务</th>
+                <th className="text-left px-4 py-3 font-medium">提供者</th>
+                <th className="text-left px-4 py-3 font-medium">模式</th>
+                <th className="text-left px-4 py-3 font-medium">模型</th>
+                <th className="text-right px-4 py-3 font-medium">定价（输入/输出/缓存）</th>
+                <th className="text-left px-4 py-3 font-medium">申请时间</th>
+                <th className="text-right px-4 py-3 font-medium">操作</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {pending.map((b) => {
+                const sym = b.currency === "USD" ? "$" : "¥"
+                return (
+                  <tr key={b.id}>
+                    <td className="px-4 py-3 font-medium">{b.name}</td>
+                    <td className="px-4 py-3">{b.owner_name}</td>
+                    <td className="px-4 py-3">
+                      <span className="px-2 py-0.5 rounded text-xs bg-gray-100">{b.mode === "tunnel" ? "隧道" : "直连"}</span>
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs">{(b.models || []).join(", ") || "—"}</td>
+                    <td className="px-4 py-3 text-right font-mono text-xs">
+                      {sym}{b.input_price ?? "-"} / {sym}{b.output_price ?? "-"} / {b.cache_price != null ? `${sym}${b.cache_price}` : "默认10%"}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-500">{b.review_requested_at || "—"}</td>
+                    <td className="px-4 py-3 text-right space-x-2 whitespace-nowrap">
+                      <button onClick={() => approveBackend(b.name)} className="text-sm text-green-600 hover:text-green-800">通过</button>
+                      <button onClick={() => rejectBackend(b.name)} className="text-sm text-red-600 hover:text-red-800">驳回</button>
+                    </td>
+                  </tr>
+                )
+              })}
+              {pending.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">暂无待审核的上架申请</td>
                 </tr>
               )}
             </tbody>

@@ -57,6 +57,11 @@ async def init_db():
             currency TEXT NOT NULL DEFAULT 'CNY',
             is_public INTEGER NOT NULL DEFAULT 1,
             enabled INTEGER NOT NULL DEFAULT 0,
+            listing_status TEXT NOT NULL DEFAULT 'offline',
+            review_note TEXT,
+            review_requested_at TEXT,
+            reviewed_at TEXT,
+            reviewed_by INTEGER,
             updated_at TEXT NOT NULL DEFAULT (datetime('now')),
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
@@ -186,6 +191,18 @@ async def init_db():
             await db.execute("ALTER TABLE backends ADD COLUMN cache_price REAL")
         if "pending_cache_price" not in cols:
             await db.execute("ALTER TABLE backends ADD COLUMN pending_cache_price REAL")
+        if "listing_status" not in cols:
+            await db.execute("ALTER TABLE backends ADD COLUMN listing_status TEXT NOT NULL DEFAULT 'offline'")
+            # Backfill: existing enabled=1 rows were pre-review, treat as listed.
+            await db.execute("UPDATE backends SET listing_status = 'listed' WHERE enabled = 1")
+        if "review_note" not in cols:
+            await db.execute("ALTER TABLE backends ADD COLUMN review_note TEXT")
+        if "review_requested_at" not in cols:
+            await db.execute("ALTER TABLE backends ADD COLUMN review_requested_at TEXT")
+        if "reviewed_at" not in cols:
+            await db.execute("ALTER TABLE backends ADD COLUMN reviewed_at TEXT")
+        if "reviewed_by" not in cols:
+            await db.execute("ALTER TABLE backends ADD COLUMN reviewed_by INTEGER")
         # Migration: usage_logs records the backend's pricing currency at the time
         cur = await db.execute("PRAGMA table_info(usage_logs)")
         ulcols = {r[1] for r in await cur.fetchall()}

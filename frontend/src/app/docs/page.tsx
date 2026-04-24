@@ -109,7 +109,7 @@ export default function DocsPage() {
               <li>注册账号，在「我的服务」中激活提供者身份</li>
               <li>注册后端服务（选择直连或隧道模式），填写支持的模型与单价</li>
               <li>如果是隧道模式，在本地运行 <code>tunnel_client.py</code> 建立连接</li>
-              <li>手动点击「上架」，模型即在广场中可见</li>
+              <li>点击「申请上架」提交审核，管理员通过后自动上架到广场，如被驳回可根据原因修改后重新提交</li>
             </ol>
           </div>
         </div>
@@ -401,7 +401,7 @@ for chunk in resp:
               <tr>
                 <td className="px-4 py-2"><code className="text-yellow-600">PUT</code></td>
                 <td className="px-4 py-2 font-mono text-xs">/api/backends/&#123;name&#125;/toggle</td>
-                <td className="px-4 py-2 text-gray-600">上架/下架</td>
+                <td className="px-4 py-2 text-gray-600">申请上架（→审核中） / 撤回 / 下架</td>
               </tr>
               <tr>
                 <td className="px-4 py-2"><code className="text-red-600">DELETE</code></td>
