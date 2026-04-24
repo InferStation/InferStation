@@ -220,13 +220,18 @@ for chunk in resp:
         <div className="bg-white rounded-lg border p-6 space-y-3 text-sm text-gray-700 leading-relaxed">
           <ul className="list-disc list-inside space-y-1 ml-2">
             <li>
-              计费粒度：每次请求按返回的 <code>usage.prompt_tokens</code> / <code>usage.completion_tokens</code>（<code>/v1/responses</code> 为 <code>input_tokens</code> / <code>output_tokens</code>）×
-              后端单价结算
+              计费粒度：每次请求按返回的 <code>usage.prompt_tokens</code> / <code>usage.completion_tokens</code>（<code>/v1/responses</code> 为 <code>input_tokens</code> / <code>output_tokens</code>）× 后端单价结算
             </li>
-            <li>单价由提供者在注册后端时设定，单位为「元 / 百万 token」，分输入与输出两档</li>
-            <li><strong>后付费月结</strong>：账单在每月 1 日自动生成，展示于「账单」页</li>
+            <li>单价由提供者在注册后端时设定，单位为「货币 / 百万 token」，分输入与输出两档；货币支持 CNY / USD</li>
+            <li>
+              <strong>时区与计量颗粒度</strong>：所有时间按 <code>Asia/Shanghai</code> 统计。每次请求实时写入<strong>小时桶</strong>（<code>usage_hourly</code>），每日 00:00 把前一日的小时桶聚合归档到日表（<code>usage_daily</code>）
+            </li>
+            <li>
+              <strong>价格生效时间</strong>：首次注册后端的价格立即生效；注册后通过「我的服务」修改价格/货币一律在<strong>次日 00:00（Asia/Shanghai）</strong>生效。当前挂起的价格会在服务卡片上以「次日生效」徽标展示
+            </li>
+            <li><strong>后付费月结</strong>：账单在每月 1 日自动生成，展示于「账单」页，多货币分账单单独结算</li>
             <li>未支付账单累计超出限额会暂停 API 调用，支付后自动恢复</li>
-            <li>实时用量与本月累计费用可在「仪表盘」和 <code>GET /api/billing/status</code> 查询</li>
+            <li>实时用量与本月累计费用可在「仪表盘」、<code>GET /api/billing/status</code>、<code>GET /api/usage</code>（按模型汇总）、<code>GET /api/usage/hourly</code>（今日按小时）、<code>GET /api/usage/daily?days=N</code>（历史按天）查询</li>
           </ul>
         </div>
       </section>
@@ -356,7 +361,17 @@ for chunk in resp:
               <tr>
                 <td className="px-4 py-2"><code className="text-green-600">GET</code></td>
                 <td className="px-4 py-2 font-mono text-xs">/api/usage</td>
-                <td className="px-4 py-2 text-gray-600">查询调用明细</td>
+                <td className="px-4 py-2 text-gray-600">按模型汇总调用明细（默认近 7 天，<code>days</code> 可选）</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-2"><code className="text-green-600">GET</code></td>
+                <td className="px-4 py-2 font-mono text-xs">/api/usage/hourly</td>
+                <td className="px-4 py-2 text-gray-600">今日按小时桶（Asia/Shanghai）</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-2"><code className="text-green-600">GET</code></td>
+                <td className="px-4 py-2 font-mono text-xs">/api/usage/daily</td>
+                <td className="px-4 py-2 text-gray-600">历史按天归档（不含今日）</td>
               </tr>
 
               <tr><td colSpan={3} className="px-4 py-2 bg-gray-50 font-semibold text-gray-600 text-xs">后端管理（提供者）</td></tr>

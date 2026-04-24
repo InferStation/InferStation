@@ -8,6 +8,8 @@ import secrets
 import sys
 import time
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import httpx
 import yaml
@@ -60,6 +62,93 @@ def load_config():
     auth.JWT_SECRET = jwt_cfg.get("secret_key", os.environ.get("JWT_SECRET", "dev-secret-change-me"))
     auth.JWT_ALGORITHM = jwt_cfg.get("algorithm", "HS256")
     auth.JWT_EXPIRE_MINUTES = jwt_cfg.get("access_token_expire_minutes", 1440)
+
+
+# ── Asia/Shanghai day/hour helpers ──────────────────────
+SHANGHAI = ZoneInfo("Asia/Shanghai")
+
+
+def sh_now() -> datetime:
+    return datetime.now(SHANGHAI)
+
+
+def sh_hour_start(dt: datetime | None = None) -> str:
+    dt = (dt or sh_now()).astimezone(SHANGHAI)
+    return dt.strftime("%Y-%m-%d %H:00:00")
+
+
+def sh_day(dt: datetime | None = None) -> str:
+    dt = (dt or sh_now()).astimezone(SHANGHAI)
+    return dt.strftime("%Y-%m-%d")
+
+
+def seconds_until_next_sh_midnight() -> float:
+    now = sh_now()
+    tomorrow = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    return max(1.0, (tomorrow - now).total_seconds())
+
+
+# ── Daily 00:00 Asia/Shanghai job: promote pending prices + archive usage ────
+async def daily_rollover_loop():
+    """Run once per Asia/Shanghai midnight:
+       1. Promote backends.pending_{input_price,output_price,currency} to live.
+       2. Archive prior-day usage_hourly rows into usage_daily, then delete them.
+    """
+    while True:
+        try:
+            await asyncio.sleep(seconds_until_next_sh_midnight())
+        except asyncio.CancelledError:
+            return
+        try:
+            await run_daily_rollover()
+        except Exception as e:
+            logger.error(f"daily_rollover error: {e}")
+
+
+async def run_daily_rollover():
+    yesterday = sh_day(sh_now() - timedelta(days=1))
+    db = await get_db()
+    try:
+        # 1. Promote pending prices whose effective date is <= today.
+        today = sh_day()
+        await db.execute(
+            """UPDATE backends SET
+                 input_price  = COALESCE(pending_input_price,  input_price),
+                 output_price = COALESCE(pending_output_price, output_price),
+                 currency     = COALESCE(pending_currency,     currency),
+                 pending_input_price = NULL,
+                 pending_output_price = NULL,
+                 pending_currency = NULL,
+                 pending_effective_at = NULL,
+                 updated_at = datetime('now')
+               WHERE pending_effective_at IS NOT NULL
+                 AND pending_effective_at <= ?""",
+            (today,),
+        )
+        # 2. Archive yesterday's hourly rows into daily, then delete.
+        await db.execute(
+            """INSERT INTO usage_daily(user_id, backend_id, model, currency, day,
+                                       requests, input_tokens, output_tokens, cost)
+               SELECT user_id, backend_id, model, currency, ?,
+                      SUM(requests), SUM(input_tokens), SUM(output_tokens), SUM(cost)
+               FROM usage_hourly
+               WHERE substr(hour_start, 1, 10) = ?
+               GROUP BY user_id, backend_id, model, currency
+               ON CONFLICT(user_id, backend_id, model, currency, day) DO UPDATE SET
+                   requests      = usage_daily.requests      + excluded.requests,
+                   input_tokens  = usage_daily.input_tokens  + excluded.input_tokens,
+                   output_tokens = usage_daily.output_tokens + excluded.output_tokens,
+                   cost          = usage_daily.cost          + excluded.cost""",
+            (yesterday, yesterday),
+        )
+        await db.execute(
+            "DELETE FROM usage_hourly WHERE substr(hour_start, 1, 10) = ?",
+            (yesterday,),
+        )
+        await db.commit()
+        logger.info(f"daily_rollover: archived {yesterday}, promoted pending prices")
+    finally:
+        await db.close()
 
 
 # ── Health Check Background Task ───────────────────────
@@ -147,9 +236,11 @@ async def lifespan(app: FastAPI):
     finally:
         await db.close()
     task = asyncio.create_task(health_check_loop())
+    roll_task = asyncio.create_task(daily_rollover_loop())
     logger.info("Gateway started")
     yield
     task.cancel()
+    roll_task.cancel()
 
 
 async def ensure_admin():
@@ -631,12 +722,19 @@ async def my_backend_stats(user=Depends(require_provider)):
         )
         sub_rows = await cur.fetchall()
 
+        # Stats pulled from hourly (today) + daily archive (past days).
         cur = await db.execute(
-            f"SELECT backend_id, model, COUNT(*) AS requests, "
+            f"SELECT backend_id, model, "
+            f"SUM(requests) AS requests, "
             f"SUM(input_tokens) AS input_tokens, SUM(output_tokens) AS output_tokens, "
-            f"SUM(cost) AS cost FROM usage_logs "
-            f"WHERE backend_id IN ({placeholders}) GROUP BY backend_id, model",
-            ids,
+            f"SUM(cost) AS cost FROM ("
+            f"  SELECT backend_id, model, requests, input_tokens, output_tokens, cost "
+            f"  FROM usage_hourly WHERE backend_id IN ({placeholders}) "
+            f"  UNION ALL "
+            f"  SELECT backend_id, model, requests, input_tokens, output_tokens, cost "
+            f"  FROM usage_daily WHERE backend_id IN ({placeholders})"
+            f") GROUP BY backend_id, model",
+            ids + ids,
         )
         usage_rows = await cur.fetchall()
     finally:
@@ -760,19 +858,32 @@ async def update_backend(name: str, req: UpdateBackendRequest, user=Depends(requ
             sanitized = _sanitize_client_info(req.client_info, effective_models)
             updates.append("client_info = ?")
             params.append(json.dumps(sanitized))
+        # Price/currency edits are staged to pending_* and promoted at 00:00
+        # Asia/Shanghai the next day.  clear_price still takes effect immediately.
+        effective_day = (sh_now() + timedelta(days=1)).strftime("%Y-%m-%d")
+        pending_touched = False
         if req.clear_price:
             updates.append("input_price = NULL")
             updates.append("output_price = NULL")
+            updates.append("pending_input_price = NULL")
+            updates.append("pending_output_price = NULL")
+            updates.append("pending_effective_at = NULL")
         else:
             if req.input_price is not None:
-                updates.append("input_price = ?")
+                updates.append("pending_input_price = ?")
                 params.append(req.input_price)
+                pending_touched = True
             if req.output_price is not None:
-                updates.append("output_price = ?")
+                updates.append("pending_output_price = ?")
                 params.append(req.output_price)
+                pending_touched = True
         if req.currency is not None:
-            updates.append("currency = ?")
+            updates.append("pending_currency = ?")
             params.append(req.currency.upper())
+            pending_touched = True
+        if pending_touched:
+            updates.append("pending_effective_at = ?")
+            params.append(effective_day)
 
         if updates:
             updates.append("updated_at = datetime('now')")
@@ -1523,6 +1634,7 @@ async def _record_usage(api_user, backend, model, usage, input_price, output_pri
     output_tokens = usage.get("completion_tokens", 0)
     cost = (input_tokens * input_price + output_tokens * output_price) / 1_000_000
     currency = backend.get("currency") or "CNY"
+    hour_start = sh_hour_start()
 
     db = await get_db()
     try:
@@ -1531,7 +1643,19 @@ async def _record_usage(api_user, backend, model, usage, input_price, output_pri
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (api_user["user_id"], api_user["key_id"], backend["id"], model, input_tokens, output_tokens, cost, currency),
         )
-        # Post-paid monthly billing: do NOT touch users.balance (deprecated).
+        # Hourly rollup (Asia/Shanghai).
+        await db.execute(
+            """INSERT INTO usage_hourly(user_id, backend_id, model, currency, hour_start,
+                                        requests, input_tokens, output_tokens, cost)
+               VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)
+               ON CONFLICT(user_id, backend_id, model, currency, hour_start) DO UPDATE SET
+                   requests      = requests      + 1,
+                   input_tokens  = input_tokens  + excluded.input_tokens,
+                   output_tokens = output_tokens + excluded.output_tokens,
+                   cost          = cost          + excluded.cost""",
+            (api_user["user_id"], backend["id"], model, currency, hour_start,
+             input_tokens, output_tokens, cost),
+        )
         await db.commit()
     finally:
         await db.close()
@@ -1627,19 +1751,82 @@ async def tunnel_ws(ws: WebSocket):
 
 @app.get("/api/usage")
 async def get_usage(days: int = Query(7, ge=1, le=365), user=Depends(get_current_user)):
+    """Per-model usage summary. Today's data comes from usage_hourly,
+       older days from usage_daily (archived at 00:00 Asia/Shanghai)."""
+    today = sh_day()
+    earliest_day = sh_day(sh_now() - timedelta(days=days - 1))
     db = await get_db()
     try:
         cur = await db.execute(
-            """SELECT model, currency, SUM(input_tokens) as total_input, SUM(output_tokens) as total_output,
-               SUM(cost) as total_cost, COUNT(*) as requests
-               FROM usage_logs WHERE user_id = ? AND created_at >= datetime('now', ?)
-               GROUP BY model, currency ORDER BY total_cost DESC""",
-            (user["id"], f"-{days} days"),
+            """SELECT model, currency,
+                      SUM(input_tokens) AS total_input,
+                      SUM(output_tokens) AS total_output,
+                      SUM(cost) AS total_cost,
+                      SUM(requests) AS requests
+               FROM (
+                   SELECT model, currency, input_tokens, output_tokens, cost, requests
+                   FROM usage_daily WHERE user_id = ? AND day >= ? AND day < ?
+                   UNION ALL
+                   SELECT model, currency, input_tokens, output_tokens, cost, requests
+                   FROM usage_hourly WHERE user_id = ? AND substr(hour_start, 1, 10) = ?
+               )
+               GROUP BY model, currency
+               ORDER BY total_cost DESC""",
+            (user["id"], earliest_day, today, user["id"], today),
         )
         rows = [dict(r) for r in await cur.fetchall()]
     finally:
         await db.close()
     return rows
+
+
+@app.get("/api/usage/hourly")
+async def get_usage_hourly(user=Depends(get_current_user)):
+    """Today's hourly usage buckets (Asia/Shanghai).  Past days live in
+       usage_daily and are exposed via /api/usage/daily."""
+    today = sh_day()
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            """SELECT hour_start, model, currency,
+                      SUM(requests) AS requests,
+                      SUM(input_tokens) AS total_input,
+                      SUM(output_tokens) AS total_output,
+                      SUM(cost) AS total_cost
+               FROM usage_hourly
+               WHERE user_id = ? AND substr(hour_start, 1, 10) = ?
+               GROUP BY hour_start, model, currency
+               ORDER BY hour_start DESC, total_cost DESC""",
+            (user["id"], today),
+        )
+        return [dict(r) for r in await cur.fetchall()]
+    finally:
+        await db.close()
+
+
+@app.get("/api/usage/daily")
+async def get_usage_daily(days: int = Query(30, ge=1, le=365), user=Depends(get_current_user)):
+    """Per-day archived usage (Asia/Shanghai).  Today is NOT included here;
+       query /api/usage/hourly for intraday data."""
+    today = sh_day()
+    earliest_day = sh_day(sh_now() - timedelta(days=days))
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            """SELECT day, model, currency,
+                      SUM(requests) AS requests,
+                      SUM(input_tokens) AS total_input,
+                      SUM(output_tokens) AS total_output,
+                      SUM(cost) AS total_cost
+               FROM usage_daily
+               WHERE user_id = ? AND day >= ? AND day < ?
+               GROUP BY day, model, currency
+               ORDER BY day DESC, total_cost DESC""",
+            (user["id"], earliest_day, today),
+        )
+        return [dict(r) for r in await cur.fetchall()]
+    finally:
+        await db.close()
 
 
 # ══════════════════════════════════════════════════════════
@@ -1728,16 +1915,28 @@ async def admin_toggle_user(user_id: int, admin=Depends(require_admin)):
 
 @app.get("/api/admin/usage")
 async def admin_usage(days: int = Query(7, ge=1, le=365), admin=Depends(require_admin)):
+    """Admin aggregate usage from usage_hourly (today) + usage_daily (past)."""
+    today = sh_day()
+    earliest_day = sh_day(sh_now() - timedelta(days=days - 1))
     db = await get_db()
     try:
         cur = await db.execute(
-            """SELECT u.username, ul.model, COALESCE(ul.currency,'CNY') as currency,
-               SUM(ul.input_tokens) as total_input,
-               SUM(ul.output_tokens) as total_output, SUM(ul.cost) as total_cost, COUNT(*) as requests
-               FROM usage_logs ul JOIN users u ON ul.user_id = u.id
-               WHERE ul.created_at >= datetime('now', ?)
-               GROUP BY u.username, ul.model, COALESCE(ul.currency,'CNY') ORDER BY total_cost DESC""",
-            (f"-{days} days",),
+            """SELECT u.username, t.model, COALESCE(t.currency,'CNY') AS currency,
+                      SUM(t.input_tokens) AS total_input,
+                      SUM(t.output_tokens) AS total_output,
+                      SUM(t.cost) AS total_cost,
+                      SUM(t.requests) AS requests
+               FROM (
+                   SELECT user_id, model, currency, input_tokens, output_tokens, cost, requests
+                   FROM usage_daily WHERE day >= ? AND day < ?
+                   UNION ALL
+                   SELECT user_id, model, currency, input_tokens, output_tokens, cost, requests
+                   FROM usage_hourly WHERE substr(hour_start, 1, 10) = ?
+               ) t
+               JOIN users u ON u.id = t.user_id
+               GROUP BY u.username, t.model, COALESCE(t.currency,'CNY')
+               ORDER BY total_cost DESC""",
+            (earliest_day, today, today),
         )
         return [dict(r) for r in await cur.fetchall()]
     finally:

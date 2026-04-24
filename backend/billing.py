@@ -45,10 +45,15 @@ async def ensure_invoices_for_user(user_id: int) -> None:
     One invoice is generated per (user, month, currency)."""
     db = await get_db()
     try:
-        # Earliest usage month for this user
+        # Earliest usage month for this user — derived from usage_daily (past)
+        # plus usage_hourly (today).  All timestamps are Asia/Shanghai local.
         cur = await db.execute(
-            "SELECT MIN(strftime('%Y-%m', created_at)) FROM usage_logs WHERE user_id = ?",
-            (user_id,),
+            """SELECT MIN(ym) FROM (
+                   SELECT substr(day,1,7) AS ym FROM usage_daily WHERE user_id = ?
+                   UNION ALL
+                   SELECT substr(hour_start,1,7) AS ym FROM usage_hourly WHERE user_id = ?
+               )""",
+            (user_id, user_id),
         )
         row = await cur.fetchone()
         earliest_ym = row[0] if row else None
@@ -71,10 +76,19 @@ async def ensure_invoices_for_user(user_id: int) -> None:
             ym = period_start[:7]
             # Sum usage for that month, grouped by currency
             cur = await db.execute(
-                "SELECT COALESCE(currency,'CNY') AS currency, COALESCE(SUM(cost),0) AS total "
-                "FROM usage_logs WHERE user_id = ? AND created_at >= ? AND created_at < ? "
-                "GROUP BY COALESCE(currency,'CNY')",
-                (user_id, period_start, period_end),
+                """SELECT COALESCE(currency,'CNY') AS currency,
+                          COALESCE(SUM(cost),0) AS total
+                   FROM (
+                       SELECT currency, cost FROM usage_daily
+                       WHERE user_id = ? AND day >= ? AND day < ?
+                       UNION ALL
+                       SELECT currency, cost FROM usage_hourly
+                       WHERE user_id = ? AND substr(hour_start,1,10) >= ?
+                                           AND substr(hour_start,1,10) <  ?
+                   )
+                   GROUP BY COALESCE(currency,'CNY')""",
+                (user_id, period_start, period_end,
+                 user_id, period_start, period_end),
             )
             sums = await cur.fetchall()
             pe = date.fromisoformat(period_end)
@@ -105,10 +119,19 @@ async def get_billing_status(user_id: int) -> dict:
         month_start = _month_first(today).isoformat()
         next_month = _next_month_first(today).isoformat()
         cur = await db.execute(
-            "SELECT COALESCE(currency,'CNY') AS currency, COALESCE(SUM(cost),0) AS total "
-            "FROM usage_logs WHERE user_id = ? AND created_at >= ? AND created_at < ? "
-            "GROUP BY COALESCE(currency,'CNY')",
-            (user_id, month_start, next_month),
+            """SELECT COALESCE(currency,'CNY') AS currency,
+                      COALESCE(SUM(cost),0) AS total
+               FROM (
+                   SELECT currency, cost FROM usage_daily
+                   WHERE user_id = ? AND day >= ? AND day < ?
+                   UNION ALL
+                   SELECT currency, cost FROM usage_hourly
+                   WHERE user_id = ? AND substr(hour_start,1,10) >= ?
+                                       AND substr(hour_start,1,10) <  ?
+               )
+               GROUP BY COALESCE(currency,'CNY')""",
+            (user_id, month_start, next_month,
+             user_id, month_start, next_month),
         )
         cm_rows = await cur.fetchall()
         current_month_by_currency: dict[str, float] = {

@@ -17,6 +17,10 @@ interface Backend {
   input_price: number | null
   output_price: number | null
   currency: string
+  pending_input_price: number | null
+  pending_output_price: number | null
+  pending_currency: string | null
+  pending_effective_at: string | null
   is_public: number
   owner_name: string
   updated_at: string
@@ -375,10 +379,16 @@ export default function ServicesPage() {
                     <div className="rounded-lg bg-gray-50 px-3 py-2">
                       <div className="text-[11px] text-gray-500">输入价</div>
                       <div className="text-base font-semibold text-gray-900 mt-0.5">{b.currency === "USD" ? "$" : "¥"}{b.input_price ?? "-"}<span className="text-[11px] font-normal text-gray-500">/M</span></div>
+                      {b.pending_input_price != null && (
+                        <div className="text-[10px] text-amber-600 mt-0.5">次日生效 {(b.pending_currency ?? b.currency) === "USD" ? "$" : "¥"}{b.pending_input_price}</div>
+                      )}
                     </div>
                     <div className="rounded-lg bg-gray-50 px-3 py-2">
                       <div className="text-[11px] text-gray-500">输出价</div>
                       <div className="text-base font-semibold text-gray-900 mt-0.5">{b.currency === "USD" ? "$" : "¥"}{b.output_price ?? "-"}<span className="text-[11px] font-normal text-gray-500">/M</span></div>
+                      {b.pending_output_price != null && (
+                        <div className="text-[10px] text-amber-600 mt-0.5">次日生效 {(b.pending_currency ?? b.currency) === "USD" ? "$" : "¥"}{b.pending_output_price}</div>
+                      )}
                     </div>
                     <div className="rounded-lg bg-gray-50 px-3 py-2">
                       <div className="text-[11px] text-gray-500">订阅数</div>

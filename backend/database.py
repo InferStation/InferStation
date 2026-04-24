@@ -73,6 +73,39 @@ async def init_db():
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
 
+        -- Hourly usage rollup in Asia/Shanghai local time.
+        -- hour_start format: 'YYYY-MM-DD HH:00:00' (CST wall-clock).
+        CREATE TABLE IF NOT EXISTS usage_hourly (
+            user_id INTEGER NOT NULL,
+            backend_id INTEGER NOT NULL,
+            model TEXT NOT NULL,
+            currency TEXT NOT NULL DEFAULT 'CNY',
+            hour_start TEXT NOT NULL,
+            requests INTEGER NOT NULL DEFAULT 0,
+            input_tokens INTEGER NOT NULL DEFAULT 0,
+            output_tokens INTEGER NOT NULL DEFAULT 0,
+            cost REAL NOT NULL DEFAULT 0.0,
+            PRIMARY KEY (user_id, backend_id, model, currency, hour_start)
+        );
+        CREATE INDEX IF NOT EXISTS idx_usage_hourly_user_hour ON usage_hourly(user_id, hour_start);
+        CREATE INDEX IF NOT EXISTS idx_usage_hourly_hour ON usage_hourly(hour_start);
+
+        -- Daily archive in Asia/Shanghai. day format: 'YYYY-MM-DD'.
+        CREATE TABLE IF NOT EXISTS usage_daily (
+            user_id INTEGER NOT NULL,
+            backend_id INTEGER NOT NULL,
+            model TEXT NOT NULL,
+            currency TEXT NOT NULL DEFAULT 'CNY',
+            day TEXT NOT NULL,
+            requests INTEGER NOT NULL DEFAULT 0,
+            input_tokens INTEGER NOT NULL DEFAULT 0,
+            output_tokens INTEGER NOT NULL DEFAULT 0,
+            cost REAL NOT NULL DEFAULT 0.0,
+            PRIMARY KEY (user_id, backend_id, model, currency, day)
+        );
+        CREATE INDEX IF NOT EXISTS idx_usage_daily_user_day ON usage_daily(user_id, day);
+        CREATE INDEX IF NOT EXISTS idx_usage_daily_day ON usage_daily(day);
+
         CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash);
         CREATE INDEX IF NOT EXISTS idx_usage_logs_user ON usage_logs(user_id);
         CREATE INDEX IF NOT EXISTS idx_usage_logs_created ON usage_logs(created_at);
@@ -135,6 +168,16 @@ async def init_db():
         # Migration: per-backend pricing currency (CNY default for back-compat)
         if "currency" not in cols:
             await db.execute("ALTER TABLE backends ADD COLUMN currency TEXT NOT NULL DEFAULT 'CNY'")
+        # Migration: pending pricing fields. Price/currency edits land here and
+        # are promoted to live columns at 00:00 Asia/Shanghai each day.
+        if "pending_input_price" not in cols:
+            await db.execute("ALTER TABLE backends ADD COLUMN pending_input_price REAL")
+        if "pending_output_price" not in cols:
+            await db.execute("ALTER TABLE backends ADD COLUMN pending_output_price REAL")
+        if "pending_currency" not in cols:
+            await db.execute("ALTER TABLE backends ADD COLUMN pending_currency TEXT")
+        if "pending_effective_at" not in cols:
+            await db.execute("ALTER TABLE backends ADD COLUMN pending_effective_at TEXT")
         # Migration: usage_logs records the backend's pricing currency at the time
         cur = await db.execute("PRAGMA table_info(usage_logs)")
         ulcols = {r[1] for r in await cur.fetchall()}
