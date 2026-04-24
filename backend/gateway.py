@@ -306,7 +306,7 @@ class LoginRequest(BaseModel):
 
 class SendCodeRequest(BaseModel):
     email: str
-    purpose: str  # "register" | "change-email"
+    purpose: str  # "register" | "change-email" | "delete-account"
 
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -314,7 +314,7 @@ _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 async def _issue_verification_code(email: str, purpose: str) -> str:
     """Create a 6-digit code, rate-limit 60s, keep only one active per (email, purpose)."""
-    if purpose not in ("register", "change-email"):
+    if purpose not in ("register", "change-email", "delete-account"):
         raise HTTPException(400, "Invalid purpose")
     if not _EMAIL_RE.match(email):
         raise HTTPException(400, "邮箱格式不正确")
@@ -392,6 +392,8 @@ async def send_code(req: SendCodeRequest):
         raise HTTPException(400, "该邮箱已被注册")
     if purpose == "change-email" and existing:
         raise HTTPException(400, "该邮箱已被其他账号使用")
+    if purpose == "delete-account" and not existing:
+        raise HTTPException(400, "该邮箱未注册")
     code = await _issue_verification_code(email, purpose)
     resp = {"ok": True}
     if email_service.expose_dev_code():
@@ -542,6 +544,83 @@ async def change_email(req: ChangeEmailRequest, user=Depends(get_current_user)):
         if await existing.fetchone():
             raise HTTPException(400, "该邮箱已被其他账号使用")
         await db.execute("UPDATE users SET email = ? WHERE id = ?", (email, user["id"]))
+        await db.commit()
+    finally:
+        await db.close()
+    return {"ok": True}
+
+
+class DeleteAccountRequest(BaseModel):
+    password: str
+    code: str
+    confirm: str  # must be "DELETE"
+
+
+@app.post("/api/auth/delete-account")
+async def delete_account(req: DeleteAccountRequest, user=Depends(get_current_user)):
+    """Self-service account cancellation.
+
+    Safety rails:
+      * Admin accounts cannot be self-deleted.
+      * User must re-auth (password) and prove email ownership (6-digit code).
+      * User must type DELETE as confirmation.
+      * Blocks if any unpaid invoice exists.
+      * Blocks if any owned backend is currently listed or has a pending review.
+
+    Effects (soft-delete, to preserve financial/audit trail):
+      * users.is_active = 0
+      * username/email anonymised to release uniqueness for future registrations
+      * all api_keys disabled
+      * all subscriptions deactivated
+      * all owned backends taken offline (listing_status=offline, enabled=0)
+      * invoices & usage_logs are kept intact with the same user_id
+    """
+    if user["role"] == "admin":
+        raise HTTPException(400, "管理员账号不能自助注销")
+    if (req.confirm or "").strip().upper() != "DELETE":
+        raise HTTPException(400, '请在确认框中输入 "DELETE"')
+    if not verify_password(req.password, user["password_hash"]):
+        raise HTTPException(400, "密码错误")
+
+    email = (user["email"] or "").strip().lower()
+    if not _EMAIL_RE.match(email):
+        raise HTTPException(400, "账号邮箱无效，请先修改邮箱")
+    await _consume_verification_code(email, "delete-account", req.code)
+
+    # Financial gate: can't quit with unpaid invoices.
+    billing = await get_billing_status(user["id"])
+    if billing.get("unpaid_total", 0) > 0:
+        raise HTTPException(400, "存在未支付账单，请先结清后再注销")
+
+    uid = user["id"]
+    db = await get_db()
+    try:
+        # Provider gate: any listed / under-review backend blocks deletion so
+        # the admin queue does not end up referencing a ghost user.
+        cur = await db.execute(
+            "SELECT COUNT(*) AS n FROM backends WHERE owner_id = ? "
+            "AND listing_status IN ('listed', 'pending')",
+            (uid,),
+        )
+        row = await cur.fetchone()
+        if row and row["n"]:
+            raise HTTPException(400, "请先下架所有服务并撤回审核后再注销")
+
+        anon_suffix = secrets.token_hex(4)
+        anon_username = f"deleted_{uid}_{anon_suffix}"
+        anon_email = f"deleted_{uid}_{anon_suffix}@deleted.invalid"
+
+        await db.execute("UPDATE api_keys SET is_active = 0 WHERE user_id = ?", (uid,))
+        await db.execute("UPDATE subscriptions SET is_active = 0, is_activated = 0 WHERE user_id = ?", (uid,))
+        await db.execute(
+            "UPDATE backends SET enabled = 0, listing_status = 'offline' WHERE owner_id = ?",
+            (uid,),
+        )
+        await db.execute(
+            "UPDATE users SET is_active = 0, username = ?, email = ?, "
+            "active_subscription_id = NULL WHERE id = ?",
+            (anon_username, anon_email, uid),
+        )
         await db.commit()
     finally:
         await db.close()
