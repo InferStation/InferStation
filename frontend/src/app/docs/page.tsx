@@ -234,7 +234,7 @@ for chunk in resp:
             </li>
             <li><strong>后付费月结</strong>：账单在每月 1 日自动生成，展示于「账单」页，多货币分账单单独结算；「本月用量/花费」汇总以本月为统计窗口，归档结算后自动归零，历史底账仍可在 <code>/api/usage/daily</code> 回看</li>
             <li>
-              <strong>平台服务费</strong>：网关按消费者账单金额的 <strong>1%</strong> 作为平台服务费，从消费者本月账单中额外收取（或在服务提供者结算时按结算金额的 1% 扣除，取决于结算模式）。<span className="text-emerald-700 font-medium">试运营期间，平台服务费减免 100%，用户与服务提供者均不产生额外费用</span>。试运营结束后将在本页面提前公告生效日期。
+              <strong>平台技术服务费（Platform Technical Service Fee）</strong>：本网关作为撮合 + 算力转接 + 计费结算的技术服务提供方，按账单金额的 <strong>1%</strong> 收取平台技术服务费（发票品目：<code>*现代服务*技术服务费</code>）。<span className="text-emerald-700 font-medium">试运营期间，平台技术服务费减免 100%，用户与服务提供者均不产生额外费用</span>。试运营结束后将在本页面提前公告生效日期与具体收取方式。
             </li>
             <li>未支付账单累计超出限额会暂停 API 调用，支付后自动恢复</li>
             <li>实时用量与本月累计费用可在「仪表盘」、<code>GET /api/billing/status</code>、<code>GET /api/usage</code>（按模型汇总）、<code>GET /api/usage/hourly</code>（今日按小时）、<code>GET /api/usage/daily?days=N</code>（历史按天）查询</li>
