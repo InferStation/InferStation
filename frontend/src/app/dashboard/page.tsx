@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/context/AuthContext"
@@ -17,6 +17,7 @@ export default function AccountPage() {
   const [msg, setMsg] = useState("")
   const [error, setError] = useState("")
   const [saving, setSaving] = useState(false)
+  const [showPwModal, setShowPwModal] = useState(false)
   const [editingEmail, setEditingEmail] = useState(false)
   const [newEmail, setNewEmail] = useState("")
   const [emailCode, setEmailCode] = useState("")
@@ -25,6 +26,13 @@ export default function AccountPage() {
   const [emailSaving, setEmailSaving] = useState(false)
   const [emailSending, setEmailSending] = useState(false)
   const [emailCooldown, setEmailCooldown] = useState(0)
+
+  useEffect(() => {
+    if (msg === "密码修改成功" && showPwModal) {
+      const t = setTimeout(() => setShowPwModal(false), 800)
+      return () => clearTimeout(t)
+    }
+  }, [msg, showPwModal])
 
   if (!user) return null
 
@@ -220,22 +228,60 @@ export default function AccountPage() {
       </div>
 
       <div className="bg-white rounded-lg border p-6">
-        <h2 className="font-semibold mb-4">修改密码</h2>
-        {msg && <div className="mb-4 p-3 bg-green-50 text-green-600 rounded text-sm">{msg}</div>}
-        {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded text-sm">{error}</div>}
-        <form onSubmit={handleChangePw} className="space-y-4 max-w-md">
-          <PasswordInput label="原密码" value={oldPw} onChange={setOldPw} required />
-          <PasswordInput label="新密码" value={newPw} onChange={setNewPw} required minLength={8} showStrength />
-          <PasswordInput label="确认新密码" value={confirmPw} onChange={setConfirmPw} required />
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-semibold">登录密码</h2>
+            <p className="text-xs text-gray-500 mt-1">建议定期更换，使用大小写字母、数字和特殊字符的组合</p>
+          </div>
           <button
-            type="submit"
-            disabled={saving}
-            className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+            onClick={() => { setShowPwModal(true); setMsg(""); setError(""); setOldPw(""); setNewPw(""); setConfirmPw("") }}
+            className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
           >
-            {saving ? "保存中..." : "修改密码"}
+            修改密码
           </button>
-        </form>
+        </div>
+        {msg && <div className="mt-4 p-3 bg-green-50 text-green-600 rounded text-sm">{msg}</div>}
       </div>
+
+      {showPwModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !saving && setShowPwModal(false)}>
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-lg">修改密码</h3>
+              <button
+                onClick={() => !saving && setShowPwModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+                aria-label="关闭"
+              >
+                ✕
+              </button>
+            </div>
+            {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded text-sm">{error}</div>}
+            <form onSubmit={handleChangePw} className="space-y-4">
+              <PasswordInput label="原密码" value={oldPw} onChange={setOldPw} required />
+              <PasswordInput label="新密码" value={newPw} onChange={setNewPw} required minLength={8} showStrength />
+              <PasswordInput label="确认新密码" value={confirmPw} onChange={setConfirmPw} required />
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowPwModal(false)}
+                  disabled={saving}
+                  className="px-4 py-2 text-sm border rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                >
+                  取消
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="bg-indigo-600 text-white px-6 py-2 text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {saving ? "保存中..." : "确认修改"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {user.role !== "admin" && (
         <div className="bg-white rounded-lg border border-red-200 p-6 mt-6">
