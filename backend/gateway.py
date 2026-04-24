@@ -931,9 +931,9 @@ async def delete_backend(name: str, user=Depends(require_provider)):
 async def toggle_backend(name: str, user=Depends(require_provider)):
     """Provider-facing listing toggle with review workflow.
 
-    - listed    -> offline  (立即下架)
-    - offline   -> pending  (提交审核)
-    - rejected  -> pending  (修改后重新提交)
+    - listed    -> offline  (立即下架，变为仅私有)
+    - offline   -> pending  (提交上架审核)
+    
     - pending   -> offline  (撤回申请)
     Admins bypass review and flip listed<->offline directly.
     """
@@ -980,10 +980,10 @@ async def toggle_backend(name: str, user=Depends(require_provider)):
                 )
                 new_status, new_enabled = "offline", 0
             else:
-                # offline / rejected -> pending review.
+                # offline -> pending review (keep review_note for history display).
                 await db.execute(
                     """UPDATE backends SET listing_status = 'pending',
-                       review_requested_at = ?, review_note = NULL
+                       review_requested_at = ?
                        WHERE name = ? AND owner_id = ?""",
                     (now, name, user["id"]),
                 )
@@ -1027,7 +1027,7 @@ async def admin_approve_backend(name: str, req: ReviewDecisionRequest = ReviewDe
             raise HTTPException(404, "Backend not found")
         now = sh_now().strftime("%Y-%m-%d %H:%M:%S")
         await db.execute(
-            """UPDATE backends SET enabled = 1, listing_status = 'listed',
+            """UPDATE backends SET enabled = 1, is_public = 1, listing_status = 'listed',
                reviewed_at = ?, reviewed_by = ?, review_note = ? WHERE name = ?""",
             (now, admin["id"], req.note, name),
         )
@@ -1049,14 +1049,14 @@ async def admin_reject_backend(name: str, req: ReviewDecisionRequest, admin=Depe
             raise HTTPException(404, "Backend not found")
         now = sh_now().strftime("%Y-%m-%d %H:%M:%S")
         await db.execute(
-            """UPDATE backends SET enabled = 0, listing_status = 'rejected',
+            """UPDATE backends SET enabled = 0, is_public = 0, listing_status = 'offline',
                reviewed_at = ?, reviewed_by = ?, review_note = ? WHERE name = ?""",
             (now, admin["id"], req.note, name),
         )
         await db.commit()
     finally:
         await db.close()
-    return {"ok": True, "listing_status": "rejected"}
+    return {"ok": True, "listing_status": "offline"}
 
 
 # ══════════════════════════════════════════════════════════

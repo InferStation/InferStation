@@ -343,15 +343,11 @@ export default function ServicesPage() {
                       <h3 className="font-semibold text-lg text-gray-900 truncate font-mono">{m ?? "未设置模型"}</h3>
                       {(() => {
                         const st = b.listing_status || (b.enabled ? "listed" : "offline")
-                        const badge = st === "pending"
-                          ? { cls: "bg-amber-50 text-amber-700 ring-amber-200", dot: "bg-amber-500", label: "审核中" }
-                          : st === "rejected"
-                          ? { cls: "bg-rose-50 text-rose-700 ring-rose-200", dot: "bg-rose-500", label: "已驳回" }
-                          : st === "listed" && b.is_public
+                        const badge = st === "listed"
                           ? { cls: "bg-emerald-50 text-emerald-700 ring-emerald-200", dot: "bg-emerald-500", label: "已上架" }
-                          : st === "listed"
-                          ? { cls: "bg-sky-50 text-sky-700 ring-sky-200", dot: "bg-sky-500", label: "仅私有" }
-                          : { cls: "bg-gray-100 text-gray-500 ring-gray-200", dot: "bg-gray-400", label: "已下架" }
+                          : st === "pending"
+                          ? { cls: "bg-amber-50 text-amber-700 ring-amber-200", dot: "bg-amber-500", label: "上架审核中" }
+                          : { cls: "bg-sky-50 text-sky-700 ring-sky-200", dot: "bg-sky-500", label: "仅私有" }
                         return (
                           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ring-1 ${badge.cls}`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`}></span>
@@ -366,9 +362,7 @@ export default function ServicesPage() {
                       <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-50 text-slate-600 ring-1 ring-slate-200">
                         {b.mode === "tunnel" ? "隧道" : "直连"}
                       </span>
-                      {!b.is_public && (b.listing_status || (b.enabled ? "listed" : "offline")) !== "listed" && (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 ring-1 ring-amber-200">私有</span>
-                      )}
+
                     </div>
                     <div className="mt-1.5 flex items-center gap-2 text-xs text-gray-500">
                       <span className="text-gray-400">后端</span>
@@ -408,7 +402,7 @@ export default function ServicesPage() {
                   )}
                 </div>
 
-                {b.listing_status === "rejected" && b.review_note && idx === 0 && (
+                {b.listing_status === "offline" && b.review_note && idx === 0 && (
                   <div className="px-5 py-2 text-xs text-rose-700 bg-rose-50 border-b border-rose-100">
                     驳回原因：{b.review_note}
                   </div>

@@ -203,6 +203,8 @@ async def init_db():
             await db.execute("ALTER TABLE backends ADD COLUMN reviewed_at TEXT")
         if "reviewed_by" not in cols:
             await db.execute("ALTER TABLE backends ADD COLUMN reviewed_by INTEGER")
+        # Migration: collapse deprecated 'rejected' status into 'offline'.
+        await db.execute("UPDATE backends SET listing_status = 'offline' WHERE listing_status = 'rejected'")
         # Migration: usage_logs records the backend's pricing currency at the time
         cur = await db.execute("PRAGMA table_info(usage_logs)")
         ulcols = {r[1] for r in await cur.fetchall()}
