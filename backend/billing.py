@@ -75,20 +75,29 @@ async def ensure_invoices_for_user(user_id: int) -> None:
         for period_start, period_end in _month_range_labels(earliest_ym, current_ym):
             ym = period_start[:7]
             # Sum usage for that month, grouped by currency
+            # Self-owned model waiver: usage on the user's own backends is
+            # fully waived in summaries and invoices. We still keep the raw
+            # rows in usage_hourly/usage_daily for transparency.
             cur = await db.execute(
                 """SELECT COALESCE(currency,'CNY') AS currency,
                           COALESCE(SUM(cost),0) AS total
                    FROM (
-                       SELECT currency, cost FROM usage_daily
-                       WHERE user_id = ? AND day >= ? AND day < ?
+                       SELECT u.currency, u.cost
+                       FROM usage_daily u
+                       LEFT JOIN backends b ON u.backend_id = b.id
+                       WHERE u.user_id = ? AND u.day >= ? AND u.day < ?
+                         AND (b.owner_id IS NULL OR b.owner_id != ?)
                        UNION ALL
-                       SELECT currency, cost FROM usage_hourly
-                       WHERE user_id = ? AND substr(hour_start,1,10) >= ?
-                                           AND substr(hour_start,1,10) <  ?
+                       SELECT u.currency, u.cost
+                       FROM usage_hourly u
+                       LEFT JOIN backends b ON u.backend_id = b.id
+                       WHERE u.user_id = ? AND substr(u.hour_start,1,10) >= ?
+                                            AND substr(u.hour_start,1,10) <  ?
+                         AND (b.owner_id IS NULL OR b.owner_id != ?)
                    )
                    GROUP BY COALESCE(currency,'CNY')""",
-                (user_id, period_start, period_end,
-                 user_id, period_start, period_end),
+                (user_id, period_start, period_end, user_id,
+                 user_id, period_start, period_end, user_id),
             )
             sums = await cur.fetchall()
             pe = date.fromisoformat(period_end)
@@ -122,16 +131,22 @@ async def get_billing_status(user_id: int) -> dict:
             """SELECT COALESCE(currency,'CNY') AS currency,
                       COALESCE(SUM(cost),0) AS total
                FROM (
-                   SELECT currency, cost FROM usage_daily
-                   WHERE user_id = ? AND day >= ? AND day < ?
+                   SELECT u.currency, u.cost
+                   FROM usage_daily u
+                   LEFT JOIN backends b ON u.backend_id = b.id
+                   WHERE u.user_id = ? AND u.day >= ? AND u.day < ?
+                     AND (b.owner_id IS NULL OR b.owner_id != ?)
                    UNION ALL
-                   SELECT currency, cost FROM usage_hourly
-                   WHERE user_id = ? AND substr(hour_start,1,10) >= ?
-                                       AND substr(hour_start,1,10) <  ?
+                   SELECT u.currency, u.cost
+                   FROM usage_hourly u
+                   LEFT JOIN backends b ON u.backend_id = b.id
+                   WHERE u.user_id = ? AND substr(u.hour_start,1,10) >= ?
+                                        AND substr(u.hour_start,1,10) <  ?
+                     AND (b.owner_id IS NULL OR b.owner_id != ?)
                )
                GROUP BY COALESCE(currency,'CNY')""",
-            (user_id, month_start, next_month,
-             user_id, month_start, next_month),
+            (user_id, month_start, next_month, user_id,
+             user_id, month_start, next_month, user_id),
         )
         cm_rows = await cur.fetchall()
         current_month_by_currency: dict[str, float] = {
@@ -245,16 +260,22 @@ async def settle_user_partial(user_id: int, today: date | None = None) -> list[d
             """SELECT COALESCE(currency,'CNY') AS currency,
                       COALESCE(SUM(cost),0) AS total
                FROM (
-                   SELECT currency, cost FROM usage_daily
-                   WHERE user_id = ? AND day >= ? AND day < ?
+                   SELECT u.currency, u.cost
+                   FROM usage_daily u
+                   LEFT JOIN backends b ON u.backend_id = b.id
+                   WHERE u.user_id = ? AND u.day >= ? AND u.day < ?
+                     AND (b.owner_id IS NULL OR b.owner_id != ?)
                    UNION ALL
-                   SELECT currency, cost FROM usage_hourly
-                   WHERE user_id = ? AND substr(hour_start,1,10) >= ?
-                                       AND substr(hour_start,1,10) <  ?
+                   SELECT u.currency, u.cost
+                   FROM usage_hourly u
+                   LEFT JOIN backends b ON u.backend_id = b.id
+                   WHERE u.user_id = ? AND substr(u.hour_start,1,10) >= ?
+                                        AND substr(u.hour_start,1,10) <  ?
+                     AND (b.owner_id IS NULL OR b.owner_id != ?)
                )
                GROUP BY COALESCE(currency,'CNY')""",
-            (user_id, month_start, next_day,
-             user_id, month_start, next_day),
+            (user_id, month_start, next_day, user_id,
+             user_id, month_start, next_day, user_id),
         )
         sums = await cur.fetchall()
 

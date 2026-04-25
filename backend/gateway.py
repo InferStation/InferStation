@@ -2284,23 +2284,37 @@ async def get_usage(user=Depends(get_current_user)):
     month_start = sh_month_start()
     db = await get_db()
     try:
+        # is_self = 1 when the serving backend belongs to the requester;
+        # such usage is fully waived in summaries (self_cost), and the
+        # billable amount is total_cost - self_cost.
         cur = await db.execute(
             """SELECT model, currency,
                       SUM(input_tokens) AS total_input,
                       SUM(output_tokens) AS total_output,
                       SUM(cached_tokens) AS total_cached,
                       SUM(cost) AS total_cost,
+                      SUM(CASE WHEN is_self = 1 THEN cost ELSE 0 END) AS self_cost,
+                      SUM(CASE WHEN is_self = 1 THEN 0 ELSE cost END) AS billable_cost,
                       SUM(requests) AS requests
                FROM (
-                   SELECT model, currency, input_tokens, output_tokens, cached_tokens, cost, requests
-                   FROM usage_daily WHERE user_id = ? AND day >= ? AND day < ?
+                   SELECT u.model, u.currency, u.input_tokens, u.output_tokens, u.cached_tokens,
+                          u.cost, u.requests,
+                          CASE WHEN b.owner_id = ? THEN 1 ELSE 0 END AS is_self
+                   FROM usage_daily u
+                   LEFT JOIN backends b ON u.backend_id = b.id
+                   WHERE u.user_id = ? AND u.day >= ? AND u.day < ?
                    UNION ALL
-                   SELECT model, currency, input_tokens, output_tokens, cached_tokens, cost, requests
-                   FROM usage_hourly WHERE user_id = ? AND substr(hour_start, 1, 10) >= ?
+                   SELECT u.model, u.currency, u.input_tokens, u.output_tokens, u.cached_tokens,
+                          u.cost, u.requests,
+                          CASE WHEN b.owner_id = ? THEN 1 ELSE 0 END AS is_self
+                   FROM usage_hourly u
+                   LEFT JOIN backends b ON u.backend_id = b.id
+                   WHERE u.user_id = ? AND substr(u.hour_start, 1, 10) >= ?
                )
                GROUP BY model, currency
-               ORDER BY total_cost DESC""",
-            (user["id"], month_start, today, user["id"], month_start),
+               ORDER BY billable_cost DESC, total_cost DESC""",
+            (user["id"], user["id"], month_start, today,
+             user["id"], user["id"], month_start),
         )
         rows = [dict(r) for r in await cur.fetchall()]
     finally:
@@ -2316,17 +2330,20 @@ async def get_usage_hourly(user=Depends(get_current_user)):
     db = await get_db()
     try:
         cur = await db.execute(
-            """SELECT hour_start, model, currency,
-                      SUM(requests) AS requests,
-                      SUM(input_tokens) AS total_input,
-                      SUM(output_tokens) AS total_output,
-                      SUM(cached_tokens) AS total_cached,
-                      SUM(cost) AS total_cost
-               FROM usage_hourly
-               WHERE user_id = ? AND substr(hour_start, 1, 10) = ?
-               GROUP BY hour_start, model, currency
-               ORDER BY hour_start DESC, total_cost DESC""",
-            (user["id"], today),
+            """SELECT u.hour_start, u.model, u.currency,
+                      SUM(u.requests) AS requests,
+                      SUM(u.input_tokens) AS total_input,
+                      SUM(u.output_tokens) AS total_output,
+                      SUM(u.cached_tokens) AS total_cached,
+                      SUM(u.cost) AS total_cost,
+                      SUM(CASE WHEN b.owner_id = ? THEN u.cost ELSE 0 END) AS self_cost,
+                      SUM(CASE WHEN b.owner_id = ? THEN 0 ELSE u.cost END) AS billable_cost
+               FROM usage_hourly u
+               LEFT JOIN backends b ON u.backend_id = b.id
+               WHERE u.user_id = ? AND substr(u.hour_start, 1, 10) = ?
+               GROUP BY u.hour_start, u.model, u.currency
+               ORDER BY u.hour_start DESC, billable_cost DESC, total_cost DESC""",
+            (user["id"], user["id"], user["id"], today),
         )
         return [dict(r) for r in await cur.fetchall()]
     finally:
@@ -2342,17 +2359,20 @@ async def get_usage_daily(days: int = Query(30, ge=1, le=365), user=Depends(get_
     db = await get_db()
     try:
         cur = await db.execute(
-            """SELECT day, model, currency,
-                      SUM(requests) AS requests,
-                      SUM(input_tokens) AS total_input,
-                      SUM(output_tokens) AS total_output,
-                      SUM(cached_tokens) AS total_cached,
-                      SUM(cost) AS total_cost
-               FROM usage_daily
-               WHERE user_id = ? AND day >= ? AND day < ?
-               GROUP BY day, model, currency
-               ORDER BY day DESC, total_cost DESC""",
-            (user["id"], earliest_day, today),
+            """SELECT u.day, u.model, u.currency,
+                      SUM(u.requests) AS requests,
+                      SUM(u.input_tokens) AS total_input,
+                      SUM(u.output_tokens) AS total_output,
+                      SUM(u.cached_tokens) AS total_cached,
+                      SUM(u.cost) AS total_cost,
+                      SUM(CASE WHEN b.owner_id = ? THEN u.cost ELSE 0 END) AS self_cost,
+                      SUM(CASE WHEN b.owner_id = ? THEN 0 ELSE u.cost END) AS billable_cost
+               FROM usage_daily u
+               LEFT JOIN backends b ON u.backend_id = b.id
+               WHERE u.user_id = ? AND u.day >= ? AND u.day < ?
+               GROUP BY u.day, u.model, u.currency
+               ORDER BY u.day DESC, billable_cost DESC, total_cost DESC""",
+            (user["id"], user["id"], user["id"], earliest_day, today),
         )
         return [dict(r) for r in await cur.fetchall()]
     finally:

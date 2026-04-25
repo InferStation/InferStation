@@ -12,6 +12,8 @@ interface UsageStat {
   total_output: number
   total_cached: number
   total_cost: number
+  self_cost: number
+  billable_cost: number
   requests: number
 }
 
@@ -23,6 +25,8 @@ interface HourlyRow {
   total_output: number
   total_cached: number
   total_cost: number
+  self_cost: number
+  billable_cost: number
   requests: number
 }
 
@@ -34,6 +38,8 @@ interface DailyRow {
   total_output: number
   total_cached: number
   total_cost: number
+  self_cost: number
+  billable_cost: number
   requests: number
 }
 
@@ -72,9 +78,24 @@ export default function UsagePage() {
     acc[cur] = (acc[cur] || 0) + u.total_cost
     return acc
   }, {})
-  const totalCostStr = Object.keys(costByCurrency).length === 0
-    ? "¥0.000000"
-    : Object.entries(costByCurrency).map(([c, v]) => fmtCost(v, c)).join(" + ")
+  const selfByCurrency = usage.reduce<Record<string, number>>((acc, u) => {
+    const cur = u.currency || "CNY"
+    acc[cur] = (acc[cur] || 0) + (u.self_cost || 0)
+    return acc
+  }, {})
+  const billableByCurrency = usage.reduce<Record<string, number>>((acc, u) => {
+    const cur = u.currency || "CNY"
+    acc[cur] = (acc[cur] || 0) + (u.billable_cost ?? (u.total_cost - (u.self_cost || 0)))
+    return acc
+  }, {})
+  const fmtCurrencyMap = (m: Record<string, number>) =>
+    Object.keys(m).length === 0
+      ? "¥0.000000"
+      : Object.entries(m).map(([c, v]) => fmtCost(v, c)).join(" + ")
+  const totalCostStr = fmtCurrencyMap(costByCurrency)
+  const totalSelfStr = fmtCurrencyMap(selfByCurrency)
+  const totalBillableStr = fmtCurrencyMap(billableByCurrency)
+  const hasSelf = Object.values(selfByCurrency).some((v) => v > 0)
 
   return (
     <div>
@@ -113,7 +134,7 @@ export default function UsagePage() {
 
       {tab === "summary" && (
         <>
-          <div className="grid gap-4 md:grid-cols-5 mb-6">
+          <div className="grid gap-4 md:grid-cols-4 lg:grid-cols-6 mb-6">
             <div className="bg-white rounded-lg border p-4">
               <div className="text-sm text-gray-500">本月请求数</div>
               <div className="text-2xl font-bold">{totalRequests}</div>
@@ -135,7 +156,13 @@ export default function UsagePage() {
             </div>
             <div className="bg-white rounded-lg border p-4">
               <div className="text-sm text-gray-500">本月总花费</div>
-              <div className="text-2xl font-bold text-orange-600">{totalCostStr}</div>
+              <div className="text-xl font-bold text-gray-700">{totalCostStr}</div>
+              <div className="text-xs text-gray-400 mt-1">未减免前</div>
+            </div>
+            <div className={`rounded-lg border p-4 ${hasSelf ? "bg-emerald-50 border-emerald-200" : "bg-white"}`}>
+              <div className="text-sm text-gray-500">自有模型减免</div>
+              <div className={`text-xl font-bold ${hasSelf ? "text-emerald-600" : "text-gray-300"}`}>−{totalSelfStr}</div>
+              <div className="text-xs text-emerald-700 mt-1">实际计费 {totalBillableStr}</div>
             </div>
           </div>
 
@@ -152,10 +179,16 @@ export default function UsagePage() {
                     <th className="text-right px-4 py-3 font-medium">输出 tokens</th>
                     <th className="text-right px-4 py-3 font-medium">缓存命中</th>
                     <th className="text-right px-4 py-3 font-medium">花费</th>
+                    <th className="text-right px-4 py-3 font-medium" title="使用自己名下的后端模型，本平台不计入账单">自有模型减免</th>
+                    <th className="text-right px-4 py-3 font-medium">实际计费</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {usage.map((u, i) => (
+                  {usage.map((u, i) => {
+                    const cur = u.currency || "CNY"
+                    const self = u.self_cost || 0
+                    const billable = u.billable_cost ?? (u.total_cost - self)
+                    return (
                     <tr key={i}>
                       <td className="px-4 py-3 font-mono">{u.model}</td>
                       <td className="px-4 py-3 text-right">{u.requests}</td>
@@ -167,9 +200,12 @@ export default function UsagePage() {
                           <span className="text-xs text-gray-400 ml-1">({((u.total_cached / u.total_input) * 100).toFixed(0)}%)</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-right text-green-600">{fmtCost(u.total_cost, u.currency || "CNY")} <span className="text-xs text-gray-400">{u.currency || "CNY"}</span></td>
+                      <td className="px-4 py-3 text-right text-gray-700">{fmtCost(u.total_cost, cur)} <span className="text-xs text-gray-400">{cur}</span></td>
+                      <td className={`px-4 py-3 text-right ${self > 0 ? "text-emerald-600" : "text-gray-300"}`}>{self > 0 ? `−${fmtCost(self, cur)}` : "—"}</td>
+                      <td className="px-4 py-3 text-right text-green-600 font-medium">{fmtCost(billable, cur)}</td>
                     </tr>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -192,10 +228,16 @@ export default function UsagePage() {
                   <th className="text-right px-4 py-3 font-medium">输出</th>
                   <th className="text-right px-4 py-3 font-medium">缓存命中</th>
                   <th className="text-right px-4 py-3 font-medium">花费</th>
+                  <th className="text-right px-4 py-3 font-medium">自有模型减免</th>
+                  <th className="text-right px-4 py-3 font-medium">实际计费</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {hourly.map((r, i) => (
+                {hourly.map((r, i) => {
+                  const cur = r.currency || "CNY"
+                  const self = r.self_cost || 0
+                  const billable = r.billable_cost ?? (r.total_cost - self)
+                  return (
                   <tr key={i}>
                     <td className="px-4 py-3 font-mono text-xs text-gray-600">{r.hour_start}</td>
                     <td className="px-4 py-3 font-mono">{r.model}</td>
@@ -203,9 +245,12 @@ export default function UsagePage() {
                     <td className="px-4 py-3 text-right">{formatTokens(r.total_input)}</td>
                     <td className="px-4 py-3 text-right">{formatTokens(r.total_output)}</td>
                     <td className="px-4 py-3 text-right text-sky-600">{formatTokens(r.total_cached || 0)}</td>
-                    <td className="px-4 py-3 text-right text-green-600">{fmtCost(r.total_cost, r.currency || "CNY")}</td>
+                    <td className="px-4 py-3 text-right text-gray-700">{fmtCost(r.total_cost, cur)}</td>
+                    <td className={`px-4 py-3 text-right ${self > 0 ? "text-emerald-600" : "text-gray-300"}`}>{self > 0 ? `−${fmtCost(self, cur)}` : "—"}</td>
+                    <td className="px-4 py-3 text-right text-green-600 font-medium">{fmtCost(billable, cur)}</td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -227,10 +272,16 @@ export default function UsagePage() {
                   <th className="text-right px-4 py-3 font-medium">输出</th>
                   <th className="text-right px-4 py-3 font-medium">缓存命中</th>
                   <th className="text-right px-4 py-3 font-medium">花费</th>
+                  <th className="text-right px-4 py-3 font-medium">自有模型减免</th>
+                  <th className="text-right px-4 py-3 font-medium">实际计费</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {daily.map((r, i) => (
+                {daily.map((r, i) => {
+                  const cur = r.currency || "CNY"
+                  const self = r.self_cost || 0
+                  const billable = r.billable_cost ?? (r.total_cost - self)
+                  return (
                   <tr key={i}>
                     <td className="px-4 py-3 font-mono text-xs text-gray-600">{r.day}</td>
                     <td className="px-4 py-3 font-mono">{r.model}</td>
@@ -238,9 +289,12 @@ export default function UsagePage() {
                     <td className="px-4 py-3 text-right">{formatTokens(r.total_input)}</td>
                     <td className="px-4 py-3 text-right">{formatTokens(r.total_output)}</td>
                     <td className="px-4 py-3 text-right text-sky-600">{formatTokens(r.total_cached || 0)}</td>
-                    <td className="px-4 py-3 text-right text-green-600">{fmtCost(r.total_cost, r.currency || "CNY")}</td>
+                    <td className="px-4 py-3 text-right text-gray-700">{fmtCost(r.total_cost, cur)}</td>
+                    <td className={`px-4 py-3 text-right ${self > 0 ? "text-emerald-600" : "text-gray-300"}`}>{self > 0 ? `−${fmtCost(self, cur)}` : "—"}</td>
+                    <td className="px-4 py-3 text-right text-green-600 font-medium">{fmtCost(billable, cur)}</td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>
