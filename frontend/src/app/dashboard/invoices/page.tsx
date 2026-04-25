@@ -29,20 +29,51 @@ interface BillingStatus {
   grace_days: number
 }
 
+interface SettleEligibility {
+  eligible: boolean
+  active_subscriptions: number
+  listed_backends: number
+  idle_minutes_required: number
+  last_activity: string | null
+  reasons: string[]
+}
+
 export default function InvoicesPage() {
   const [data, setData] = useState<BillingStatus | null>(null)
   const [loading, setLoading] = useState(true)
+  const [settle, setSettle] = useState<SettleEligibility | null>(null)
+  const [settling, setSettling] = useState(false)
+  const [settleMsg, setSettleMsg] = useState("")
+  const [settleErr, setSettleErr] = useState("")
 
-  useEffect(() => {
-    ;(async () => {
-      try {
-        const res = await apiFetch("/api/billing/status")
-        setData(res)
-      } finally {
-        setLoading(false)
-      }
-    })()
-  }, [])
+  const reload = async () => {
+    setLoading(true)
+    try {
+      const [s, e] = await Promise.all([
+        apiFetch("/api/billing/status"),
+        apiFetch("/api/billing/settle-now/eligibility").catch(() => null),
+      ])
+      setData(s)
+      setSettle(e)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { reload() }, [])
+
+  const handleSettleNow = async () => {
+    setSettleErr(""); setSettleMsg("")
+    if (!confirm("将当前月份用量提前出账。出账后即可联系管理员结清；本月若再有用量需另起一张账单。继续？")) return
+    setSettling(true)
+    try {
+      const r = await apiFetch("/api/billing/settle-now", { method: "POST" })
+      setSettleMsg(`已出账 ${r.created?.length ?? 0} 张账单`)
+      await reload()
+    } catch (err: unknown) {
+      setSettleErr(err instanceof Error ? err.message : "出账失败")
+    } finally { setSettling(false) }
+  }
 
   if (loading) return <div className="text-center py-20 text-gray-500">加载中...</div>
   if (!data) return <div className="text-center py-20 text-gray-500">无数据</div>
@@ -77,6 +108,31 @@ export default function InvoicesPage() {
           <div className={`text-xs mt-1 ${data.is_suspended ? "text-red-700" : "text-gray-400"}`}>
             {data.is_suspended ? "⚠ 服务已暂停，结清后恢复" : `到期后 ${data.grace_days} 天内付清`}
           </div>
+        </div>
+      </div>
+
+      <div className="bg-white border rounded-lg p-4 mb-6 text-sm">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <p className="font-medium text-gray-800">提前结清本月账单</p>
+            <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+              一般情况下账单于每月 1 日自动出账；若你想离开平台或注销账号，可在<strong>取消所有订阅 + 下架所有服务 + 静默 {settle?.idle_minutes_required ?? 30} 分钟</strong>后，主动把当前月份用量出账并结清。出账后本月若再有计费请求会另起一张账单。
+            </p>
+            {settle && settle.reasons.length > 0 && (
+              <ul className="mt-2 text-xs text-amber-700 list-disc list-inside space-y-0.5">
+                {settle.reasons.map((r, i) => (<li key={i}>{r}</li>))}
+              </ul>
+            )}
+            {settleMsg && <p className="mt-2 text-xs text-green-600">{settleMsg}</p>}
+            {settleErr && <p className="mt-2 text-xs text-red-600">{settleErr}</p>}
+          </div>
+          <button
+            onClick={handleSettleNow}
+            disabled={!settle?.eligible || settling}
+            className="shrink-0 px-4 py-2 text-sm border border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {settling ? "出账中..." : "提前结清"}
+          </button>
         </div>
       </div>
 

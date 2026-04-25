@@ -197,6 +197,107 @@ async def is_user_suspended(user_id: int) -> tuple[bool, float]:
         await db.close()
 
 
+# Idle window required before a user may proactively close out the running
+# month early.  In-flight streaming requests commit usage when they finish, so
+# we wait until at least this many minutes have elapsed since the user's last
+# usage_hourly bucket update before allowing early settlement.
+SETTLE_IDLE_MINUTES = 30
+
+
+async def is_user_idle_for_settle(user_id: int, idle_minutes: int = SETTLE_IDLE_MINUTES) -> tuple[bool, str | None]:
+    """Return (idle_ok, last_activity_str)."""
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            "SELECT MAX(hour_start) FROM usage_hourly WHERE user_id = ?",
+            (user_id,),
+        )
+        latest = (await cur.fetchone())[0]
+        if not latest:
+            return True, None
+        # usage_hourly.hour_start is Asia/Shanghai local; compare to local now.
+        cur = await db.execute(
+            "SELECT datetime('now','+8 hours','-' || ? || ' minutes')",
+            (idle_minutes,),
+        )
+        cutoff = (await cur.fetchone())[0]
+        return latest < cutoff, latest
+    finally:
+        await db.close()
+
+
+async def settle_user_partial(user_id: int, today: date | None = None) -> list[dict]:
+    """Generate an early-settlement invoice for the running month.
+
+    Sums usage from month-start through today (inclusive) per currency, and
+    inserts one invoice per (currency) that does not yet have a current-month
+    invoice.  Returns the rows just created.  Idempotent: a second call within
+    the same calendar month returns [] for already-billed currencies.
+    """
+    today = today or date.today()
+    month_start = _month_first(today).isoformat()
+    next_day = (today + timedelta(days=1)).isoformat()
+    ym = month_start[:7]
+    db = await get_db()
+    created: list[dict] = []
+    try:
+        cur = await db.execute(
+            """SELECT COALESCE(currency,'CNY') AS currency,
+                      COALESCE(SUM(cost),0) AS total
+               FROM (
+                   SELECT currency, cost FROM usage_daily
+                   WHERE user_id = ? AND day >= ? AND day < ?
+                   UNION ALL
+                   SELECT currency, cost FROM usage_hourly
+                   WHERE user_id = ? AND substr(hour_start,1,10) >= ?
+                                       AND substr(hour_start,1,10) <  ?
+               )
+               GROUP BY COALESCE(currency,'CNY')""",
+            (user_id, month_start, next_day,
+             user_id, month_start, next_day),
+        )
+        sums = await cur.fetchall()
+
+        cur = await db.execute(
+            "SELECT COALESCE(currency,'CNY') AS currency FROM invoices "
+            "WHERE user_id = ? AND strftime('%Y-%m', period_start) = ?",
+            (user_id, ym),
+        )
+        existing_curr = {r["currency"] or "CNY" for r in await cur.fetchall()}
+
+        period_end = next_day  # exclusive: covers today
+        due_date = (today + timedelta(days=GRACE_DAYS)).isoformat()
+        now_iso = datetime.utcnow().isoformat(sep=" ", timespec="seconds")
+        for r in sums:
+            currency = r["currency"] or "CNY"
+            if currency in existing_curr:
+                continue
+            total = float(r["total"] or 0.0)
+            if total <= 0:
+                status, paid_at = "paid", now_iso
+            else:
+                status, paid_at = "unpaid", None
+            cur = await db.execute(
+                "INSERT INTO invoices (user_id, period_start, period_end, total_cost, currency, status, due_date, paid_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (user_id, month_start, period_end, total, currency, status, due_date, paid_at),
+            )
+            created.append({
+                "id": cur.lastrowid,
+                "period_start": month_start,
+                "period_end": period_end,
+                "currency": currency,
+                "total_cost": total,
+                "status": status,
+                "due_date": due_date,
+                "paid_at": paid_at,
+            })
+        await db.commit()
+        return created
+    finally:
+        await db.close()
+
+
 async def mark_invoice_paid(invoice_id: int) -> dict | None:
     db = await get_db()
     try:

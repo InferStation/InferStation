@@ -37,6 +37,9 @@ from billing import (
     is_user_suspended,
     mark_invoice_paid,
     ensure_invoices_for_user,
+    settle_user_partial,
+    is_user_idle_for_settle,
+    SETTLE_IDLE_MINUTES,
 )
 from tunnel import TunnelConnection, tunnel_manager
 
@@ -508,6 +511,90 @@ async def me(user=Depends(get_current_user)):
 @app.get("/api/billing/status")
 async def billing_status(user=Depends(get_current_user)):
     return await get_billing_status(user["id"])
+
+
+@app.get("/api/billing/settle-now/eligibility")
+async def settle_now_eligibility(user=Depends(get_current_user)):
+    """Tell the UI whether the user is currently allowed to early-settle."""
+    uid = user["id"]
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            "SELECT COUNT(*) AS n FROM subscriptions WHERE user_id = ? AND is_active = 1",
+            (uid,),
+        )
+        active_subs = int((await cur.fetchone())["n"])
+        cur = await db.execute(
+            "SELECT COUNT(*) AS n FROM backends WHERE owner_id = ? "
+            "AND listing_status IN ('listed', 'pending')",
+            (uid,),
+        )
+        listed_backends = int((await cur.fetchone())["n"])
+    finally:
+        await db.close()
+    idle_ok, last_activity = await is_user_idle_for_settle(uid)
+    reasons: list[str] = []
+    if active_subs > 0:
+        reasons.append(f"请先取消全部订阅（当前有 {active_subs} 条仍激活）")
+    if listed_backends > 0:
+        reasons.append(f"请先下架/撤回审核所有名下服务（当前 {listed_backends} 个 listed/pending）")
+    if not idle_ok:
+        reasons.append(f"为防止漏计在途请求，需账户静默至少 {SETTLE_IDLE_MINUTES} 分钟（最近一次计费在 {last_activity} CST）")
+    return {
+        "eligible": not reasons,
+        "active_subscriptions": active_subs,
+        "listed_backends": listed_backends,
+        "idle_minutes_required": SETTLE_IDLE_MINUTES,
+        "last_activity": last_activity,
+        "reasons": reasons,
+    }
+
+
+@app.post("/api/billing/settle-now")
+async def settle_now(user=Depends(get_current_user)):
+    """Proactively close out the running month into an invoice.
+
+    Allowed only when:
+      - all subscriptions are deactivated;
+      - no backend is currently listed or pending review;
+      - the user has had no billable usage in the last SETTLE_IDLE_MINUTES.
+    """
+    if user["role"] == "admin":
+        raise HTTPException(400, "管理员账号无须结清")
+    uid = user["id"]
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            "SELECT COUNT(*) AS n FROM subscriptions WHERE user_id = ? AND is_active = 1",
+            (uid,),
+        )
+        if int((await cur.fetchone())["n"]) > 0:
+            raise HTTPException(400, "请先取消全部订阅")
+        cur = await db.execute(
+            "SELECT COUNT(*) AS n FROM backends WHERE owner_id = ? "
+            "AND listing_status IN ('listed', 'pending')",
+            (uid,),
+        )
+        if int((await cur.fetchone())["n"]) > 0:
+            raise HTTPException(400, "请先下架/撤回审核所有名下服务")
+    finally:
+        await db.close()
+    idle_ok, last_activity = await is_user_idle_for_settle(uid)
+    if not idle_ok:
+        raise HTTPException(
+            400,
+            f"为防止漏计在途请求，需账户静默至少 {SETTLE_IDLE_MINUTES} 分钟（最近一次计费在 {last_activity} CST）",
+        )
+    # Make sure any past months are invoiced first, then bill the running month.
+    await ensure_invoices_for_user(uid)
+    created = await settle_user_partial(uid)
+    billing = await get_billing_status(uid)
+    return {
+        "ok": True,
+        "created": created,
+        "unpaid_total": billing["unpaid_total"],
+        "unpaid_by_currency": billing["unpaid_by_currency"],
+    }
 
 
 class AutoFallbackRequest(BaseModel):
