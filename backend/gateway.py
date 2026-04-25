@@ -641,7 +641,10 @@ async def delete_account(req: DeleteAccountRequest, user=Depends(get_current_use
             raise HTTPException(400, "请先下架所有服务并撤回审核后再注销")
 
         anon_suffix = secrets.token_hex(4)
-        anon_username = f"deleted_{uid}_{anon_suffix}"
+        # Preserve original username in anonymized handle for audit traceability,
+        # while keeping the row collision-free via uid+random suffix.
+        safe_orig = re.sub(r"[^A-Za-z0-9_.-]", "_", user["username"] or "")[:32] or "user"
+        anon_username = f"deleted_{uid}_{anon_suffix}_{safe_orig}"
         anon_email = f"deleted_{uid}_{anon_suffix}@deleted.invalid"
 
         await db.execute("UPDATE api_keys SET is_active = 0 WHERE user_id = ?", (uid,))
