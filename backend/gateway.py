@@ -685,8 +685,13 @@ async def delete_account(req: DeleteAccountRequest, user=Depends(get_current_use
       * Admin accounts cannot be self-deleted.
       * User must re-auth (password) and prove email ownership (6-digit code).
       * User must type DELETE as confirmation.
-      * Blocks if any unpaid invoice exists.
+      * Blocks if any subscription is still active.
       * Blocks if any owned backend is currently listed or has a pending review.
+      * Blocks if the account has had billable usage in the last
+        SETTLE_IDLE_MINUTES (prevents losing in-flight requests).
+      * Blocks if the running month has uninvoiced usage — user must
+        early-settle first via POST /api/billing/settle-now.
+      * Blocks if any invoice remains unpaid.
 
     Effects (soft-delete, to preserve financial/audit trail):
       * users.is_active = 0
@@ -708,14 +713,18 @@ async def delete_account(req: DeleteAccountRequest, user=Depends(get_current_use
         raise HTTPException(400, "账号邮箱无效，请先修改邮箱")
     await _consume_verification_code(email, "delete-account", req.code)
 
-    # Financial gate: can't quit with unpaid invoices.
-    billing = await get_billing_status(user["id"])
-    if billing.get("unpaid_total", 0) > 0:
-        raise HTTPException(400, "存在未支付账单，请先结清后再注销")
-
     uid = user["id"]
     db = await get_db()
     try:
+        # Subscription gate: all subscriptions must be cancelled first.
+        cur = await db.execute(
+            "SELECT COUNT(*) AS n FROM subscriptions WHERE user_id = ? AND is_active = 1",
+            (uid,),
+        )
+        row = await cur.fetchone()
+        if row and row["n"]:
+            raise HTTPException(400, "请先取消全部订阅后再注销")
+
         # Provider gate: any listed / under-review backend blocks deletion so
         # the admin queue does not end up referencing a ghost user.
         cur = await db.execute(
@@ -726,7 +735,33 @@ async def delete_account(req: DeleteAccountRequest, user=Depends(get_current_use
         row = await cur.fetchone()
         if row and row["n"]:
             raise HTTPException(400, "请先下架所有服务并撤回审核后再注销")
+    finally:
+        await db.close()
 
+    # Idle gate: block if there is billable usage within the last
+    # SETTLE_IDLE_MINUTES — prevents deleting while in-flight requests still
+    # accrue cost, and prevents skipping the early-settle step below.
+    idle_ok, last_activity = await is_user_idle_for_settle(uid)
+    if not idle_ok:
+        raise HTTPException(
+            400,
+            f"账户在最近 {SETTLE_IDLE_MINUTES} 分钟内仍有计费（{last_activity} CST），请等待静默后再注销",
+        )
+
+    # Financial gate: can't quit with unpaid invoices, and must have settled
+    # the running month first (current_month_cost > 0 means uninvoiced usage
+    # remains — user should call POST /api/billing/settle-now first).
+    billing = await get_billing_status(uid)
+    if billing.get("unpaid_total", 0) > 0:
+        raise HTTPException(400, "存在未支付账单，请先结清后再注销")
+    if billing.get("current_month_cost", 0) > 0:
+        raise HTTPException(
+            400,
+            "当前月份仍有未出账用量，请先在账单页「提前结清本月账单」并结清后再注销",
+        )
+
+    db = await get_db()
+    try:
         anon_suffix = secrets.token_hex(4)
         # Preserve original username in anonymized handle for audit traceability,
         # while keeping the row collision-free via uid+random suffix.

@@ -287,8 +287,18 @@ export default function AccountPage() {
         <div className="bg-white rounded-lg border border-red-200 p-6 mt-6">
           <h2 className="font-semibold text-red-600 mb-2">注销账号</h2>
           <p className="text-sm text-gray-600 mb-3">
-            注销后账号将立即停用、API 密钥全部失效、所有订阅解除、名下服务全部下架。历史账单与用量记录仍会保留用于审计；已开出的账单仍须结清。此操作不可逆。
+            注销后账号将立即停用、API 密钥全部失效、所有订阅解除、名下服务全部下架。历史账单与用量记录仍会保留用于审计。此操作不可逆。
           </p>
+          <div className="text-xs text-gray-500 mb-3 leading-relaxed bg-gray-50 border rounded p-2">
+            <div className="font-medium text-gray-700 mb-1">注销前请依次完成：</div>
+            <ol className="list-decimal list-inside space-y-0.5">
+              <li>在「订阅」页取消全部订阅</li>
+              <li>如是服务提供方，下架 / 撤回审核全部后端</li>
+              <li>等待账户静默 30 分钟（防止在途请求漏计）</li>
+              <li>在「账单」页点击「提前结清本月账单」把当月用量出账</li>
+              <li>结清全部未付账单</li>
+            </ol>
+          </div>
           {!showDelete ? (
             <button
               onClick={() => { setShowDelete(true); setDelError("") }}
