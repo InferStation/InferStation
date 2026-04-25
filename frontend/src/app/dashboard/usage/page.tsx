@@ -134,7 +134,7 @@ export default function UsagePage() {
 
       {tab === "summary" && (
         <>
-          <div className="grid gap-4 md:grid-cols-4 lg:grid-cols-6 mb-6">
+          <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5 mb-6">
             <div className="bg-white rounded-lg border p-4">
               <div className="text-sm text-gray-500">本月请求数</div>
               <div className="text-2xl font-bold">{totalRequests}</div>
@@ -156,13 +156,10 @@ export default function UsagePage() {
             </div>
             <div className="bg-white rounded-lg border p-4">
               <div className="text-sm text-gray-500">本月总花费</div>
-              <div className="text-xl font-bold text-gray-700">{totalCostStr}</div>
-              <div className="text-xs text-gray-400 mt-1">未减免前</div>
-            </div>
-            <div className={`rounded-lg border p-4 ${hasSelf ? "bg-emerald-50 border-emerald-200" : "bg-white"}`}>
-              <div className="text-sm text-gray-500">自有模型减免</div>
-              <div className={`text-xl font-bold ${hasSelf ? "text-emerald-600" : "text-gray-300"}`}>−{totalSelfStr}</div>
-              <div className="text-xs text-emerald-700 mt-1">实际计费 {totalBillableStr}</div>
+              <div className="text-xl font-bold text-green-600">{totalBillableStr}</div>
+              {hasSelf && (
+                <div className="text-xs text-emerald-700 mt-1" title="使用自己名下的后端模型已全额减免">已减免自有模型 {totalSelfStr}</div>
+              )}
             </div>
           </div>
 
@@ -178,9 +175,7 @@ export default function UsagePage() {
                     <th className="text-right px-4 py-3 font-medium">输入 tokens</th>
                     <th className="text-right px-4 py-3 font-medium">输出 tokens</th>
                     <th className="text-right px-4 py-3 font-medium">缓存命中</th>
-                    <th className="text-right px-4 py-3 font-medium">花费</th>
-                    <th className="text-right px-4 py-3 font-medium" title="使用自己名下的后端模型，本平台不计入账单">自有模型减免</th>
-                    <th className="text-right px-4 py-3 font-medium">实际计费</th>
+                    <th className="text-right px-4 py-3 font-medium" title="使用自己名下的后端模型已全额减免">花费</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -200,9 +195,7 @@ export default function UsagePage() {
                           <span className="text-xs text-gray-400 ml-1">({((u.total_cached / u.total_input) * 100).toFixed(0)}%)</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-right text-gray-700">{fmtCost(u.total_cost, cur)} <span className="text-xs text-gray-400">{cur}</span></td>
-                      <td className={`px-4 py-3 text-right ${self > 0 ? "text-emerald-600" : "text-gray-300"}`}>{self > 0 ? `−${fmtCost(self, cur)}` : "—"}</td>
-                      <td className="px-4 py-3 text-right text-green-600 font-medium">{fmtCost(billable, cur)}</td>
+                      <td className="px-4 py-3 text-right text-green-600 font-medium">{fmtCost(billable, cur)} <span className="text-xs text-gray-400">{cur}</span></td>
                     </tr>
                     )
                   })}
