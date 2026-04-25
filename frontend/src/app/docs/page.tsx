@@ -237,6 +237,7 @@ for chunk in resp:
             <li>
               <strong>平台技术服务费（Platform Technical Service Fee）</strong>：本网关作为撮合 + 算力转接 + 计费结算的技术服务提供方，按账单金额的 <strong>1%</strong> 收取平台技术服务费（发票品目：<code>*现代服务*技术服务费</code>）。<span className="text-emerald-700 font-medium">试运营期间，平台技术服务费减免 100%，用户与服务提供者均不产生额外费用</span>。试运营结束后将在本页面提前公告生效日期与具体收取方式。
             </li>
+            <li><strong>自有模型 100% 减免</strong>：当你订阅/调用的是自己名下的后端模型时，统计依然记录 token 与单价，但「按模型汇总」与账单结算阶段会全额减免，不会进入 <code>current_month_cost</code> 与月账单。「使用明细」的小时表与日表会单独列出 <em>自有模型减免</em> 与 <em>实际计费</em> 两列方便核对</li>
             <li>未支付账单累计超出限额会暂停 API 调用，支付后自动恢复</li>
             <li>
               <strong>提前结清本月账单</strong>：若计划离开或注销账号，可在 <strong>取消所有订阅 + 下架所有服务 + 账户静默 30 分钟</strong> 后，通过 <code>POST /api/billing/settle-now</code>（或账单页「提前结清」按钮）把本月用量立即出账；出账幂等按 <em>年月 × 货币</em>，本月若再产生计费会另起一张账单
