@@ -88,6 +88,9 @@ llm-gateway/
 - **按量计费**：按 token 计费，余额扣减，余额不足拒绝请求；`/v1/responses` 自动归一 `input_tokens`/`output_tokens`
 - **定价优先级**：Backend 定价 > 配置模型定价 > 全局默认
 - **管理面板**：用户管理、余额充值、用量统计、启用/禁用用户
+- **邮箱验证码二次确认**：注册 / 登录 / 修改邮箱 / 注销账号均需 6 位验证码（10 分钟有效，60 秒发送间隔，每邮箱每用途每小时 ≤ 3 条）
+- **自助账号管理**：弹窗式修改密码；注销账号需通过密码 + 邮箱验证码 + 输入 `DELETE` 三重确认，且必须先取消订阅、下架后端、静默 30 分钟、提前结清当月、清账
+- **提前结清本月账单**：用户取消订阅且静默 ≥ 30 分钟后可主动出账，便于尽快注销（`POST /api/billing/settle-now`）
 
 ## 部署
 
@@ -195,6 +198,10 @@ curl https://your-gateway/s/SUB_KEY/v1/chat/completions \
 | POST | `/api/auth/register` | 注册 | 无 |
 | POST | `/api/auth/login` | 登录 | 无 |
 | GET | `/api/auth/me` | 当前用户信息 | JWT |
+| POST | `/api/auth/send-code` | 发送邮箱验证码（register / login / change-email / delete-account） | 无 |
+| POST | `/api/auth/change-password` | 修改密码（旧密码确认） | JWT |
+| POST | `/api/auth/change-email` | 修改邮箱（验证码） | JWT |
+| POST | `/api/auth/delete-account` | 自助注销（密码 + 验证码 + DELETE；需先取消订阅 / 下架后端 / 静默 30 分钟 / 提前结清当月 / 无未付账单） | JWT |
 | POST | `/api/user/upgrade-role` | 升级角色 | JWT |
 | GET/POST | `/api/keys` | 列出/创建 API Key | JWT |
 | DELETE | `/api/keys/{id}` | 吊销 Key | JWT |
@@ -202,6 +209,9 @@ curl https://your-gateway/s/SUB_KEY/v1/chat/completions \
 | DELETE | `/api/backends/{name}` | 删除后端 | JWT (Provider) |
 | GET | `/api/models` | 模型市场（公开在线模型）| 无 |
 | GET | `/api/usage` | 用户用量统计 | JWT |
+| GET | `/api/billing/status` | 本月用量与未付账单 | JWT |
+| GET | `/api/billing/settle-now/eligibility` | 能否提前结清本月账单 | JWT |
+| POST | `/api/billing/settle-now` | 提前结清本月账单（需无激活订阅 + 无 listed/pending 后端 + 静默 ≥ 30 分钟） | JWT |
 | GET | `/v1/models` | OpenAI 兼容模型列表 | API Key |
 | POST | `/v1/chat/completions` | OpenAI 兼容对话 | API Key |
 | POST | `/v1/completions` | OpenAI 兼容 Completion | API Key |

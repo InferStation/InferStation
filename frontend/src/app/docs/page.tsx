@@ -238,7 +238,10 @@ for chunk in resp:
               <strong>平台技术服务费（Platform Technical Service Fee）</strong>：本网关作为撮合 + 算力转接 + 计费结算的技术服务提供方，按账单金额的 <strong>1%</strong> 收取平台技术服务费（发票品目：<code>*现代服务*技术服务费</code>）。<span className="text-emerald-700 font-medium">试运营期间，平台技术服务费减免 100%，用户与服务提供者均不产生额外费用</span>。试运营结束后将在本页面提前公告生效日期与具体收取方式。
             </li>
             <li>未支付账单累计超出限额会暂停 API 调用，支付后自动恢复</li>
-            <li>实时用量与本月累计费用可在「仪表盘」、<code>GET /api/billing/status</code>、<code>GET /api/usage</code>（按模型汇总）、<code>GET /api/usage/hourly</code>（今日按小时）、<code>GET /api/usage/daily?days=N</code>（历史按天）查询</li>
+            <li>
+              <strong>提前结清本月账单</strong>：若计划离开或注销账号，可在 <strong>取消所有订阅 + 下架所有服务 + 账户静默 30 分钟</strong> 后，通过 <code>POST /api/billing/settle-now</code>（或账单页「提前结清」按钮）把本月用量立即出账；出账幂等按 <em>年月 × 货币</em>，本月若再产生计费会另起一张账单
+            </li>
+            <li>实时用量与本月累计费用可在「仪表盘」、<code>GET /api/billing/status</code>、<code>GET /api/billing/settle-now/eligibility</code>（查询能否提前结清）、<code>GET /api/usage</code>（按模型汇总）、<code>GET /api/usage/hourly</code>（今日按小时）、<code>GET /api/usage/daily?days=N</code>（历史按天）查询</li>
           </ul>
         </div>
       </section>
@@ -278,7 +281,20 @@ curl -X POST https://your-gateway/api/auth/login \
   -d '{"login": "you@example.com", "password": "xxxxx", "code": "123456"}'`}</pre>
           </div>
           <p>
-            <strong>修改密码 / 注销账号</strong> 均在个人中心「账号密码」页完成 ：修改密码弹窗要求原密码，注销账号需依次输入当前密码、邮箱验证码并键入 <code>DELETE</code> 三重确认；admin、存在未付账单、或名下仍有上架中/审核中后端的账号会被拒绝注销。
+            <strong>修改密码 / 注销账号</strong> 均在个人中心「账号密码」页完成：修改密码弹窗要求原密码；注销账号需依次输入当前密码、邮箱验证码并键入 <code>DELETE</code> 三重确认。
+          </p>
+          <p>
+            <strong>注销前置 5 步（任何一步不满足，后端直接返回 400）：</strong>
+          </p>
+          <ol className="list-decimal list-inside space-y-1 ml-2">
+            <li>取消全部订阅（<code>subscriptions.is_active = 1</code> 必须为 0 条）</li>
+            <li>下架 / 撤回审核全部名下后端（无 <code>listed</code> / <code>pending</code>）</li>
+            <li>账户静默至少 <strong>30 分钟</strong>（最近一个 <code>usage_hourly</code> 桶距今 ≥ 30 min，防止漏计在途请求）</li>
+            <li>用 <code>POST /api/billing/settle-now</code> 把当前月份用量提前出账（<code>current_month_cost == 0</code>）</li>
+            <li>结清全部未付账单（<code>unpaid_total == 0</code>）</li>
+          </ol>
+          <p>
+            admin 账号不可自助注销。软删除会把 <code>username</code> 改成 <code>deleted_&#123;id&#125;_&#123;rand&#125;_&#123;原用户名&#125;</code>（便于审计回溯），<code>email</code> 置为 <code>deleted_&#123;id&#125;_&#123;rand&#125;@deleted.invalid</code>，账单与用量记录保留。
           </p>
         </div>
       </section>
@@ -407,6 +423,16 @@ curl -X POST https://your-gateway/api/auth/login \
               </tr>
               <tr>
                 <td className="px-4 py-2"><code className="text-green-600">GET</code></td>
+                <td className="px-4 py-2 font-mono text-xs">/api/billing/settle-now/eligibility</td>
+                <td className="px-4 py-2 text-gray-600">能否提前结清本月账单（返回 <code>eligible</code> + <code>reasons</code> 清单）</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-2"><code className="text-indigo-600">POST</code></td>
+                <td className="px-4 py-2 font-mono text-xs">/api/billing/settle-now</td>
+                <td className="px-4 py-2 text-gray-600">把本月用量立即出账（需无激活订阅、无 listed/pending 后端、静默 ≥ 30 分钟）</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-2"><code className="text-green-600">GET</code></td>
                 <td className="px-4 py-2 font-mono text-xs">/api/usage</td>
                 <td className="px-4 py-2 text-gray-600">按模型汇总调用明细（默认近 7 天，<code>days</code> 可选）</td>
               </tr>
@@ -487,7 +513,7 @@ curl -X POST https://your-gateway/api/auth/login \
               <tr>
                 <td className="px-4 py-2"><code className="text-indigo-600">POST</code></td>
                 <td className="px-4 py-2 font-mono text-xs">/api/auth/delete-account</td>
-                <td className="px-4 py-2 text-gray-600">自助注销（<code>password</code> + <code>code</code> + <code>confirm: "DELETE"</code>，软删除）</td>
+                <td className="px-4 py-2 text-gray-600">自助注销（<code>password</code> + <code>code</code> + <code>confirm: "DELETE"</code>，软删除；需先通过上述 5 项注销前置）</td>
               </tr>
             </tbody>
           </table>
