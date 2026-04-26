@@ -51,7 +51,7 @@ export default function LoginPage() {
     try {
       const data = await apiFetch("/api/auth/login", {
         method: "POST",
-        body: JSON.stringify({ login, password, code: code.trim() }),
+        body: JSON.stringify({ login, password, code: code.trim(), remember }),
       })
       await auth.login(data.token, remember)
       router.push("/dashboard")

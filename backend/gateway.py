@@ -319,6 +319,7 @@ class LoginRequest(BaseModel):
     login: str  # username or email
     password: str
     code: str
+    remember: bool = False
 
 
 class SendCodeRequest(BaseModel):
@@ -490,7 +491,9 @@ async def login(req: LoginRequest):
         raise HTTPException(401, "Invalid credentials")
     user = dict(user)
     await _consume_verification_code((user["email"] or "").lower(), "login", req.code)
-    token = create_access_token(user["id"], user["role"])
+    # "记住我" → 7 天 token；否则默认 24 小时
+    expires_minutes = 7 * 24 * 60 if req.remember else None
+    token = create_access_token(user["id"], user["role"], expires_minutes=expires_minutes)
     return {
         "token": token,
         "user": {"id": user["id"], "username": user["username"], "role": user["role"]},
