@@ -56,6 +56,7 @@ export default function ServicesPage() {
   const [form, setForm] = useState({
     name: "",
     url: "",
+    api_key: "",
     mode: "direct",
     family: "",
     model: "",
@@ -124,6 +125,9 @@ export default function ServicesPage() {
       if (form.served_as.trim()) {
         client_info.model_map = { [models[0]]: form.served_as.trim() }
       }
+      if (form.api_key.trim()) {
+        client_info.api_key = form.api_key.trim()
+      }
 
       await apiFetch("/api/backends", {
         method: "POST",
@@ -141,7 +145,7 @@ export default function ServicesPage() {
         }),
       })
       setShowForm(false)
-      setForm({ name: "", url: "", mode: "direct", family: "", model: "", served_as: "", tag_hardware: "", tag_framework: "", tag_quantization: "", input_price: "", output_price: "", cache_price: "", currency: "CNY" })
+      setForm({ name: "", url: "", api_key: "", mode: "direct", family: "", model: "", served_as: "", tag_hardware: "", tag_framework: "", tag_quantization: "", input_price: "", output_price: "", cache_price: "", currency: "CNY" })
       loadBackends()
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : "操作失败")
@@ -245,6 +249,20 @@ export default function ServicesPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">后端 URL</label>
                 <input type="url" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="http://IP:PORT" required className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+              </div>
+            )}
+            {form.mode === "direct" && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">上游 API Key（可选）</label>
+                <input
+                  type="password"
+                  value={form.api_key}
+                  onChange={(e) => setForm({ ...form, api_key: e.target.value })}
+                  placeholder="如上游需要认证则填入，留空表示上游无认证"
+                  autoComplete="new-password"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono"
+                />
+                <p className="mt-1 text-xs text-gray-500">网关转发时会以 <code>Authorization: Bearer &lt;key&gt;</code> 带上。仅你本人可见，不会泄露给订阅者。</p>
               </div>
             )}
             <div>

@@ -25,7 +25,7 @@ interface Backend {
   owner_name: string
   updated_at: string
   created_at: string
-  client_info?: { model_map?: Record<string, string> }
+  client_info?: { model_map?: Record<string, string>; api_key?: string }
 }
 
 export default function ServiceDetailPage() {
@@ -45,6 +45,8 @@ export default function ServiceDetailPage() {
   const [saving, setSaving] = useState(false)
   const [editForm, setEditForm] = useState({
     url: "",
+    api_key: "",
+    api_key_changed: false,
     family: "",
     model: "",
     served_as: "",
@@ -82,6 +84,8 @@ export default function ServiceDetailPage() {
     const bareNames = b.models.map((m) => m.includes("/") ? m.split("/").slice(1).join("/") : m)
     setEditForm({
       url: b.url || "",
+      api_key: "",
+      api_key_changed: false,
       family: inferredFamily,
       model: bareNames[0] || "",
       served_as: b.client_info?.model_map?.[b.models[0]] || "",
@@ -120,6 +124,12 @@ export default function ServiceDetailPage() {
         client_info.model_map = { [models[0]]: editForm.served_as.trim() }
       } else {
         delete client_info.model_map
+      }
+      // Only touch api_key if user actually edited the field; otherwise keep existing.
+      if (editForm.api_key_changed) {
+        const k = editForm.api_key.trim()
+        if (k) client_info.api_key = k
+        else delete client_info.api_key
       }
 
       await apiFetch(`/api/backends/${encodeURIComponent(name)}`, {
@@ -253,6 +263,34 @@ export default function ServiceDetailPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">后端 URL</label>
                 <input type="url" value={editForm.url} onChange={(e) => setEditForm({ ...editForm, url: e.target.value })} placeholder="http://IP:PORT" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+              </div>
+            )}
+            {backend.mode === "direct" && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  上游 API Key（可选）
+                  <span className="ml-2 text-xs text-gray-500 font-normal">
+                    {backend.client_info?.api_key ? "当前状态：已设置" : "当前状态：未设置"}
+                  </span>
+                </label>
+                <input
+                  type="password"
+                  value={editForm.api_key}
+                  onChange={(e) => setEditForm({ ...editForm, api_key: e.target.value, api_key_changed: true })}
+                  placeholder={backend.client_info?.api_key ? "保留原值请不要修改；填入新值会覆盖原值" : "如上游需要认证则填入"}
+                  autoComplete="new-password"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono"
+                />
+                <div className="mt-1 flex items-center justify-between">
+                  <p className="text-xs text-gray-500">转发时以 <code>Authorization: Bearer &lt;key&gt;</code> 带上。</p>
+                  {backend.client_info?.api_key && (
+                    <button
+                      type="button"
+                      onClick={() => setEditForm({ ...editForm, api_key: "", api_key_changed: true })}
+                      className="text-xs text-red-600 hover:underline"
+                    >清除 API Key</button>
+                  )}
+                </div>
               </div>
             )}
             <div>
