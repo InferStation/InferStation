@@ -167,6 +167,24 @@ export default function ServicesPage() {
     }
   }
 
+  const [checking, setChecking] = useState<Record<string, boolean>>({})
+  const checkBackend = async (name: string) => {
+    setChecking((m) => ({ ...m, [name]: true }))
+    try {
+      const r = await apiFetch(`/api/backends/${name}/check`, { method: "POST" })
+      if (r?.status === "online") {
+        alert(`检查通过：${name} 当前在线`)
+      } else {
+        alert(`检查未通过：${name} 离线\n${r?.error ?? ""}`)
+      }
+      loadBackends()
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "操作失败")
+    } finally {
+      setChecking((m) => ({ ...m, [name]: false }))
+    }
+  }
+
   if (!user) return null
 
   const handleUpgrade = async () => {
@@ -402,6 +420,14 @@ export default function ServicesPage() {
                     const disabled = "bg-gray-50 text-gray-300 cursor-not-allowed"
                     return (
                       <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.preventDefault()}>
+                        <button
+                          disabled={!!checking[b.name]}
+                          onClick={(e) => { e.preventDefault(); checkBackend(b.name) }}
+                          className={`${base} ${checking[b.name] ? "bg-sky-50 text-sky-400 cursor-wait" : "bg-sky-100 text-sky-700 hover:bg-sky-200"}`}
+                          title="立即向后端发起一次健康检查"
+                        >
+                          {checking[b.name] ? "检查中…" : "在线检查"}
+                        </button>
                         <button
                           disabled={!canApply}
                           onClick={(e) => { e.preventDefault(); if (canApply) toggleBackend(b.name) }}

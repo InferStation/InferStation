@@ -169,6 +169,43 @@ async def run_daily_rollover():
 
 
 # ── Health Check Background Task ───────────────────────
+async def probe_backend_status(b: dict) -> tuple[str, str | None]:
+    """Probe a single backend (tunnel or direct) and return (status, error).
+
+    `b` must contain id / mode / url / client_info. Does not touch DB.
+    """
+    if b["mode"] == "tunnel":
+        if await tunnel_manager.health_probe(b["id"]):
+            return "online", None
+        return "offline", "隧道未连接或心跳失败"
+    if not b.get("url"):
+        return "offline", "未配置 URL"
+    try:
+        headers = {}
+        ci = json.loads(b["client_info"]) if b.get("client_info") else {}
+        if ci.get("api_key"):
+            headers["Authorization"] = f"Bearer {ci['api_key']}"
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(f"{b['url'].rstrip('/')}/v1/models", headers=headers)
+            if resp.status_code == 200:
+                return "online", None
+            return "offline", f"上游 /v1/models 返回 {resp.status_code}"
+    except Exception as e:
+        return "offline", f"探测失败: {e.__class__.__name__}: {e}"
+
+
+async def update_backend_status(backend_id: int, status: str) -> None:
+    db = await get_db()
+    try:
+        await db.execute(
+            "UPDATE backends SET status = ?, updated_at = datetime('now') WHERE id = ?",
+            (status, backend_id),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+
+
 async def health_check_loop():
     interval = CONFIG.get("health_check", {}).get("interval_seconds", 30)
     while True:
@@ -182,32 +219,8 @@ async def health_check_loop():
                 await db.close()
 
             for b in backends:
-                new_status = "offline"
-                if b["mode"] == "tunnel":
-                    if await tunnel_manager.health_probe(b["id"]):
-                        new_status = "online"
-                elif b["url"]:
-                    try:
-                        headers = {}
-                        ci = json.loads(b["client_info"]) if b.get("client_info") else {}
-                        if ci.get("api_key"):
-                            headers["Authorization"] = f"Bearer {ci['api_key']}"
-                        async with httpx.AsyncClient(timeout=10) as client:
-                            resp = await client.get(f"{b['url'].rstrip('/')}/v1/models", headers=headers)
-                            if resp.status_code == 200:
-                                new_status = "online"
-                    except Exception:
-                        pass
-
-                db2 = await get_db()
-                try:
-                    await db2.execute(
-                        "UPDATE backends SET status = ?, updated_at = datetime('now') WHERE id = ?",
-                        (new_status, b["id"]),
-                    )
-                    await db2.commit()
-                finally:
-                    await db2.close()
+                new_status, _ = await probe_backend_status(b)
+                await update_backend_status(b["id"], new_status)
         except Exception as e:
             logger.error(f"Health check error: {e}")
 
@@ -1077,8 +1090,12 @@ async def my_backend_stats(user=Depends(require_provider)):
         sub_rows = await cur.fetchall()
 
         # Stats scoped to current month (Asia/Shanghai); resets on the 1st.
+        # Exclude self-usage (owner calling their own backend) — those calls
+        # are 100% waived from billing/revenue, so they should not appear in
+        # the provider's "expected revenue" either.
         month_start = sh_month_start()
         today = sh_day()
+        owner_id = user["id"]
         cur = await db.execute(
             f"SELECT backend_id, model, "
             f"SUM(requests) AS requests, "
@@ -1086,12 +1103,14 @@ async def my_backend_stats(user=Depends(require_provider)):
             f"SUM(cached_tokens) AS cached_tokens, "
             f"SUM(cost) AS cost FROM ("
             f"  SELECT backend_id, model, requests, input_tokens, output_tokens, cached_tokens, cost "
-            f"  FROM usage_hourly WHERE backend_id IN ({placeholders}) AND substr(hour_start, 1, 10) >= ? "
+            f"  FROM usage_hourly WHERE backend_id IN ({placeholders}) "
+            f"    AND user_id != ? AND substr(hour_start, 1, 10) >= ? "
             f"  UNION ALL "
             f"  SELECT backend_id, model, requests, input_tokens, output_tokens, cached_tokens, cost "
-            f"  FROM usage_daily WHERE backend_id IN ({placeholders}) AND day >= ? AND day < ?"
+            f"  FROM usage_daily WHERE backend_id IN ({placeholders}) "
+            f"    AND user_id != ? AND day >= ? AND day < ?"
             f") GROUP BY backend_id, model",
-            ids + [month_start] + ids + [month_start, today],
+            ids + [owner_id, month_start] + ids + [owner_id, month_start, today],
         )
         usage_rows = await cur.fetchall()
     finally:
@@ -1344,6 +1363,36 @@ async def toggle_backend(name: str, user=Depends(require_provider)):
     finally:
         await db.close()
     return {"ok": True, "enabled": bool(new_enabled), "listing_status": new_status}
+
+
+@app.post("/api/backends/{name}/check")
+async def check_backend(name: str, user=Depends(require_provider)):
+    """Manually trigger an online probe for a single backend.
+
+    Owner (or admin) only. Updates `backends.status` and returns the result.
+    """
+    db = await get_db()
+    try:
+        if user["role"] == "admin":
+            cur = await db.execute(
+                "SELECT id, name, url, mode, client_info FROM backends WHERE name = ?",
+                (name,),
+            )
+        else:
+            cur = await db.execute(
+                "SELECT id, name, url, mode, client_info FROM backends "
+                "WHERE name = ? AND owner_id = ?",
+                (name, user["id"]),
+            )
+        row = await cur.fetchone()
+    finally:
+        await db.close()
+    if not row:
+        raise HTTPException(404, "Backend not found")
+    b = dict(row)
+    status, error = await probe_backend_status(b)
+    await update_backend_status(b["id"], status)
+    return {"ok": True, "status": status, "error": error}
 
 
 @app.get("/api/admin/backends/pending")
