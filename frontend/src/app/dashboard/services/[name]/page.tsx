@@ -359,7 +359,7 @@ export default function ServiceDetailPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">缓存命中定价（{editForm.currency === "USD" ? "$" : "¥"}/百万token）</label>
-                <input type="number" step="0.01" value={editForm.cache_price} onChange={(e) => setEditForm({ ...editForm, cache_price: e.target.value })} placeholder="默认为输入价×0.1" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+                <input type="number" step="0.01" value={editForm.cache_price} onChange={(e) => setEditForm({ ...editForm, cache_price: e.target.value })} placeholder="默认为输入×0.1" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
               </div>
             </div>
             <p className="text-xs text-gray-500 -mt-2">缓存命中部分按缓存价计费；留空时按输入价×0.1（行业通行折扣）计费。</p>
