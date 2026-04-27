@@ -468,7 +468,7 @@ export default function ServicesPage() {
 
                 {/* Stats */}
                 {m ? (
-                  <div className="px-5 py-3 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 text-sm">
+                  <div className="px-5 py-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9 gap-2 text-sm">
                     <div className="rounded bg-gray-50 px-3 py-2">
                       <div className="text-[11px] text-gray-500">输入价</div>
                       <div className="font-semibold text-gray-900 mt-0.5">{sym}{b.input_price ?? "-"}<span className="text-[11px] font-normal text-gray-500">/M</span></div>
@@ -515,7 +515,7 @@ export default function ServicesPage() {
                       </div>
                       <div className="font-semibold text-gray-900 mt-0.5">{formatTokens(s?.cached_tokens ?? 0)}</div>
                     </div>
-                    <div className="rounded bg-gray-50 px-3 py-2 col-span-2 sm:col-span-1">
+                    <div className="rounded bg-gray-50 px-3 py-2">
                       <div className="text-[11px] text-gray-500">本月预期收入</div>
                       <div className="font-semibold text-gray-900 mt-0.5">{sym}{(s?.cost ?? 0).toFixed(6)}</div>
                     </div>
