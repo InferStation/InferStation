@@ -20,7 +20,7 @@
        ▼                ▼
 ┌────────────┐  ┌─────────────────┐
 │ 公网 vLLM   │  │ NAT 内网 vLLM    │
-│ (直接可达)   │  │ (运行 client.py) │
+│ (直接可达)   │  │ (运行 tunnel_client) │
 └────────────┘  └─────────────────┘
 ```
 
@@ -41,15 +41,15 @@ llm-gateway/
 │   │   ├── models/         # 模型市场
 │   │   ├── login/          # 登录
 │   │   ├── register/       # 注册
-│   │   ├── dashboard/      # 用户控制台
-│   │   ├── keys/           # API Key 管理
-│   │   ├── backends/       # 提供者后端管理
+│   │   ├── dashboard/      # 用户控制台 (account/keys/usage/invoices/other)
+│   │   ├── my-subscriptions/  # 我的订阅（顶级路由）
+│   │   ├── my-services/      # 我的服务（顶级路由）
 │   │   └── admin/          # 管理员面板
 │   ├── src/context/        # AuthContext
-│   ├── src/components/     # Navbar
+│   ├── src/components/     # AppShell / SideNav / TopBar / ui/*
 │   └── src/lib/api.ts      # API 请求封装
 └── client/
-    └── client.py           # 提供者隧道客户端
+    └── tunnel_client.py    # 提供者隧道客户端（永久指数退避重连）
 ```
 
 ## 用户角色
@@ -71,19 +71,15 @@ llm-gateway/
 - **OpenAI 兼容 API**：`/v1/models`、`/v1/chat/completions`、`/v1/completions`、`/v1/responses`（均支持流式）
 - **双模式后端接入**：
   - **直连**：后端有公网 IP，网关直接 HTTP 转发
-  - **隧道**：后端在 NAT 后，运行 client.py 建立 WebSocket 长连接
-- **订阅 + 多激活 + 优先级回退**：
-  - 用户在模型市场订阅 Backend 的某个模型 → 获得独立的 `sub_key`
-  - 同一个用户可**同时激活多个订阅**；平台按用户设置的优先级依次尝试
-  - 高优先级订阅的 Backend 离线或失败时，**自动回退**到下一个
-  - 自动订阅：Provider 注册 Backend 后，自身自动激活该订阅（方便测试）
-- **Auto fallback 开关（用户级）**：
-  - **开启（默认）**：调用 `/v1/*` 时忽略请求里的 `model`，按优先级选一个在线的已激活订阅；离线自动回退
-  - **关闭**：必须在请求体里显式指定 `model`，且只能是已激活订阅里的模型名；只走对应那一个订阅，**不自动切换**
-  - 在 `/dashboard/my-models` 页面可直接切换
-- **两种调用方式**：
-  - **统一入口**：用自己的 API Key 调 `/v1/*`，按优先级自动路由到已激活订阅
-  - **指定订阅**：用 `sub_key` 调 `/s/{sub_key}/v1/*`，强制使用该订阅
+  - **隧道**：后端在 NAT 后，运行 `tunnel_client.py` 建立 WebSocket 长连接
+- **路由三模式**（请求体 `model` 字段决定钉定粒度）：
+  - `Auto`（case-insensitive）：跨所有激活订阅 fallback；online 优先于 offline，同 tier 按订阅优先级
+  - `<model>`（如 `Qwen/Qwen3.6-35B-A3B`）：仅在该模型组内的多个 provider 间 fallback（同模型可订阅多个后端）
+  - `<model>/<backend_name>`：钉死单 backend，**不**做 fallback
+  - 空 / 未知 model 直接 4xx 并列出可用清单
+- **同模型多 provider**：`subscriptions` UNIQUE `(user_id, backend_id, model)`，新订阅按 (input+output) 升序入组；高优先级失败 / 5xx / 连接错 / 首字节超时自动切下一候选（4xx 透传）；流式响应先 pre-flight 首 chunk，未输出字节才允许切换 provider
+- **唯一对外入口**：用 API Key 调 `/v1/*`；旧 `/s/{sub_key}/v1/*` 已下线
+- **自动订阅**：Provider 注册 Backend 后自身自动激活该订阅（方便测试）
 - **API Key 管理**：创建、查看、吊销
 - **按量计费**：按 token 计费，余额扣减，余额不足拒绝请求；`/v1/responses` 自动归一 `input_tokens`/`output_tokens`
 - **定价优先级**：Backend 定价 > 配置模型定价 > 全局默认
@@ -128,14 +124,16 @@ node .next/standalone/server.js
 
 ```bash
 pip install websockets httpx
-python client.py \
-  --gateway ws://GATEWAY_HOST:8080/ws/tunnel \
+python tunnel_client.py \
+  --gateway wss://your-gateway/ws/tunnel \
   --token sk-你的API-Key \
   --backend-name my-gpu-server \
   --local-url http://localhost:8000
 ```
 
-> **隧道协议更新（2026-04）**：WebSocket 消息新增可选 `path` 字段，用于支持 `/v1/completions`、`/v1/responses` 等非 chat 路径。若 `path` 缺省，兼容默认回落到 `/v1/chat/completions`。老版 `client.py` 仍可服务 chat 场景，如需完整 OpenAI 兼容，请拉取最新版。
+> `tunnel_client.py` 在 auth-fail / connect-fail / 1012 service-restart 全部走指数退避 1→60 s 永久重试，不会自行退出。
+
+> **隧道协议更新（2026-04）**：WebSocket 消息新增可选 `path` 字段，用于支持 `/v1/completions`、`/v1/responses` 等非 chat 路径。若 `path` 缺省，兼容默认回落到 `/v1/chat/completions`。
 
 ## 使用
 
@@ -155,7 +153,7 @@ client = OpenAI(
 
 # model 可填 "auto"，由网关按优先级选；也可填某个已激活订阅里的模型名
 resp = client.chat.completions.create(
-    model="auto",
+    model="Auto",
     messages=[{"role": "user", "content": "Hello"}],
     stream=True
 )
@@ -174,19 +172,8 @@ for chunk in resp:
 
 > 自签证书场景（直接用 IP 访问）需要在客户端跳过证书校验，例如 `curl -k`；使用配置好的域名则不需要。
 
-#### 2. 指定订阅（sub_key）
 
-每个订阅有独立 `sub_key`，可以用来强制走某一个 Backend，路径前缀为 `/s/{sub_key}`：
-
-```bash
-curl https://your-gateway/s/SUB_KEY/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{"model":"Qwen3-8B","messages":[{"role":"user","content":"hi"}]}'
-```
-
-> `sub_key` 本身即携带身份和计费归属，无需再带 `Authorization`。
-
-#### 3. 订阅管理与优先级（前端 /dashboard/my-models）
+#### 2. 订阅管理与优先级（前端 /my-subscriptions）
 
 - "激活/停用"：控制该订阅是否参与统一入口的自动路由
 - "↑ / ↓"：调整已激活订阅的优先级（越靠上越优先）
@@ -217,7 +204,6 @@ curl https://your-gateway/s/SUB_KEY/v1/chat/completions \
 | POST | `/v1/chat/completions` | OpenAI 兼容对话 | API Key |
 | POST | `/v1/completions` | OpenAI 兼容 Completion | API Key |
 | POST | `/v1/responses` | OpenAI Responses API | API Key |
-| ALL | `/s/{sub_key}/v1/*` | 指定订阅的 OpenAI 调用 | sub_key（免 Authorization）|
 | GET/POST/DELETE | `/api/subscriptions` | 订阅列表/创建/退订 | JWT |
 | POST | `/api/subscriptions/{id}/activate` | 激活/停用订阅 | JWT |
 | POST | `/api/subscriptions/reorder` | 调整激活订阅优先级 | JWT |
