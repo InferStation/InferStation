@@ -3,6 +3,7 @@ import "./globals.css"
 import { AuthProvider } from "@/context/AuthContext"
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
+import AppShell from "@/components/AppShell"
 
 export const metadata: Metadata = {
   title: "天枢 - 模型服务聚合平台",
@@ -15,9 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="bg-gray-50 min-h-screen flex flex-col">
         <AuthProvider>
           <Navbar />
-          <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
-            {children}
-          </main>
+          <AppShell>{children}</AppShell>
           <Footer />
         </AuthProvider>
       </body>

@@ -14,26 +14,15 @@ export default function Navbar() {
             <Link href="/" className="text-xl font-bold text-indigo-600">
               天枢
             </Link>
-            <Link href="/models" className="text-gray-600 hover:text-gray-900">
-              模型广场
-            </Link>
-            {user && (
-              <Link href="/my-subscriptions" className="text-gray-600 hover:text-gray-900">
-                我的订阅
-              </Link>
-            )}
-            {user && (user.role === "provider" || user.role === "both" || user.role === "admin") && (
-              <Link href="/my-services" className="text-gray-600 hover:text-gray-900">
-                我的服务
-              </Link>
-            )}
-            <Link href="/docs" className="text-gray-600 hover:text-gray-900">
-              文档
-            </Link>
-            {user && user.role === "admin" && (
-              <Link href="/admin" className="text-gray-600 hover:text-gray-900">
-                管理
-              </Link>
+            {!user && (
+              <>
+                <Link href="/models" className="text-gray-600 hover:text-gray-900">
+                  模型广场
+                </Link>
+                <Link href="/docs" className="text-gray-600 hover:text-gray-900">
+                  文档
+                </Link>
+              </>
             )}
           </div>
           <div className="flex items-center gap-4">
