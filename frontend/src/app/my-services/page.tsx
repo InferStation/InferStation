@@ -360,48 +360,51 @@ export default function ServicesPage() {
         </div>
       )}
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {backends.flatMap((b) => {
           const rows = b.models.length > 0 ? b.models : [null]
           return rows.map((m, idx) => {
             const s = m ? (statsMap[b.id] || []).find((x) => x.model === m) : undefined
+            const sym = b.currency === "USD" ? "$" : "¥"
+            const psym = (b.pending_currency ?? b.currency) === "USD" ? "$" : "¥"
             return (
               <Link
                 key={`${b.id}-${m ?? "_"}`}
                 href={`/my-services/${encodeURIComponent(b.name)}`}
-                className={`block bg-white rounded-xl border border-line hover:border-line-strong hover:shadow-md transition-all overflow-hidden ${!b.enabled ? "opacity-60" : ""}`}
+                className={`block bg-white rounded-lg border border-line hover:border-line-strong transition-colors ${!b.enabled ? "opacity-60" : ""}`}
               >
                 {/* Header */}
-                <div className="flex justify-between items-start gap-4 px-5 py-4 border-b border-line bg-gradient-to-r from-gray-50/50 to-transparent">
+                <div className="flex justify-between items-start gap-3 px-5 py-3 border-b border-line flex-wrap">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-semibold text-lg text-gray-900 truncate font-mono">{m ?? "未设置模型"}</h3>
+                      <h3 className="font-semibold text-base text-gray-900 break-all">{m ?? "未设置模型"}</h3>
                       {(() => {
                         const st = b.listing_status || (b.enabled ? "listed" : "offline")
-                        const badge = st === "listed"
-                          ? { cls: "bg-emerald-50 text-emerald-700 ring-emerald-200", dot: "bg-emerald-500", label: "已上架" }
-                          : st === "pending"
-                          ? { cls: "bg-amber-50 text-amber-700 ring-amber-200", dot: "bg-amber-500", label: "上架审核中" }
-                          : { cls: "bg-sky-50 text-sky-700 ring-sky-200", dot: "bg-sky-500", label: "仅私有" }
+                        const cls =
+                          st === "listed" ? "bg-green-50 text-green-700"
+                          : st === "pending" ? "bg-amber-50 text-amber-700"
+                          : "bg-gray-100 text-gray-600"
+                        const label = st === "listed" ? "已上架" : st === "pending" ? "审核中" : "未上架"
                         return (
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ring-1 ${badge.cls}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`}></span>
-                            {badge.label}
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>
+                            {label}
                           </span>
                         )
                       })()}
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${b.status === "online" ? "bg-green-50 text-green-700 ring-1 ring-green-200" : "bg-red-50 text-red-700 ring-1 ring-red-200"}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${b.status === "online" ? "bg-green-500 animate-pulse" : "bg-red-500"}`}></span>
-                        {b.status}
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                          b.status === "online" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"
+                        }`}
+                      >
+                        <span className={`w-1.5 h-1.5 rounded-full ${b.status === "online" ? "bg-green-500" : "bg-red-400"}`} />
+                        {b.status === "online" ? "在线" : "离线"}
                       </span>
-                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-50 text-slate-600 ring-1 ring-slate-200">
-                        {b.mode === "tunnel" ? "隧道" : "直连"}
-                      </span>
-
                     </div>
-                    <div className="mt-1.5 flex items-center gap-2 text-xs text-gray-500">
+                    <div className="mt-1.5 flex items-center gap-2 text-xs text-gray-500 flex-wrap">
                       <span className="text-gray-400">后端</span>
-                      <span className="text-gray-700">{b.name}</span>
+                      <span className="text-gray-700 font-mono">{b.name}</span>
+                      <span className="text-gray-300">·</span>
+                      <span className="text-gray-500">{b.mode === "tunnel" ? "隧道" : "直连"}</span>
                       {Object.entries(b.tags || {}).map(([k, v]) => (
                         <span key={k} className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-accent-soft text-fg border border-line">
                           {v}
@@ -414,14 +417,17 @@ export default function ServicesPage() {
                     const canApply = st === "offline"
                     const canTakedown = st === "listed" || st === "pending"
                     const canDelete = st === "offline"
-                    const base = "text-sm px-3 py-1.5 rounded-md font-medium transition-colors"
-                    const disabled = "bg-gray-50 text-gray-300 cursor-not-allowed"
+                    const btn = "px-2 h-7 flex items-center text-xs rounded border transition-colors"
+                    const ghost = "border-line text-gray-600 bg-white hover:bg-accent-soft hover:text-fg hover:border-line-strong"
+                    const danger = "border-red-300 text-red-600 bg-white hover:bg-red-50 hover:border-red-400"
+                    const primary = "border-fg bg-fg text-white hover:bg-fg/90"
+                    const dis = "border-line text-gray-300 bg-gray-50 cursor-not-allowed hover:bg-gray-50"
                     return (
-                      <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.preventDefault()}>
+                      <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.preventDefault()}>
                         <button
                           disabled={!!checking[b.name]}
                           onClick={(e) => { e.preventDefault(); checkBackend(b.name) }}
-                          className={`${base} ${checking[b.name] ? "bg-sky-50 text-sky-400 cursor-wait" : "bg-sky-100 text-sky-700 hover:bg-sky-200"}`}
+                          className={`${btn} ${checking[b.name] ? "border-line text-gray-400 bg-gray-50 cursor-wait" : ghost}`}
                           title="立即向后端发起一次健康检查"
                         >
                           {checking[b.name] ? "检查中…" : "在线检查"}
@@ -429,14 +435,14 @@ export default function ServicesPage() {
                         <button
                           disabled={!canApply}
                           onClick={(e) => { e.preventDefault(); if (canApply) toggleBackend(b.name) }}
-                          className={`${base} ${canApply ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : disabled}`}
+                          className={`${btn} ${canApply ? primary : dis}`}
                         >
                           申请上架
                         </button>
                         <button
                           disabled={!canTakedown}
                           onClick={(e) => { e.preventDefault(); if (canTakedown) toggleBackend(b.name) }}
-                          className={`${base} ${canTakedown ? "bg-gray-100 text-gray-700 hover:bg-gray-200" : disabled}`}
+                          className={`${btn} ${canTakedown ? ghost : dis}`}
                           title={st === "pending" ? "下架将撤回本次上架申请" : undefined}
                         >
                           下架
@@ -444,7 +450,7 @@ export default function ServicesPage() {
                         <button
                           disabled={!canDelete}
                           onClick={(e) => { e.preventDefault(); if (canDelete) deleteBackend(b.name) }}
-                          className={`${base} ${canDelete ? "text-red-600 hover:bg-red-50" : disabled}`}
+                          className={`${btn} ${canDelete ? danger : dis}`}
                           title={!canDelete ? "请先下架后再删除" : undefined}
                         >
                           删除
@@ -455,63 +461,63 @@ export default function ServicesPage() {
                 </div>
 
                 {b.listing_status === "offline" && b.review_note && idx === 0 && (
-                  <div className="px-5 py-2 text-xs text-rose-700 bg-rose-50 border-b border-rose-100">
+                  <div className="px-5 py-2 text-xs text-red-700 bg-red-50 border-b border-line">
                     驳回原因：{b.review_note}
                   </div>
                 )}
 
                 {/* Stats */}
                 {m ? (
-                  <div className="px-5 py-4 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
-                    <div className="rounded-lg bg-gray-50 px-3 py-2">
+                  <div className="px-5 py-3 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 text-sm">
+                    <div className="rounded bg-gray-50 px-3 py-2">
                       <div className="text-[11px] text-gray-500">输入价</div>
-                      <div className="text-base font-semibold text-gray-900 mt-0.5">{b.currency === "USD" ? "$" : "¥"}{b.input_price ?? "-"}<span className="text-[11px] font-normal text-gray-500">/M</span></div>
+                      <div className="font-semibold text-gray-900 mt-0.5">{sym}{b.input_price ?? "-"}<span className="text-[11px] font-normal text-gray-500">/M</span></div>
                       {b.pending_input_price != null && (
-                        <div className="text-[10px] text-amber-600 mt-0.5">次日生效 {(b.pending_currency ?? b.currency) === "USD" ? "$" : "¥"}{b.pending_input_price}</div>
+                        <div className="text-[10px] text-amber-600 mt-0.5">次日 {psym}{b.pending_input_price}</div>
                       )}
                     </div>
-                    <div className="rounded-lg bg-gray-50 px-3 py-2">
+                    <div className="rounded bg-gray-50 px-3 py-2">
                       <div className="text-[11px] text-gray-500">输出价</div>
-                      <div className="text-base font-semibold text-gray-900 mt-0.5">{b.currency === "USD" ? "$" : "¥"}{b.output_price ?? "-"}<span className="text-[11px] font-normal text-gray-500">/M</span></div>
+                      <div className="font-semibold text-gray-900 mt-0.5">{sym}{b.output_price ?? "-"}<span className="text-[11px] font-normal text-gray-500">/M</span></div>
                       {b.pending_output_price != null && (
-                        <div className="text-[10px] text-amber-600 mt-0.5">次日生效 {(b.pending_currency ?? b.currency) === "USD" ? "$" : "¥"}{b.pending_output_price}</div>
+                        <div className="text-[10px] text-amber-600 mt-0.5">次日 {psym}{b.pending_output_price}</div>
                       )}
                     </div>
-                    <div className="rounded-lg bg-sky-50 px-3 py-2">
-                      <div className="text-[11px] text-sky-700">缓存价</div>
-                      <div className="text-base font-semibold text-gray-900 mt-0.5">{b.cache_price != null ? `${b.currency === "USD" ? "$" : "¥"}${b.cache_price}` : "—"}<span className="text-[11px] font-normal text-gray-500">/M</span></div>
+                    <div className="rounded bg-gray-50 px-3 py-2">
+                      <div className="text-[11px] text-gray-500">缓存价</div>
+                      <div className="font-semibold text-gray-900 mt-0.5">{b.cache_price != null ? `${sym}${b.cache_price}` : "—"}<span className="text-[11px] font-normal text-gray-500">/M</span></div>
                       {b.pending_cache_price != null && (
-                        <div className="text-[10px] text-amber-600 mt-0.5">次日生效 {(b.pending_currency ?? b.currency) === "USD" ? "$" : "¥"}{b.pending_cache_price}</div>
+                        <div className="text-[10px] text-amber-600 mt-0.5">次日 {psym}{b.pending_cache_price}</div>
                       )}
                     </div>
-                    <div className="rounded-lg bg-gray-50 px-3 py-2">
+                    <div className="rounded bg-gray-50 px-3 py-2">
                       <div className="text-[11px] text-gray-500">订阅数</div>
-                      <div className="text-base font-semibold text-gray-900 mt-0.5">{s?.subscribers ?? 0}</div>
+                      <div className="font-semibold text-gray-900 mt-0.5">{s?.subscribers ?? 0}</div>
                     </div>
-                    <div className="rounded-lg bg-gray-50 px-3 py-2">
-                      <div className="text-[11px] text-gray-500">本月请求数</div>
-                      <div className="text-base font-semibold text-gray-900 mt-0.5">{(s?.requests ?? 0).toLocaleString()}</div>
+                    <div className="rounded bg-gray-50 px-3 py-2">
+                      <div className="text-[11px] text-gray-500">本月请求</div>
+                      <div className="font-semibold text-gray-900 mt-0.5">{(s?.requests ?? 0).toLocaleString()}</div>
                     </div>
-                    <div className="rounded-lg bg-gray-50 px-3 py-2">
-                      <div className="text-[11px] text-gray-500">本月输入 tokens</div>
-                      <div className="text-base font-semibold text-gray-900 mt-0.5">{formatTokens(s?.input_tokens ?? 0)}</div>
+                    <div className="rounded bg-gray-50 px-3 py-2">
+                      <div className="text-[11px] text-gray-500">本月输入</div>
+                      <div className="font-semibold text-gray-900 mt-0.5">{formatTokens(s?.input_tokens ?? 0)}</div>
                     </div>
-                    <div className="rounded-lg bg-gray-50 px-3 py-2">
-                      <div className="text-[11px] text-gray-500">本月输出 tokens</div>
-                      <div className="text-base font-semibold text-gray-900 mt-0.5">{formatTokens(s?.output_tokens ?? 0)}</div>
+                    <div className="rounded bg-gray-50 px-3 py-2">
+                      <div className="text-[11px] text-gray-500">本月输出</div>
+                      <div className="font-semibold text-gray-900 mt-0.5">{formatTokens(s?.output_tokens ?? 0)}</div>
                     </div>
-                    <div className="rounded-lg bg-sky-50 px-3 py-2 ring-1 ring-sky-100">
-                      <div className="text-[11px] text-sky-700">本月缓存命中 tokens</div>
-                      <div className="text-base font-semibold text-sky-900 mt-0.5">
-                        {formatTokens(s?.cached_tokens ?? 0)}
+                    <div className="rounded bg-gray-50 px-3 py-2">
+                      <div className="text-[11px] text-gray-500">
+                        本月缓存
                         {(s?.input_tokens ?? 0) > 0 && (
-                          <span className="text-[11px] text-sky-600 ml-1">({(((s?.cached_tokens ?? 0) / (s?.input_tokens ?? 1)) * 100).toFixed(0)}%)</span>
+                          <span className="ml-1 text-gray-400">{(((s?.cached_tokens ?? 0) / (s?.input_tokens ?? 1)) * 100).toFixed(0)}%</span>
                         )}
                       </div>
+                      <div className="font-semibold text-gray-900 mt-0.5">{formatTokens(s?.cached_tokens ?? 0)}</div>
                     </div>
-                    <div className="rounded-lg bg-emerald-50 px-3 py-2 ring-1 ring-emerald-100 col-span-2 sm:col-span-1">
-                      <div className="text-[11px] text-emerald-700">本月预期收入</div>
-                      <div className="text-base font-semibold text-emerald-900 mt-0.5">{b.currency === "USD" ? "$" : "¥"}{(s?.cost ?? 0).toFixed(6)}</div>
+                    <div className="rounded bg-gray-50 px-3 py-2 col-span-2 sm:col-span-1">
+                      <div className="text-[11px] text-gray-500">本月预期收入</div>
+                      <div className="font-semibold text-gray-900 mt-0.5">{sym}{(s?.cost ?? 0).toFixed(6)}</div>
                     </div>
                   </div>
                 ) : (
