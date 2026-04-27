@@ -17,6 +17,16 @@ export default function Navbar() {
             <Link href="/models" className="text-gray-600 hover:text-gray-900">
               模型广场
             </Link>
+            {user && (
+              <Link href="/dashboard/my-models" className="text-gray-600 hover:text-gray-900">
+                我的订阅
+              </Link>
+            )}
+            {user && (user.role === "provider" || user.role === "both" || user.role === "admin") && (
+              <Link href="/dashboard/services" className="text-gray-600 hover:text-gray-900">
+                我的服务
+              </Link>
+            )}
             <Link href="/docs" className="text-gray-600 hover:text-gray-900">
               文档
             </Link>

@@ -293,14 +293,11 @@ export default function MyModelsPage() {
                         <span className={`w-1.5 h-1.5 rounded-full ${anyOnline ? "bg-green-500" : "bg-red-400"}`} />
                         {anyOnline ? "在线" : "离线"}
                       </span>
-                      {minActivatedRank !== null && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-600 text-white">
-                          优先级 {minActivatedRank}
+                      {g.rows.length > 0 && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                          {g.rows.length} 个服务
                         </span>
                       )}
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
-                        {g.rows.length} 个服务
-                      </span>
                     </button>
                     <div className="flex items-center gap-1 shrink-0" title={disabled ? "未激活模型不可调整顺序" : "在所有模型间调整该模型的优先级"}>
                       <button
@@ -364,11 +361,6 @@ export default function MyModelsPage() {
                                   />
                                   {s.backend_status === "online" ? "在线" : "离线"}
                                 </span>
-                                {myRank !== null && (
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[11px] font-medium bg-indigo-100 text-indigo-700 border border-indigo-200" title="按优先级回退顺序">
-                                    优先级 {myRank}
-                                  </span>
-                                )}
                                 {s.is_owned && (
                                   <span
                                     className="inline-flex items-center gap-1 text-amber-600"
