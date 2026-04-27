@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useAuth } from "@/context/AuthContext"
+import { useT } from "@/context/LocaleContext"
 import SideNav from "@/components/SideNav"
 import TopBar from "@/components/TopBar"
 import { IconLayers } from "@/components/ui/Icon"
@@ -12,6 +13,7 @@ const NO_SHELL = ["/login", "/register"]
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { user } = useAuth()
+  const t = useT()
   const hideShell = NO_SHELL.some((p) => pathname === p || pathname.startsWith(p + "/"))
   const showSide = !!user && !hideShell
 
@@ -30,13 +32,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 <div className="w-7 h-7 rounded-lg bg-fg text-accent-fg grid place-items-center">
                   <IconLayers className="w-4 h-4" />
                 </div>
-                <span className="text-[15px] font-semibold tracking-tight">天枢</span>
+                <span className="text-[15px] font-semibold tracking-tight">{t({ en: "Tianshu", zh: "天枢" })}</span>
               </Link>
               <div className="flex items-center gap-1">
-                <Link href="/models" className="px-3 h-8 inline-flex items-center text-[13px] text-fg-muted hover:text-fg rounded-md hover:bg-accent-soft">模型广场</Link>
-                <Link href="/docs" className="px-3 h-8 inline-flex items-center text-[13px] text-fg-muted hover:text-fg rounded-md hover:bg-accent-soft">文档</Link>
-                <Link href="/login" className="px-3 h-8 inline-flex items-center text-[13px] text-fg-muted hover:text-fg rounded-md hover:bg-accent-soft">登录</Link>
-                <Link href="/register" className="ml-1 px-3 h-8 inline-flex items-center text-[13px] rounded-md bg-fg text-accent-fg hover:bg-fg/90">注册</Link>
+                <Link href="/models" className="px-3 h-8 inline-flex items-center text-[13px] text-fg-muted hover:text-fg rounded-md hover:bg-accent-soft">{t({ en: "Models", zh: "模型广场" })}</Link>
+                <Link href="/docs" className="px-3 h-8 inline-flex items-center text-[13px] text-fg-muted hover:text-fg rounded-md hover:bg-accent-soft">{t({ en: "Docs", zh: "文档" })}</Link>
+                <Link href="/login" className="px-3 h-8 inline-flex items-center text-[13px] text-fg-muted hover:text-fg rounded-md hover:bg-accent-soft">{t({ en: "Sign in", zh: "登录" })}</Link>
+                <Link href="/register" className="ml-1 px-3 h-8 inline-flex items-center text-[13px] rounded-md bg-fg text-accent-fg hover:bg-fg/90">{t({ en: "Sign up", zh: "注册" })}</Link>
               </div>
             </div>
           </header>

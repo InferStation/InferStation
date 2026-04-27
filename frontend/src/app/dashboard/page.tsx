@@ -4,10 +4,12 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useAuth } from "@/context/AuthContext"
 import { apiFetch } from "@/lib/api"
+import { useT } from "@/context/LocaleContext"
 import { formatByCurrency } from "@/lib/currency"
 import PasswordInput, { checkStrength } from "@/components/PasswordInput"
 
 export default function AccountPage() {
+  const t = useT()
   const { user, refreshUser, logout } = useAuth()
   const [oldPw, setOldPw] = useState("")
   const [newPw, setNewPw] = useState("")
@@ -26,7 +28,7 @@ export default function AccountPage() {
   const [emailCooldown, setEmailCooldown] = useState(0)
 
   useEffect(() => {
-    if (msg === "密码修改成功" && showPwModal) {
+    if (msg === t({ en: "Password changed", zh: "密码修改成功" }) && showPwModal) {
       const t = setTimeout(() => setShowPwModal(false), 800)
       return () => clearTimeout(t)
     }
@@ -37,40 +39,40 @@ export default function AccountPage() {
   const handleSendEmailCode = async () => {
     setEmailMsg(""); setEmailError("")
     const target = newEmail.trim().toLowerCase()
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(target)) { setEmailError("请输入有效的邮箱"); return }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(target)) { setEmailError(t({ en: "Please enter a valid email", zh: "请输入有效的邮箱" })); return }
     setEmailSending(true)
     try {
       const data = await apiFetch("/api/auth/send-code", {
         method: "POST",
         body: JSON.stringify({ email: target, purpose: "change-email" }),
       })
-      setEmailMsg(data?.dev_code ? `验证码已生成（开发模式：${data.dev_code}）` : "验证码已发送，请查收邮箱")
+      setEmailMsg(data?.dev_code ? t({ en: `Code generated (dev mode: ${data.dev_code})`, zh: `验证码已生成（开发模式：${data.dev_code}）` }) : t({ en: "Code sent — please check your email", zh: "验证码已发送，请查收邮箱" }))
       setEmailCooldown(60)
       const iv = setInterval(() => {
         setEmailCooldown((c) => { if (c <= 1) { clearInterval(iv); return 0 } ; return c - 1 })
       }, 1000)
     } catch (err: unknown) {
-      setEmailError(err instanceof Error ? err.message : "发送失败")
+      setEmailError(err instanceof Error ? err.message : t({ en: "Failed to send", zh: "发送失败" }))
     } finally { setEmailSending(false) }
   }
 
   const handleChangeEmail = async () => {
     setEmailMsg(""); setEmailError("")
-    if (!newEmail.trim()) { setEmailError("请输入邮箱"); return }
-    if (!/^\d{6}$/.test(emailCode.trim())) { setEmailError("请输入 6 位验证码"); return }
+    if (!newEmail.trim()) { setEmailError(t({ en: "Please enter an email", zh: "请输入邮箱" })); return }
+    if (!/^\d{6}$/.test(emailCode.trim())) { setEmailError(t({ en: "Please enter the 6-digit code", zh: "请输入 6 位验证码" })); return }
     setEmailSaving(true)
     try {
       await apiFetch("/api/auth/change-email", {
         method: "POST",
         body: JSON.stringify({ new_email: newEmail.trim().toLowerCase(), code: emailCode.trim() }),
       })
-      setEmailMsg("邮箱修改成功")
+      setEmailMsg(t({ en: "Email updated", zh: "邮箱修改成功" }))
       setEditingEmail(false)
       setNewEmail("")
       setEmailCode("")
       await refreshUser()
     } catch (err: unknown) {
-      setEmailError(err instanceof Error ? err.message : "修改失败")
+      setEmailError(err instanceof Error ? err.message : t({ en: "Update failed", zh: "修改失败" }))
     } finally { setEmailSaving(false) }
   }
 
@@ -80,18 +82,18 @@ export default function AccountPage() {
     e.preventDefault()
     setMsg("")
     setError("")
-    if (newPw !== confirmPw) { setError("两次密码不一致"); return }
-    if (!checkStrength(newPw).ok) { setError("密码需包含大写、小写、数字、特殊字符中的至少3种，且不少于8位"); return }
+    if (newPw !== confirmPw) { setError(t({ en: "Passwords do not match", zh: "两次密码不一致" })); return }
+    if (!checkStrength(newPw).ok) { setError(t({ en: "Password must include at least 3 of: uppercase, lowercase, digit, special; min 8 chars", zh: "密码需包含大写、小写、数字、特殊字符中的至少3种，且不少于8位" })); return }
     setSaving(true)
     try {
       await apiFetch("/api/auth/change-password", {
         method: "POST",
         body: JSON.stringify({ old_password: oldPw, new_password: newPw }),
       })
-      setMsg("密码修改成功")
+      setMsg(t({ en: "Password changed", zh: "密码修改成功" }))
       setOldPw(""); setNewPw(""); setConfirmPw("")
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "修改失败")
+      setError(err instanceof Error ? err.message : t({ en: "Update failed", zh: "修改失败" }))
     } finally {
       setSaving(false)
     }
@@ -99,26 +101,26 @@ export default function AccountPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">账号信息</h1>
+      <h1 className="text-2xl font-bold mb-6">{t({ en: "Account", zh: "账号信息" })}</h1>
 
       <div className="bg-white rounded-lg border p-6 mb-6">
         <div className="flex items-start justify-between gap-4 mb-4">
-          <h2 className="font-semibold">账号信息</h2>
+          <h2 className="font-semibold">{t({ en: "Account information", zh: "账号信息" })}</h2>
           <button
-            onClick={() => { if (confirm("确认退出登录？")) logout() }}
+            onClick={() => { if (confirm(t({ en: "Confirm log out?", zh: "确认退出登录？" }))) logout() }}
             className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 hover:border-red-300"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-            退出登录
+            {t({ en: "Log out", zh: "退出登录" })}
           </button>
         </div>
         <div className="grid gap-4 md:grid-cols-2 text-sm">
           <div>
-            <span className="text-gray-500">用户名：</span>
+            <span className="text-gray-500">{t({ en: "Username: ", zh: "用户名：" })}</span>
             <span className="font-medium">{user.username}</span>
           </div>
           <div>
-            <span className="text-gray-500">邮箱：</span>
+            <span className="text-gray-500">{t({ en: "Email: ", zh: "邮箱：" })}</span>
             {editingEmail ? (
               <span className="inline-flex flex-wrap items-center gap-2">
                 <input
@@ -134,7 +136,7 @@ export default function AccountPage() {
                   maxLength={6}
                   value={emailCode}
                   onChange={(e) => setEmailCode(e.target.value.replace(/\D/g, ""))}
-                  placeholder="验证码"
+                  placeholder={t({ en: "Code", zh: "验证码" })}
                   className="border rounded px-2 py-0.5 text-sm w-24 focus:outline-none focus:ring-1 focus:ring-fg/15"
                 />
                 <button
@@ -142,43 +144,43 @@ export default function AccountPage() {
                   disabled={emailSending || emailCooldown > 0}
                   className="text-xs text-fg hover:text-fg disabled:text-gray-400 disabled:cursor-not-allowed"
                 >
-                  {emailCooldown > 0 ? `${emailCooldown}s` : emailSending ? "发送中" : "发送验证码"}
+                  {emailCooldown > 0 ? `${emailCooldown}s` : emailSending ? t({ en: "Sending", zh: "发送中" }) : t({ en: "Send code", zh: "发送验证码" })}
                 </button>
                 <button onClick={handleChangeEmail} disabled={emailSaving} className="text-xs text-fg hover:text-fg disabled:opacity-50">
-                  {emailSaving ? "保存中" : "保存"}
+                  {emailSaving ? t({ en: "Saving", zh: "保存中" }) : t({ en: "Save", zh: "保存" })}
                 </button>
-                <button onClick={() => { setEditingEmail(false); setNewEmail(""); setEmailCode(""); setEmailError("") }} className="text-xs text-gray-400 hover:text-gray-600">取消</button>
+                <button onClick={() => { setEditingEmail(false); setNewEmail(""); setEmailCode(""); setEmailError("") }} className="text-xs text-gray-400 hover:text-gray-600">{t({ en: "Cancel", zh: "取消" })}</button>
               </span>
             ) : (
               <span className="font-medium">
                 {user.email}
-                <button onClick={() => { setEditingEmail(true); setNewEmail(user.email) }} className="ml-2 text-xs text-fg hover:text-fg">修改</button>
+                <button onClick={() => { setEditingEmail(true); setNewEmail(user.email) }} className="ml-2 text-xs text-fg hover:text-fg">{t({ en: "Edit", zh: "修改" })}</button>
               </span>
             )}
             {emailMsg && <span className="ml-2 text-xs text-green-600">{emailMsg}</span>}
             {emailError && <span className="ml-2 text-xs text-red-500">{emailError}</span>}
           </div>
           <div>
-            <span className="text-gray-500">本月用量：</span>
+            <span className="text-gray-500">{t({ en: "Usage this month: ", zh: "本月用量：" })}</span>
             <span className="font-medium">{formatByCurrency(user.billing?.current_month_by_currency ?? { CNY: user.billing?.current_month_cost ?? 0 })}</span>
-            <span className="ml-2 text-xs text-gray-400">（每月 1 日结算出账）</span>
+            <span className="ml-2 text-xs text-gray-400">{t({ en: "(invoiced on the 1st of each month)", zh: "（每月 1 日结算出账）" })}</span>
           </div>
           {user.billing && user.billing.unpaid_total > 0 && (
             <div>
-              <span className="text-gray-500">未付账单：</span>
+              <span className="text-gray-500">{t({ en: "Unpaid invoices: ", zh: "未付账单：" })}</span>
               <span className={`font-medium ${user.billing.is_suspended ? "text-red-600" : "text-amber-600"}`}>
                 {formatByCurrency(user.billing.unpaid_by_currency ?? { CNY: user.billing.unpaid_total })}
               </span>
               {user.billing.is_suspended && (
-                <span className="ml-2 text-xs text-red-600">⚠ 已逾期，服务已暂停</span>
+                <span className="ml-2 text-xs text-red-600">{t({ en: "⚠ Overdue — service suspended", zh: "⚠ 已逾期，服务已暂停" })}</span>
               )}
-              <Link href="/dashboard/invoices" className="ml-2 text-xs text-fg hover:underline">查看账单</Link>
+              <Link href="/dashboard/invoices" className="ml-2 text-xs text-fg hover:underline">{t({ en: "View invoices", zh: "查看账单" })}</Link>
             </div>
           )}
           <div>
-            <span className="text-gray-500">角色：</span>
+            <span className="text-gray-500">{t({ en: "Role: ", zh: "角色：" })}</span>
             <span className="font-medium">
-              {user.role === "admin" ? "管理员" : user.role === "both" ? "消费者+提供者" : user.role === "provider" ? "提供者" : "消费者"}
+              {user.role === "admin" ? t({ en: "Admin", zh: "管理员" }) : user.role === "both" ? t({ en: "Consumer + Provider", zh: "消费者+提供者" }) : user.role === "provider" ? t({ en: "Provider", zh: "提供者" }) : t({ en: "Consumer", zh: "消费者" })}
             </span>
           </div>
         </div>
@@ -187,14 +189,14 @@ export default function AccountPage() {
       <div className="bg-white rounded-lg border p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="font-semibold">登录密码</h2>
-            <p className="text-xs text-gray-500 mt-1">建议定期更换，使用大小写字母、数字和特殊字符的组合</p>
+            <h2 className="font-semibold">{t({ en: "Login password", zh: "登录密码" })}</h2>
+            <p className="text-xs text-gray-500 mt-1">{t({ en: "Update regularly; combine upper/lowercase letters, digits and special characters", zh: "建议定期更换，使用大小写字母、数字和特殊字符的组合" })}</p>
           </div>
           <button
             onClick={() => { setShowPwModal(true); setMsg(""); setError(""); setOldPw(""); setNewPw(""); setConfirmPw("") }}
             className="px-4 py-2 text-sm bg-fg text-white rounded-lg hover:bg-fg/90"
           >
-            修改密码
+            {t({ en: "Change password", zh: "修改密码" })}
           </button>
         </div>
         {msg && <div className="mt-4 p-3 bg-green-50 text-green-600 rounded text-sm">{msg}</div>}
@@ -204,20 +206,20 @@ export default function AccountPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !saving && setShowPwModal(false)}>
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-lg">修改密码</h3>
+              <h3 className="font-semibold text-lg">{t({ en: "Change password", zh: "修改密码" })}</h3>
               <button
                 onClick={() => !saving && setShowPwModal(false)}
                 className="text-gray-400 hover:text-gray-600"
-                aria-label="关闭"
+                aria-label={t({ en: "Close", zh: "关闭" })}
               >
                 ✕
               </button>
             </div>
             {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded text-sm">{error}</div>}
             <form onSubmit={handleChangePw} className="space-y-4">
-              <PasswordInput label="原密码" value={oldPw} onChange={setOldPw} required />
-              <PasswordInput label="新密码" value={newPw} onChange={setNewPw} required minLength={8} showStrength />
-              <PasswordInput label="确认新密码" value={confirmPw} onChange={setConfirmPw} required />
+              <PasswordInput label={t({ en: "Current password", zh: "原密码" })} value={oldPw} onChange={setOldPw} required />
+              <PasswordInput label={t({ en: "New password", zh: "新密码" })} value={newPw} onChange={setNewPw} required minLength={8} showStrength />
+              <PasswordInput label={t({ en: "Confirm new password", zh: "确认新密码" })} value={confirmPw} onChange={setConfirmPw} required />
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
@@ -225,14 +227,14 @@ export default function AccountPage() {
                   disabled={saving}
                   className="px-4 py-2 text-sm border rounded-lg hover:bg-gray-50 disabled:opacity-50"
                 >
-                  取消
+                  {t({ en: "Cancel", zh: "取消" })}
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
                   className="bg-fg text-white px-6 py-2 text-sm rounded-lg hover:bg-fg/90 disabled:opacity-50"
                 >
-                  {saving ? "保存中..." : "确认修改"}
+                  {saving ? t({ en: "Saving...", zh: "保存中..." }) : t({ en: "Confirm", zh: "确认修改" })}
                 </button>
               </div>
             </form>
@@ -242,7 +244,7 @@ export default function AccountPage() {
 
       {user.role !== "admin" && (
         <div className="mt-6 text-sm text-gray-500">
-          需要注销账号？请前往 <Link href="/dashboard/other" className="text-fg hover:underline">其他</Link> 页面。
+          {t({ en: "Need to delete your account? Visit ", zh: "需要注销账号？请前往 " })}<Link href="/dashboard/other" className="text-fg hover:underline">{t({ en: "Other", zh: "其他" })}</Link>{t({ en: " page.", zh: " 页面。" })}
         </div>
       )}
     </div>

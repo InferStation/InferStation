@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { apiFetch } from "@/lib/api"
 import { useAuth } from "@/context/AuthContext"
+import { useT } from "@/context/LocaleContext"
 
 interface Model {
   id: string
@@ -28,6 +29,7 @@ interface SubInfo {
 const MODEL_FAMILIES = ["Qwen", "THUDM", "deepseek-ai"]
 
 export default function ModelsPage() {
+  const t = useT()
   const { user } = useAuth()
   const router = useRouter()
   const [models, setModels] = useState<Model[]>([])
@@ -110,13 +112,13 @@ export default function ModelsPage() {
     <div className="space-y-5">
       <div className="bg-surface rounded-xl border border-line">
         <div className="flex items-center gap-4 px-5 py-3">
-          <span className="text-xs font-medium text-fg-subtle shrink-0 w-16 uppercase tracking-wider">类别</span>
+          <span className="text-xs font-medium text-fg-subtle shrink-0 w-16 uppercase tracking-wider">{t({ en: "Family", zh: "类别" })}</span>
           <div className="flex flex-wrap items-center gap-1.5">
             <button
               onClick={() => setFamilyFilter("all")}
               className={`h-7 px-3 rounded-full text-xs font-medium transition-colors ${familyFilter === "all" ? "bg-fg text-accent-fg" : "bg-accent-soft text-fg-muted hover:text-fg"}`}
             >
-              全部
+              {t({ en: "All", zh: "全部" })}
             </button>
             {MODEL_FAMILIES.map((f) => (
               <button
@@ -130,7 +132,7 @@ export default function ModelsPage() {
           </div>
         </div>
         <div className="flex items-center gap-4 px-5 py-3 border-t border-line">
-          <span className="text-xs font-medium text-fg-subtle shrink-0 w-16 uppercase tracking-wider">状态</span>
+          <span className="text-xs font-medium text-fg-subtle shrink-0 w-16 uppercase tracking-wider">{t({ en: "Status", zh: "状态" })}</span>
           <div className="flex items-center gap-1.5">
             {(["all", "online", "offline"] as const).map((s) => (
               <button
@@ -141,7 +143,7 @@ export default function ModelsPage() {
                 }`}
               >
                 {s !== "all" && <span className={`w-1.5 h-1.5 rounded-full ${s === "online" ? "bg-success" : "bg-danger"}`} />}
-                {s === "all" ? "全部" : s === "online" ? "在线" : "离线"}
+                {s === "all" ? t({ en: "All", zh: "全部" }) : s === "online" ? t({ en: "Online", zh: "在线" }) : t({ en: "Offline", zh: "离线" })}
               </button>
             ))}
           </div>
@@ -154,7 +156,7 @@ export default function ModelsPage() {
         </svg>
         <input
           type="text"
-          placeholder="搜索模型 ID（如 Qwen / DeepSeek）"
+          placeholder={t({ en: "Search model ID (e.g. Qwen / DeepSeek)", zh: "搜索模型 ID（如 Qwen / DeepSeek）" })}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full pl-10 pr-4 h-10 bg-surface border border-line rounded-xl focus:outline-none focus:ring-2 focus:ring-fg/15 focus:border-fg/40 text-sm placeholder:text-fg-subtle"
@@ -166,7 +168,7 @@ export default function ModelsPage() {
           <svg className="mx-auto w-12 h-12 mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
           </svg>
-          {models.length === 0 ? "暂无在线模型，等待提供者注册服务" : "未找到匹配的模型"}
+          {models.length === 0 ? t({ en: "No online models yet — waiting for providers to register services.", zh: "暂无在线模型，等待提供者注册服务" }) : t({ en: "No matching models", zh: "未找到匹配的模型" })}
         </div>
       ) : (() => {
         // 按 model.id 分组：一张卡 = 一个模型，下面列出多个 backend
@@ -193,10 +195,10 @@ export default function ModelsPage() {
                     <span className="font-semibold text-lg text-gray-900 break-all flex-1">{modelId}</span>
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${anyOnline ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-500"}`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${anyOnline ? "bg-emerald-500" : "bg-red-400"}`} />
-                      {anyOnline ? "在线" : "离线"}
+                      {anyOnline ? t({ en: "Online", zh: "在线" }) : t({ en: "Offline", zh: "离线" })}
                     </span>
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-line">
-                      {rows.length} 个服务
+                      {rows.length} {t({ en: "backend(s)", zh: "个服务" })}
                     </span>
                   </button>
                   {!isCollapsed && (
@@ -212,17 +214,17 @@ export default function ModelsPage() {
                                 <Link
                                   href={`/models/${m.backend_id}/${m.id}`}
                                   className="inline-flex items-center gap-1 text-gray-700 hover:text-fg"
-                                  title={`后端：${m.backend}（点击查看详情）`}
+                                  title={t({ en: `Backend: ${m.backend} (click for details)`, zh: `后端：${m.backend}（点击查看详情）` })}
                                 >
                                   <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" /></svg>
                                   <span className="font-medium">{m.backend}</span>
                                 </Link>
-                                <span className="inline-flex items-center gap-1 text-gray-600" title={`提供者：${m.provider || "共享"}`}>
+                                <span className="inline-flex items-center gap-1 text-gray-600" title={t({ en: `Provider: ${m.provider || "shared"}`, zh: `提供者：${m.provider || "共享"}` })}>
                                   <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                                  <span>{m.provider || "共享"}</span>
+                                  <span>{m.provider || t({ en: "shared", zh: "共享" })}</span>
                                 </span>
                                 {m.input_price != null && (
-                                  <span className="inline-flex items-center gap-1 text-gray-600" title="价格（输入 / 输出，每 1M tokens）">
+                                  <span className="inline-flex items-center gap-1 text-gray-600" title={t({ en: "Price (input / output, per 1M tokens)", zh: "价格（输入 / 输出，每 1M tokens）" })}>
                                     <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                     {m.input_price === 0 && m.output_price === 0 ? (
                                       <span className="text-emerald-600 font-semibold">Free</span>
@@ -233,7 +235,7 @@ export default function ModelsPage() {
                                 )}
                                 <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] font-medium ${m.status === "online" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-500"}`}>
                                   <span className={`w-1 h-1 rounded-full ${m.status === "online" ? "bg-emerald-500" : "bg-red-400"}`} />
-                                  {m.status === "online" ? "在线" : "离线"}
+                                  {m.status === "online" ? t({ en: "Online", zh: "在线" }) : t({ en: "Offline", zh: "离线" })}
                                 </span>
                                 {Object.entries(m.tags || {}).map(([k, v]) => (
                                   <span key={k} className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-accent-soft text-fg">
@@ -244,8 +246,8 @@ export default function ModelsPage() {
                               <div className="flex items-center gap-2">
                                 {subscribed ? (
                                   owned ? (
-                                    <span className="px-3 py-1.5 rounded-lg text-xs font-medium text-gray-500 bg-gray-100" title="自己注册的模型服务，无法取消订阅">
-                                      自动订阅
+                                    <span className="px-3 py-1.5 rounded-lg text-xs font-medium text-gray-500 bg-gray-100" title={t({ en: "You own this backend — cannot unsubscribe", zh: "自己注册的模型服务，无法取消订阅" })}>
+                                      {t({ en: "Auto-subscribed", zh: "自动订阅" })}
                                     </span>
                                   ) : (
                                     <button
@@ -253,7 +255,7 @@ export default function ModelsPage() {
                                       disabled={subLoading === rowKey}
                                       className="px-3 py-1.5 rounded-lg text-xs font-medium text-red-500 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-50"
                                     >
-                                      {subLoading === rowKey ? "..." : "取消订阅"}
+                                      {subLoading === rowKey ? "..." : t({ en: "Unsubscribe", zh: "取消订阅" })}
                                     </button>
                                   )
                                 ) : (
@@ -262,7 +264,7 @@ export default function ModelsPage() {
                                     disabled={subLoading === rowKey || m.status !== "online"}
                                     className="px-4 py-1.5 rounded-lg text-xs font-medium text-white bg-fg hover:bg-fg/90 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                                   >
-                                    {subLoading === rowKey ? "处理中..." : "订阅"}
+                                    {subLoading === rowKey ? t({ en: "Working...", zh: "处理中..." }) : t({ en: "Subscribe", zh: "订阅" })}
                                   </button>
                                 )}
                               </div>

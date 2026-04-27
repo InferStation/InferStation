@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { apiFetch } from "@/lib/api"
+import { useT } from "@/context/LocaleContext"
 
 interface Sub {
   id: number
@@ -21,6 +22,7 @@ interface Sub {
 }
 
 export default function MyModelsPage() {
+  const t = useT()
   const [subs, setSubs] = useState<Sub[]>([])
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState("")
@@ -138,19 +140,19 @@ export default function MyModelsPage() {
   const unifiedUrl = `${baseUrl}/v1/chat/completions`
   const activatedSubs = subs.filter((s) => s.is_active && s.is_activated)
 
-  if (loading) return <div className="text-center py-20 text-gray-500">加载中...</div>
+  if (loading) return <div className="text-center py-20 text-gray-500">{t({ en: "Loading...", zh: "加载中..." })}</div>
 
   return (
     <div>
       <div className="bg-accent-soft border border-line rounded-lg p-5 mb-8">
         <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-          <h2 className="text-sm font-semibold text-fg">API 链接</h2>
+          <h2 className="text-sm font-semibold text-fg">{t({ en: "API endpoint", zh: "API 链接" })}</h2>
           {activatedSubs.length > 0 ? (
             <span className="text-xs text-fg">
-              已激活 {activatedSubs.length} 个服务
+              {t({ en: `${activatedSubs.length} activated service(s)`, zh: `已激活 ${activatedSubs.length} 个服务` })}
             </span>
           ) : (
-            <span className="text-xs text-amber-600">尚未激活任何订阅，请在下方点击「激活」</span>
+            <span className="text-xs text-amber-600">{t({ en: "No subscriptions activated yet — click Activate below", zh: "尚未激活任何订阅，请在下方点击「激活」" })}</span>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -161,43 +163,43 @@ export default function MyModelsPage() {
             onClick={() => copyToClipboard(unifiedUrl, "unified")}
             className="shrink-0 px-3 py-2 text-xs bg-fg hover:bg-fg/90 text-white rounded"
           >
-            {copied === "unified" ? "已复制" : "复制"}
+            {copied === "unified" ? t({ en: "Copied", zh: "已复制" }) : t({ en: "Copy", zh: "复制" })}
           </button>
         </div>
         <div className="text-sm text-gray-700 mt-3 space-y-2 leading-relaxed">
           <p className="text-xs text-gray-700">
-            用你<span className="font-semibold">自己的 API Key</span>请求上方 URL，按请求体里 <code className="font-mono bg-white px-1 rounded">model</code> 字段决定路由：
+            {t({ en: "Call the URL above with ", zh: "用你" })}<span className="font-semibold">{t({ en: "your own API key", zh: "自己的 API Key" })}</span>{t({ en: "; routing is decided by the ", zh: "请求上方 URL，按请求体里 " })}<code className="font-mono bg-white px-1 rounded">model</code>{t({ en: " field in the request body:", zh: " 字段决定路由：" })}
           </p>
           <ul className="text-xs space-y-1.5">
             <li className="bg-white border border-line rounded px-3 py-2">
               <code className="font-mono font-semibold text-fg">"model": "Auto"</code>
               <span className="ml-2 text-gray-600">
-                在<strong>所有已激活订阅</strong>之间按优先级自动回退（越靠上优先级越高，可用「上移/下移」调整）
+                {t({ en: "Failover across ", zh: "在" })}<strong>{t({ en: "all activated subscriptions", zh: "所有已激活订阅" })}</strong>{t({ en: " by priority (top = highest; use Move up / Move down to reorder).", zh: "之间按优先级自动回退（越靠上优先级越高，可用「上移/下移」调整）" })}
               </span>
             </li>
             <li className="bg-white border border-line rounded px-3 py-2">
               <code className="font-mono font-semibold text-fg">"model": "&lt;model&gt;"</code>
               <span className="ml-2 text-gray-600">
-                例如 <code className="font-mono">"Qwen/Qwen3-32B-AWQ"</code>，仅在该模型对应的多个后端之间回退，<strong>不</strong>跨模型
+                {t({ en: "e.g. ", zh: "例如 " })}<code className="font-mono">"Qwen/Qwen3-32B-AWQ"</code>{t({ en: " — failover only across backends of that model, ", zh: "，仅在该模型对应的多个后端之间回退，" })}<strong>{t({ en: "never", zh: "不" })}</strong>{t({ en: " across models.", zh: "跨模型" })}
               </span>
             </li>
             <li className="bg-white border border-line rounded px-3 py-2">
               <code className="font-mono font-semibold text-fg">"model": "&lt;model&gt;/&lt;backend_name&gt;"</code>
               <span className="ml-2 text-gray-600">
-                例如 <code className="font-mono">"Qwen/Qwen3-32B-AWQ/vllm-qwen36-awq-45"</code>，<strong>锁定</strong>到这一个后端，不回退
+                {t({ en: "e.g. ", zh: "例如 " })}<code className="font-mono">"Qwen/Qwen3-32B-AWQ/vllm-qwen36-awq-45"</code>{t({ en: " — ", zh: "，" })}<strong>{t({ en: "locked", zh: "锁定" })}</strong>{t({ en: " to a single backend; no failover.", zh: "到这一个后端，不回退" })}
               </span>
             </li>
           </ul>
           <p className="text-xs text-gray-500">
-            可用 model 列表也能通过 <code className="font-mono">GET /v1/models</code> 拉取（含 Auto / 模型名 / 模型名/后端名 三种形态）。
+            {t({ en: "Pull the available model list via ", zh: "可用 model 列表也能通过 " })}<code className="font-mono">GET /v1/models</code>{t({ en: " (returns the three forms: Auto / model / model/backend).", zh: " 拉取（含 Auto / 模型名 / 模型名/后端名 三种形态）。" })}
           </p>
         </div>
       </div>
 
       {subs.length === 0 ? (
         <div className="text-center py-20 text-gray-500">
-          <p className="mb-4">暂无订阅模型</p>
-          <Link href="/models" className="text-fg hover:underline">去模型广场看看 →</Link>
+          <p className="mb-4">{t({ en: "No subscriptions yet", zh: "暂无订阅模型" })}</p>
+          <Link href="/models" className="text-fg hover:underline">{t({ en: "Browse the model catalog →", zh: "去模型广场看看 →" })}</Link>
         </div>
       ) : (
         <>
@@ -270,25 +272,25 @@ export default function MyModelsPage() {
                       </span>
                       {g.rows.length > 0 && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-line">
-                          {g.rows.length} 个服务
+                          {g.rows.length} {t({ en: "backend(s)", zh: "个服务" })}
                         </span>
                       )}
                     </button>
-                    <div className="flex items-center gap-1 shrink-0" title={disabled ? "未激活模型不可调整顺序" : "在所有模型间调整该模型的优先级"}>
+                    <div className="flex items-center gap-1 shrink-0" title={disabled ? t({ en: "Inactive models cannot be reordered", zh: "未激活模型不可调整顺序" }) : t({ en: "Adjust this model's priority among all models", zh: "在所有模型间调整该模型的优先级" })}>
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); handleMoveGroup(g.model, -1) }}
                         disabled={disabled || globalGroupIdx <= 0}
-                        title="在所有模型间提高该模型的优先级"
+                        title={t({ en: "Move this model up across all models", zh: "在所有模型间提高该模型的优先级" })}
                         className="px-2 h-7 flex items-center text-xs rounded border border-line text-gray-600 bg-white hover:bg-accent-soft hover:text-fg hover:border-line-strong disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
-                      >上移模型</button>
+                      >{t({ en: "Move up model", zh: "上移模型" })}</button>
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); handleMoveGroup(g.model, 1) }}
                         disabled={disabled || globalGroupIdx === allOrder.length - 1}
-                        title="在所有模型间降低该模型的优先级"
+                        title={t({ en: "Move this model down across all models", zh: "在所有模型间降低该模型的优先级" })}
                         className="px-2 h-7 flex items-center text-xs rounded border border-line text-gray-600 bg-white hover:bg-accent-soft hover:text-fg hover:border-line-strong disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
-                      >下移模型</button>
+                      >{t({ en: "Move down model", zh: "下移模型" })}</button>
                     </div>
                   </div>
                   {!collapsed && (
@@ -303,16 +305,16 @@ export default function MyModelsPage() {
                               className={`${g.rows.length > 1 ? "px-3 py-3" : ""} flex items-center justify-between flex-wrap gap-2`}
                             >
                               <div className="flex items-center gap-3 flex-wrap text-sm">
-                                <span className="inline-flex items-center gap-1 text-gray-700" title={`后端：${s.backend}`}>
+                                <span className="inline-flex items-center gap-1 text-gray-700" title={t({ en: `Backend: ${s.backend}`, zh: `后端：${s.backend}` })}>
                                   <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" /></svg>
                                   <span className="font-medium text-gray-900">{s.backend}</span>
                                 </span>
-                                <span className="inline-flex items-center gap-1 text-gray-600" title={`提供者：${s.provider || "共享"}`}>
+                                <span className="inline-flex items-center gap-1 text-gray-600" title={t({ en: `Provider: ${s.provider || "shared"}`, zh: `提供者：${s.provider || "共享"}` })}>
                                   <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                                  <span>{s.provider || "共享"}</span>
+                                  <span>{s.provider || t({ en: "shared", zh: "共享" })}</span>
                                 </span>
                                 {s.input_price != null && (
-                                  <span className="inline-flex items-center gap-1 text-gray-600" title="价格（输入 / 输出，每 1M tokens）">
+                                  <span className="inline-flex items-center gap-1 text-gray-600" title={t({ en: "Price (input / output, per 1M tokens)", zh: "价格（输入 / 输出，每 1M tokens）" })}>
                                     <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                     {s.input_price === 0 && s.output_price === 0 ? (
                                       <span className="text-emerald-600 font-semibold">Free</span>
@@ -327,21 +329,21 @@ export default function MyModelsPage() {
                                       ? "bg-green-50 text-green-700"
                                       : "bg-red-50 text-red-600"
                                   }`}
-                                  title={s.backend_status === "online" ? "在线" : "离线"}
+                                  title={s.backend_status === "online" ? t({ en: "Online", zh: "在线" }) : t({ en: "Offline", zh: "离线" })}
                                 >
                                   <span
                                     className={`w-1 h-1 rounded-full ${
                                       s.backend_status === "online" ? "bg-green-500" : "bg-red-400"
                                     }`}
                                   />
-                                  {s.backend_status === "online" ? "在线" : "离线"}
+                                  {s.backend_status === "online" ? t({ en: "Online", zh: "在线" }) : t({ en: "Offline", zh: "离线" })}
                                 </span>
                                 {!!s.is_owned && (
                                   <span
                                     className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200"
-                                    title="自己注册的模型服务（自动订阅，无法取消订阅）"
+                                    title={t({ en: "Your own backend (auto-subscribed; cannot unsubscribe)", zh: "自己注册的模型服务（自动订阅，无法取消订阅）" })}
                                   >
-                                    自有
+                                    {t({ en: "Owned", zh: "自有" })}
                                   </span>
                                 )}
                               </div>
@@ -352,7 +354,7 @@ export default function MyModelsPage() {
                                     disabled={saving === s.id}
                                     className="px-2 h-7 flex items-center text-xs rounded border border-line text-gray-600 bg-white hover:bg-accent-soft hover:text-fg hover:border-line-strong disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
                                   >
-                                    取消激活
+                                    {t({ en: "Deactivate", zh: "取消激活" })}
                                   </button>
                                 ) : (
                                   <button
@@ -360,33 +362,33 @@ export default function MyModelsPage() {
                                     disabled={saving === s.id}
                                     className="px-2 h-7 flex items-center text-xs rounded border border-fg bg-fg text-white hover:bg-fg/90 disabled:opacity-50 disabled:cursor-not-allowed"
                                   >
-                                    激活
+                                    {t({ en: "Activate", zh: "激活" })}
                                   </button>
                                 )}
                                 <button
                                   onClick={() => handleUnsubscribe(s.id)}
                                   disabled={!!s.is_owned}
-                                  title={s.is_owned ? "自己注册的模型服务，无法取消订阅" : undefined}
+                                  title={s.is_owned ? t({ en: "Your own backend — cannot unsubscribe", zh: "自己注册的模型服务，无法取消订阅" }) : undefined}
                                   className="px-2 h-7 flex items-center text-xs rounded border border-red-300 text-red-600 bg-white hover:bg-red-50 hover:border-red-400 disabled:text-gray-300 disabled:border-line disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
                                 >
-                                  取消订阅
+                                  {t({ en: "Unsubscribe", zh: "取消订阅" })}
                                 </button>
-                                <div className="flex items-center gap-1" title={disabled ? "未激活模型不可调整顺序" : g.rows.length <= 1 ? "该模型只有一个后端，无需排序" : "在该模型的多个后端之间调整顺序"}>
+                                <div className="flex items-center gap-1" title={disabled ? t({ en: "Inactive models cannot be reordered", zh: "未激活模型不可调整顺序" }) : g.rows.length <= 1 ? t({ en: "Only one backend — nothing to reorder", zh: "该模型只有一个后端，无需排序" }) : t({ en: "Reorder backends within this model", zh: "在该模型的多个后端之间调整顺序" })}>
                                   <button
                                     onClick={() => handleMoveInCard(s.id, -1)}
                                     disabled={disabled || g.rows.length <= 1 || rowIdx === 0}
-                                    title="同模型内提高该服务的优先级"
+                                    title={t({ en: "Move this backend up within the model", zh: "同模型内提高该服务的优先级" })}
                                     className="px-2 h-7 flex items-center text-xs rounded border border-line text-gray-600 bg-white hover:bg-accent-soft hover:text-fg hover:border-line-strong disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
                                   >
-                                    上移服务
+                                    {t({ en: "Move up", zh: "上移服务" })}
                                   </button>
                                   <button
                                     onClick={() => handleMoveInCard(s.id, 1)}
                                     disabled={disabled || g.rows.length <= 1 || rowIdx === g.rows.length - 1}
-                                    title="同模型内降低该服务的优先级"
+                                    title={t({ en: "Move this backend down within the model", zh: "同模型内降低该服务的优先级" })}
                                     className="px-2 h-7 flex items-center text-xs rounded border border-line text-gray-600 bg-white hover:bg-accent-soft hover:text-fg hover:border-line-strong disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
                                   >
-                                    下移服务
+                                    {t({ en: "Move down", zh: "下移服务" })}
                                   </button>
                                 </div>
                               </div>
@@ -410,7 +412,7 @@ export default function MyModelsPage() {
                       className="flex items-center gap-2 text-lg font-semibold text-gray-700 mb-3 hover:text-gray-900"
                     >
                       <span className={`transition-transform ${showActivated ? "rotate-90" : ""}`}>▶</span>
-                      已激活模型服务 ({activatedGroups.length})
+                      {t({ en: "Activated services", zh: "已激活模型服务" })} ({activatedGroups.length})
                     </button>
                     {showActivated && (
                       <div className="space-y-4">
@@ -428,7 +430,7 @@ export default function MyModelsPage() {
                       className="flex items-center gap-2 text-lg font-semibold text-gray-500 mb-3 hover:text-gray-700"
                     >
                       <span className={`transition-transform ${showInactive ? "rotate-90" : ""}`}>▶</span>
-                      未激活模型服务 ({inactiveGroups.length})
+                      {t({ en: "Inactive services", zh: "未激活模型服务" })} ({inactiveGroups.length})
                     </button>
                     {showInactive && (
                       <div className="space-y-4">
@@ -448,7 +450,7 @@ export default function MyModelsPage() {
                 className="flex items-center gap-2 text-lg font-semibold text-gray-500 mb-3 hover:text-gray-700"
               >
                 <span className={`transition-transform ${showHistory ? "rotate-90" : ""}`}>▶</span>
-                历史订阅 ({subs.filter((s) => !s.is_active).length})
+                {t({ en: "Subscription history", zh: "历史订阅" })} ({subs.filter((s) => !s.is_active).length})
               </button>
               {showHistory && (
                 <div className="space-y-3">
@@ -468,11 +470,11 @@ export default function MyModelsPage() {
                               {s.model}
                             </Link>
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-500">
-                              已取消
+                              {t({ en: "Cancelled", zh: "已取消" })}
                             </span>
                           </div>
                           <span className="text-xs text-gray-400">
-                            订阅于 {s.created_at?.replace("T", " ")}
+                            {t({ en: `Subscribed ${s.created_at?.replace("T", " ")}`, zh: `订阅于 ${s.created_at?.replace("T", " ")}` })}
                           </span>
                         </div>
                       </div>

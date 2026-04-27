@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { useAuth } from "@/context/AuthContext"
 import { apiFetch } from "@/lib/api"
+import { useT } from "@/context/LocaleContext"
 
 interface Backend {
   id: number
@@ -29,6 +30,7 @@ interface Backend {
 }
 
 export default function ServiceDetailPage() {
+  const t = useT()
   const params = useParams()
   const router = useRouter()
   const { user } = useAuth()
@@ -66,7 +68,7 @@ export default function ServiceDetailPage() {
         setBackend(data)
         populateForm(data)
       })
-      .catch(() => setError("后端不存在或无权访问"))
+      .catch(() => setError(t({ en: "Backend not found or access denied", zh: "后端不存在或无权访问" })))
       .finally(() => setLoading(false))
     apiFetch("/api/model-families").then((data: string[] | { families: string[] }) => {
       setFamilies(Array.isArray(data) ? data : data.families)
@@ -103,11 +105,11 @@ export default function ServiceDetailPage() {
   const handleSave = async () => {
     if (!backend) return
     if (!editForm.family) {
-      alert("请选择模型系列")
+      alert(t({ en: "Please select a model family", zh: "请选择模型系列" }))
       return
     }
     if (!editForm.model) {
-      alert("请选择一个模型")
+      alert(t({ en: "Please select a model", zh: "请选择一个模型" }))
       return
     }
     setSaving(true)
@@ -154,7 +156,7 @@ export default function ServiceDetailPage() {
       populateForm(data)
       setEditing(false)
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "保存失败")
+      alert(err instanceof Error ? err.message : t({ en: "Save failed", zh: "保存失败" }))
     } finally {
       setSaving(false)
     }
@@ -167,22 +169,22 @@ export default function ServiceDetailPage() {
       const data: Backend = await apiFetch(`/api/backends/${encodeURIComponent(name)}`)
       setBackend(data)
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "操作失败")
+      alert(err instanceof Error ? err.message : t({ en: "Operation failed", zh: "操作失败" }))
     }
   }
 
   const handleDelete = async () => {
-    if (!confirm(`确定要删除后端 "${name}" 吗？`)) return
+    if (!confirm(t({ en: `Delete backend "${name}"?`, zh: `确定要删除后端 "${name}" 吗？` }))) return
     await apiFetch(`/api/backends/${encodeURIComponent(name)}`, { method: "DELETE" })
     router.push("/my-services")
   }
 
-  if (loading) return <div className="text-center py-20 text-gray-500">加载中...</div>
+  if (loading) return <div className="text-center py-20 text-gray-500">{t({ en: "Loading...", zh: "加载中..." })}</div>
   if (error || !backend) {
     return (
       <div className="text-center py-20">
-        <p className="text-gray-500 mb-4">{error || "后端不存在"}</p>
-        <button onClick={() => router.push("/my-services")} className="text-fg hover:underline">返回我的服务</button>
+        <p className="text-gray-500 mb-4">{error || t({ en: "Backend not found", zh: "后端不存在" })}</p>
+        <button onClick={() => router.push("/my-services")} className="text-fg hover:underline">{t({ en: "Back to My Services", zh: "返回我的服务" })}</button>
       </div>
     )
   }
@@ -190,17 +192,17 @@ export default function ServiceDetailPage() {
   return (
     <div className="max-w-3xl mx-auto">
       <button onClick={() => router.push("/my-services")} className="text-sm text-gray-500 hover:text-gray-700 mb-6 inline-flex items-center gap-1">
-        ← 返回我的服务
+        ← {t({ en: "Back to My Services", zh: "返回我的服务" })}
       </button>
 
       {backend.listing_status === "offline" && backend.review_note && (
         <div className="mb-4 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-          <b>审核驳回：</b>{backend.review_note}
+          <b>{t({ en: "Review rejected: ", zh: "审核驳回：" })}</b>{backend.review_note}
         </div>
       )}
       {backend.listing_status === "pending" && (
         <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          上架申请已提交，等待管理员审核。审核通过后自动上架。
+          {t({ en: "Listing request submitted; waiting for admin review. It will be listed automatically once approved.", zh: "上架申请已提交，等待管理员审核。审核通过后自动上架。" })}
         </div>
       )}
 
@@ -213,10 +215,10 @@ export default function ServiceDetailPage() {
               {(() => {
                 const st = backend.listing_status || (backend.enabled ? "listed" : "offline")
                 const badge = st === "listed"
-                  ? { cls: "bg-green-100 text-green-700", label: "已上架" }
+                  ? { cls: "bg-green-100 text-green-700", label: t({ en: "Listed", zh: "已上架" }) }
                   : st === "pending"
-                  ? { cls: "bg-amber-100 text-amber-700", label: "上架审核中" }
-                  : { cls: "bg-sky-100 text-sky-700", label: "仅私有" }
+                  ? { cls: "bg-amber-100 text-amber-700", label: t({ en: "Listing under review", zh: "上架审核中" }) }
+                  : { cls: "bg-sky-100 text-sky-700", label: t({ en: "Private only", zh: "仅私有" }) }
                 return (
                   <span className={`px-2 py-0.5 rounded text-xs ${badge.cls}`}>{badge.label}</span>
                 )
@@ -225,7 +227,7 @@ export default function ServiceDetailPage() {
                 {backend.status}
               </span>
               <span className="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600">
-                {backend.mode === "tunnel" ? "隧道" : "直连"}
+                {backend.mode === "tunnel" ? t({ en: "Tunnel", zh: "隔道" }) : t({ en: "Direct", zh: "直连" })}
               </span>
 
             </div>
@@ -242,17 +244,17 @@ export default function ServiceDetailPage() {
             >
               {(() => {
                 const st = backend.listing_status || (backend.enabled ? "listed" : "offline")
-                if (st === "listed") return "下架"
-                if (st === "pending") return "撤回申请"
-                return "申请上架"
+                if (st === "listed") return t({ en: "Take down", zh: "下架" })
+                if (st === "pending") return t({ en: "Withdraw request", zh: "撤回申请" })
+                return t({ en: "Request listing", zh: "申请上架" })
               })()}
             </button>
             {!editing && (
               <button onClick={() => setEditing(true)} className="text-sm px-3 py-1.5 rounded bg-accent-soft text-fg hover:bg-fg/15">
-                编辑
+                {t({ en: "Edit", zh: "编辑" })}
               </button>
             )}
-            <button onClick={handleDelete} className="text-sm px-3 py-1.5 rounded text-red-500 hover:bg-red-50">删除</button>
+            <button onClick={handleDelete} className="text-sm px-3 py-1.5 rounded text-red-500 hover:bg-red-50">{t({ en: "Delete", zh: "删除" })}</button>
           </div>
         </div>
 
@@ -261,49 +263,49 @@ export default function ServiceDetailPage() {
           <div className="space-y-4">
             {backend.mode === "direct" && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">后端 URL</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t({ en: "Backend URL", zh: "后端 URL" })}</label>
                 <input type="url" value={editForm.url} onChange={(e) => setEditForm({ ...editForm, url: e.target.value })} placeholder="http://IP:PORT" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none" />
               </div>
             )}
             {backend.mode === "direct" && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  上游 API Key（可选）
+                  {t({ en: "Upstream API key (optional)", zh: "上游 API Key（可选）" })}
                   <span className="ml-2 text-xs text-gray-500 font-normal">
-                    {backend.client_info?.api_key ? "当前状态：已设置" : "当前状态：未设置"}
+                    {backend.client_info?.api_key ? t({ en: "Current: set", zh: "当前状态：已设置" }) : t({ en: "Current: unset", zh: "当前状态：未设置" })}
                   </span>
                 </label>
                 <input
                   type="password"
                   value={editForm.api_key}
                   onChange={(e) => setEditForm({ ...editForm, api_key: e.target.value, api_key_changed: true })}
-                  placeholder={backend.client_info?.api_key ? "保留原值请不要修改；填入新值会覆盖原值" : "如上游需要认证则填入"}
+                  placeholder={backend.client_info?.api_key ? t({ en: "Leave unchanged to keep; enter new value to overwrite", zh: "保留原值请不要修改；填入新值会覆盖原值" }) : t({ en: "Fill in if upstream requires auth", zh: "如上游需要认证则填入" })}
                   autoComplete="new-password"
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none font-mono"
                 />
                 <div className="mt-1 flex items-center justify-between">
-                  <p className="text-xs text-gray-500">转发时以 <code>Authorization: Bearer &lt;key&gt;</code> 带上。</p>
+                  <p className="text-xs text-gray-500">{t({ en: "Forwarded as ", zh: "转发时以 " })}<code>Authorization: Bearer &lt;key&gt;</code>{t({ en: ".", zh: " 带上。" })}</p>
                   {backend.client_info?.api_key && (
                     <button
                       type="button"
                       onClick={() => setEditForm({ ...editForm, api_key: "", api_key_changed: true })}
                       className="text-xs text-red-600 hover:underline"
-                    >清除 API Key</button>
+                    >{t({ en: "Clear API Key", zh: "清除 API Key" })}</button>
                   )}
                 </div>
               </div>
             )}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">模型系列</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t({ en: "Model family", zh: "模型系列" })}</label>
               <select value={editForm.family} onChange={(e) => setEditForm({ ...editForm, family: e.target.value, model: "" })} required className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none">
-                <option value="">请选择模型系列</option>
+                <option value="">{t({ en: "Please select a model family", zh: "请选择模型系列" })}</option>
                 {families.map((f) => (
                   <option key={f} value={f}>{f}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">模型</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t({ en: "Model", zh: "模型" })}</label>
               <select
                 value={editForm.model}
                 onChange={(e) => setEditForm({ ...editForm, model: e.target.value })}
@@ -311,67 +313,67 @@ export default function ServiceDetailPage() {
                 disabled={!editForm.family}
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400"
               >
-                <option value="">{editForm.family ? "请选择模型" : "请先选择模型系列"}</option>
+                <option value="">{editForm.family ? t({ en: "Please select a model", zh: "请选择模型" }) : t({ en: "Please select a family first", zh: "请先选择模型系列" })}</option>
                 {(catalog[editForm.family] || []).map((name) => (
                   <option key={name} value={name}>{name}</option>
                 ))}
               </select>
               {editForm.family && editForm.model && (
-                <p className="mt-1 text-xs text-gray-500">将保存为：{editForm.family}/{editForm.model}</p>
+                <p className="mt-1 text-xs text-gray-500">{t({ en: `Will be saved as: ${editForm.family}/${editForm.model}`, zh: `将保存为：${editForm.family}/${editForm.model}` })}</p>
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">你的 URL 上的模型名（可选）</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t({ en: "Model name on your URL (optional)", zh: "你的 URL 上的模型名（可选）" })}</label>
               <input
                 type="text"
                 value={editForm.served_as}
                 onChange={(e) => setEditForm({ ...editForm, served_as: e.target.value })}
-                placeholder={editForm.model ? `默认用 ${editForm.model}` : "例如 qwen3-8b-awq"}
+                placeholder={editForm.model ? t({ en: `Defaults to ${editForm.model}`, zh: `默认用 ${editForm.model}` }) : t({ en: "e.g. qwen3-8b-awq", zh: "例如 qwen3-8b-awq" })}
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none"
               />
               <p className="mt-1 text-xs text-gray-500">
-                网关转发请求时，会把 OpenAI 请求的 model 字段改为此值再传给你的服务。同一 URL 可用不同后端名注册多个模型。
+                {t({ en: "The gateway rewrites the OpenAI request's model field to this value before forwarding. The same URL can be registered with different backend names for multiple models.", zh: "网关转发请求时，会把 OpenAI 请求的 model 字段改为此值再传给你的服务。同一 URL 可用不同后端名注册多个模型。" })}
               </p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">标签</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t({ en: "Tags", zh: "标签" })}</label>
               <div className="grid gap-3 md:grid-cols-3">
-                <input type="text" value={editForm.tag_hardware} onChange={(e) => setEditForm({ ...editForm, tag_hardware: e.target.value })} placeholder="硬件，如 MI300X" className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none text-sm" />
-                <input type="text" value={editForm.tag_framework} onChange={(e) => setEditForm({ ...editForm, tag_framework: e.target.value })} placeholder="框架，如 vLLM" className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none text-sm" />
-                <input type="text" value={editForm.tag_quantization} onChange={(e) => setEditForm({ ...editForm, tag_quantization: e.target.value })} placeholder="量化，如 AWQ / FP16" className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none text-sm" />
+                <input type="text" value={editForm.tag_hardware} onChange={(e) => setEditForm({ ...editForm, tag_hardware: e.target.value })} placeholder={t({ en: "Hardware, e.g. MI300X", zh: "硬件，如 MI300X" })} className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none text-sm" />
+                <input type="text" value={editForm.tag_framework} onChange={(e) => setEditForm({ ...editForm, tag_framework: e.target.value })} placeholder={t({ en: "Framework, e.g. vLLM", zh: "框架，如 vLLM" })} className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none text-sm" />
+                <input type="text" value={editForm.tag_quantization} onChange={(e) => setEditForm({ ...editForm, tag_quantization: e.target.value })} placeholder={t({ en: "Quantization, e.g. AWQ / FP16", zh: "量化，如 AWQ / FP16" })} className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none text-sm" />
               </div>
             </div>
             <div className="grid gap-4 md:grid-cols-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">货币</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t({ en: "Currency", zh: "货币" })}</label>
                 <select value={editForm.currency} onChange={(e) => setEditForm({ ...editForm, currency: e.target.value })} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none">
                   <option value="CNY">CNY (¥)</option>
                   <option value="USD">USD ($)</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">输入定价（{editForm.currency === "USD" ? "$" : "¥"}/百万token）</label>
-                <input type="number" step="0.01" value={editForm.input_price} onChange={(e) => setEditForm({ ...editForm, input_price: e.target.value })} placeholder="留空为免费" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none" />
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t({ en: `Input price (${editForm.currency === "USD" ? "$" : "¥"}/M tokens)`, zh: `输入定价（${editForm.currency === "USD" ? "$" : "¥"}/百万token）` })}</label>
+                <input type="number" step="0.01" value={editForm.input_price} onChange={(e) => setEditForm({ ...editForm, input_price: e.target.value })} placeholder={t({ en: "Leave blank for free", zh: "留空为免费" })} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">输出定价（{editForm.currency === "USD" ? "$" : "¥"}/百万token）</label>
-                <input type="number" step="0.01" value={editForm.output_price} onChange={(e) => setEditForm({ ...editForm, output_price: e.target.value })} placeholder="留空为免费" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none" />
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t({ en: `Output price (${editForm.currency === "USD" ? "$" : "¥"}/M tokens)`, zh: `输出定价（${editForm.currency === "USD" ? "$" : "¥"}/百万token）` })}</label>
+                <input type="number" step="0.01" value={editForm.output_price} onChange={(e) => setEditForm({ ...editForm, output_price: e.target.value })} placeholder={t({ en: "Leave blank for free", zh: "留空为免费" })} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">缓存命中定价（{editForm.currency === "USD" ? "$" : "¥"}/百万token）</label>
-                <input type="number" step="0.01" value={editForm.cache_price} onChange={(e) => setEditForm({ ...editForm, cache_price: e.target.value })} placeholder="默认为输入×0.1" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none" />
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t({ en: `Cache-hit price (${editForm.currency === "USD" ? "$" : "¥"}/M tokens)`, zh: `缓存命中定价（${editForm.currency === "USD" ? "$" : "¥"}/百万token）` })}</label>
+                <input type="number" step="0.01" value={editForm.cache_price} onChange={(e) => setEditForm({ ...editForm, cache_price: e.target.value })} placeholder={t({ en: "defaults to input × 0.1", zh: "默认为输入×0.1" })} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none" />
               </div>
             </div>
-            <p className="text-xs text-gray-500 -mt-2">缓存命中部分按缓存价计费；留空时按输入价×0.1（行业通行折扣）计费。</p>
+            <p className="text-xs text-gray-500 -mt-2">{t({ en: "Cache-hit tokens are billed at the cache price; if blank, charged at input price × 0.1 (industry-standard discount).", zh: "缓存命中部分按缓存价计费；留空时按输入价×0.1（行业通行折扣）计费。" })}</p>
             <div className="flex items-center">
               <input type="checkbox" checked={editForm.is_public} onChange={(e) => setEditForm({ ...editForm, is_public: e.target.checked })} className="mr-2" />
-              <span className="text-sm text-gray-600">公开可见（所有用户可调用）</span>
+              <span className="text-sm text-gray-600">{t({ en: "Public (callable by all users)", zh: "公开可见（所有用户可调用）" })}</span>
             </div>
             <div className="flex gap-2">
               <button onClick={handleSave} disabled={saving} className="bg-fg text-white px-6 py-2 rounded-lg hover:bg-fg/90 disabled:opacity-50">
-                {saving ? "保存中..." : "保存"}
+                {saving ? t({ en: "Saving...", zh: "保存中..." }) : t({ en: "Save", zh: "保存" })}
               </button>
-              <button onClick={() => { setEditing(false); populateForm(backend) }} className="px-6 py-2 rounded-lg border hover:bg-gray-50">取消</button>
+              <button onClick={() => { setEditing(false); populateForm(backend) }} className="px-6 py-2 rounded-lg border hover:bg-gray-50">{t({ en: "Cancel", zh: "取消" })}</button>
             </div>
           </div>
         ) : (
@@ -381,31 +383,31 @@ export default function ServiceDetailPage() {
             <div className="grid grid-cols-2 gap-4 text-sm">
               {backend.mode === "direct" && backend.url && (
                 <div className="bg-gray-50 rounded-lg p-4 col-span-2">
-                  <p className="text-gray-500 mb-1">后端 URL</p>
+                  <p className="text-gray-500 mb-1">{t({ en: "Backend URL", zh: "后端 URL" })}</p>
                   <p className="font-medium text-gray-900 font-mono">{backend.url}</p>
                 </div>
               )}
               <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-gray-500 mb-1">创建时间</p>
+                <p className="text-gray-500 mb-1">{t({ en: "Created at", zh: "创建时间" })}</p>
                 <p className="font-medium text-gray-900">{backend.created_at}</p>
               </div>
               <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-gray-500 mb-1">更新时间</p>
+                <p className="text-gray-500 mb-1">{t({ en: "Updated at", zh: "更新时间" })}</p>
                 <p className="font-medium text-gray-900">{backend.updated_at}</p>
               </div>
               <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-gray-500 mb-1">公开</p>
-                <p className="font-medium text-gray-900">{backend.is_public ? "是" : "否"}</p>
+                <p className="text-gray-500 mb-1">{t({ en: "Public", zh: "公开" })}</p>
+                <p className="font-medium text-gray-900">{backend.is_public ? t({ en: "Yes", zh: "是" }) : t({ en: "No", zh: "否" })}</p>
               </div>
               <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-gray-500 mb-1">定价</p>
+                <p className="text-gray-500 mb-1">{t({ en: "Pricing", zh: "定价" })}</p>
                 <p className="font-medium text-gray-900">
                   {backend.input_price == null && backend.output_price == null ? (
-                    "未设置"
+                    t({ en: "Not set", zh: "未设置" })
                   ) : backend.input_price === 0 && backend.output_price === 0 ? (
                     <span className="text-green-600">Free</span>
                   ) : (
-                    <>{backend.currency === "USD" ? "$" : "¥"}{backend.input_price}/M 输入 / {backend.currency === "USD" ? "$" : "¥"}{backend.output_price}/M 输出 / {backend.cache_price != null ? `${backend.currency === "USD" ? "$" : "¥"}${backend.cache_price}/M 缓存` : `缓存默认按输入价×0.1`} <span className="text-xs text-gray-500">({backend.currency || "CNY"})</span></>
+                    <>{backend.currency === "USD" ? "$" : "¥"}{backend.input_price}/M {t({ en: "input", zh: "输入" })} / {backend.currency === "USD" ? "$" : "¥"}{backend.output_price}/M {t({ en: "output", zh: "输出" })} / {backend.cache_price != null ? `${backend.currency === "USD" ? "$" : "¥"}${backend.cache_price}/M ${t({ en: "cache", zh: "缓存" })}` : t({ en: "cache defaults to input × 0.1", zh: "缓存默认按输入价×0.1" })} <span className="text-xs text-gray-500">({backend.currency || "CNY"})</span></>
                   )}
                 </p>
               </div>
@@ -414,7 +416,7 @@ export default function ServiceDetailPage() {
             {/* Tags */}
             {Object.keys(backend.tags || {}).length > 0 && (
               <div>
-                <p className="text-sm text-gray-500 mb-2">标签</p>
+                <p className="text-sm text-gray-500 mb-2">{t({ en: "Tags", zh: "标签" })}</p>
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(backend.tags).map(([k, v]) => (
                     <span key={k} className="inline-flex items-center px-2.5 py-1 rounded text-xs font-medium bg-accent-soft text-fg border border-line">
@@ -427,7 +429,7 @@ export default function ServiceDetailPage() {
 
             {/* Models */}
             <div>
-              <p className="text-sm text-gray-500 mb-2">模型列表</p>
+              <p className="text-sm text-gray-500 mb-2">{t({ en: "Models", zh: "模型列表" })}</p>
               <div className="space-y-2">
                 {backend.models.length > 0 ? backend.models.map((m) => (
                   <Link
@@ -438,7 +440,7 @@ export default function ServiceDetailPage() {
                     {m} →
                   </Link>
                 )) : (
-                  <p className="text-sm text-gray-400">暂无模型</p>
+                  <p className="text-sm text-gray-400">{t({ en: "No models", zh: "暂无模型" })}</p>
                 )}
               </div>
             </div>

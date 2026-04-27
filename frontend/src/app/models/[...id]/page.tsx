@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { apiFetch } from "@/lib/api"
 import { useAuth } from "@/context/AuthContext"
+import { useT } from "@/context/LocaleContext"
 
 interface ModelDetail {
   id: string
@@ -29,6 +30,7 @@ interface Subscription {
 }
 
 export default function ModelDetailPage() {
+  const t = useT()
   const params = useParams()
   const router = useRouter()
   const { user } = useAuth()
@@ -47,7 +49,7 @@ export default function ModelDetailPage() {
     if (!modelId || !backendId) return
     apiFetch(`/api/models/${modelId}?backend_id=${backendId}`)
       .then(setModel)
-      .catch(() => setError("模型不存在"))
+      .catch(() => setError(t({ en: "Model not found", zh: "模型不存在" })))
       .finally(() => setLoading(false))
   }, [modelId, backendId])
 
@@ -76,7 +78,7 @@ export default function ModelDetailPage() {
       })
       setSub(res)
     } catch {
-      alert("订阅失败")
+      alert(t({ en: "Subscribe failed", zh: "订阅失败" }))
     } finally {
       setSubLoading(false)
     }
@@ -88,21 +90,21 @@ export default function ModelDetailPage() {
       await apiFetch(`/api/subscriptions/${sub.id}`, { method: "DELETE" })
       setSub(null)
     } catch {
-      alert("取消订阅失败")
+      alert(t({ en: "Failed to unsubscribe", zh: "取消订阅失败" }))
     }
   }
 
 
   if (loading) {
-    return <div className="text-center py-20 text-gray-500">加载中...</div>
+    return <div className="text-center py-20 text-gray-500">{t({ en: "Loading...", zh: "加载中..." })}</div>
   }
 
   if (error || !model) {
     return (
       <div className="text-center py-20">
-        <p className="text-gray-500 mb-4">{error || "模型不存在"}</p>
+        <p className="text-gray-500 mb-4">{error || t({ en: "Model not found", zh: "模型不存在" })}</p>
         <button onClick={() => router.push("/models")} className="text-fg hover:underline">
-          返回模型广场
+          {t({ en: "Back to model catalog", zh: "返回模型广场" })}
         </button>
       </div>
     )
@@ -115,7 +117,7 @@ export default function ModelDetailPage() {
   -H "Content-Type: application/json" \\
   -d '{
     "model": "${model.id}",
-    "messages": [{"role": "user", "content": "你好"}]
+    "messages": [{"role": "user", "content": "hello"}]
   }'`
 
   const pythonExample = `from openai import OpenAI
@@ -127,7 +129,7 @@ client = OpenAI(
 
 resp = client.chat.completions.create(
     model="${model.id}",
-    messages=[{"role": "user", "content": "你好"}],
+    messages=[{"role": "user", "content": "hello"}],
 )
 print(resp.choices[0].message.content)`
 
@@ -146,7 +148,7 @@ print(resp.choices[0].message.content)`
         onClick={() => router.push("/models")}
         className="text-sm text-gray-500 hover:text-gray-700 mb-6 inline-flex items-center gap-1"
       >
-        ← 返回模型广场
+        ← {t({ en: "Back to model catalog", zh: "返回模型广场" })}
       </button>
 
       <div className="bg-white rounded-lg border border-line p-8">
@@ -157,10 +159,10 @@ print(resp.choices[0].message.content)`
             {sub && (
               <span
                 className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700"
-                title={sub.is_owned ? "自己注册的模型服务（自动订阅）" : "已订阅"}
+                title={sub.is_owned ? t({ en: "You own this backend (auto-subscribed)", zh: "自己注册的模型服务（自动订阅）" }) : t({ en: "Subscribed", zh: "已订阅" })}
               >
                 <span className="w-2 h-2 rounded-full bg-green-500" />
-                {sub.is_owned ? "自动订阅" : "已订阅"}
+                {sub.is_owned ? t({ en: "Auto-subscribed", zh: "自动订阅" }) : t({ en: "Subscribed", zh: "已订阅" })}
               </span>
             )}
             <span
@@ -169,7 +171,7 @@ print(resp.choices[0].message.content)`
               }`}
             >
               <span className={`w-2 h-2 rounded-full ${model.status === "online" ? "bg-green-500" : "bg-red-400"}`} />
-              {model.status === "online" ? "在线" : "离线"}
+              {model.status === "online" ? t({ en: "Online", zh: "在线" }) : t({ en: "Offline", zh: "离线" })}
             </span>
           </div>
         </div>
@@ -191,17 +193,17 @@ print(resp.choices[0].message.content)`
         {/* Info Grid */}
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div className="bg-gray-50 rounded-lg p-4">
-            <p className="text-gray-500 mb-1">服务后端</p>
+            <p className="text-gray-500 mb-1">{t({ en: "Backend", zh: "服务后端" })}</p>
             <p className="font-medium text-gray-900">{model.backend}</p>
           </div>
           <div className="bg-gray-50 rounded-lg p-4">
-            <p className="text-gray-500 mb-1">提供者</p>
-            <p className="font-medium text-gray-900">{model.provider || "共享"}</p>
+            <p className="text-gray-500 mb-1">{t({ en: "Provider", zh: "提供者" })}</p>
+            <p className="font-medium text-gray-900">{model.provider || t({ en: "shared", zh: "共享" })}</p>
           </div>
           <div className="bg-gray-50 rounded-lg p-4 col-span-2">
-            <p className="text-gray-500 mb-2">定价（每 1M tokens，{model.currency || "CNY"}）</p>
+            <p className="text-gray-500 mb-2">{t({ en: `Pricing (per 1M tokens, ${model.currency || "CNY"})`, zh: `定价（每 1M tokens，${model.currency || "CNY"}）` })}</p>
             {model.input_price == null ? (
-              <p className="font-medium text-gray-900">未设置</p>
+              <p className="font-medium text-gray-900">{t({ en: "Not set", zh: "未设置" })}</p>
             ) : model.input_price === 0 && model.output_price === 0 ? (
               <p className="font-semibold text-green-600">Free</p>
             ) : (() => {
@@ -211,16 +213,16 @@ print(resp.choices[0].message.content)`
               return (
                 <div className="grid grid-cols-3 gap-3 text-sm">
                   <div>
-                    <p className="text-xs text-gray-500 mb-0.5">输入</p>
+                    <p className="text-xs text-gray-500 mb-0.5">{t({ en: "Input", zh: "输入" })}</p>
                     <p className="font-semibold text-green-600">{sym}{model.input_price}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-0.5">输出</p>
+                    <p className="text-xs text-gray-500 mb-0.5">{t({ en: "Output", zh: "输出" })}</p>
                     <p className="font-semibold text-green-600">{sym}{model.output_price}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-0.5">
-                      缓存命中{cacheImplicit && <span className="ml-1 text-gray-400">(=输入×0.1)</span>}
+                      {t({ en: "Cache hit", zh: "缓存命中" })}{cacheImplicit && <span className="ml-1 text-gray-400">{t({ en: "(=input×0.1)", zh: "(=输入×0.1)" })}</span>}
                     </p>
                     <p className="font-semibold text-green-600">{sym}{Number(cache).toFixed(4).replace(/\.?0+$/, "")}</p>
                   </div>
@@ -238,24 +240,24 @@ print(resp.choices[0].message.content)`
               disabled={subLoading || model.status !== "online"}
               className="w-full py-3 rounded-lg font-medium text-white bg-fg hover:bg-fg/90 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
             >
-              {subLoading ? "订阅中..." : model.status !== "online" ? "模型离线，暂不可订阅" : "订阅此模型"}
+              {subLoading ? t({ en: "Subscribing...", zh: "订阅中..." }) : model.status !== "online" ? t({ en: "Offline — not available", zh: "模型离线，暂不可订阅" }) : t({ en: "Subscribe", zh: "订阅此模型" })}
             </button>
           ) : (
             <div className="space-y-4">
               {sub.is_owned ? (
-                <div className="w-full py-3 rounded-lg font-medium text-center bg-gray-100 text-gray-500 cursor-not-allowed" title="自己注册的模型服务，无法取消订阅">
-                  自己的服务（已自动订阅）
+                <div className="w-full py-3 rounded-lg font-medium text-center bg-gray-100 text-gray-500 cursor-not-allowed" title={t({ en: "You own this backend — cannot unsubscribe", zh: "自己注册的模型服务，无法取消订阅" })}>
+                  {t({ en: "Your service (auto-subscribed)", zh: "自己的服务（已自动订阅）" })}
                 </div>
               ) : (
                 <button
                   onClick={handleUnsubscribe}
                   className="w-full py-3 rounded-lg font-medium text-red-600 bg-white border border-red-300 hover:bg-red-50 hover:border-red-400 transition-colors"
                 >
-                  取消订阅
+                  {t({ en: "Unsubscribe", zh: "取消订阅" })}
                 </button>
               )}
               <p className="text-sm text-fg-muted">
-                用你的 <Link href="/dashboard/keys" className="underline hover:text-fg">API Key</Link> 直接请求即可，下面是调用本模型的最小示例：
+                {t({ en: "Use your ", zh: "用你的 " })}<Link href="/dashboard/keys" className="underline hover:text-fg">{t({ en: "API key", zh: "API Key" })}</Link>{t({ en: " directly. Below is the minimum example for calling this model:", zh: " 直接请求即可，下面是调用本模型的最小示例：" })}
               </p>
               <div className="rounded-lg border border-line bg-gray-900 overflow-hidden">
                 <div className="flex items-center justify-between px-3 py-2 bg-gray-800 border-b border-gray-700">
@@ -278,7 +280,7 @@ print(resp.choices[0].message.content)`
                     onClick={copyExample}
                     className="text-xs text-gray-400 hover:text-white px-2 py-1 rounded hover:bg-gray-700"
                   >
-                    {copied ? "已复制" : "复制"}
+                    {copied ? t({ en: "Copied", zh: "已复制" }) : t({ en: "Copy", zh: "复制" })}
                   </button>
                 </div>
                 <pre className="px-4 py-3 text-xs text-gray-100 overflow-x-auto leading-relaxed">
@@ -286,7 +288,7 @@ print(resp.choices[0].message.content)`
                 </pre>
               </div>
               <p className="text-xs text-gray-500">
-                更多调用方式（多模型回退、指定后端等）见 <Link href="/docs" className="underline hover:text-fg">使用文档</Link>。
+                {t({ en: "More usage patterns (multi-model failover, lock to a backend, etc.) — see the ", zh: "更多调用方式（多模型回退、指定后端等）见 " })}<Link href="/docs" className="underline hover:text-fg">{t({ en: "docs", zh: "使用文档" })}</Link>{t({ en: ".", zh: "。" })}
               </p>
             </div>
           )}

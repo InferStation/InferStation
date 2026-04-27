@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useT } from "@/context/LocaleContext"
 
 interface Props {
   value: string
@@ -22,6 +23,7 @@ function checkStrength(pw: string) {
 }
 
 export default function PasswordInput({ value, onChange, placeholder, required, minLength, label, showStrength }: Props) {
+  const t = useT()
   const [show, setShow] = useState(false)
   const { cats, ok } = checkStrength(value)
 
@@ -67,7 +69,7 @@ export default function PasswordInput({ value, onChange, placeholder, required, 
             ))}
           </div>
           <p className={`text-xs ${ok ? "text-green-600" : "text-red-500"}`}>
-            {ok ? "密码强度合格" : "需包含大写、小写、数字、特殊字符中的至少3种，且不少于8位"}
+            {ok ? t({ en: "Strong password", zh: "密码强度合格" }) : t({ en: "Use at least 8 characters with 3 of: uppercase, lowercase, numbers, symbols.", zh: "需包含大写、小写、数字、特殊字符中的至少3种，且不少于8位" })}
           </p>
         </div>
       )}

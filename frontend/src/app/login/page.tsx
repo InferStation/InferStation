@@ -6,8 +6,10 @@ import { useAuth } from "@/context/AuthContext"
 import { apiFetch } from "@/lib/api"
 import PasswordInput from "@/components/PasswordInput"
 import Link from "next/link"
+import { useT } from "@/context/LocaleContext"
 
 export default function LoginPage() {
+  const t = useT()
   const [login, setLogin] = useState("")
   const [password, setPassword] = useState("")
   const [code, setCode] = useState("")
@@ -23,14 +25,14 @@ export default function LoginPage() {
 
   const handleSendCode = async () => {
     setError(""); setInfo("")
-    if (!login.trim()) { setError("请先输入用户名或邮箱"); return }
+    if (!login.trim()) { setError(t({ en: "Please enter your username or email first", zh: "请先输入用户名或邮箱" })); return }
     setSending(true)
     try {
       const data = await apiFetch("/api/auth/send-code", {
         method: "POST",
         body: JSON.stringify({ email: login.trim(), purpose: "login" }),
       })
-      setInfo(data?.dev_code ? `验证码已生成（开发模式：${data.dev_code}）` : "验证码已发送至账号绑定邮箱")
+      setInfo(data?.dev_code ? t({ en: `Verification code generated (dev mode: ${data.dev_code})`, zh: `验证码已生成（开发模式：${data.dev_code}）` }) : t({ en: "Verification code sent to the email bound to your account", zh: "验证码已发送至账号绑定邮箱" }))
       setCooldown(60)
       if (cdRef.current) clearInterval(cdRef.current)
       cdRef.current = setInterval(() => {
@@ -40,7 +42,7 @@ export default function LoginPage() {
         })
       }, 1000)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "发送失败")
+      setError(err instanceof Error ? err.message : t({ en: "Failed to send", zh: "发送失败" }))
     } finally { setSending(false) }
   }
 
@@ -56,7 +58,7 @@ export default function LoginPage() {
       await auth.login(data.token, remember)
       router.push("/dashboard")
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "登录失败")
+      setError(err instanceof Error ? err.message : t({ en: "Sign-in failed", zh: "登录失败" }))
     } finally {
       setLoading(false)
     }
@@ -70,20 +72,20 @@ export default function LoginPage() {
           <div className="w-8 h-8 rounded-lg bg-white/10 grid place-items-center">
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M12 2l9 5-9 5-9-5 9-5z M3 12l9 5 9-5 M3 17l9 5 9-5" /></svg>
           </div>
-          <span className="text-base font-semibold tracking-tight">天枢</span>
+          <span className="text-base font-semibold tracking-tight">{t({ en: "Tianshu", zh: "天枢" })}</span>
         </Link>
         <div>
           <h2 className="text-3xl font-semibold leading-tight tracking-tight mb-3">
-            一个 API，<br />接入所有大模型
+            {t({ en: "One API,", zh: "一个 API，" })}<br />{t({ en: "every LLM backend", zh: "接入所有大模型" })}
           </h2>
           <p className="text-sm text-white/60 max-w-sm leading-relaxed">
-            天枢把分散的 LLM 后端聚合为统一 OpenAI 兼容接口，按优先级自动调度、失败转移、按 token 真实计费。
+            {t({ en: "Tianshu aggregates fragmented LLM backends behind a unified OpenAI-compatible interface — priority routing, automatic failover, and token-true billing.", zh: "天枢把分散的 LLM 后端聚合为统一 OpenAI 兼容接口，按优先级自动调度、失败转移、按 token 真实计费。" })}
           </p>
         </div>
         <div className="flex items-center gap-4 text-xs text-white/40">
           <span>© {new Date().getFullYear()} Tianshu</span>
-          <Link href="/terms" className="hover:text-white/70">服务条款</Link>
-          <Link href="/privacy" className="hover:text-white/70">隐私政策</Link>
+          <Link href="/terms" className="hover:text-white/70">{t({ en: "Terms", zh: "服务条款" })}</Link>
+          <Link href="/privacy" className="hover:text-white/70">{t({ en: "Privacy", zh: "隐私政策" })}</Link>
         </div>
       </aside>
 
@@ -91,16 +93,16 @@ export default function LoginPage() {
       <div className="lg:col-span-3 flex items-center justify-center p-6">
         <div className="w-full max-w-sm">
           <Link href="/" className="lg:hidden flex items-center gap-2 mb-8">
-            <div className="w-7 h-7 rounded-lg bg-fg text-accent-fg grid place-items-center text-xs font-semibold">天</div>
-            <span className="text-[15px] font-semibold tracking-tight">天枢</span>
+            <div className="w-7 h-7 rounded-lg bg-fg text-accent-fg grid place-items-center text-xs font-semibold">{t({ en: "T", zh: "天" })}</div>
+            <span className="text-[15px] font-semibold tracking-tight">{t({ en: "Tianshu", zh: "天枢" })}</span>
           </Link>
-          <h1 className="text-[22px] font-semibold tracking-tight mb-1">欢迎回来</h1>
-          <p className="text-sm text-fg-muted mb-6">登录后管理订阅、密钥与账单</p>
+          <h1 className="text-[22px] font-semibold tracking-tight mb-1">{t({ en: "Welcome back", zh: "欢迎回来" })}</h1>
+          <p className="text-sm text-fg-muted mb-6">{t({ en: "Sign in to manage subscriptions, keys, and billing", zh: "登录后管理订阅、密钥与账单" })}</p>
           {error && <div className="mb-4 p-3 bg-danger/10 text-danger rounded-lg text-[13px]">{error}</div>}
           {info && <div className="mb-4 p-3 bg-success/10 text-success rounded-lg text-[13px]">{info}</div>}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-fg mb-1.5">用户名或邮箱</label>
+              <label className="block text-xs font-medium text-fg mb-1.5">{t({ en: "Username or email", zh: "用户名或邮箱" })}</label>
               <input
                 type="text"
                 value={login}
@@ -109,9 +111,9 @@ export default function LoginPage() {
                 className="w-full h-10 px-3 text-sm rounded-lg bg-surface border border-line placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-fg/15 focus:border-fg/40"
               />
             </div>
-            <PasswordInput label="密码" value={password} onChange={setPassword} required />
+            <PasswordInput label={t({ en: "Password", zh: "密码" })} value={password} onChange={setPassword} required />
             <div>
-              <label className="block text-xs font-medium text-fg mb-1.5">邮箱验证码</label>
+              <label className="block text-xs font-medium text-fg mb-1.5">{t({ en: "Email verification code", zh: "邮箱验证码" })}</label>
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -120,7 +122,7 @@ export default function LoginPage() {
                   value={code}
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
                   required
-                  placeholder="6 位验证码"
+                  placeholder={t({ en: "6-digit code", zh: "6 位验证码" })}
                   className="flex-1 h-10 px-3 text-sm rounded-lg bg-surface border border-line placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-fg/15 focus:border-fg/40"
                 />
                 <button
@@ -129,7 +131,7 @@ export default function LoginPage() {
                   disabled={sending || cooldown > 0}
                   className="h-10 px-3 text-sm rounded-lg bg-surface border border-line text-fg hover:bg-accent-soft disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                 >
-                  {cooldown > 0 ? `${cooldown}s` : sending ? "发送中" : "获取验证码"}
+                  {cooldown > 0 ? `${cooldown}s` : sending ? t({ en: "Sending", zh: "发送中" }) : t({ en: "Send code", zh: "获取验证码" })}
                 </button>
               </div>
             </div>
@@ -140,18 +142,18 @@ export default function LoginPage() {
                 onChange={(e) => setRemember(e.target.checked)}
                 className="w-4 h-4 rounded border-line accent-fg"
               />
-              <span className="text-[13px] text-fg-muted">记住我</span>
+              <span className="text-[13px] text-fg-muted">{t({ en: "Remember me", zh: "记住我" })}</span>
             </label>
             <button
               type="submit"
               disabled={loading}
               className="w-full h-10 rounded-lg bg-fg text-accent-fg text-sm font-medium hover:bg-fg/90 disabled:opacity-50"
             >
-              {loading ? "登录中..." : "登录"}
+              {loading ? t({ en: "Signing in...", zh: "登录中..." }) : t({ en: "Sign in", zh: "登录" })}
             </button>
           </form>
           <p className="text-center text-[13px] text-fg-muted mt-6">
-            没有账号？<Link href="/register" className="text-fg font-medium hover:underline">立即注册</Link>
+            {t({ en: "No account yet? ", zh: "没有账号？" })}<Link href="/register" className="text-fg font-medium hover:underline">{t({ en: "Sign up", zh: "立即注册" })}</Link>
           </p>
         </div>
       </div>
