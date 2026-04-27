@@ -136,16 +136,6 @@ export default function DocsPage() {
             </ol>
           </div>
         </div>
-
-        {/* API Key vs sub_key 决策树 */}
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-5 mt-4 text-sm text-gray-700">
-          <h3 className="font-semibold text-base text-amber-900 mb-2">API Key 还是 sub_key？</h3>
-          <ul className="space-y-1.5 ml-1">
-            <li>· <strong>99% 场景用 API Key</strong>（<code>sk-xxxx</code>）。它走 <code>/v1</code>，按激活订阅优先级自动路由 + 失败转移。</li>
-            <li>· <strong>sub_key</strong> 只在你需要<em>强制锁定</em>到某一家提供者的某个后端时用，例如对比测试或诊断。它走 <code>/s/&#123;sub_key&#125;/v1</code>，<strong>不</strong>走路由也<strong>不</strong>转移。</li>
-            <li>· 一个 API Key 调用所有激活订阅；一个 sub_key 只对应一条订阅。</li>
-          </ul>
-        </div>
       </section>
 
       {/* API 调用 */}
@@ -195,23 +185,6 @@ for chunk in resp:
     if chunk.choices and chunk.choices[0].delta.content:
         print(chunk.choices[0].delta.content, end="")`}</pre>
             </div>
-          </div>
-
-          {/* 方式二：sub_key 直达 */}
-          <div className="bg-white rounded-lg border p-6">
-            <h3 className="font-semibold text-base text-gray-800 mb-3">方式二：sub_key 直达（不经路由）</h3>
-            <p className="text-sm text-gray-600 mb-3">
-              订阅生成的 <code>sub_key</code> 可直接定位到某一个具体后端，<strong>不走</strong>优先级与失败转移。适合调试或强制指定某家提供者的场景。
-            </p>
-            <div className="bg-gray-900 text-gray-100 rounded-lg p-4 text-sm overflow-x-auto">
-              <pre>{`curl https://your-gateway/s/{sub_key}/v1/chat/completions \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "model": "Qwen/Qwen3-8B",
-    "messages": [{"role": "user", "content": "你好"}]
-  }'`}</pre>
-            </div>
-            <p className="text-xs text-gray-500 mt-2">sub_key 可在「我的订阅」或模型详情页获取，无需 Authorization 头。</p>
           </div>
         </div>
       </section>
@@ -273,7 +246,7 @@ for chunk in resp:
               </thead>
               <tbody>
                 <tr><td className="px-3 py-2 border font-mono">400</td><td className="px-3 py-2 border">关闭了 auto_fallback 但请求未指定 <code>model</code></td><td className="px-3 py-2 border">补上 <code>model</code>，或开启 auto_fallback</td></tr>
-                <tr><td className="px-3 py-2 border font-mono">401</td><td className="px-3 py-2 border">缺少 / 无效 / 已禁用的 API Key 或 sub_key</td><td className="px-3 py-2 border">检查 Authorization 头；在「API Key」页确认未禁用</td></tr>
+                <tr><td className="px-3 py-2 border font-mono">401</td><td className="px-3 py-2 border">缺少 / 无效 / 已禁用的 API Key</td><td className="px-3 py-2 border">检查 Authorization 头；在「API Key」页确认未禁用</td></tr>
                 <tr><td className="px-3 py-2 border font-mono">402</td><td className="px-3 py-2 border">有逾期未付账单，账户已挂起</td><td className="px-3 py-2 border">在「账单」页结清逾期账单后自动恢复</td></tr>
                 <tr><td className="px-3 py-2 border font-mono">403</td><td className="px-3 py-2 border">用户被管理员停用 / 账号已注销</td><td className="px-3 py-2 border">联系平台管理员</td></tr>
                 <tr><td className="px-3 py-2 border font-mono">404</td><td className="px-3 py-2 border">没激活任何订阅 / 关闭 fallback 时 model 未匹配 / 模型不存在</td><td className="px-3 py-2 border">在「我的订阅」激活；或换 model；或在广场重新订阅</td></tr>
@@ -413,18 +386,6 @@ curl -X POST https://your-gateway/api/auth/login \
                 <td className="px-4 py-2"><code className="text-green-600">GET</code></td>
                 <td className="px-4 py-2 font-mono text-xs">/v1/models</td>
                 <td className="px-4 py-2 text-gray-600">列出可用模型（优先返回已激活订阅绑定的模型）</td>
-              </tr>
-
-              <tr><td colSpan={3} className="px-4 py-2 bg-gray-50 font-semibold text-gray-600 text-xs">sub_key 直达</td></tr>
-              <tr>
-                <td className="px-4 py-2"><code className="text-fg">POST</code></td>
-                <td className="px-4 py-2 font-mono text-xs">/s/&#123;sub_key&#125;/v1/chat/completions</td>
-                <td className="px-4 py-2 text-gray-600">直达订阅绑定的单个后端（不走路由）</td>
-              </tr>
-              <tr>
-                <td className="px-4 py-2"><code className="text-green-600">GET</code></td>
-                <td className="px-4 py-2 font-mono text-xs">/s/&#123;sub_key&#125;/v1/models</td>
-                <td className="px-4 py-2 text-gray-600">列出订阅绑定的模型</td>
               </tr>
 
               <tr><td colSpan={3} className="px-4 py-2 bg-gray-50 font-semibold text-gray-600 text-xs">模型广场</td></tr>

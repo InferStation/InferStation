@@ -1540,7 +1540,7 @@ class SubscribeRequest(BaseModel):
 
 @app.post("/api/subscriptions")
 async def subscribe_model(req: SubscribeRequest, user=Depends(get_current_user)):
-    """Subscribe to a model on a specific backend and get a unique sub_key for API access.
+    """Subscribe to a model on a specific backend.
 
     When the user already has subs for the same model on OTHER backends, the
     new sub is inserted into the model group at a position keeping
@@ -1563,17 +1563,17 @@ async def subscribe_model(req: SubscribeRequest, user=Depends(get_current_user))
 
         # Check existing subscription for this user + backend + model
         cur = await db.execute(
-            "SELECT id, sub_key, is_active FROM subscriptions WHERE user_id = ? AND backend_id = ? AND model = ?",
+            "SELECT id, is_active FROM subscriptions WHERE user_id = ? AND backend_id = ? AND model = ?",
             (user["id"], req.backend_id, req.model),
         )
         existing = await cur.fetchone()
         if existing:
             existing = dict(existing)
             if existing["is_active"]:
-                return {"sub_key": existing["sub_key"], "model": req.model}
+                return {"id": existing["id"], "model": req.model}
             await db.execute("UPDATE subscriptions SET is_active = 1 WHERE id = ?", (existing["id"],))
             await db.commit()
-            return {"sub_key": existing["sub_key"], "model": req.model}
+            return {"id": existing["id"], "model": req.model}
 
         # Default placement: keep (input + output) price ascending within the
         # same-model group. New sub goes just before the first existing sub of
@@ -1617,14 +1617,15 @@ async def subscribe_model(req: SubscribeRequest, user=Depends(get_current_user))
         )
 
         sub_key = f"sub-{secrets.token_urlsafe(24)}"
-        await db.execute(
+        cur = await db.execute(
             "INSERT INTO subscriptions (user_id, backend_id, model, sub_key, sort_order) VALUES (?, ?, ?, ?, ?)",
             (user["id"], req.backend_id, req.model, sub_key, insert_at),
         )
+        new_id = cur.lastrowid
         await db.commit()
     finally:
         await db.close()
-    return {"sub_key": sub_key, "model": req.model}
+    return {"id": new_id, "model": req.model}
 
 
 @app.get("/api/subscriptions")
@@ -1633,7 +1634,7 @@ async def list_subscriptions(user=Depends(get_current_user)):
     db = await get_db()
     try:
         cur = await db.execute(
-            "SELECT s.id, s.backend_id, s.model, s.sub_key, s.is_active, s.is_activated, s.created_at, s.sort_order, "
+            "SELECT s.id, s.backend_id, s.model, s.is_active, s.is_activated, s.created_at, s.sort_order, "
             "b.name as backend, b.status as backend_status, b.input_price, b.output_price, b.cache_price, b.currency, "
             "u.username as provider, "
             "CASE WHEN b.owner_id = ? THEN 1 ELSE 0 END as is_owned "
@@ -1765,79 +1766,6 @@ async def set_active_subscription(req: ActiveSubRequest, user=Depends(get_curren
     return {"ok": True, "active_subscription_id": req.subscription_id}
 
 
-# ── Subscription proxy endpoint ────────────────────────
-
-@app.post("/s/{sub_key}/v1/chat/completions")
-async def sub_chat(sub_key: str, request: Request):
-    """Proxy chat completions via subscription key."""
-    db = await get_db()
-    try:
-        cur = await db.execute(
-            "SELECT s.*, u.is_active as user_active "
-            "FROM subscriptions s JOIN users u ON s.user_id = u.id "
-            "WHERE s.sub_key = ? AND s.is_active = 1",
-            (sub_key,),
-        )
-        sub = await cur.fetchone()
-        if not sub:
-            raise HTTPException(401, "Invalid or inactive subscription")
-        sub = dict(sub)
-        if not sub["user_active"]:
-            raise HTTPException(403, "User account disabled")
-        suspended, overdue_total = await is_user_suspended(sub["user_id"])
-        if suspended:
-            raise HTTPException(402, f"服务已停用：有逾期未付账单 (累计 ¥{overdue_total:.6f})")
-
-        cur = await db.execute("SELECT * FROM backends WHERE id = ?", (sub["backend_id"],))
-        backend = await cur.fetchone()
-        if not backend:
-            raise HTTPException(503, "Backend not found")
-        backend = dict(backend)
-    finally:
-        await db.close()
-
-    if backend["status"] != "online":
-        raise HTTPException(503, "Backend is offline")
-
-    body = await request.json()
-    body["model"] = sub["model"]  # Force the subscribed model
-    stream = body.get("stream", False)
-
-    # Rewrite model name if mapping exists
-    client_info = json.loads(backend["client_info"]) if backend.get("client_info") else {}
-    model_map = client_info.get("model_map", {})
-    if sub["model"] in model_map:
-        body["model"] = model_map[sub["model"]]
-
-    input_price, output_price, cache_price = get_pricing(backend)
-    api_user = {"user_id": sub["user_id"], "key_id": 0}
-
-    if backend["mode"] == "tunnel":
-        return await _proxy_tunnel(api_user, backend, body, stream, input_price, output_price,
-                                    cache_price=cache_price)
-    else:
-        return await _proxy_direct(api_user, backend, body, stream, input_price, output_price,
-                                    cache_price=cache_price)
-
-
-@app.get("/s/{sub_key}/v1/models")
-async def sub_models(sub_key: str):
-    """List models available for this subscription."""
-    db = await get_db()
-    try:
-        cur = await db.execute(
-            "SELECT s.model FROM subscriptions s WHERE s.sub_key = ? AND s.is_active = 1",
-            (sub_key,),
-        )
-        sub = await cur.fetchone()
-        if not sub:
-            raise HTTPException(401, "Invalid or inactive subscription")
-    finally:
-        await db.close()
-    return {
-        "object": "list",
-        "data": [{"id": sub["model"], "object": "model", "owned_by": "llm-gateway"}],
-    }
 
 
 # ══════════════════════════════════════════════════════════

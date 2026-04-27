@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { apiFetch } from "@/lib/api"
 import { useAuth } from "@/context/AuthContext"
@@ -22,7 +23,6 @@ interface ModelDetail {
 
 interface Subscription {
   id: number
-  sub_key: string
   model: string
   is_owned?: boolean
 }
@@ -36,7 +36,6 @@ export default function ModelDetailPage() {
   const [error, setError] = useState("")
   const [sub, setSub] = useState<Subscription | null>(null)
   const [subLoading, setSubLoading] = useState(false)
-  const [copied, setCopied] = useState("")
 
   const modelId = Array.isArray(params.id) ? params.id.slice(1).join("/") : params.id
   const backendId = Array.isArray(params.id) ? params.id[0] : ""
@@ -55,7 +54,7 @@ export default function ModelDetailPage() {
     apiFetch("/api/subscriptions")
       .then((subs: any[]) => {
         const found = subs.find((s) => s.model === modelId && String(s.backend_id) === backendId && s.is_active)
-        if (found) setSub({ id: found.id, sub_key: found.sub_key, model: found.model, is_owned: !!found.is_owned })
+        if (found) setSub({ id: found.id, model: found.model, is_owned: !!found.is_owned })
       })
       .catch(() => {})
   }, [user, modelId, backendId])
@@ -90,11 +89,6 @@ export default function ModelDetailPage() {
     }
   }
 
-  const copyToClipboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text)
-    setCopied(label)
-    setTimeout(() => setCopied(""), 2000)
-  }
 
   if (loading) {
     return <div className="text-center py-20 text-gray-500">加载中...</div>
@@ -213,32 +207,9 @@ export default function ModelDetailPage() {
               </div>
 
               <div className="space-y-3">
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">你的专属 API 地址</p>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 bg-gray-100 px-3 py-2 rounded text-sm font-mono break-all">
-                      {baseUrl}/s/{sub.sub_key}/v1/chat/completions
-                    </code>
-                    <button
-                      onClick={() => copyToClipboard(`${baseUrl}/s/${sub.sub_key}/v1/chat/completions`, "url")}
-                      className="shrink-0 px-3 py-2 text-xs bg-gray-200 hover:bg-gray-300 rounded transition-colors"
-                    >
-                      {copied === "url" ? "已复制" : "复制"}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">调用示例</p>
-                  <pre className="bg-gray-900 text-gray-100 rounded-lg p-4 text-sm overflow-x-auto">
-{`curl ${baseUrl}/s/${sub.sub_key}/v1/chat/completions \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "model": "${model.id}",
-    "messages": [{"role": "user", "content": "Hello!"}]
-  }'`}
-                  </pre>
-                </div>
+                <p className="text-sm text-fg-muted">
+                  通过你的 <Link href="/dashboard/keys" className="underline hover:text-fg">API Key</Link> 调用 <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">{baseUrl}/v1/chat/completions</code>，把 <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">model</code> 设为 <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">{model.id}</code> 即可。详细路由规则见 <Link href="/docs" className="underline hover:text-fg">使用文档</Link>。
+                </p>
               </div>
             </div>
           )}

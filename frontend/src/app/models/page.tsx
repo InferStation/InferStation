@@ -22,7 +22,6 @@ interface SubInfo {
   id: number
   model: string
   backend_id: number
-  sub_key: string
   is_owned?: boolean
 }
 
@@ -37,7 +36,6 @@ export default function ModelsPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | "online" | "offline">("online")
   const [subs, setSubs] = useState<SubInfo[]>([])
   const [subLoading, setSubLoading] = useState<string | null>(null)
-  const [copied, setCopied] = useState<string | null>(null)
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
 
   const toggleCard = (id: string) => {
@@ -60,26 +58,12 @@ export default function ModelsPage() {
   useEffect(() => {
     if (!user) { setSubs([]); return }
     apiFetch("/api/subscriptions")
-      .then((list: any[]) => setSubs(list.filter((s) => s.is_active).map((s) => ({ id: s.id, model: s.model, backend_id: s.backend_id, sub_key: s.sub_key, is_owned: !!s.is_owned }))))
+      .then((list: any[]) => setSubs(list.filter((s) => s.is_active).map((s) => ({ id: s.id, model: s.model, backend_id: s.backend_id, is_owned: !!s.is_owned }))))
       .catch(() => {})
   }, [user])
 
   const isSubscribed = (m: Model) => subs.some((s) => s.model === m.id && s.backend_id === m.backend_id)
-  const getSubKey = (m: Model) => subs.find((s) => s.model === m.id && s.backend_id === m.backend_id)?.sub_key
   const isOwned = (m: Model) => !!subs.find((s) => s.model === m.id && s.backend_id === m.backend_id)?.is_owned
-
-  const baseUrl = typeof window !== "undefined" ? window.location.origin : ""
-
-  const copyApi = (e: React.MouseEvent, m: Model) => {
-    e.preventDefault()
-    e.stopPropagation()
-    const key = getSubKey(m)
-    if (!key) return
-    const url = `${baseUrl}/s/${key}/v1/chat/completions`
-    navigator.clipboard.writeText(url)
-    setCopied(`${m.backend_id}-${m.id}`)
-    setTimeout(() => setCopied(null), 2000)
-  }
 
   const handleSubscribe = async (e: React.MouseEvent, m: Model) => {
     e.preventDefault()
@@ -93,7 +77,7 @@ export default function ModelsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model: m.id, backend_id: m.backend_id }),
       })
-      setSubs((prev) => [...prev, { id: res.id, model: m.id, backend_id: m.backend_id, sub_key: res.sub_key }])
+      setSubs((prev) => [...prev, { id: res.id, model: m.id, backend_id: m.backend_id }])
     } catch {}
     setSubLoading(null)
   }

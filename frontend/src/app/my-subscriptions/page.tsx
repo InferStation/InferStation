@@ -8,7 +8,6 @@ interface Sub {
   id: number
   backend_id: number
   model: string
-  sub_key: string
   is_active: number
   is_activated?: number | boolean
   created_at: string
