@@ -215,7 +215,7 @@ export default function ServicesPage() {
             disabled={upgrading}
             className="bg-fg text-white px-6 py-2 rounded-lg hover:bg-fg/90 disabled:opacity-50"
           >
-            {upgrading ? t({ en: "Activating...", zh: "激活中..." }) : t({ en: "Activate", zh: "激活" })}}
+            {upgrading ? t({ en: "Activating...", zh: "激活中..." }) : t({ en: "Activate", zh: "激活" })}
           </button>
         </div>
       </div>
@@ -229,7 +229,7 @@ export default function ServicesPage() {
           onClick={() => setShowForm(!showForm)}
           className="bg-fg text-white px-4 py-2 rounded-lg hover:bg-fg/90"
         >
-          {showForm ? t({ en: "Cancel", zh: "取消" }) : t({ en: "Register new backend", zh: "注册新后端" })}}
+          {showForm ? t({ en: "Cancel", zh: "取消" }) : t({ en: "Register new backend", zh: "注册新后端" })}
         </button>
       </div>
 

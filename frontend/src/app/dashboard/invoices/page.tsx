@@ -133,7 +133,7 @@ export default function InvoicesPage() {
             disabled={!settle?.eligible || settling}
             className="shrink-0 px-4 py-2 text-sm border border-line-strong text-fg rounded-lg hover:bg-accent-soft disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {settling ? t({ en: "Issuing...", zh: "出账中..." }) : t({ en: "Settle now", zh: "提前结清" })}}
+            {settling ? t({ en: "Issuing...", zh: "出账中..." }) : t({ en: "Settle now", zh: "提前结清" })}
           </button>
         </div>
       </div>
