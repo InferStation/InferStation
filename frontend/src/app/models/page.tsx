@@ -38,6 +38,15 @@ export default function ModelsPage() {
   const [subs, setSubs] = useState<SubInfo[]>([])
   const [subLoading, setSubLoading] = useState<string | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+
+  const toggleCard = (id: string) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
 
   useEffect(() => {
     apiFetch("/api/models")
@@ -179,84 +188,124 @@ export default function ModelsPage() {
           </svg>
           {models.length === 0 ? "暂无在线模型，等待提供者注册服务" : "未找到匹配的模型"}
         </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((m, i) => (
-            <Link key={`${m.backend_id}-${m.id}`} href={`/models/${m.backend_id}/${m.id}`} className="group bg-white rounded-xl border border-gray-200/80 p-5 hover:shadow-lg hover:border-indigo-200 transition-all duration-200 cursor-pointer block flex flex-col">
-              <div className="flex items-start justify-between mb-3">
-                <h3 className="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors leading-tight break-all">{m.id}</h3>
-                <span className={`shrink-0 ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${m.status === "online" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-500"}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${m.status === "online" ? "bg-emerald-500 animate-pulse" : "bg-red-400"}`} />
-                  {m.status === "online" ? "在线" : "离线"}
-                </span>
-              </div>
-              {Object.keys(m.tags || {}).length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mb-3">
-                  {Object.entries(m.tags).map(([k, v]) => (
-                    <span key={k} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-600">
-                      {v}
-                    </span>
-                  ))}
-                </div>
-              )}
-              <div className="flex-1" />
-              <div className="text-sm text-gray-500 space-y-1 pt-2 border-t border-gray-100">
-                <div className="flex items-center gap-1.5">
-                  <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" /></svg>
-                  <span>{m.backend}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                  <span>{m.provider || "共享"}</span>
-                </div>
-                {m.input_price != null && (
-                  <div className="flex items-center gap-1.5">
-                    <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    {m.input_price === 0 && m.output_price === 0 ? (
-                      <span className="text-emerald-600 font-semibold">Free</span>
-                    ) : (
-                      <span className="text-gray-600">{m.currency === "USD" ? "$" : "¥"}{m.input_price}/M · {m.currency === "USD" ? "$" : "¥"}{m.output_price}/M <span className="text-[10px] text-gray-400">{m.currency || "CNY"}</span></span>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div className="mt-3 pt-2 border-t border-gray-100">
-                {isSubscribed(m) ? (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={(e) => copyApi(e, m)}
-                      className="flex-1 py-1.5 rounded-lg text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors"
-                    >
-                      {copied === `${m.backend_id}-${m.id}` ? "已复制 API" : "复制 API 地址"}
-                    </button>
-                    {isOwned(m) ? (
-                      <span className="px-3 py-1.5 rounded-lg text-xs font-medium text-gray-500 bg-gray-100" title="自己注册的模型服务，无法取消订阅">
-                        自动订阅
-                      </span>
-                    ) : (
-                      <button
-                        onClick={(e) => handleUnsubscribe(e, m)}
-                        disabled={subLoading === `${m.backend_id}-${m.id}`}
-                        className="px-3 py-1.5 rounded-lg text-xs font-medium text-red-500 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-50"
-                      >
-                        {subLoading === `${m.backend_id}-${m.id}` ? "..." : "取消"}
-                      </button>
-                    )}
-                  </div>
-                ) : (
+      ) : (() => {
+        // 按 model.id 分组：一张卡 = 一个模型，下面列出多个 backend
+        const groupOrder: string[] = []
+        const buckets = new Map<string, Model[]>()
+        filtered.forEach((m) => {
+          if (!buckets.has(m.id)) { groupOrder.push(m.id); buckets.set(m.id, []) }
+          buckets.get(m.id)!.push(m)
+        })
+        return (
+          <div className="space-y-4">
+            {groupOrder.map((modelId) => {
+              const rows = buckets.get(modelId)!
+              const isCollapsed = collapsed.has(modelId)
+              const anyOnline = rows.some((r) => r.status === "online")
+              return (
+                <div key={modelId} className="bg-white rounded-xl border border-gray-200/80 shadow-sm">
                   <button
-                    onClick={(e) => handleSubscribe(e, m)}
-                    disabled={subLoading === `${m.backend_id}-${m.id}` || m.status !== "online"}
-                    className="w-full py-1.5 rounded-lg text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                    type="button"
+                    onClick={() => toggleCard(modelId)}
+                    className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50 rounded-xl text-left"
                   >
-                    {subLoading === `${m.backend_id}-${m.id}` ? "处理中..." : "订阅"}
+                    <span className={`shrink-0 inline-block text-gray-400 transition-transform ${isCollapsed ? "" : "rotate-90"}`}>▶</span>
+                    <span className="font-semibold text-lg text-gray-900 break-all flex-1">{modelId}</span>
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${anyOnline ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-500"}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${anyOnline ? "bg-emerald-500" : "bg-red-400"}`} />
+                      {anyOnline ? "在线" : "离线"}
+                    </span>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                      {rows.length} 个服务
+                    </span>
                   </button>
-                )}
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
+                  {!isCollapsed && (
+                    <div className={`px-5 pb-4 ${rows.length > 1 ? "" : ""}`}>
+                      <div className={rows.length > 1 ? "divide-y divide-gray-100 border border-gray-100 rounded" : ""}>
+                        {rows.map((m) => {
+                          const rowKey = `${m.backend_id}-${m.id}`
+                          const subscribed = isSubscribed(m)
+                          const owned = isOwned(m)
+                          return (
+                            <div key={rowKey} className={`${rows.length > 1 ? "px-3 py-3" : "py-2"} flex items-center justify-between flex-wrap gap-3`}>
+                              <div className="flex items-center gap-3 flex-wrap text-sm min-w-0">
+                                <Link
+                                  href={`/models/${m.backend_id}/${m.id}`}
+                                  className="inline-flex items-center gap-1 text-gray-700 hover:text-indigo-600"
+                                  title={`后端：${m.backend}（点击查看详情）`}
+                                >
+                                  <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" /></svg>
+                                  <span className="font-medium">{m.backend}</span>
+                                </Link>
+                                <span className="inline-flex items-center gap-1 text-gray-600" title={`提供者：${m.provider || "共享"}`}>
+                                  <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                                  <span>{m.provider || "共享"}</span>
+                                </span>
+                                {m.input_price != null && (
+                                  <span className="inline-flex items-center gap-1 text-gray-600" title="价格（输入 / 输出，每 1M tokens）">
+                                    <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                    {m.input_price === 0 && m.output_price === 0 ? (
+                                      <span className="text-emerald-600 font-semibold">Free</span>
+                                    ) : (
+                                      <span>{m.currency === "USD" ? "$" : "¥"}{m.input_price}/M · {m.currency === "USD" ? "$" : "¥"}{m.output_price}/M <span className="text-[10px] text-gray-400">{m.currency || "CNY"}</span></span>
+                                    )}
+                                  </span>
+                                )}
+                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] font-medium ${m.status === "online" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-500"}`}>
+                                  <span className={`w-1 h-1 rounded-full ${m.status === "online" ? "bg-emerald-500" : "bg-red-400"}`} />
+                                  {m.status === "online" ? "在线" : "离线"}
+                                </span>
+                                {Object.entries(m.tags || {}).map(([k, v]) => (
+                                  <span key={k} className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-indigo-50 text-indigo-600">
+                                    {v}
+                                  </span>
+                                ))}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {subscribed ? (
+                                  <>
+                                    <button
+                                      onClick={(e) => copyApi(e, m)}
+                                      className="px-3 py-1.5 rounded-lg text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors"
+                                    >
+                                      {copied === rowKey ? "已复制 API" : "复制 API 地址"}
+                                    </button>
+                                    {owned ? (
+                                      <span className="px-3 py-1.5 rounded-lg text-xs font-medium text-gray-500 bg-gray-100" title="自己注册的模型服务，无法取消订阅">
+                                        自动订阅
+                                      </span>
+                                    ) : (
+                                      <button
+                                        onClick={(e) => handleUnsubscribe(e, m)}
+                                        disabled={subLoading === rowKey}
+                                        className="px-3 py-1.5 rounded-lg text-xs font-medium text-red-500 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-50"
+                                      >
+                                        {subLoading === rowKey ? "..." : "取消订阅"}
+                                      </button>
+                                    )}
+                                  </>
+                                ) : (
+                                  <button
+                                    onClick={(e) => handleSubscribe(e, m)}
+                                    disabled={subLoading === rowKey || m.status !== "online"}
+                                    className="px-4 py-1.5 rounded-lg text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                                  >
+                                    {subLoading === rowKey ? "处理中..." : "订阅"}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )
+      })()}
     </div>
   )
 }
