@@ -37,6 +37,8 @@ export default function ModelDetailPage() {
   const [error, setError] = useState("")
   const [sub, setSub] = useState<Subscription | null>(null)
   const [subLoading, setSubLoading] = useState(false)
+  const [exampleLang, setExampleLang] = useState<"curl" | "python">("curl")
+  const [copied, setCopied] = useState(false)
 
   const modelId = Array.isArray(params.id) ? params.id.slice(1).join("/") : params.id
   const backendId = Array.isArray(params.id) ? params.id[0] : ""
@@ -107,6 +109,36 @@ export default function ModelDetailPage() {
   }
 
   const baseUrl = typeof window !== "undefined" ? window.location.origin : ""
+
+  const curlExample = `curl ${baseUrl}/v1/chat/completions \\
+  -H "Authorization: Bearer $YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "model": "${model.id}",
+    "messages": [{"role": "user", "content": "你好"}]
+  }'`
+
+  const pythonExample = `from openai import OpenAI
+
+client = OpenAI(
+    api_key="$YOUR_API_KEY",
+    base_url="${baseUrl}/v1",
+)
+
+resp = client.chat.completions.create(
+    model="${model.id}",
+    messages=[{"role": "user", "content": "你好"}],
+)
+print(resp.choices[0].message.content)`
+
+  const exampleCode = exampleLang === "curl" ? curlExample : pythonExample
+  const copyExample = async () => {
+    try {
+      await navigator.clipboard.writeText(exampleCode)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {}
+  }
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -223,7 +255,38 @@ export default function ModelDetailPage() {
                 </button>
               )}
               <p className="text-sm text-fg-muted">
-                通过你的 <Link href="/dashboard/keys" className="underline hover:text-fg">API Key</Link> 调用 <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">{baseUrl}/v1/chat/completions</code>，把 <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">model</code> 设为 <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">{model.id}</code> 即可。详细路由规则见 <Link href="/docs" className="underline hover:text-fg">使用文档</Link>。
+                用你的 <Link href="/dashboard/keys" className="underline hover:text-fg">API Key</Link> 直接请求即可，下面是调用本模型的最小示例：
+              </p>
+              <div className="rounded-lg border border-line bg-gray-900 overflow-hidden">
+                <div className="flex items-center justify-between px-3 py-2 bg-gray-800 border-b border-gray-700">
+                  <div className="flex items-center gap-1">
+                    {(["curl", "python"] as const).map((lang) => (
+                      <button
+                        key={lang}
+                        onClick={() => setExampleLang(lang)}
+                        className={`px-2.5 py-1 text-xs rounded ${
+                          exampleLang === lang
+                            ? "bg-gray-700 text-white"
+                            : "text-gray-400 hover:text-gray-200"
+                        }`}
+                      >
+                        {lang === "curl" ? "curl" : "Python"}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={copyExample}
+                    className="text-xs text-gray-400 hover:text-white px-2 py-1 rounded hover:bg-gray-700"
+                  >
+                    {copied ? "已复制" : "复制"}
+                  </button>
+                </div>
+                <pre className="px-4 py-3 text-xs text-gray-100 overflow-x-auto leading-relaxed">
+{exampleCode}
+                </pre>
+              </div>
+              <p className="text-xs text-gray-500">
+                更多调用方式（多模型回退、指定后端等）见 <Link href="/docs" className="underline hover:text-fg">使用文档</Link>。
               </p>
             </div>
           )}
