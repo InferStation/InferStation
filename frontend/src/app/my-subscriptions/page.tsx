@@ -375,24 +375,6 @@ export default function MyModelsPage() {
                                 )}
                               </div>
                               <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-1" title={disabled ? "未激活模型不可调整顺序" : g.rows.length <= 1 ? "该模型只有一个后端，无需排序" : "在该模型的多个后端之间调整顺序"}>
-                                  <button
-                                    onClick={() => handleMoveInCard(s.id, -1)}
-                                    disabled={disabled || g.rows.length <= 1 || rowIdx === 0}
-                                    title="同模型内提高该服务的优先级"
-                                    className="px-2 h-7 flex items-center text-xs rounded border border-gray-200 text-gray-600 bg-white hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-300 disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
-                                  >
-                                    上移服务
-                                  </button>
-                                  <button
-                                    onClick={() => handleMoveInCard(s.id, 1)}
-                                    disabled={disabled || g.rows.length <= 1 || rowIdx === g.rows.length - 1}
-                                    title="同模型内降低该服务的优先级"
-                                    className="px-2 h-7 flex items-center text-xs rounded border border-gray-200 text-gray-600 bg-white hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-300 disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
-                                  >
-                                    下移服务
-                                  </button>
-                                </div>
                                 {isActivated ? (
                                   <button
                                     onClick={() => handleToggleActivate(s.id, false)}
@@ -418,6 +400,24 @@ export default function MyModelsPage() {
                                 >
                                   取消订阅
                                 </button>
+                                <div className="flex items-center gap-1" title={disabled ? "未激活模型不可调整顺序" : g.rows.length <= 1 ? "该模型只有一个后端，无需排序" : "在该模型的多个后端之间调整顺序"}>
+                                  <button
+                                    onClick={() => handleMoveInCard(s.id, -1)}
+                                    disabled={disabled || g.rows.length <= 1 || rowIdx === 0}
+                                    title="同模型内提高该服务的优先级"
+                                    className="px-2 h-7 flex items-center text-xs rounded border border-gray-200 text-gray-600 bg-white hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-300 disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
+                                  >
+                                    上移服务
+                                  </button>
+                                  <button
+                                    onClick={() => handleMoveInCard(s.id, 1)}
+                                    disabled={disabled || g.rows.length <= 1 || rowIdx === g.rows.length - 1}
+                                    title="同模型内降低该服务的优先级"
+                                    className="px-2 h-7 flex items-center text-xs rounded border border-gray-200 text-gray-600 bg-white hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-300 disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
+                                  >
+                                    下移服务
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           )
