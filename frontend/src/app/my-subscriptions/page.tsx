@@ -163,11 +163,11 @@ export default function MyModelsPage() {
 
   return (
     <div>
-      <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-5 mb-8">
+      <div className="bg-accent-soft border border-line rounded-lg p-5 mb-8">
         <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-          <h2 className="text-sm font-semibold text-indigo-900">API 链接</h2>
+          <h2 className="text-sm font-semibold text-fg">API 链接</h2>
           {activatedSubs.length > 0 ? (
-            <span className="text-xs text-indigo-700">
+            <span className="text-xs text-fg">
               已激活 {activatedSubs.length} 个服务，{autoFallback ? "按优先级自动回退" : "需在请求中指定 model"}
             </span>
           ) : (
@@ -175,18 +175,18 @@ export default function MyModelsPage() {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <code className="flex-1 bg-white px-3 py-2 rounded text-xs font-mono text-gray-800 break-all border border-indigo-200">
+          <code className="flex-1 bg-white px-3 py-2 rounded text-xs font-mono text-gray-800 break-all border border-line">
             {unifiedUrl}
           </code>
           <button
             onClick={() => copyToClipboard(unifiedUrl, "unified")}
-            className="shrink-0 px-3 py-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded"
+            className="shrink-0 px-3 py-2 text-xs bg-fg hover:bg-fg/90 text-white rounded"
           >
             {copied === "unified" ? "已复制" : "复制"}
           </button>
         </div>
         <div className="text-sm text-gray-700 mt-3 space-y-2 leading-relaxed">
-          <div className="flex items-center justify-between bg-white border border-indigo-200 rounded px-3 py-2">
+          <div className="flex items-center justify-between bg-white border border-line rounded px-3 py-2">
             <div className="text-xs text-gray-700">
               <span className="font-semibold text-gray-900">自动回退 (auto fallback)</span>
               <span className="ml-2 text-gray-500">
@@ -198,7 +198,7 @@ export default function MyModelsPage() {
             <button
               onClick={toggleAutoFallback}
               disabled={savingAuto}
-              className={`shrink-0 ml-3 relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${autoFallback ? "bg-indigo-600" : "bg-gray-300"} ${savingAuto ? "opacity-50 cursor-not-allowed" : ""}`}
+              className={`shrink-0 ml-3 relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${autoFallback ? "bg-fg" : "bg-gray-300"} ${savingAuto ? "opacity-50 cursor-not-allowed" : ""}`}
               aria-label="toggle auto fallback"
             >
               <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${autoFallback ? "translate-x-6" : "translate-x-1"}`} />
@@ -217,7 +217,7 @@ export default function MyModelsPage() {
       {subs.length === 0 ? (
         <div className="text-center py-20 text-gray-500">
           <p className="mb-4">暂无订阅模型</p>
-          <Link href="/models" className="text-indigo-600 hover:underline">去模型广场看看 →</Link>
+          <Link href="/models" className="text-fg hover:underline">去模型广场看看 →</Link>
         </div>
       ) : (
         <>
@@ -272,7 +272,7 @@ export default function MyModelsPage() {
                 <div
                   key={cardKey}
                   className={`bg-white rounded-lg border ${
-                    groupActivated ? "border-indigo-400 ring-2 ring-indigo-100" : ""
+                    groupActivated ? "border-fg/40 ring-2 ring-fg/10" : ""
                   }`}
                 >
                   <div className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 rounded-lg">
@@ -298,7 +298,7 @@ export default function MyModelsPage() {
                         {anyOnline ? "在线" : "离线"}
                       </span>
                       {g.rows.length > 0 && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-line">
                           {g.rows.length} 个服务
                         </span>
                       )}
@@ -309,20 +309,20 @@ export default function MyModelsPage() {
                         onClick={(e) => { e.stopPropagation(); handleMoveGroup(g.model, -1) }}
                         disabled={disabled || globalGroupIdx <= 0}
                         title="在所有模型间提高该模型的优先级"
-                        className="px-2 h-7 flex items-center text-xs rounded border border-gray-200 text-gray-600 bg-white hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-300 disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
+                        className="px-2 h-7 flex items-center text-xs rounded border border-line text-gray-600 bg-white hover:bg-accent-soft hover:text-fg hover:border-line-strong disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
                       >上移模型</button>
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); handleMoveGroup(g.model, 1) }}
                         disabled={disabled || globalGroupIdx === allOrder.length - 1}
                         title="在所有模型间降低该模型的优先级"
-                        className="px-2 h-7 flex items-center text-xs rounded border border-gray-200 text-gray-600 bg-white hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-300 disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
+                        className="px-2 h-7 flex items-center text-xs rounded border border-line text-gray-600 bg-white hover:bg-accent-soft hover:text-fg hover:border-line-strong disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
                       >下移模型</button>
                     </div>
                   </div>
                   {!collapsed && (
                     <div className="px-5 pb-5">
-                      <div className={g.rows.length > 1 ? "divide-y divide-gray-100 border border-gray-100 rounded" : ""}>
+                      <div className={g.rows.length > 1 ? "divide-y divide-line border border-line rounded" : ""}>
                         {g.rows.map((s, rowIdx) => {
                           const isActivated = !!s.is_activated
                           const myRank = activatedRank.get(s.id) ?? null
@@ -387,7 +387,7 @@ export default function MyModelsPage() {
                                   <button
                                     onClick={() => handleToggleActivate(s.id, true)}
                                     disabled={saving === s.id}
-                                    className="text-xs px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded disabled:opacity-50"
+                                    className="text-xs px-2 py-1 bg-fg hover:bg-fg/90 text-white rounded disabled:opacity-50"
                                   >
                                     激活
                                   </button>
@@ -405,7 +405,7 @@ export default function MyModelsPage() {
                                     onClick={() => handleMoveInCard(s.id, -1)}
                                     disabled={disabled || g.rows.length <= 1 || rowIdx === 0}
                                     title="同模型内提高该服务的优先级"
-                                    className="px-2 h-7 flex items-center text-xs rounded border border-gray-200 text-gray-600 bg-white hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-300 disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
+                                    className="px-2 h-7 flex items-center text-xs rounded border border-line text-gray-600 bg-white hover:bg-accent-soft hover:text-fg hover:border-line-strong disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
                                   >
                                     上移服务
                                   </button>
@@ -413,7 +413,7 @@ export default function MyModelsPage() {
                                     onClick={() => handleMoveInCard(s.id, 1)}
                                     disabled={disabled || g.rows.length <= 1 || rowIdx === g.rows.length - 1}
                                     title="同模型内降低该服务的优先级"
-                                    className="px-2 h-7 flex items-center text-xs rounded border border-gray-200 text-gray-600 bg-white hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-300 disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
+                                    className="px-2 h-7 flex items-center text-xs rounded border border-line text-gray-600 bg-white hover:bg-accent-soft hover:text-fg hover:border-line-strong disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
                                   >
                                     下移服务
                                   </button>
@@ -486,13 +486,13 @@ export default function MyModelsPage() {
                     .map((s) => (
                       <div
                         key={s.id}
-                        className="bg-gray-50 rounded-lg border border-gray-200 p-4 opacity-60"
+                        className="bg-gray-50 rounded-lg border border-line p-4 opacity-60"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <Link
                               href={`/models/${s.backend_id}/${s.model}`}
-                              className="font-medium text-gray-700 hover:text-indigo-600"
+                              className="font-medium text-gray-700 hover:text-fg"
                             >
                               {s.model}
                             </Link>

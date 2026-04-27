@@ -118,25 +118,25 @@ export default function AdminPage() {
       <div className="flex gap-4 mb-6">
         <button
           onClick={() => setTab("users")}
-          className={`px-4 py-2 rounded-lg text-sm ${tab === "users" ? "bg-indigo-600 text-white" : "bg-white border text-gray-600"}`}
+          className={`px-4 py-2 rounded-lg text-sm ${tab === "users" ? "bg-fg text-white" : "bg-white border text-gray-600"}`}
         >
           用户管理 ({users.length})
         </button>
         <button
           onClick={() => setTab("usage")}
-          className={`px-4 py-2 rounded-lg text-sm ${tab === "usage" ? "bg-indigo-600 text-white" : "bg-white border text-gray-600"}`}
+          className={`px-4 py-2 rounded-lg text-sm ${tab === "usage" ? "bg-fg text-white" : "bg-white border text-gray-600"}`}
         >
           用量统计
         </button>
         <button
           onClick={() => setTab("invoices")}
-          className={`px-4 py-2 rounded-lg text-sm ${tab === "invoices" ? "bg-indigo-600 text-white" : "bg-white border text-gray-600"}`}
+          className={`px-4 py-2 rounded-lg text-sm ${tab === "invoices" ? "bg-fg text-white" : "bg-white border text-gray-600"}`}
         >
           账单 ({invoices.length})
         </button>
         <button
           onClick={() => setTab("review")}
-          className={`px-4 py-2 rounded-lg text-sm ${tab === "review" ? "bg-indigo-600 text-white" : "bg-white border text-gray-600"} ${pending.length > 0 ? "ring-2 ring-amber-400" : ""}`}
+          className={`px-4 py-2 rounded-lg text-sm ${tab === "review" ? "bg-fg text-white" : "bg-white border text-gray-600"} ${pending.length > 0 ? "ring-2 ring-amber-400" : ""}`}
         >
           服务审核 ({pending.length})
         </button>

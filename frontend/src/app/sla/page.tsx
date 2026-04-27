@@ -46,7 +46,7 @@ export default function SlaPage() {
         <h2 className="text-lg font-semibold text-gray-800">4. 故障报告</h2>
         <p>
           如果您遇到平台故障或异常计费，请发送邮件至
-          <a className="text-indigo-600 ml-1" href="mailto:support@tianshu-gateway.cloud">support@tianshu-gateway.cloud</a>，
+          <a className="text-fg ml-1" href="mailto:support@tianshu-gateway.cloud">support@tianshu-gateway.cloud</a>，
           建议附上时间、API Key 前缀、请求的大致参数以便定位。核实后可对异常扣费进行账单抵扣。
         </p>
 

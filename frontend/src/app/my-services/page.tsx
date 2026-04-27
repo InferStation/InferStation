@@ -211,7 +211,7 @@ export default function ServicesPage() {
           <button
             onClick={handleUpgrade}
             disabled={upgrading}
-            className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+            className="bg-fg text-white px-6 py-2 rounded-lg hover:bg-fg/90 disabled:opacity-50"
           >
             {upgrading ? "激活中..." : "激活"}
           </button>
@@ -225,7 +225,7 @@ export default function ServicesPage() {
       <div className="flex justify-end items-center mb-6">
         <button
           onClick={() => setShowForm(!showForm)}
-          className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700"
+          className="bg-fg text-white px-4 py-2 rounded-lg hover:bg-fg/90"
         >
           {showForm ? "取消" : "注册后端"}
         </button>
@@ -237,7 +237,7 @@ export default function ServicesPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">后端名称</label>
-                <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+                <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">接入模式</label>
@@ -248,7 +248,7 @@ export default function ServicesPage() {
                     setForm({ ...form, mode: v })
                     if (v === "tunnel") setTunnelNoticeOpen(true)
                   }}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none"
                 >
                   <option value="direct">直连（公网可达）</option>
                   <option value="tunnel">隧道（NAT 内网，需客户端注册）</option>
@@ -264,7 +264,7 @@ export default function ServicesPage() {
             {form.mode === "direct" && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">后端 URL</label>
-                <input type="url" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="http://IP:PORT" required className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+                <input type="url" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="http://IP:PORT" required className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none" />
               </div>
             )}
             {form.mode === "direct" && (
@@ -276,14 +276,14 @@ export default function ServicesPage() {
                   onChange={(e) => setForm({ ...form, api_key: e.target.value })}
                   placeholder="如上游需要认证则填入，留空表示上游无认证"
                   autoComplete="new-password"
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none font-mono"
                 />
                 <p className="mt-1 text-xs text-gray-500">网关转发时会以 <code>Authorization: Bearer &lt;key&gt;</code> 带上。仅你本人可见，不会泄露给订阅者。</p>
               </div>
             )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">模型系列</label>
-              <select value={form.family} onChange={(e) => setForm({ ...form, family: e.target.value, model: "" })} required className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              <select value={form.family} onChange={(e) => setForm({ ...form, family: e.target.value, model: "" })} required className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none">
                 <option value="">请选择模型系列</option>
                 {families.map((f) => (
                   <option key={f} value={f}>{f}</option>
@@ -297,7 +297,7 @@ export default function ServicesPage() {
                 onChange={(e) => setForm({ ...form, model: e.target.value })}
                 required
                 disabled={!form.family}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400"
               >
                 <option value="">{form.family ? "请选择模型" : "请先选择模型系列"}</option>
                 {(catalog[form.family] || []).map((name) => (
@@ -317,7 +317,7 @@ export default function ServicesPage() {
                 value={form.served_as}
                 onChange={(e) => setForm({ ...form, served_as: e.target.value })}
                 placeholder={form.model ? `默认用 ${form.model}` : "例如 qwen3-8b-awq"}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none"
               />
               <p className="mt-1 text-xs text-gray-500">
                 仅直连模式需要。网关转发请求时，会把 OpenAI 请求的 model 字段改为此值后再传给你的服务。同一个 URL 可以用不同后端名注册多个模型（每个走不同的 served 名）。
@@ -326,36 +326,36 @@ export default function ServicesPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">标签（均为可选）</label>
               <div className="grid gap-3 md:grid-cols-3">
-                <input type="text" value={form.tag_hardware} onChange={(e) => setForm({ ...form, tag_hardware: e.target.value })} placeholder="硬件，如 MI300X" className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm" />
-                <input type="text" value={form.tag_framework} onChange={(e) => setForm({ ...form, tag_framework: e.target.value })} placeholder="框架，如 vLLM" className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm" />
-                <input type="text" value={form.tag_quantization} onChange={(e) => setForm({ ...form, tag_quantization: e.target.value })} placeholder="量化，如 AWQ / FP16" className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm" />
+                <input type="text" value={form.tag_hardware} onChange={(e) => setForm({ ...form, tag_hardware: e.target.value })} placeholder="硬件，如 MI300X" className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none text-sm" />
+                <input type="text" value={form.tag_framework} onChange={(e) => setForm({ ...form, tag_framework: e.target.value })} placeholder="框架，如 vLLM" className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none text-sm" />
+                <input type="text" value={form.tag_quantization} onChange={(e) => setForm({ ...form, tag_quantization: e.target.value })} placeholder="量化，如 AWQ / FP16" className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none text-sm" />
               </div>
             </div>
             <div className="grid gap-4 md:grid-cols-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">货币</label>
-                <select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none">
                   <option value="CNY">CNY (¥)</option>
                   <option value="USD">USD ($)</option>
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">输入定价（{form.currency === "USD" ? "$" : "¥"}/百万token）</label>
-                <input type="number" step="0.01" value={form.input_price} onChange={(e) => setForm({ ...form, input_price: e.target.value })} placeholder="默认" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+                <input type="number" step="0.01" value={form.input_price} onChange={(e) => setForm({ ...form, input_price: e.target.value })} placeholder="默认" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">输出定价（{form.currency === "USD" ? "$" : "¥"}/百万token）</label>
-                <input type="number" step="0.01" value={form.output_price} onChange={(e) => setForm({ ...form, output_price: e.target.value })} placeholder="默认" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+                <input type="number" step="0.01" value={form.output_price} onChange={(e) => setForm({ ...form, output_price: e.target.value })} placeholder="默认" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">缓存命中定价（{form.currency === "USD" ? "$" : "¥"}/百万token）</label>
-                <input type="number" step="0.01" value={form.cache_price} onChange={(e) => setForm({ ...form, cache_price: e.target.value })} placeholder="默认为输入×0.1" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+                <input type="number" step="0.01" value={form.cache_price} onChange={(e) => setForm({ ...form, cache_price: e.target.value })} placeholder="默认为输入×0.1" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none" />
               </div>
             </div>
             <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
               注册后服务默认为 <b>未上架 · 私有</b>。请在详情页确认配置后点击「申请上架」，提交管理员审核通过后才能正式上架；上架前可选择「公开可见」。
             </div>
-            <button type="submit" className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700">提交</button>
+            <button type="submit" className="bg-fg text-white px-6 py-2 rounded-lg hover:bg-fg/90">提交</button>
           </form>
         </div>
       )}
@@ -369,10 +369,10 @@ export default function ServicesPage() {
               <Link
                 key={`${b.id}-${m ?? "_"}`}
                 href={`/my-services/${encodeURIComponent(b.name)}`}
-                className={`block bg-white rounded-xl border border-gray-200 hover:border-indigo-300 hover:shadow-md transition-all overflow-hidden ${!b.enabled ? "opacity-60" : ""}`}
+                className={`block bg-white rounded-xl border border-line hover:border-line-strong hover:shadow-md transition-all overflow-hidden ${!b.enabled ? "opacity-60" : ""}`}
               >
                 {/* Header */}
-                <div className="flex justify-between items-start gap-4 px-5 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50/50 to-transparent">
+                <div className="flex justify-between items-start gap-4 px-5 py-4 border-b border-line bg-gradient-to-r from-gray-50/50 to-transparent">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-semibold text-lg text-gray-900 truncate font-mono">{m ?? "未设置模型"}</h3>
@@ -403,7 +403,7 @@ export default function ServicesPage() {
                       <span className="text-gray-400">后端</span>
                       <span className="text-gray-700">{b.name}</span>
                       {Object.entries(b.tags || {}).map(([k, v]) => (
-                        <span key={k} className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+                        <span key={k} className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-accent-soft text-fg border border-line">
                           {v}
                         </span>
                       ))}
@@ -542,12 +542,12 @@ export default function ServicesPage() {
   --local-url http://localhost:8000`}</pre>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <Link href="/docs#tunnel" target="_blank" className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
+              <Link href="/docs#tunnel" target="_blank" className="text-sm text-fg hover:text-fg font-medium">
                 查看完整接入文档 →
               </Link>
               <button
                 onClick={() => { setTunnelNoticeOpen(false); setForm((f) => ({ ...f, mode: "direct" })) }}
-                className="px-4 py-1.5 rounded-md bg-indigo-600 text-white text-sm hover:bg-indigo-700"
+                className="px-4 py-1.5 rounded-md bg-fg text-white text-sm hover:bg-fg/90"
               >
                 切回直连
               </button>

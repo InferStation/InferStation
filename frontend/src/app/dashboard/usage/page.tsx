@@ -106,7 +106,7 @@ export default function UsagePage() {
             <select
               value={days}
               onChange={(e) => setDays(Number(e.target.value))}
-              className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-fg/40 focus:outline-none"
             >
               <option value={7}>近 7 天</option>
               <option value={30}>近 30 天</option>
@@ -121,7 +121,7 @@ export default function UsagePage() {
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm -mb-px border-b-2 ${tab === t ? "border-indigo-600 text-indigo-600 font-medium" : "border-transparent text-gray-500 hover:text-gray-700"}`}
+            className={`px-4 py-2 text-sm -mb-px border-b-2 ${tab === t ? "border-fg text-fg font-medium" : "border-transparent text-gray-500 hover:text-gray-700"}`}
           >
             {t === "summary" ? "按模型汇总" : t === "hourly" ? "今日按小时" : "历史按天"}
           </button>

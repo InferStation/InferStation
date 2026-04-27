@@ -54,7 +54,7 @@ export default function DocsPage() {
               onClick={() => scrollTo(id)}
               className={`block w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
                 active === id
-                  ? "bg-indigo-50 text-indigo-700 font-medium"
+                  ? "bg-accent-soft text-fg font-medium"
                   : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
               }`}
             >
@@ -96,13 +96,13 @@ export default function DocsPage() {
         <h2 className="text-2xl font-semibold text-gray-800 mb-4">快速开始</h2>
 
         {/* 5 分钟跑通 */}
-        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-6 mb-4 text-sm text-gray-700">
-          <h3 className="font-semibold text-base text-indigo-900 mb-2">5 分钟跑通</h3>
+        <div className="bg-accent-soft border border-line rounded-lg p-6 mb-4 text-sm text-gray-700">
+          <h3 className="font-semibold text-base text-fg mb-2">5 分钟跑通</h3>
           <ol className="list-decimal list-inside space-y-1.5 ml-1">
-            <li>在 <a href="/register" className="text-indigo-700 underline">注册</a> 页用邮箱验证码完成注册</li>
-            <li>在 <a href="/models" className="text-indigo-700 underline">模型广场</a> 选一个免费模型，点「订阅」</li>
-            <li>进入 <a href="/my-subscriptions" className="text-indigo-700 underline">我的订阅</a>，把它<strong>激活</strong></li>
-            <li>在 <a href="/dashboard/keys" className="text-indigo-700 underline">API Key</a> 页创建一个 <code>sk-xxxx</code></li>
+            <li>在 <a href="/register" className="text-fg underline">注册</a> 页用邮箱验证码完成注册</li>
+            <li>在 <a href="/models" className="text-fg underline">模型广场</a> 选一个免费模型，点「订阅」</li>
+            <li>进入 <a href="/my-subscriptions" className="text-fg underline">我的订阅</a>，把它<strong>激活</strong></li>
+            <li>在 <a href="/dashboard/keys" className="text-fg underline">API Key</a> 页创建一个 <code>sk-xxxx</code></li>
             <li>把下面这条 curl 里的 <code>sk-your-api-key</code> 和 <code>MODEL_NAME</code> 换成自己的：</li>
           </ol>
           <div className="bg-gray-900 text-gray-100 rounded-lg p-4 text-xs overflow-x-auto mt-3">
@@ -222,12 +222,12 @@ for chunk in resp:
         <div className="bg-white rounded-lg border p-6 space-y-3 text-sm text-gray-700 leading-relaxed">
           <p>调用 <code>/v1/chat/completions</code>、<code>/v1/completions</code>、<code>/v1/responses</code> 时，平台只在你<strong>已激活的订阅</strong>中按优先级（订阅页可拖拽 ↑↓）选后端。同一个模型可同时订阅多个 provider，订阅时默认按 <code>input_price + output_price</code> 升序插入到该模型组末尾，可手动再调整顺序。</p>
 
-          <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-xs text-indigo-900 space-y-1.5">
+          <div className="rounded-lg border border-line bg-accent-soft p-3 text-xs text-fg space-y-1.5">
             <div className="font-semibold">两级回退（auto_fallback = ON）</div>
             <div><span className="font-mono bg-white/60 px-1 rounded">第 1 级</span> 同一 <code>model</code> 内：按订阅优先级依次尝试，连接失败 / 5xx / 首字节超时 → 跳到下一个 provider</div>
             <div><span className="font-mono bg-white/60 px-1 rounded">第 2 级</span> 该 model 的所有 provider 全部失败 → 退到下一个已激活 model（按全局优先级），重复第 1 级</div>
-            <div className="text-indigo-700">✅ 流式请求：仅在<strong>首个 chunk 之前</strong>可重试；一旦开始向客户端 yield 数据就不再切换。</div>
-            <div className="text-indigo-700">✅ 4xx（你的请求自身有问题，比如 token 超限、参数非法）<strong>不重试</strong>，直接透传。</div>
+            <div className="text-fg">✅ 流式请求：仅在<strong>首个 chunk 之前</strong>可重试；一旦开始向客户端 yield 数据就不再切换。</div>
+            <div className="text-fg">✅ 4xx（你的请求自身有问题，比如 token 超限、参数非法）<strong>不重试</strong>，直接透传。</div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 my-2">
@@ -395,17 +395,17 @@ curl -X POST https://your-gateway/api/auth/login \
             <tbody className="divide-y">
               <tr><td colSpan={3} className="px-4 py-2 bg-gray-50 font-semibold text-gray-600 text-xs">OpenAI 兼容（统一 /v1，需 Bearer API Key）</td></tr>
               <tr>
-                <td className="px-4 py-2"><code className="text-indigo-600">POST</code></td>
+                <td className="px-4 py-2"><code className="text-fg">POST</code></td>
                 <td className="px-4 py-2 font-mono text-xs">/v1/chat/completions</td>
                 <td className="px-4 py-2 text-gray-600">聊天补全（按激活订阅优先级路由）</td>
               </tr>
               <tr>
-                <td className="px-4 py-2"><code className="text-indigo-600">POST</code></td>
+                <td className="px-4 py-2"><code className="text-fg">POST</code></td>
                 <td className="px-4 py-2 font-mono text-xs">/v1/completions</td>
                 <td className="px-4 py-2 text-gray-600">文本补全</td>
               </tr>
               <tr>
-                <td className="px-4 py-2"><code className="text-indigo-600">POST</code></td>
+                <td className="px-4 py-2"><code className="text-fg">POST</code></td>
                 <td className="px-4 py-2 font-mono text-xs">/v1/responses</td>
                 <td className="px-4 py-2 text-gray-600">Responses API</td>
               </tr>
@@ -417,7 +417,7 @@ curl -X POST https://your-gateway/api/auth/login \
 
               <tr><td colSpan={3} className="px-4 py-2 bg-gray-50 font-semibold text-gray-600 text-xs">sub_key 直达</td></tr>
               <tr>
-                <td className="px-4 py-2"><code className="text-indigo-600">POST</code></td>
+                <td className="px-4 py-2"><code className="text-fg">POST</code></td>
                 <td className="px-4 py-2 font-mono text-xs">/s/&#123;sub_key&#125;/v1/chat/completions</td>
                 <td className="px-4 py-2 text-gray-600">直达订阅绑定的单个后端（不走路由）</td>
               </tr>
@@ -446,7 +446,7 @@ curl -X POST https://your-gateway/api/auth/login \
 
               <tr><td colSpan={3} className="px-4 py-2 bg-gray-50 font-semibold text-gray-600 text-xs">订阅管理</td></tr>
               <tr>
-                <td className="px-4 py-2"><code className="text-indigo-600">POST</code></td>
+                <td className="px-4 py-2"><code className="text-fg">POST</code></td>
                 <td className="px-4 py-2 font-mono text-xs">/api/subscriptions</td>
                 <td className="px-4 py-2 text-gray-600">订阅模型</td>
               </tr>
@@ -473,7 +473,7 @@ curl -X POST https://your-gateway/api/auth/login \
 
               <tr><td colSpan={3} className="px-4 py-2 bg-gray-50 font-semibold text-gray-600 text-xs">API Key 与账户</td></tr>
               <tr>
-                <td className="px-4 py-2"><code className="text-indigo-600">POST</code></td>
+                <td className="px-4 py-2"><code className="text-fg">POST</code></td>
                 <td className="px-4 py-2 font-mono text-xs">/api/keys</td>
                 <td className="px-4 py-2 text-gray-600">创建 API Key</td>
               </tr>
@@ -493,7 +493,7 @@ curl -X POST https://your-gateway/api/auth/login \
                 <td className="px-4 py-2 text-gray-600">删除 Key</td>
               </tr>
               <tr>
-                <td className="px-4 py-2"><code className="text-indigo-600">POST</code></td>
+                <td className="px-4 py-2"><code className="text-fg">POST</code></td>
                 <td className="px-4 py-2 font-mono text-xs">/api/user/auto-fallback</td>
                 <td className="px-4 py-2 text-gray-600">开关自动失败转移</td>
               </tr>
@@ -508,7 +508,7 @@ curl -X POST https://your-gateway/api/auth/login \
                 <td className="px-4 py-2 text-gray-600">能否提前结清本月账单（返回 <code>eligible</code> + <code>reasons</code> 清单）</td>
               </tr>
               <tr>
-                <td className="px-4 py-2"><code className="text-indigo-600">POST</code></td>
+                <td className="px-4 py-2"><code className="text-fg">POST</code></td>
                 <td className="px-4 py-2 font-mono text-xs">/api/billing/settle-now</td>
                 <td className="px-4 py-2 text-gray-600">把本月用量立即出账（需无激活订阅、无 listed/pending 后端、静默 ≥ 30 分钟）</td>
               </tr>
@@ -530,7 +530,7 @@ curl -X POST https://your-gateway/api/auth/login \
 
               <tr><td colSpan={3} className="px-4 py-2 bg-gray-50 font-semibold text-gray-600 text-xs">后端管理（提供者）</td></tr>
               <tr>
-                <td className="px-4 py-2"><code className="text-indigo-600">POST</code></td>
+                <td className="px-4 py-2"><code className="text-fg">POST</code></td>
                 <td className="px-4 py-2 font-mono text-xs">/api/backends</td>
                 <td className="px-4 py-2 text-gray-600">注册后端</td>
               </tr>
@@ -562,17 +562,17 @@ curl -X POST https://your-gateway/api/auth/login \
 
               <tr><td colSpan={3} className="px-4 py-2 bg-gray-50 font-semibold text-gray-600 text-xs">认证与账户</td></tr>
               <tr>
-                <td className="px-4 py-2"><code className="text-indigo-600">POST</code></td>
+                <td className="px-4 py-2"><code className="text-fg">POST</code></td>
                 <td className="px-4 py-2 font-mono text-xs">/api/auth/send-code</td>
                 <td className="px-4 py-2 text-gray-600">索取邮箱验证码（purpose: register / login / change-email / delete-account）</td>
               </tr>
               <tr>
-                <td className="px-4 py-2"><code className="text-indigo-600">POST</code></td>
+                <td className="px-4 py-2"><code className="text-fg">POST</code></td>
                 <td className="px-4 py-2 font-mono text-xs">/api/auth/register</td>
                 <td className="px-4 py-2 text-gray-600">注册（需先调用 send-code 并带上 <code>code</code>）</td>
               </tr>
               <tr>
-                <td className="px-4 py-2"><code className="text-indigo-600">POST</code></td>
+                <td className="px-4 py-2"><code className="text-fg">POST</code></td>
                 <td className="px-4 py-2 font-mono text-xs">/api/auth/login</td>
                 <td className="px-4 py-2 text-gray-600">登录：<code>login</code> + <code>password</code> + <code>code</code></td>
               </tr>
@@ -582,17 +582,17 @@ curl -X POST https://your-gateway/api/auth/login \
                 <td className="px-4 py-2 text-gray-600">获取当前用户信息</td>
               </tr>
               <tr>
-                <td className="px-4 py-2"><code className="text-indigo-600">POST</code></td>
+                <td className="px-4 py-2"><code className="text-fg">POST</code></td>
                 <td className="px-4 py-2 font-mono text-xs">/api/auth/change-password</td>
                 <td className="px-4 py-2 text-gray-600">修改密码（<code>old_password</code> + <code>new_password</code>）</td>
               </tr>
               <tr>
-                <td className="px-4 py-2"><code className="text-indigo-600">POST</code></td>
+                <td className="px-4 py-2"><code className="text-fg">POST</code></td>
                 <td className="px-4 py-2 font-mono text-xs">/api/auth/change-email</td>
                 <td className="px-4 py-2 text-gray-600">修改邮箱（需 <code>change-email</code> 用途的验证码）</td>
               </tr>
               <tr>
-                <td className="px-4 py-2"><code className="text-indigo-600">POST</code></td>
+                <td className="px-4 py-2"><code className="text-fg">POST</code></td>
                 <td className="px-4 py-2 font-mono text-xs">/api/auth/delete-account</td>
                 <td className="px-4 py-2 text-gray-600">自助注销（<code>password</code> + <code>code</code> + <code>confirm: "DELETE"</code>，软删除；需先通过上述 5 项注销前置）</td>
               </tr>
@@ -691,7 +691,7 @@ sudo journalctl -u tianshu-tunnel@qwen36 -f`}</pre>
    │
    └──[owner 主动下架 / admin 强制下架]── listed`}</pre>
           <ul className="list-disc list-inside space-y-1 ml-2">
-            <li>「申请上架」按钮在 <a href="/my-services" className="text-indigo-700 underline">我的服务</a> 卡片上。</li>
+            <li>「申请上架」按钮在 <a href="/my-services" className="text-fg underline">我的服务</a> 卡片上。</li>
             <li>被驳回时 <code>review_note</code> 会显示在卡片上；按 note 修改后再次点「申请上架」即可重新进入 pending。</li>
             <li>已 listed 的后端，编辑价格/货币/cache 价不会触发重新审核，但会按上面「次日 00:00 CST 生效」的规则延后。</li>
             <li>注销账号或下架前必须先把所有 listed/pending 的后端撤回到 offline。</li>

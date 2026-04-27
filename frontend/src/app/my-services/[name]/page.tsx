@@ -182,7 +182,7 @@ export default function ServiceDetailPage() {
     return (
       <div className="text-center py-20">
         <p className="text-gray-500 mb-4">{error || "后端不存在"}</p>
-        <button onClick={() => router.push("/my-services")} className="text-indigo-600 hover:underline">返回我的服务</button>
+        <button onClick={() => router.push("/my-services")} className="text-fg hover:underline">返回我的服务</button>
       </div>
     )
   }
@@ -204,7 +204,7 @@ export default function ServiceDetailPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg border border-gray-200 p-8">
+      <div className="bg-white rounded-lg border border-line p-8">
         {/* Header */}
         <div className="flex items-start justify-between mb-6">
           <div>
@@ -248,7 +248,7 @@ export default function ServiceDetailPage() {
               })()}
             </button>
             {!editing && (
-              <button onClick={() => setEditing(true)} className="text-sm px-3 py-1.5 rounded bg-indigo-100 text-indigo-700 hover:bg-indigo-200">
+              <button onClick={() => setEditing(true)} className="text-sm px-3 py-1.5 rounded bg-accent-soft text-fg hover:bg-fg/15">
                 编辑
               </button>
             )}
@@ -262,7 +262,7 @@ export default function ServiceDetailPage() {
             {backend.mode === "direct" && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">后端 URL</label>
-                <input type="url" value={editForm.url} onChange={(e) => setEditForm({ ...editForm, url: e.target.value })} placeholder="http://IP:PORT" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+                <input type="url" value={editForm.url} onChange={(e) => setEditForm({ ...editForm, url: e.target.value })} placeholder="http://IP:PORT" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none" />
               </div>
             )}
             {backend.mode === "direct" && (
@@ -279,7 +279,7 @@ export default function ServiceDetailPage() {
                   onChange={(e) => setEditForm({ ...editForm, api_key: e.target.value, api_key_changed: true })}
                   placeholder={backend.client_info?.api_key ? "保留原值请不要修改；填入新值会覆盖原值" : "如上游需要认证则填入"}
                   autoComplete="new-password"
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none font-mono"
                 />
                 <div className="mt-1 flex items-center justify-between">
                   <p className="text-xs text-gray-500">转发时以 <code>Authorization: Bearer &lt;key&gt;</code> 带上。</p>
@@ -295,7 +295,7 @@ export default function ServiceDetailPage() {
             )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">模型系列</label>
-              <select value={editForm.family} onChange={(e) => setEditForm({ ...editForm, family: e.target.value, model: "" })} required className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              <select value={editForm.family} onChange={(e) => setEditForm({ ...editForm, family: e.target.value, model: "" })} required className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none">
                 <option value="">请选择模型系列</option>
                 {families.map((f) => (
                   <option key={f} value={f}>{f}</option>
@@ -309,7 +309,7 @@ export default function ServiceDetailPage() {
                 onChange={(e) => setEditForm({ ...editForm, model: e.target.value })}
                 required
                 disabled={!editForm.family}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400"
               >
                 <option value="">{editForm.family ? "请选择模型" : "请先选择模型系列"}</option>
                 {(catalog[editForm.family] || []).map((name) => (
@@ -327,7 +327,7 @@ export default function ServiceDetailPage() {
                 value={editForm.served_as}
                 onChange={(e) => setEditForm({ ...editForm, served_as: e.target.value })}
                 placeholder={editForm.model ? `默认用 ${editForm.model}` : "例如 qwen3-8b-awq"}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none"
               />
               <p className="mt-1 text-xs text-gray-500">
                 网关转发请求时，会把 OpenAI 请求的 model 字段改为此值再传给你的服务。同一 URL 可用不同后端名注册多个模型。
@@ -336,30 +336,30 @@ export default function ServiceDetailPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">标签</label>
               <div className="grid gap-3 md:grid-cols-3">
-                <input type="text" value={editForm.tag_hardware} onChange={(e) => setEditForm({ ...editForm, tag_hardware: e.target.value })} placeholder="硬件，如 MI300X" className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm" />
-                <input type="text" value={editForm.tag_framework} onChange={(e) => setEditForm({ ...editForm, tag_framework: e.target.value })} placeholder="框架，如 vLLM" className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm" />
-                <input type="text" value={editForm.tag_quantization} onChange={(e) => setEditForm({ ...editForm, tag_quantization: e.target.value })} placeholder="量化，如 AWQ / FP16" className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm" />
+                <input type="text" value={editForm.tag_hardware} onChange={(e) => setEditForm({ ...editForm, tag_hardware: e.target.value })} placeholder="硬件，如 MI300X" className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none text-sm" />
+                <input type="text" value={editForm.tag_framework} onChange={(e) => setEditForm({ ...editForm, tag_framework: e.target.value })} placeholder="框架，如 vLLM" className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none text-sm" />
+                <input type="text" value={editForm.tag_quantization} onChange={(e) => setEditForm({ ...editForm, tag_quantization: e.target.value })} placeholder="量化，如 AWQ / FP16" className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none text-sm" />
               </div>
             </div>
             <div className="grid gap-4 md:grid-cols-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">货币</label>
-                <select value={editForm.currency} onChange={(e) => setEditForm({ ...editForm, currency: e.target.value })} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <select value={editForm.currency} onChange={(e) => setEditForm({ ...editForm, currency: e.target.value })} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none">
                   <option value="CNY">CNY (¥)</option>
                   <option value="USD">USD ($)</option>
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">输入定价（{editForm.currency === "USD" ? "$" : "¥"}/百万token）</label>
-                <input type="number" step="0.01" value={editForm.input_price} onChange={(e) => setEditForm({ ...editForm, input_price: e.target.value })} placeholder="留空为免费" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+                <input type="number" step="0.01" value={editForm.input_price} onChange={(e) => setEditForm({ ...editForm, input_price: e.target.value })} placeholder="留空为免费" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">输出定价（{editForm.currency === "USD" ? "$" : "¥"}/百万token）</label>
-                <input type="number" step="0.01" value={editForm.output_price} onChange={(e) => setEditForm({ ...editForm, output_price: e.target.value })} placeholder="留空为免费" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+                <input type="number" step="0.01" value={editForm.output_price} onChange={(e) => setEditForm({ ...editForm, output_price: e.target.value })} placeholder="留空为免费" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">缓存命中定价（{editForm.currency === "USD" ? "$" : "¥"}/百万token）</label>
-                <input type="number" step="0.01" value={editForm.cache_price} onChange={(e) => setEditForm({ ...editForm, cache_price: e.target.value })} placeholder="默认为输入×0.1" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+                <input type="number" step="0.01" value={editForm.cache_price} onChange={(e) => setEditForm({ ...editForm, cache_price: e.target.value })} placeholder="默认为输入×0.1" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none" />
               </div>
             </div>
             <p className="text-xs text-gray-500 -mt-2">缓存命中部分按缓存价计费；留空时按输入价×0.1（行业通行折扣）计费。</p>
@@ -368,7 +368,7 @@ export default function ServiceDetailPage() {
               <span className="text-sm text-gray-600">公开可见（所有用户可调用）</span>
             </div>
             <div className="flex gap-2">
-              <button onClick={handleSave} disabled={saving} className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+              <button onClick={handleSave} disabled={saving} className="bg-fg text-white px-6 py-2 rounded-lg hover:bg-fg/90 disabled:opacity-50">
                 {saving ? "保存中..." : "保存"}
               </button>
               <button onClick={() => { setEditing(false); populateForm(backend) }} className="px-6 py-2 rounded-lg border hover:bg-gray-50">取消</button>
@@ -417,7 +417,7 @@ export default function ServiceDetailPage() {
                 <p className="text-sm text-gray-500 mb-2">标签</p>
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(backend.tags).map(([k, v]) => (
-                    <span key={k} className="inline-flex items-center px-2.5 py-1 rounded text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+                    <span key={k} className="inline-flex items-center px-2.5 py-1 rounded text-xs font-medium bg-accent-soft text-fg border border-line">
                       {v}
                     </span>
                   ))}
@@ -433,7 +433,7 @@ export default function ServiceDetailPage() {
                   <Link
                     key={m}
                     href={`/models/${encodeURIComponent(m)}?backend_id=${backend.id}`}
-                    className="block bg-gray-50 rounded-lg p-3 hover:bg-indigo-50 transition-colors text-sm font-medium text-indigo-700 hover:text-indigo-800"
+                    className="block bg-gray-50 rounded-lg p-3 hover:bg-accent-soft transition-colors text-sm font-medium text-fg hover:text-fg"
                   >
                     {m} →
                   </Link>

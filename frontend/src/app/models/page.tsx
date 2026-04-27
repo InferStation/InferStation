@@ -123,14 +123,14 @@ export default function ModelsPage() {
   })
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm divide-y divide-gray-100">
-        <div className="flex items-center gap-4 px-5 py-3.5">
-          <span className="text-sm font-medium text-gray-400 shrink-0 w-16">模型类别</span>
-          <div className="flex flex-wrap items-center gap-2">
+    <div className="space-y-5">
+      <div className="bg-surface rounded-xl border border-line">
+        <div className="flex items-center gap-4 px-5 py-3">
+          <span className="text-xs font-medium text-fg-subtle shrink-0 w-16 uppercase tracking-wider">类别</span>
+          <div className="flex flex-wrap items-center gap-1.5">
             <button
               onClick={() => setFamilyFilter("all")}
-              className={`px-3 py-1 rounded-full text-sm font-medium transition-all ${familyFilter === "all" ? "bg-indigo-600 text-white shadow-sm" : "bg-gray-50 text-gray-600 hover:bg-gray-100"}`}
+              className={`h-7 px-3 rounded-full text-xs font-medium transition-colors ${familyFilter === "all" ? "bg-fg text-accent-fg" : "bg-accent-soft text-fg-muted hover:text-fg"}`}
             >
               全部
             </button>
@@ -138,29 +138,25 @@ export default function ModelsPage() {
               <button
                 key={f}
                 onClick={() => setFamilyFilter(f)}
-                className={`px-3 py-1 rounded-full text-sm font-medium transition-all ${familyFilter === f ? "bg-indigo-600 text-white shadow-sm" : "bg-gray-50 text-gray-600 hover:bg-gray-100"}`}
+                className={`h-7 px-3 rounded-full text-xs font-medium transition-colors ${familyFilter === f ? "bg-fg text-accent-fg" : "bg-accent-soft text-fg-muted hover:text-fg"}`}
               >
                 {f}
               </button>
             ))}
           </div>
         </div>
-        <div className="flex items-center gap-4 px-5 py-3.5">
-          <span className="text-sm font-medium text-gray-400 shrink-0 w-16">在线状态</span>
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4 px-5 py-3 border-t border-line">
+          <span className="text-xs font-medium text-fg-subtle shrink-0 w-16 uppercase tracking-wider">状态</span>
+          <div className="flex items-center gap-1.5">
             {(["all", "online", "offline"] as const).map((s) => (
               <button
                 key={s}
                 onClick={() => setStatusFilter(s)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium transition-all ${
-                  statusFilter === s
-                    ? s === "online" ? "bg-emerald-600 text-white shadow-sm"
-                    : s === "offline" ? "bg-rose-500 text-white shadow-sm"
-                    : "bg-indigo-600 text-white shadow-sm"
-                    : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-xs font-medium transition-colors ${
+                  statusFilter === s ? "bg-fg text-accent-fg" : "bg-accent-soft text-fg-muted hover:text-fg"
                 }`}
               >
-                {s !== "all" && <span className={`w-2 h-2 rounded-full ${statusFilter === s ? "bg-white" : "bg-gray-400"}`} />}
+                {s !== "all" && <span className={`w-1.5 h-1.5 rounded-full ${s === "online" ? "bg-success" : "bg-danger"}`} />}
                 {s === "all" ? "全部" : s === "online" ? "在线" : "离线"}
               </button>
             ))}
@@ -169,15 +165,15 @@ export default function ModelsPage() {
       </div>
 
       <div className="relative">
-        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-subtle" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
         <input
           type="text"
-          placeholder="输入模型名称搜索..."
+          placeholder="搜索模型 ID（如 Qwen / DeepSeek）"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200/80 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 focus:outline-none text-sm transition-shadow"
+          className="w-full pl-10 pr-4 h-10 bg-surface border border-line rounded-xl focus:outline-none focus:ring-2 focus:ring-fg/15 focus:border-fg/40 text-sm placeholder:text-fg-subtle"
         />
       </div>
 
@@ -203,7 +199,7 @@ export default function ModelsPage() {
               const isCollapsed = collapsed.has(modelId)
               const anyOnline = rows.some((r) => r.status === "online")
               return (
-                <div key={modelId} className="bg-white rounded-xl border border-gray-200/80 shadow-sm">
+                <div key={modelId} className="bg-white rounded-xl border border-line shadow-sm">
                   <button
                     type="button"
                     onClick={() => toggleCard(modelId)}
@@ -215,13 +211,13 @@ export default function ModelsPage() {
                       <span className={`w-1.5 h-1.5 rounded-full ${anyOnline ? "bg-emerald-500" : "bg-red-400"}`} />
                       {anyOnline ? "在线" : "离线"}
                     </span>
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-line">
                       {rows.length} 个服务
                     </span>
                   </button>
                   {!isCollapsed && (
                     <div className={`px-5 pb-4 ${rows.length > 1 ? "" : ""}`}>
-                      <div className={rows.length > 1 ? "divide-y divide-gray-100 border border-gray-100 rounded" : ""}>
+                      <div className={rows.length > 1 ? "divide-y divide-line border border-line rounded" : ""}>
                         {rows.map((m) => {
                           const rowKey = `${m.backend_id}-${m.id}`
                           const subscribed = isSubscribed(m)
@@ -231,7 +227,7 @@ export default function ModelsPage() {
                               <div className="flex items-center gap-3 flex-wrap text-sm min-w-0">
                                 <Link
                                   href={`/models/${m.backend_id}/${m.id}`}
-                                  className="inline-flex items-center gap-1 text-gray-700 hover:text-indigo-600"
+                                  className="inline-flex items-center gap-1 text-gray-700 hover:text-fg"
                                   title={`后端：${m.backend}（点击查看详情）`}
                                 >
                                   <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" /></svg>
@@ -256,7 +252,7 @@ export default function ModelsPage() {
                                   {m.status === "online" ? "在线" : "离线"}
                                 </span>
                                 {Object.entries(m.tags || {}).map(([k, v]) => (
-                                  <span key={k} className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-indigo-50 text-indigo-600">
+                                  <span key={k} className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-accent-soft text-fg">
                                     {v}
                                   </span>
                                 ))}
@@ -280,7 +276,7 @@ export default function ModelsPage() {
                                   <button
                                     onClick={(e) => handleSubscribe(e, m)}
                                     disabled={subLoading === rowKey || m.status !== "online"}
-                                    className="px-4 py-1.5 rounded-lg text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                                    className="px-4 py-1.5 rounded-lg text-xs font-medium text-white bg-fg hover:bg-fg/90 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                                   >
                                     {subLoading === rowKey ? "处理中..." : "订阅"}
                                   </button>

@@ -39,9 +39,9 @@ export default function AboutPage() {
 
         <h2 className="text-lg font-semibold text-gray-800">下一步</h2>
         <ul className="list-disc list-inside space-y-1">
-          <li>查看 <Link href="/docs" className="text-indigo-600 hover:underline">开发者文档</Link></li>
-          <li>浏览 <Link href="/models" className="text-indigo-600 hover:underline">模型广场</Link></li>
-          <li>问题反馈：<a className="text-indigo-600" href="mailto:support@tianshu-gateway.cloud">support@tianshu-gateway.cloud</a></li>
+          <li>查看 <Link href="/docs" className="text-fg hover:underline">开发者文档</Link></li>
+          <li>浏览 <Link href="/models" className="text-fg hover:underline">模型广场</Link></li>
+          <li>问题反馈：<a className="text-fg" href="mailto:support@tianshu-gateway.cloud">support@tianshu-gateway.cloud</a></li>
         </ul>
       </section>
     </article>

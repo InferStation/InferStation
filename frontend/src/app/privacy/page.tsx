@@ -74,7 +74,7 @@ export default function PrivacyPage() {
 
         <h2 className="text-lg font-semibold text-gray-800">8. 联系方式</h2>
         <p>
-          对本隐私政策有任何问题，请发送邮件至 <a className="text-indigo-600" href="mailto:support@tianshu-gateway.cloud">support@tianshu-gateway.cloud</a>。
+          对本隐私政策有任何问题，请发送邮件至 <a className="text-fg" href="mailto:support@tianshu-gateway.cloud">support@tianshu-gateway.cloud</a>。
         </p>
       </section>
     </article>

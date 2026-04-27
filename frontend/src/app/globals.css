@@ -1,3 +1,49 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  /* Surface */
+  --bg: 250 250 250;            /* #FAFAFA  page background */
+  --surface: 255 255 255;       /* #FFFFFF  cards / panels */
+  --elevated: 255 255 255;      /* popovers / modals */
+
+  /* Lines */
+  --line: 234 234 236;          /* #EAEAEC  default border */
+  --line-strong: 212 212 216;   /* #D4D4D8 */
+
+  /* Foreground */
+  --fg: 15 15 16;               /* #0F0F10  primary text */
+  --fg-muted: 107 114 128;      /* #6B7280  secondary text */
+  --fg-subtle: 156 163 175;     /* #9CA3AF  tertiary text / placeholder */
+
+  /* Accent — black, OpenAI / Vercel style */
+  --accent: 15 15 16;
+  --accent-fg: 255 255 255;
+  --accent-soft: 244 244 245;   /* gray hover/selected */
+
+  /* Status */
+  --success: 16 163 74;         /* emerald-600 */
+  --warning: 217 119 6;         /* amber-600 */
+  --danger: 220 38 38;          /* red-600 */
+}
+
+html, body {
+  background-color: rgb(var(--bg));
+  color: rgb(var(--fg));
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Reset focus ring to a softer accent */
+*:focus-visible {
+  outline: 2px solid rgb(var(--fg) / 0.6);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Slim scrollbar (sidebar / dropdowns) */
+.scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: rgb(var(--line-strong)); border-radius: 999px; }
+.scrollbar-thin::-webkit-scrollbar-track { background: transparent; }

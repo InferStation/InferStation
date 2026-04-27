@@ -85,74 +85,103 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex justify-center pt-16">
-      <div className="w-full max-w-lg bg-white rounded-lg border p-8">
-        <h2 className="text-2xl font-bold text-center mb-6">注册</h2>
-        {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded text-sm">{error}</div>}
-        {codeMsg && <div className="mb-4 p-3 bg-emerald-50 text-emerald-700 rounded text-sm">{codeMsg}</div>}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">用户名</label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-            />
+    <div className="min-h-screen grid lg:grid-cols-5 bg-bg">
+      <aside className="hidden lg:flex lg:col-span-2 flex-col justify-between p-10 bg-fg text-accent-fg">
+        <Link href="/" className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-white/10 grid place-items-center">
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M12 2l9 5-9 5-9-5 9-5z M3 12l9 5 9-5 M3 17l9 5 9-5" /></svg>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">邮箱</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">邮箱验证码</label>
-            <div className="flex gap-2">
+          <span className="text-base font-semibold tracking-tight">天枢</span>
+        </Link>
+        <div>
+          <h2 className="text-3xl font-semibold leading-tight tracking-tight mb-3">
+            立即加入<br />聚合 LLM 算力
+          </h2>
+          <p className="text-sm text-white/60 max-w-sm leading-relaxed">
+            注册免费，按使用量后付费。也可作为提供者出租闲置算力，平台不抽成、不存储内容。
+          </p>
+        </div>
+        <div className="flex items-center gap-4 text-xs text-white/40">
+          <span>© {new Date().getFullYear()} Tianshu</span>
+          <Link href="/terms" className="hover:text-white/70">服务条款</Link>
+          <Link href="/privacy" className="hover:text-white/70">隐私政策</Link>
+        </div>
+      </aside>
+
+      <div className="lg:col-span-3 flex items-center justify-center p-6">
+        <div className="w-full max-w-sm">
+          <Link href="/" className="lg:hidden flex items-center gap-2 mb-8">
+            <div className="w-7 h-7 rounded-lg bg-fg text-accent-fg grid place-items-center text-xs font-semibold">天</div>
+            <span className="text-[15px] font-semibold tracking-tight">天枢</span>
+          </Link>
+          <h1 className="text-[22px] font-semibold tracking-tight mb-1">创建账号</h1>
+          <p className="text-sm text-fg-muted mb-6">几十秒完成，免审核即可使用</p>
+          {error && <div className="mb-4 p-3 bg-danger/10 text-danger rounded-lg text-[13px]">{error}</div>}
+          {codeMsg && <div className="mb-4 p-3 bg-success/10 text-success rounded-lg text-[13px]">{codeMsg}</div>}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-fg mb-1.5">用户名</label>
               <input
                 type="text"
-                inputMode="numeric"
-                maxLength={6}
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
-                placeholder="6 位数字"
-                className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                className="w-full h-10 px-3 text-sm rounded-lg bg-surface border border-line placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-fg/15 focus:border-fg/40"
               />
-              <button
-                type="button"
-                onClick={handleSendCode}
-                disabled={sending || cooldown > 0}
-                className="px-3 py-2 text-sm bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-              >
-                {cooldown > 0 ? `${cooldown}s 后重发` : sending ? "发送中..." : "发送验证码"}
-              </button>
             </div>
-          </div>
-          <PasswordInput label="密码" value={password} onChange={setPassword} required minLength={8} showStrength />
-          <PasswordInput label="确认密码" value={confirm} onChange={setConfirm} required />
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
-          >
-            {loading ? "注册中..." : "注册"}
-          </button>
-        </form>
-        <p className="text-xs text-gray-500 text-center mt-3">
-          注册即表示您已阅读并同意
-          <Link href="/terms" className="text-indigo-600 hover:underline mx-1"> 服务条款</Link>
-          与
-          <Link href="/privacy" className="text-indigo-600 hover:underline mx-1">隐私政策</Link>
-        </p>
-        <p className="text-center text-sm text-gray-500 mt-4">
-          已有账号？<Link href="/login" className="text-indigo-600 hover:underline">登录</Link>
-        </p>
+            <div>
+              <label className="block text-xs font-medium text-fg mb-1.5">邮箱</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full h-10 px-3 text-sm rounded-lg bg-surface border border-line placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-fg/15 focus:border-fg/40"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-fg mb-1.5">邮箱验证码</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                  required
+                  placeholder="6 位数字"
+                  className="flex-1 h-10 px-3 text-sm rounded-lg bg-surface border border-line placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-fg/15 focus:border-fg/40"
+                />
+                <button
+                  type="button"
+                  onClick={handleSendCode}
+                  disabled={sending || cooldown > 0}
+                  className="h-10 px-3 text-sm rounded-lg bg-surface border border-line text-fg hover:bg-accent-soft disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                >
+                  {cooldown > 0 ? `${cooldown}s` : sending ? "发送中" : "发送验证码"}
+                </button>
+              </div>
+            </div>
+            <PasswordInput label="密码" value={password} onChange={setPassword} required minLength={8} showStrength />
+            <PasswordInput label="确认密码" value={confirm} onChange={setConfirm} required />
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-10 rounded-lg bg-fg text-accent-fg text-sm font-medium hover:bg-fg/90 disabled:opacity-50"
+            >
+              {loading ? "注册中..." : "注册"}
+            </button>
+          </form>
+          <p className="text-xs text-fg-subtle text-center mt-4 leading-relaxed">
+            注册即表示您已阅读并同意
+            <Link href="/terms" className="text-fg hover:underline mx-1">服务条款</Link>
+            与
+            <Link href="/privacy" className="text-fg hover:underline mx-1">隐私政策</Link>
+          </p>
+          <p className="text-center text-[13px] text-fg-muted mt-3">
+            已有账号？<Link href="/login" className="text-fg font-medium hover:underline">立即登录</Link>
+          </p>
+        </div>
       </div>
     </div>
   )

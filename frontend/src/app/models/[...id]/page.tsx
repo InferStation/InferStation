@@ -104,7 +104,7 @@ export default function ModelDetailPage() {
     return (
       <div className="text-center py-20">
         <p className="text-gray-500 mb-4">{error || "模型不存在"}</p>
-        <button onClick={() => router.push("/models")} className="text-indigo-600 hover:underline">
+        <button onClick={() => router.push("/models")} className="text-fg hover:underline">
           返回模型广场
         </button>
       </div>
@@ -122,7 +122,7 @@ export default function ModelDetailPage() {
         ← 返回模型广场
       </button>
 
-      <div className="bg-white rounded-lg border border-gray-200 p-8">
+      <div className="bg-white rounded-lg border border-line p-8">
         {/* Header */}
         <div className="flex items-start justify-between mb-6">
           <h1 className="text-2xl font-bold text-gray-900">{model.id}</h1>
@@ -142,7 +142,7 @@ export default function ModelDetailPage() {
             {Object.entries(model.tags).map(([k, v]) => (
               <span
                 key={k}
-                className="inline-flex items-center px-2.5 py-1 rounded text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200"
+                className="inline-flex items-center px-2.5 py-1 rounded text-xs font-medium bg-accent-soft text-fg border border-line"
               >
                 {v}
               </span>
@@ -189,7 +189,7 @@ export default function ModelDetailPage() {
             <button
               onClick={handleSubscribe}
               disabled={subLoading || model.status !== "online"}
-              className="w-full py-3 rounded-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              className="w-full py-3 rounded-lg font-medium text-white bg-fg hover:bg-fg/90 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
             >
               {subLoading ? "订阅中..." : model.status !== "online" ? "模型离线，暂不可订阅" : "订阅此模型"}
             </button>

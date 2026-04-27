@@ -63,9 +63,9 @@ export default function KeysPage() {
             placeholder="Key 名称（可选）"
             value={newKeyName}
             onChange={(e) => setNewKeyName(e.target.value)}
-            className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none"
           />
-          <button onClick={createKey} className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700">创建</button>
+          <button onClick={createKey} className="bg-fg text-white px-6 py-2 rounded-lg hover:bg-fg/90">创建</button>
         </div>
         {newKey && (
           <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">

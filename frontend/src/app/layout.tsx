@@ -1,8 +1,13 @@
 import type { Metadata } from "next"
+import { Inter, Noto_Sans_SC, JetBrains_Mono } from "next/font/google"
 import "./globals.css"
 import { AuthProvider } from "@/context/AuthContext"
 import Footer from "@/components/Footer"
 import AppShell from "@/components/AppShell"
+
+const inter = Inter({ subsets: ["latin"], display: "swap", variable: "--font-inter" })
+const noto = Noto_Sans_SC({ subsets: ["latin"], weight: ["400", "500", "600", "700"], display: "swap", variable: "--font-noto" })
+const mono = JetBrains_Mono({ subsets: ["latin"], display: "swap", variable: "--font-mono" })
 
 export const metadata: Metadata = {
   title: "天枢 - 模型服务聚合平台",
@@ -11,8 +16,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="zh-CN">
-      <body className="bg-gray-50 min-h-screen flex flex-col">
+    <html lang="zh-CN" className={`${inter.variable} ${noto.variable} ${mono.variable}`}>
+      <body className="bg-bg text-fg min-h-screen flex flex-col font-sans antialiased">
         <AuthProvider>
           <AppShell>{children}</AppShell>
           <Footer />

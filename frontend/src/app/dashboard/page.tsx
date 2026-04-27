@@ -126,7 +126,7 @@ export default function AccountPage() {
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
                   placeholder={user.email}
-                  className="border rounded px-2 py-0.5 text-sm w-48 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                  className="border rounded px-2 py-0.5 text-sm w-48 focus:outline-none focus:ring-1 focus:ring-fg/15"
                 />
                 <input
                   type="text"
@@ -135,16 +135,16 @@ export default function AccountPage() {
                   value={emailCode}
                   onChange={(e) => setEmailCode(e.target.value.replace(/\D/g, ""))}
                   placeholder="验证码"
-                  className="border rounded px-2 py-0.5 text-sm w-24 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                  className="border rounded px-2 py-0.5 text-sm w-24 focus:outline-none focus:ring-1 focus:ring-fg/15"
                 />
                 <button
                   onClick={handleSendEmailCode}
                   disabled={emailSending || emailCooldown > 0}
-                  className="text-xs text-indigo-600 hover:text-indigo-800 disabled:text-gray-400 disabled:cursor-not-allowed"
+                  className="text-xs text-fg hover:text-fg disabled:text-gray-400 disabled:cursor-not-allowed"
                 >
                   {emailCooldown > 0 ? `${emailCooldown}s` : emailSending ? "发送中" : "发送验证码"}
                 </button>
-                <button onClick={handleChangeEmail} disabled={emailSaving} className="text-xs text-indigo-600 hover:text-indigo-800 disabled:opacity-50">
+                <button onClick={handleChangeEmail} disabled={emailSaving} className="text-xs text-fg hover:text-fg disabled:opacity-50">
                   {emailSaving ? "保存中" : "保存"}
                 </button>
                 <button onClick={() => { setEditingEmail(false); setNewEmail(""); setEmailCode(""); setEmailError("") }} className="text-xs text-gray-400 hover:text-gray-600">取消</button>
@@ -152,7 +152,7 @@ export default function AccountPage() {
             ) : (
               <span className="font-medium">
                 {user.email}
-                <button onClick={() => { setEditingEmail(true); setNewEmail(user.email) }} className="ml-2 text-xs text-indigo-500 hover:text-indigo-700">修改</button>
+                <button onClick={() => { setEditingEmail(true); setNewEmail(user.email) }} className="ml-2 text-xs text-fg hover:text-fg">修改</button>
               </span>
             )}
             {emailMsg && <span className="ml-2 text-xs text-green-600">{emailMsg}</span>}
@@ -172,7 +172,7 @@ export default function AccountPage() {
               {user.billing.is_suspended && (
                 <span className="ml-2 text-xs text-red-600">⚠ 已逾期，服务已暂停</span>
               )}
-              <Link href="/dashboard/invoices" className="ml-2 text-xs text-indigo-600 hover:underline">查看账单</Link>
+              <Link href="/dashboard/invoices" className="ml-2 text-xs text-fg hover:underline">查看账单</Link>
             </div>
           )}
           <div>
@@ -192,7 +192,7 @@ export default function AccountPage() {
           </div>
           <button
             onClick={() => { setShowPwModal(true); setMsg(""); setError(""); setOldPw(""); setNewPw(""); setConfirmPw("") }}
-            className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+            className="px-4 py-2 text-sm bg-fg text-white rounded-lg hover:bg-fg/90"
           >
             修改密码
           </button>
@@ -230,7 +230,7 @@ export default function AccountPage() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="bg-indigo-600 text-white px-6 py-2 text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                  className="bg-fg text-white px-6 py-2 text-sm rounded-lg hover:bg-fg/90 disabled:opacity-50"
                 >
                   {saving ? "保存中..." : "确认修改"}
                 </button>
@@ -242,7 +242,7 @@ export default function AccountPage() {
 
       {user.role !== "admin" && (
         <div className="mt-6 text-sm text-gray-500">
-          需要注销账号？请前往 <Link href="/dashboard/other" className="text-indigo-600 hover:underline">其他</Link> 页面。
+          需要注销账号？请前往 <Link href="/dashboard/other" className="text-fg hover:underline">其他</Link> 页面。
         </div>
       )}
     </div>

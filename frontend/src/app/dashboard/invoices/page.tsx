@@ -129,7 +129,7 @@ export default function InvoicesPage() {
           <button
             onClick={handleSettleNow}
             disabled={!settle?.eligible || settling}
-            className="shrink-0 px-4 py-2 text-sm border border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="shrink-0 px-4 py-2 text-sm border border-line-strong text-fg rounded-lg hover:bg-accent-soft disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {settling ? "出账中..." : "提前结清"}
           </button>

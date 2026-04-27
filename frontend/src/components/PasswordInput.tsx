@@ -36,7 +36,7 @@ export default function PasswordInput({ value, onChange, placeholder, required, 
           placeholder={placeholder}
           required={required}
           minLength={minLength}
-          className="w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+          className="w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none"
         />
         <button
           type="button"
