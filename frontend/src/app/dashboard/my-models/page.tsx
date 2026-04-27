@@ -25,9 +25,21 @@ export default function MyModelsPage() {
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState("")
   const [showHistory, setShowHistory] = useState(false)
+  const [showActivated, setShowActivated] = useState(true)
+  const [showInactive, setShowInactive] = useState(true)
+  const [collapsedCards, setCollapsedCards] = useState<Set<string>>(new Set())
   const [saving, setSaving] = useState<number | null>(null)
   const [autoFallback, setAutoFallback] = useState(true)
   const [savingAuto, setSavingAuto] = useState(false)
+
+  const toggleCard = (key: string) => {
+    setCollapsedCards((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
 
   const fetchAll = async () => {
     try {
@@ -179,73 +191,85 @@ export default function MyModelsPage() {
         </div>
       ) : (
         <>
-          {subs.filter((s) => s.is_active).length > 0 && (
-            <div className="space-y-4 mb-8">
-              {(() => {
-                const activeSubs = subs.filter((s) => s.is_active)
-                // 计算每条订阅在"已激活订阅"里的全局优先级（用于徽章显示）
-                const activatedRank = new Map<number, number>()
-                let rank = 0
-                activeSubs.forEach((s) => {
-                  if (s.is_activated) {
-                    rank += 1
-                    activatedRank.set(s.id, rank)
-                  }
-                })
-                // 按 model 分组，组的展示顺序 = 组内首条 sub 在 activeSubs 里的下标
-                const groups: { model: string; rows: Sub[]; firstIdx: number }[] = []
-                const groupIdx = new Map<string, number>()
-                activeSubs.forEach((s, i) => {
-                  let g = groupIdx.get(s.model)
-                  if (g === undefined) {
-                    g = groups.length
-                    groupIdx.set(s.model, g)
-                    groups.push({ model: s.model, rows: [], firstIdx: i })
-                  }
-                  groups[g].rows.push(s)
-                })
-                groups.sort((a, b) => a.firstIdx - b.firstIdx)
-                return groups.map((g) => {
-                  const anyOnline = g.rows.some((r) => r.backend_status === "online")
-                  const groupActivatedRanks = g.rows
-                    .map((r) => activatedRank.get(r.id))
-                    .filter((x): x is number => typeof x === "number")
-                  const minActivatedRank = groupActivatedRanks.length ? Math.min(...groupActivatedRanks) : null
-                  const groupActivated = groupActivatedRanks.length > 0
-                  return (
-                    <div
-                      key={g.model}
-                      className={`bg-white rounded-lg border p-5 ${
-                        groupActivated ? "border-indigo-400 ring-2 ring-indigo-100" : ""
+          {subs.filter((s) => s.is_active).length > 0 && (() => {
+            const activeSubs = subs.filter((s) => s.is_active)
+            // 计算每条订阅在"已激活订阅"里的全局优先级（用于徽章显示）
+            const activatedRank = new Map<number, number>()
+            let rank = 0
+            activeSubs.forEach((s) => {
+              if (s.is_activated) {
+                rank += 1
+                activatedRank.set(s.id, rank)
+              }
+            })
+            // 按 model 分组，组的展示顺序 = 组内首条 sub 在 activeSubs 里的下标
+            const groups: { model: string; rows: Sub[]; firstIdx: number }[] = []
+            const groupIdx = new Map<string, number>()
+            activeSubs.forEach((s, i) => {
+              let g = groupIdx.get(s.model)
+              if (g === undefined) {
+                g = groups.length
+                groupIdx.set(s.model, g)
+                groups.push({ model: s.model, rows: [], firstIdx: i })
+              }
+              groups[g].rows.push(s)
+            })
+            groups.sort((a, b) => a.firstIdx - b.firstIdx)
+            const activatedGroups = groups.filter((g) => g.rows.some((r) => !!r.is_activated))
+            const inactiveGroups = groups.filter((g) => g.rows.every((r) => !r.is_activated))
+
+            const renderGroup = (g: { model: string; rows: Sub[] }, sectionKey: "act" | "inact") => {
+              const cardKey = `${sectionKey}:${g.model}`
+              const collapsed = collapsedCards.has(cardKey)
+              const anyOnline = g.rows.some((r) => r.backend_status === "online")
+              const groupActivatedRanks = g.rows
+                .map((r) => activatedRank.get(r.id))
+                .filter((x): x is number => typeof x === "number")
+              const minActivatedRank = groupActivatedRanks.length ? Math.min(...groupActivatedRanks) : null
+              const groupActivated = groupActivatedRanks.length > 0
+              return (
+                <div
+                  key={cardKey}
+                  className={`bg-white rounded-lg border ${
+                    groupActivated ? "border-indigo-400 ring-2 ring-indigo-100" : ""
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggleCard(cardKey)}
+                    className="w-full flex items-center gap-3 flex-wrap px-5 py-4 hover:bg-gray-50 rounded-lg text-left"
+                  >
+                    <span
+                      className={`shrink-0 inline-block text-gray-400 transition-transform ${collapsed ? "" : "rotate-90"}`}
+                    >
+                      ▶
+                    </span>
+                    <Link
+                      href={`/models/${g.rows[0].backend_id}/${g.model}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="font-semibold text-lg text-gray-900 hover:text-indigo-600"
+                    >
+                      {g.model}
+                    </Link>
+                    <span
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                        anyOnline ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"
                       }`}
                     >
-                      <div className="flex items-center gap-3 flex-wrap mb-3">
-                        <Link
-                          href={`/models/${g.rows[0].backend_id}/${g.model}`}
-                          className="font-semibold text-lg text-gray-900 hover:text-indigo-600"
-                        >
-                          {g.model}
-                        </Link>
-                        <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                            anyOnline ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"
-                          }`}
-                        >
-                          <span className={`w-1.5 h-1.5 rounded-full ${anyOnline ? "bg-green-500" : "bg-red-400"}`} />
-                          {anyOnline ? "在线" : "离线"}
-                        </span>
-                        {minActivatedRank !== null && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-600 text-white">
-                            优先级 {minActivatedRank}
-                          </span>
-                        )}
-                        {g.rows.length > 1 && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
-                            {g.rows.length} 个服务
-                          </span>
-                        )}
-                      </div>
-
+                      <span className={`w-1.5 h-1.5 rounded-full ${anyOnline ? "bg-green-500" : "bg-red-400"}`} />
+                      {anyOnline ? "在线" : "离线"}
+                    </span>
+                    {minActivatedRank !== null && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-600 text-white">
+                        优先级 {minActivatedRank}
+                      </span>
+                    )}
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                      {g.rows.length} 个服务
+                    </span>
+                  </button>
+                  {!collapsed && (
+                    <div className="px-5 pb-5">
                       <div className={g.rows.length > 1 ? "divide-y divide-gray-100 border border-gray-100 rounded" : ""}>
                         {g.rows.map((s) => {
                           const isActivated = !!s.is_activated
@@ -346,11 +370,51 @@ export default function MyModelsPage() {
                         })}
                       </div>
                     </div>
-                  )
-                })
-              })()}
-            </div>
-          )}
+                  )}
+                </div>
+              )
+            }
+
+            return (
+              <div className="space-y-6 mb-8">
+                {activatedGroups.length > 0 && (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setShowActivated(!showActivated)}
+                      className="flex items-center gap-2 text-lg font-semibold text-gray-700 mb-3 hover:text-gray-900"
+                    >
+                      <span className={`transition-transform ${showActivated ? "rotate-90" : ""}`}>▶</span>
+                      已激活模型服务 ({activatedGroups.length})
+                    </button>
+                    {showActivated && (
+                      <div className="space-y-4">
+                        {activatedGroups.map((g) => renderGroup(g, "act"))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {inactiveGroups.length > 0 && (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setShowInactive(!showInactive)}
+                      className="flex items-center gap-2 text-lg font-semibold text-gray-500 mb-3 hover:text-gray-700"
+                    >
+                      <span className={`transition-transform ${showInactive ? "rotate-90" : ""}`}>▶</span>
+                      未激活模型服务 ({inactiveGroups.length})
+                    </button>
+                    {showInactive && (
+                      <div className="space-y-4">
+                        {inactiveGroups.map((g) => renderGroup(g, "inact"))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })()}
 
           {subs.filter((s) => !s.is_active).length > 0 && (
             <>
