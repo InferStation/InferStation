@@ -1555,7 +1555,13 @@ class SubscribeRequest(BaseModel):
 
 @app.post("/api/subscriptions")
 async def subscribe_model(req: SubscribeRequest, user=Depends(get_current_user)):
-    """Subscribe to a model on a specific backend and get a unique sub_key for API access."""
+    """Subscribe to a model on a specific backend and get a unique sub_key for API access.
+
+    When the user already has subs for the same model on OTHER backends, the
+    new sub is inserted into the model group at a position keeping
+    (input_price + output_price) ascending. The user can later drag it to a
+    custom position via /api/subscriptions/reorder.
+    """
     db = await get_db()
     try:
         cur = await db.execute(
@@ -1584,15 +1590,51 @@ async def subscribe_model(req: SubscribeRequest, user=Depends(get_current_user))
             await db.commit()
             return {"sub_key": existing["sub_key"], "model": req.model}
 
-        sub_key = f"sub-{secrets.token_urlsafe(24)}"
+        # Default placement: keep (input + output) price ascending within the
+        # same-model group. New sub goes just before the first existing sub of
+        # the same model whose price is higher; if none, append after the last
+        # one in the group; if no group exists, append at end overall.
         cur = await db.execute(
-            "SELECT COALESCE(MAX(sort_order), 0) FROM subscriptions WHERE user_id = ?",
-            (user["id"],),
+            "SELECT s.sort_order, "
+            "  COALESCE(b.input_price, 0) + COALESCE(b.output_price, 0) AS p "
+            "FROM subscriptions s JOIN backends b ON b.id = s.backend_id "
+            "WHERE s.user_id = ? AND s.model = ? "
+            "ORDER BY s.sort_order ASC",
+            (user["id"], req.model),
         )
-        max_order = (await cur.fetchone())[0] or 0
+        group = [dict(r) for r in await cur.fetchall()]
+        cur = await db.execute(
+            "SELECT COALESCE(input_price, 0) + COALESCE(output_price, 0) FROM backends WHERE id = ?",
+            (req.backend_id,),
+        )
+        new_price = (await cur.fetchone())[0] or 0
+
+        insert_at = None
+        for r in group:
+            if new_price < r["p"]:
+                insert_at = r["sort_order"]
+                break
+        if insert_at is None:
+            if group:
+                insert_at = group[-1]["sort_order"] + 1
+            else:
+                cur = await db.execute(
+                    "SELECT COALESCE(MAX(sort_order), 0) FROM subscriptions WHERE user_id = ?",
+                    (user["id"],),
+                )
+                insert_at = ((await cur.fetchone())[0] or 0) + 1
+
+        # Shift existing subs at/after insert position
+        await db.execute(
+            "UPDATE subscriptions SET sort_order = sort_order + 1 "
+            "WHERE user_id = ? AND sort_order >= ?",
+            (user["id"], insert_at),
+        )
+
+        sub_key = f"sub-{secrets.token_urlsafe(24)}"
         await db.execute(
             "INSERT INTO subscriptions (user_id, backend_id, model, sub_key, sort_order) VALUES (?, ?, ?, ?, ?)",
-            (user["id"], req.backend_id, req.model, sub_key, max_order + 1),
+            (user["id"], req.backend_id, req.model, sub_key, insert_at),
         )
         await db.commit()
     finally:
@@ -1846,22 +1888,36 @@ async def authenticate_api_key(request: Request):
     return row
 
 
-async def get_active_subscription_backend(user_id: int, auto_fallback: bool = True,
-                                          requested_model: str | None = None):
-    """Pick a backend from the user's activated subscriptions.
+async def get_active_subscription_candidates(user_id: int, auto_fallback: bool = True,
+                                               requested_model: str | None = None):
+    """Return an ordered list of (backend_row, forced_model) candidates the
+    request can be tried against, plus the canonical model name to bill against.
 
-    - auto_fallback=True: prefer a sub whose model matches requested_model (if any);
-      if none match or the matching one is offline, fall back to activated subs by
-      priority and pick the first online. 503 if all offline.
-    - auto_fallback=False: require requested_model to exactly match one of the
-      user's activated subs; use that one. 404 if not matched; 503 if offline.
+    Ordering rules:
+      - All subscriptions are activated subs (is_active=1 AND is_activated=1) joined with
+        their backends, ordered by ``sort_order ASC, id ASC``.
+      - When ``requested_model`` is given AND ``auto_fallback=True``: candidates
+        whose model == requested_model come first (in sort_order); the rest of
+        the activated subs follow as cross-model fallback.
+      - When ``requested_model`` is given AND ``auto_fallback=False``: only
+        candidates whose model == requested_model are returned. 404 if none.
+      - When ``requested_model`` is empty AND ``auto_fallback=True``: all
+        activated subs in sort_order.
+      - When ``requested_model`` is empty AND ``auto_fallback=False``: 400 (caller
+        must specify model).
 
-    Returns (backend_row, forced_model) or (None, None) if user has no activated subs
-    AND auto_fallback=True (caller may then fall back to public backends)."""
+    Offline candidates (status != 'online') are still returned but pushed to the
+    end of their respective tier so we try online ones first; the actual call-site
+    loops and skips/retries based on real connection result.
+
+    Returns: list of dicts each containing the backend row plus 'forced_model'
+    (the canonical model name to use). Empty list means "fallback to public
+    backend lookup" (only when user has no activated subs AND auto_fallback=True).
+    """
     db = await get_db()
     try:
         cur = await db.execute(
-            "SELECT s.model, b.* "
+            "SELECT s.model, s.sort_order, b.* "
             "FROM subscriptions s JOIN backends b ON b.id = s.backend_id "
             "WHERE s.user_id = ? AND s.is_active = 1 AND s.is_activated = 1 "
             "ORDER BY s.sort_order ASC, s.id ASC",
@@ -1873,38 +1929,66 @@ async def get_active_subscription_backend(user_id: int, auto_fallback: bool = Tr
 
     if not rows:
         if auto_fallback:
-            return None, None
+            return []
         raise HTTPException(404, "你还没有激活任何订阅模型服务")
 
-    if auto_fallback:
-        # 1) Try exact match on requested_model first (respects what the user asked for)
-        if requested_model:
-            for r in rows:
-                if r["model"] == requested_model and r.get("status") == "online":
-                    forced_model = r.pop("model")
-                    return r, forced_model
-        # 2) Fallback: first online by priority
-        for r in rows:
-            if r.get("status") == "online":
-                forced_model = r.pop("model")
-                return r, forced_model
-        raise HTTPException(503, "所有已激活的订阅模型服务都当前离线")
+    # Manual mode: must match requested_model and only that group is tried.
+    if not auto_fallback:
+        if not requested_model:
+            available = sorted({r["model"] for r in rows})
+            raise HTTPException(400,
+                f"自动回退已关闭，请在请求中显式指定 model，可用：{available}")
+        matches = [r for r in rows if r["model"] == requested_model]
+        if not matches:
+            available = sorted({r["model"] for r in rows})
+            raise HTTPException(404,
+                f"模型 '{requested_model}' 不在你已激活的订阅中。可用：{available}")
+        # Online first, offline after (call site will skip offline tunnels).
+        matches.sort(key=lambda r: 0 if r.get("status") == "online" else 1)
+        return [_candidate(r) for r in matches]
 
-    # Manual mode: user must specify the model
-    if not requested_model:
-        available = sorted({r["model"] for r in rows})
-        raise HTTPException(400,
-            f"自动回退已关闭，请在请求中显式指定 model，可用：{available}")
-    matches = [r for r in rows if r["model"] == requested_model]
-    if not matches:
-        available = sorted({r["model"] for r in rows})
-        raise HTTPException(404,
-            f"模型 '{requested_model}' 不在你已激活的订阅中。可用：{available}")
-    r = matches[0]
-    if r.get("status") != "online":
-        raise HTTPException(503, f"模型 '{requested_model}' 的订阅服务当前离线（自动回退已关闭）")
-    forced_model = r.pop("model")
-    return r, forced_model
+    # Auto-fallback ON: requested model group first (online > offline within group),
+    # then everything else (online > offline within rest).
+    if requested_model:
+        same = [r for r in rows if r["model"] == requested_model]
+        rest = [r for r in rows if r["model"] != requested_model]
+        same.sort(key=lambda r: 0 if r.get("status") == "online" else 1)
+        rest.sort(key=lambda r: (0 if r.get("status") == "online" else 1, r["sort_order"]))
+        ordered = same + rest
+    else:
+        ordered = sorted(rows,
+            key=lambda r: (0 if r.get("status") == "online" else 1, r["sort_order"]))
+
+    return [_candidate(r) for r in ordered]
+
+
+def _candidate(row: dict) -> dict:
+    """Strip the row's 'model' field into 'forced_model' so the caller can
+    rewrite the body."""
+    out = dict(row)
+    out["forced_model"] = out.pop("model")
+    return out
+
+
+async def get_active_subscription_backend(user_id: int, auto_fallback: bool = True,
+                                          requested_model: str | None = None):
+    """Compatibility shim: return the FIRST online candidate as (backend, model).
+
+    Kept so legacy callers (admin dashboards, /v1/models routing helpers) keep
+    working. New /v1 request routing uses get_active_subscription_candidates
+    directly so it can iterate on call failure.
+    """
+    cands = await get_active_subscription_candidates(user_id, auto_fallback, requested_model)
+    if not cands:
+        return None, None
+    for c in cands:
+        if c.get("status") == "online":
+            forced_model = c.pop("forced_model")
+            return c, forced_model
+    if auto_fallback:
+        raise HTTPException(503, "所有已激活的订阅模型服务都当前离线")
+    forced_model = cands[0].pop("forced_model")
+    raise HTTPException(503, f"模型 '{forced_model}' 的订阅服务当前离线（自动回退已关闭）")
 
 
 async def get_activated_models(user_id: int) -> list[str]:
@@ -2013,31 +2097,66 @@ async def _handle_openai_request(request: Request, path: str, usage_keys: tuple[
     body = await request.json()
     stream = body.get("stream", False)
 
-    # Prefer user's activated subscriptions (priority routing with optional failover)
     auto_fallback = bool(api_user.get("auto_fallback", 1))
     requested_model = body.get("model", "")
-    backend, forced_model = await get_active_subscription_backend(
+
+    candidates = await get_active_subscription_candidates(
         api_user["user_id"], auto_fallback, requested_model)
-    if backend:
-        body["model"] = forced_model
-        model = forced_model
-    else:
-        model = body.get("model", "")
+
+    if not candidates:
+        # User has no activated subscriptions; fall back to public-backend lookup.
+        model = requested_model
         backend = await find_backend_for_model(model, api_user["user_id"])
         if not backend:
             raise HTTPException(404, f"Model '{model}' not available")
+        candidates = [{**backend, "forced_model": model}]
 
-    # Remember the user-facing model name for usage logging (before rewrite)
-    display_model = model
+    errors_seen: list[str] = []
+    for cand in candidates:
+        try:
+            return await _try_candidate(api_user, cand, body, stream, path, usage_keys)
+        except _RetryableUpstreamError as e:
+            errors_seen.append(str(e))
+            logger.warning(
+                f"upstream retryable failure on '{cand.get('name')}' "
+                f"(model={cand.get('forced_model')}): {e}; trying next candidate"
+            )
+            continue
 
-    # Rewrite model name to served name if mapping exists
+    detail = "所有候选 provider 均不可用"
+    if errors_seen:
+        detail += "：" + "; ".join(errors_seen[:5])
+    raise HTTPException(503, detail)
+
+
+class _RetryableUpstreamError(Exception):
+    """Signals that the current candidate failed in a way that should fall
+    through to the next provider (connection error, 5xx, tunnel disconnected,
+    upstream first-byte timeout)."""
+
+
+async def _try_candidate(api_user, candidate: dict, body: dict, stream: bool,
+                          path: str, usage_keys: tuple[str, str]):
+    """Try ONE candidate. Returns the FastAPI response on success.
+
+    Raises:
+        _RetryableUpstreamError: connect/5xx/timeout — caller should try next.
+        HTTPException: definitive (4xx etc) — propagate.
+    """
+    cand = dict(candidate)
+    forced_model = cand.pop("forced_model")
+    backend = cand
+
+    # Build a per-attempt body copy so retries see the original request.
+    body = dict(body)
+    body["model"] = forced_model
+    display_model = forced_model
+
     client_info = json.loads(backend["client_info"]) if backend.get("client_info") else {}
     model_map = client_info.get("model_map", {})
-    if model in model_map:
-        body["model"] = model_map[model]
+    if forced_model in model_map:
+        body["model"] = model_map[forced_model]
 
-    # For OpenAI chat/completions streaming, force include_usage so the final
-    # chunk carries token counts (vLLM/OpenAI omit usage in stream by default).
     if stream and path in ("/v1/chat/completions", "/v1/completions"):
         opts = body.get("stream_options")
         if not isinstance(opts, dict):
@@ -2047,14 +2166,164 @@ async def _handle_openai_request(request: Request, path: str, usage_keys: tuple[
 
     input_price, output_price, cache_price = get_pricing(backend)
 
+    # Fast pre-check: tunnel disconnect is retryable.
+    if backend["mode"] == "tunnel" and not tunnel_manager.is_connected(backend["id"]):
+        raise _RetryableUpstreamError(
+            f"backend '{backend.get('name')}' tunnel not connected")
+
+    # ── Non-streaming path ───────────────────────────────────────────────
+    if not stream:
+        try:
+            if backend["mode"] == "tunnel":
+                data = await tunnel_manager.forward_request(backend["id"], body, path=path)
+            else:
+                url = f"{backend['url'].rstrip('/')}{path}"
+                headers = _upstream_headers(backend)
+                async with httpx.AsyncClient(timeout=UPSTREAM_TIMEOUT) as client:
+                    resp = await client.post(url, json=body, headers=headers)
+                if resp.status_code >= 500:
+                    raise _RetryableUpstreamError(
+                        f"backend '{backend.get('name')}' HTTP {resp.status_code}")
+                if resp.status_code >= 400:
+                    # 4xx = client error: don't retry, propagate
+                    raise HTTPException(resp.status_code, resp.text)
+                data = resp.json()
+        except (httpx.RequestError, httpx.TimeoutException,
+                ConnectionError, TimeoutError, asyncio.TimeoutError) as e:
+            raise _RetryableUpstreamError(
+                f"backend '{backend.get('name')}': {type(e).__name__}: {e}")
+
+        usage = _extract_usage(data, usage_keys)
+        await _record_usage(api_user, backend, display_model, usage,
+                            input_price, output_price, cache_price=cache_price)
+        return data
+
+    # ── Streaming path: pre-flight first chunk before committing response ─
     if backend["mode"] == "tunnel":
-        return await _proxy_tunnel(api_user, backend, body, stream, input_price, output_price,
-                                    path=path, usage_keys=usage_keys, display_model=display_model,
-                                    cache_price=cache_price)
-    else:
-        return await _proxy_direct(api_user, backend, body, stream, input_price, output_price,
-                                    path=path, usage_keys=usage_keys, display_model=display_model,
-                                    cache_price=cache_price)
+        gen = tunnel_manager.forward_stream(backend["id"], body, path=path)
+        try:
+            first_chunk = await gen.__anext__()
+        except StopAsyncIteration:
+            raise _RetryableUpstreamError(
+                f"backend '{backend.get('name')}' produced empty stream")
+        except (ConnectionError, TimeoutError, asyncio.TimeoutError) as e:
+            raise _RetryableUpstreamError(
+                f"backend '{backend.get('name')}': {type(e).__name__}: {e}")
+
+        async def tunnel_gen():
+            total_input = 0
+            total_output = 0
+            total_cached = 0
+            chunk = first_chunk
+            try:
+                while True:
+                    yield f"data: {json.dumps(chunk)}\n\n"
+                    u = _extract_usage(chunk, usage_keys)
+                    if u["prompt_tokens"] or u["completion_tokens"]:
+                        total_input = u["prompt_tokens"] or total_input
+                        total_output = u["completion_tokens"] or total_output
+                        total_cached = u["cached_tokens"] or total_cached
+                    try:
+                        chunk = await gen.__anext__()
+                    except StopAsyncIteration:
+                        break
+            finally:
+                yield "data: [DONE]\n\n"
+                await _record_usage(
+                    api_user, backend, display_model,
+                    {"prompt_tokens": total_input, "completion_tokens": total_output,
+                     "cached_tokens": total_cached},
+                    input_price, output_price, cache_price=cache_price,
+                )
+
+        return StreamingResponse(tunnel_gen(), media_type="text/event-stream")
+
+    # Direct streaming
+    url = f"{backend['url'].rstrip('/')}{path}"
+    headers = _upstream_headers(backend)
+    client = httpx.AsyncClient(timeout=UPSTREAM_TIMEOUT)
+    try:
+        ctx = client.stream("POST", url, json=body, headers=headers)
+        resp = await ctx.__aenter__()
+    except (httpx.RequestError, httpx.TimeoutException) as e:
+        await client.aclose()
+        raise _RetryableUpstreamError(
+            f"backend '{backend.get('name')}': {type(e).__name__}: {e}")
+
+    if resp.status_code >= 500:
+        try:
+            await ctx.__aexit__(None, None, None)
+        finally:
+            await client.aclose()
+        raise _RetryableUpstreamError(
+            f"backend '{backend.get('name')}' HTTP {resp.status_code}")
+
+    if resp.status_code >= 400:
+        # 4xx — read up to 4KB for the error body, then propagate as HTTPException
+        try:
+            buf = b""
+            async for c in resp.aiter_raw():
+                buf += c
+                if len(buf) >= 4096:
+                    break
+            text = buf.decode("utf-8", "replace")
+        except Exception:
+            text = f"upstream HTTP {resp.status_code}"
+        finally:
+            try:
+                await ctx.__aexit__(None, None, None)
+            finally:
+                await client.aclose()
+        raise HTTPException(resp.status_code, text)
+
+    line_iter = resp.aiter_lines()
+    try:
+        first_line = await asyncio.wait_for(line_iter.__anext__(), timeout=30.0)
+    except (asyncio.TimeoutError, httpx.RequestError, StopAsyncIteration) as e:
+        try:
+            await ctx.__aexit__(None, None, None)
+        finally:
+            await client.aclose()
+        raise _RetryableUpstreamError(
+            f"backend '{backend.get('name')}' first-byte: {type(e).__name__}: {e}")
+
+    async def direct_gen():
+        total_input = 0
+        total_output = 0
+        total_cached = 0
+        try:
+            line = first_line
+            while True:
+                if line.startswith("data: "):
+                    yield line + "\n\n"
+                    chunk_data = line[6:]
+                    if chunk_data.strip() != "[DONE]":
+                        try:
+                            chunk = json.loads(chunk_data)
+                            u = _extract_usage(chunk, usage_keys)
+                            if u["prompt_tokens"] or u["completion_tokens"]:
+                                total_input = u["prompt_tokens"] or total_input
+                                total_output = u["completion_tokens"] or total_output
+                                total_cached = u["cached_tokens"] or total_cached
+                        except json.JSONDecodeError:
+                            pass
+                try:
+                    line = await line_iter.__anext__()
+                except StopAsyncIteration:
+                    break
+        finally:
+            try:
+                await ctx.__aexit__(None, None, None)
+            finally:
+                await client.aclose()
+            await _record_usage(
+                api_user, backend, display_model,
+                {"prompt_tokens": total_input, "completion_tokens": total_output,
+                 "cached_tokens": total_cached},
+                input_price, output_price, cache_price=cache_price,
+            )
+
+    return StreamingResponse(direct_gen(), media_type="text/event-stream")
 
 
 def _upstream_headers(backend) -> dict:

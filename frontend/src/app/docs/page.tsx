@@ -220,25 +220,34 @@ for chunk in resp:
       <section id="routing" className="mb-12 scroll-mt-20">
         <h2 className="text-2xl font-semibold text-gray-800 mb-4">路由与失败转移</h2>
         <div className="bg-white rounded-lg border p-6 space-y-3 text-sm text-gray-700 leading-relaxed">
-          <p>调用 <code>/v1/chat/completions</code>、<code>/v1/completions</code>、<code>/v1/responses</code> 时，平台只在你<strong>已激活的订阅</strong>中按优先级（订阅页可拖拽）选后端。具体行为分两种：</p>
+          <p>调用 <code>/v1/chat/completions</code>、<code>/v1/completions</code>、<code>/v1/responses</code> 时，平台只在你<strong>已激活的订阅</strong>中按优先级（订阅页可拖拽 ↑↓）选后端。同一个模型可同时订阅多个 provider，订阅时默认按 <code>input_price + output_price</code> 升序插入到该模型组末尾，可手动再调整顺序。</p>
+
+          <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-xs text-indigo-900 space-y-1.5">
+            <div className="font-semibold">两级回退（auto_fallback = ON）</div>
+            <div><span className="font-mono bg-white/60 px-1 rounded">第 1 级</span> 同一 <code>model</code> 内：按订阅优先级依次尝试，连接失败 / 5xx / 首字节超时 → 跳到下一个 provider</div>
+            <div><span className="font-mono bg-white/60 px-1 rounded">第 2 级</span> 该 model 的所有 provider 全部失败 → 退到下一个已激活 model（按全局优先级），重复第 1 级</div>
+            <div className="text-indigo-700">✅ 流式请求：仅在<strong>首个 chunk 之前</strong>可重试；一旦开始向客户端 yield 数据就不再切换。</div>
+            <div className="text-indigo-700">✅ 4xx（你的请求自身有问题，比如 token 超限、参数非法）<strong>不重试</strong>，直接透传。</div>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 my-2">
             <div className="border rounded-lg p-3 bg-emerald-50 border-emerald-200">
               <div className="font-semibold text-emerald-900 mb-1">auto_fallback = ON（默认）</div>
               <ul className="text-xs space-y-1 list-disc list-inside">
-                <li>优先用 <code>model</code> 匹配且 online 的订阅，按优先级取第一个</li>
-                <li>命中订阅请求失败 / 后端 offline → 自动按优先级试下一条</li>
-                <li>所有激活订阅都没命中 model：无激活订阅退化到自有/公开 online 后端，否则 404</li>
-                <li>所有候选都 offline → <strong>503</strong></li>
+                <li>第 1 级：先把候选限定到 <code>model</code> 匹配的那一组，按优先级穷尽</li>
+                <li>第 2 级：该组全部失败 → 跨 model 退到下一组（仍按全局优先级）</li>
+                <li>没有激活订阅：退化到自有 / 公开 online 后端按 <code>model</code> 查找；都没有 → 404</li>
+                <li>所有候选均失败 → <strong>503</strong>，错误体里带最多 5 条尝试摘要</li>
               </ul>
             </div>
             <div className="border rounded-lg p-3 bg-rose-50 border-rose-200">
               <div className="font-semibold text-rose-900 mb-1">auto_fallback = OFF</div>
               <ul className="text-xs space-y-1 list-disc list-inside">
                 <li>必须显式指定 <code>model</code>，且 model 必须等于某条已激活订阅</li>
+                <li>同一 model 多个订阅：仍会按优先级回退（第 1 级），只是<strong>不会</strong>跨 model</li>
                 <li>不指定 model → <strong>400</strong></li>
                 <li>没匹配到 → <strong>404</strong></li>
-                <li>匹配到但 backend offline → <strong>503</strong>，<em>不</em>再尝试其它订阅</li>
+                <li>该 model 全部 provider 都失败 → <strong>503</strong></li>
               </ul>
             </div>
           </div>

@@ -130,7 +130,13 @@ async def init_db():
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
 
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_sub_user_model ON subscriptions(user_id, model);
+        -- One sub per (user, backend, model) — same model across DIFFERENT backends
+        -- is allowed (multi-provider failover). The legacy UNIQUE index
+        -- idx_sub_user_model is dropped in the migration block below.
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_sub_user_backend_model
+            ON subscriptions(user_id, backend_id, model);
+        CREATE INDEX IF NOT EXISTS idx_sub_user_model_lookup
+            ON subscriptions(user_id, model);
         CREATE INDEX IF NOT EXISTS idx_sub_key ON subscriptions(sub_key);
 
         CREATE TABLE IF NOT EXISTS invoices (
@@ -173,6 +179,23 @@ async def init_db():
             await db.execute(
                 "UPDATE subscriptions SET is_activated = 1 "
                 "WHERE id IN (SELECT active_subscription_id FROM users WHERE active_subscription_id IS NOT NULL)"
+            )
+        # Migration: legacy DBs have UNIQUE(user_id, model) which prevents
+        # subscribing the same model across multiple providers. Drop it and
+        # ensure the new (user, backend, model) unique index exists.
+        cur = await db.execute(
+            "SELECT name, sql FROM sqlite_master WHERE type='index' AND name='idx_sub_user_model'"
+        )
+        legacy_idx = await cur.fetchone()
+        if legacy_idx and legacy_idx[1] and "UNIQUE" in legacy_idx[1].upper():
+            await db.execute("DROP INDEX idx_sub_user_model")
+            await db.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_sub_user_backend_model "
+                "ON subscriptions(user_id, backend_id, model)"
+            )
+            await db.execute(
+                "CREATE INDEX IF NOT EXISTS idx_sub_user_model_lookup "
+                "ON subscriptions(user_id, model)"
             )
         # Migration: per-backend pricing currency (CNY default for back-compat)
         if "currency" not in cols:
