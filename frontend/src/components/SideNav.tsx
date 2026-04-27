@@ -63,7 +63,10 @@ export default function SideNav() {
 
   return (
     <aside className="w-56 shrink-0 hidden md:block border-r border-gray-200 bg-white">
-      <nav className="sticky top-16 p-3 space-y-4 max-h-[calc(100vh-4rem)] overflow-y-auto">
+      <nav className="sticky top-0 p-3 space-y-4 max-h-screen overflow-y-auto">
+        <Link href="/" className="flex items-center px-2 py-2 mb-1">
+          <span className="text-xl font-bold text-indigo-600">天枢</span>
+        </Link>
         {groups.map((g) => (
           <div key={g.title}>
             <div className="px-2 mb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">

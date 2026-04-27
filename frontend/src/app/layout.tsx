@@ -1,7 +1,6 @@
 import type { Metadata } from "next"
 import "./globals.css"
 import { AuthProvider } from "@/context/AuthContext"
-import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
 import AppShell from "@/components/AppShell"
 
@@ -15,7 +14,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="zh-CN">
       <body className="bg-gray-50 min-h-screen flex flex-col">
         <AuthProvider>
-          <Navbar />
           <AppShell>{children}</AppShell>
           <Footer />
         </AuthProvider>

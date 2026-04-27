@@ -8,7 +8,7 @@ import { formatByCurrency } from "@/lib/currency"
 import PasswordInput, { checkStrength } from "@/components/PasswordInput"
 
 export default function AccountPage() {
-  const { user, refreshUser } = useAuth()
+  const { user, refreshUser, logout } = useAuth()
   const [oldPw, setOldPw] = useState("")
   const [newPw, setNewPw] = useState("")
   const [confirmPw, setConfirmPw] = useState("")
@@ -102,7 +102,15 @@ export default function AccountPage() {
       <h1 className="text-2xl font-bold mb-6">账号信息</h1>
 
       <div className="bg-white rounded-lg border p-6 mb-6">
-        <h2 className="font-semibold mb-4">账号信息</h2>
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <h2 className="font-semibold">账号信息</h2>
+          <button
+            onClick={() => { if (confirm("确认退出登录？")) logout() }}
+            className="text-xs px-3 py-1.5 border border-gray-300 text-gray-600 rounded hover:bg-gray-50"
+          >
+            退出登录
+          </button>
+        </div>
         <div className="grid gap-4 md:grid-cols-2 text-sm">
           <div>
             <span className="text-gray-500">用户名：</span>

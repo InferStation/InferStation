@@ -115,10 +115,6 @@ export default function ModelsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-end">
-        <span className="text-sm text-gray-400">{filtered.length} / {models.length} 个模型</span>
-      </div>
-
       <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm divide-y divide-gray-100">
         <div className="flex items-center gap-4 px-5 py-3.5">
           <span className="text-sm font-medium text-gray-400 shrink-0 w-16">模型类别</span>
