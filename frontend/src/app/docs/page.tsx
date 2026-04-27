@@ -7,10 +7,11 @@ const NAV_SECTIONS = [
   { id: "quickstart", label: "快速开始" },
   { id: "api-call", label: "API 调用" },
   { id: "routing", label: "路由与失败转移" },
+  { id: "errors", label: "错误码" },
   { id: "billing", label: "计费与账单" },
   { id: "account", label: "账户与邮箱验证" },
   { id: "api-ref", label: "API 端点参考" },
-  { id: "tunnel", label: "隧道模式接入" },
+  { id: "provider", label: "提供者接入指南" },
 ]
 
 export default function DocsPage() {
@@ -93,26 +94,57 @@ export default function DocsPage() {
       {/* 快速开始 */}
       <section id="quickstart" className="mb-12 scroll-mt-20">
         <h2 className="text-2xl font-semibold text-gray-800 mb-4">快速开始</h2>
+
+        {/* 5 分钟跑通 */}
+        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-6 mb-4 text-sm text-gray-700">
+          <h3 className="font-semibold text-base text-indigo-900 mb-2">5 分钟跑通</h3>
+          <ol className="list-decimal list-inside space-y-1.5 ml-1">
+            <li>在 <a href="/register" className="text-indigo-700 underline">注册</a> 页用邮箱验证码完成注册</li>
+            <li>在 <a href="/models" className="text-indigo-700 underline">模型广场</a> 选一个免费模型，点「订阅」</li>
+            <li>进入 <a href="/dashboard/services" className="text-indigo-700 underline">我的订阅</a>，把它<strong>激活</strong></li>
+            <li>在 <a href="/dashboard/keys" className="text-indigo-700 underline">API Key</a> 页创建一个 <code>sk-xxxx</code></li>
+            <li>把下面这条 curl 里的 <code>sk-your-api-key</code> 和 <code>MODEL_NAME</code> 换成自己的：</li>
+          </ol>
+          <div className="bg-gray-900 text-gray-100 rounded-lg p-4 text-xs overflow-x-auto mt-3">
+            <pre>{`curl https://your-gateway/v1/chat/completions \\
+  -H "Authorization: Bearer sk-your-api-key" \\
+  -H "Content-Type: application/json" \\
+  -d '{"model":"MODEL_NAME","messages":[{"role":"user","content":"你好"}]}'`}</pre>
+          </div>
+          <p className="text-xs text-gray-600 mt-2">
+            <code>MODEL_NAME</code> 用模型广场或 <code>GET /v1/models</code> 里的 <code>id</code> 字段。完整的模型清单和最新价格以广场为准，不在本文档维护。
+          </p>
+        </div>
+
         <div className="bg-white rounded-lg border p-6 space-y-4 text-sm text-gray-700">
           <div>
-            <h3 className="font-semibold text-base text-gray-800 mb-2">消费者</h3>
+            <h3 className="font-semibold text-base text-gray-800 mb-2">消费者完整路径</h3>
             <ol className="list-decimal list-inside space-y-1.5 ml-2">
-              <li>填写用户名、邮箱，获取 6 位邮箱验证码完成注册；登录同样需 要输入邮箱验证码 + 密码</li>
-              <li>在「模型广场」浏览并订阅感兴趣的模型</li>
-              <li>进入「我的订阅」，点击<strong>激活</strong>需要使用的订阅，并按优先级排序</li>
-              <li>在「API Key」页面创建一个 key（格式 <code>sk-xxxx</code>）</li>
-              <li>使用 OpenAI SDK 调用 <code>/v1</code>，平台会按订阅优先级自动选择后端</li>
+              <li>注册：邮箱 + 6 位验证码（10 分钟有效，60 秒限流，每小时 3 条）；登录同样需要密码 + 验证码</li>
+              <li>模型广场订阅 → 我的订阅页激活 → 按优先级拖拽排序</li>
+              <li>API Key 页创建 <code>sk-xxxx</code>，把它当作 OpenAI 的 key 用</li>
+              <li>调用 <code>/v1</code> 时平台按激活订阅的优先级自动选后端，详见下文「路由」</li>
             </ol>
           </div>
           <div>
-            <h3 className="font-semibold text-base text-gray-800 mb-2">提供者</h3>
+            <h3 className="font-semibold text-base text-gray-800 mb-2">提供者完整路径</h3>
             <ol className="list-decimal list-inside space-y-1.5 ml-2">
-              <li>注册账号，在「我的服务」中激活提供者身份</li>
-              <li>注册后端服务（选择直连或隧道模式），填写支持的模型与单价</li>
-              <li>如果是隧道模式，在本地运行 <code>tunnel_client.py</code> 建立连接</li>
-              <li>点击「申请上架」提交审核，管理员通过后自动上架到广场，如被驳回可根据原因修改后重新提交</li>
+              <li>账号页将身份切换为 provider 或 both</li>
+              <li>「我的服务」注册后端：选直连或隧道、填模型白名单与单价（详见下文「提供者接入指南」）</li>
+              <li>隧道模式在本地跑 <code>tunnel_client.py</code>（建议 systemd 托管，见下）</li>
+              <li>点「申请上架」进入审核；通过后自动出现在广场，被驳回可看 review_note 修改后重新提交</li>
             </ol>
           </div>
+        </div>
+
+        {/* API Key vs sub_key 决策树 */}
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-5 mt-4 text-sm text-gray-700">
+          <h3 className="font-semibold text-base text-amber-900 mb-2">API Key 还是 sub_key？</h3>
+          <ul className="space-y-1.5 ml-1">
+            <li>· <strong>99% 场景用 API Key</strong>（<code>sk-xxxx</code>）。它走 <code>/v1</code>，按激活订阅优先级自动路由 + 失败转移。</li>
+            <li>· <strong>sub_key</strong> 只在你需要<em>强制锁定</em>到某一家提供者的某个后端时用，例如对比测试或诊断。它走 <code>/s/&#123;sub_key&#125;/v1</code>，<strong>不</strong>走路由也<strong>不</strong>转移。</li>
+            <li>· 一个 API Key 调用所有激活订阅；一个 sub_key 只对应一条订阅。</li>
+          </ul>
         </div>
       </section>
 
@@ -188,29 +220,65 @@ for chunk in resp:
       <section id="routing" className="mb-12 scroll-mt-20">
         <h2 className="text-2xl font-semibold text-gray-800 mb-4">路由与失败转移</h2>
         <div className="bg-white rounded-lg border p-6 space-y-3 text-sm text-gray-700 leading-relaxed">
-          <p>
-            调用 <code>/v1/chat/completions</code>、<code>/v1/completions</code>、<code>/v1/responses</code> 时，平台按以下规则选择后端：
-          </p>
-          <ol className="list-decimal list-inside space-y-1 ml-2">
-            <li>只考虑你在「我的订阅」中<strong>已激活</strong>的订阅</li>
-            <li>按订阅的<strong>优先级</strong>（可在订阅页拖拽排序）从高到低依次尝试</li>
-            <li>优先选择 <code>model</code> 参数匹配、且后端 <code>status=online</code> 的订阅</li>
-            <li>
-              如果用户开启了 <strong>auto_fallback</strong>（默认开启），在首选不可用时会继续向后尝试其他激活订阅；
-              关闭后则严格按最高优先级，单点失败时返回错误
-            </li>
-          </ol>
-          <p>
-            开关位于「我的订阅」页顶部，或通过 <code>POST /api/user/auto-fallback</code> 调整：
-          </p>
-          <div className="bg-gray-900 text-gray-100 rounded-lg p-4 text-sm overflow-x-auto">
-            <pre>{`curl -X POST https://your-gateway/api/user/auto-fallback \\
-  -H "Authorization: Bearer <web_token>" \\
-  -H "Content-Type: application/json" \\
-  -d '{"enabled": true}'`}</pre>
+          <p>调用 <code>/v1/chat/completions</code>、<code>/v1/completions</code>、<code>/v1/responses</code> 时，平台只在你<strong>已激活的订阅</strong>中按优先级（订阅页可拖拽）选后端。具体行为分两种：</p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 my-2">
+            <div className="border rounded-lg p-3 bg-emerald-50 border-emerald-200">
+              <div className="font-semibold text-emerald-900 mb-1">auto_fallback = ON（默认）</div>
+              <ul className="text-xs space-y-1 list-disc list-inside">
+                <li>优先用 <code>model</code> 匹配且 online 的订阅，按优先级取第一个</li>
+                <li>命中订阅请求失败 / 后端 offline → 自动按优先级试下一条</li>
+                <li>所有激活订阅都没命中 model：无激活订阅退化到自有/公开 online 后端，否则 404</li>
+                <li>所有候选都 offline → <strong>503</strong></li>
+              </ul>
+            </div>
+            <div className="border rounded-lg p-3 bg-rose-50 border-rose-200">
+              <div className="font-semibold text-rose-900 mb-1">auto_fallback = OFF</div>
+              <ul className="text-xs space-y-1 list-disc list-inside">
+                <li>必须显式指定 <code>model</code>，且 model 必须等于某条已激活订阅</li>
+                <li>不指定 model → <strong>400</strong></li>
+                <li>没匹配到 → <strong>404</strong></li>
+                <li>匹配到但 backend offline → <strong>503</strong>，<em>不</em>再尝试其它订阅</li>
+              </ul>
+            </div>
+          </div>
+
+          <p className="text-xs text-gray-500">开关在「我的订阅」页顶部，或通过 <code>POST /api/user/auto-fallback</code> 切换（请求体 <code>&#123;"enabled": true|false&#125;</code>）。</p>
+          <p className="text-xs text-gray-500">没有激活任何订阅时，<code>/v1</code> 退化为按 <code>model</code> 参数在你<strong>自有或公开的 online 后端</strong>里查找；这条路径不计入路由日志的「按订阅命中」统计。</p>
+        </div>
+      </section>
+
+      {/* 错误码 */}
+      <section id="errors" className="mb-12 scroll-mt-20">
+        <h2 className="text-2xl font-semibold text-gray-800 mb-4">错误码</h2>
+        <div className="bg-white rounded-lg border p-6 space-y-3 text-sm text-gray-700 leading-relaxed">
+          <p>所有错误统一为 FastAPI 默认体格式 <code>&#123;"detail": "..."&#125;</code>。<code>detail</code> 多为中文文案，前端可直接展示。下表只列<strong>调用 <code>/v1</code> 时</strong>会遇到的状态码：</p>
+          <div className="overflow-x-auto -mx-2">
+            <table className="w-full text-xs border-collapse">
+              <thead className="bg-gray-50">
+                <tr className="text-left">
+                  <th className="px-3 py-2 border">状态码</th>
+                  <th className="px-3 py-2 border">含义</th>
+                  <th className="px-3 py-2 border">应该怎么做</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td className="px-3 py-2 border font-mono">400</td><td className="px-3 py-2 border">关闭了 auto_fallback 但请求未指定 <code>model</code></td><td className="px-3 py-2 border">补上 <code>model</code>，或开启 auto_fallback</td></tr>
+                <tr><td className="px-3 py-2 border font-mono">401</td><td className="px-3 py-2 border">缺少 / 无效 / 已禁用的 API Key 或 sub_key</td><td className="px-3 py-2 border">检查 Authorization 头；在「API Key」页确认未禁用</td></tr>
+                <tr><td className="px-3 py-2 border font-mono">402</td><td className="px-3 py-2 border">有逾期未付账单，账户已挂起</td><td className="px-3 py-2 border">在「账单」页结清逾期账单后自动恢复</td></tr>
+                <tr><td className="px-3 py-2 border font-mono">403</td><td className="px-3 py-2 border">用户被管理员停用 / 账号已注销</td><td className="px-3 py-2 border">联系平台管理员</td></tr>
+                <tr><td className="px-3 py-2 border font-mono">404</td><td className="px-3 py-2 border">没激活任何订阅 / 关闭 fallback 时 model 未匹配 / 模型不存在</td><td className="px-3 py-2 border">在「我的订阅」激活；或换 model；或在广场重新订阅</td></tr>
+                <tr><td className="px-3 py-2 border font-mono">429</td><td className="px-3 py-2 border">邮件验证码相关接口的限流（登录/注册/改邮箱/注销）</td><td className="px-3 py-2 border">60 秒后或下一小时再试</td></tr>
+                <tr><td className="px-3 py-2 border font-mono">503</td><td className="px-3 py-2 border">候选后端全部 offline / 隧道未连接</td><td className="px-3 py-2 border">稍后重试；提供者请检查 tunnel_client 是否在跑</td></tr>
+                <tr><td className="px-3 py-2 border font-mono">5xx</td><td className="px-3 py-2 border">上游 backend 或 SSE 中途异常</td><td className="px-3 py-2 border">建议客户端实现一次小退避重试</td></tr>
+              </tbody>
+            </table>
           </div>
           <p className="text-xs text-gray-500">
-            没有激活任何订阅时，<code>/v1</code> 会退化为按 <code>model</code> 参数在你<strong>自有或公开的 online 后端</strong>里查找。
+            注意：平台目前<strong>不</strong>对 <code>/v1</code> 强制 user-level 限速；429 仅出现在邮件验证码接口。后端实际吞吐由具体 backend（vLLM、上游 OpenAI 等）的容量决定，遇瓶颈时建议增加订阅或在客户端做退避。
+          </p>
+          <p className="text-xs text-gray-500">
+            未实现的端点（如 <code>/v1/embeddings</code>、<code>/v1/images</code>、<code>/v1/audio</code>、<code>/v1/batches</code>）会按 FastAPI 默认返回 <code>404 Not Found</code>。
           </p>
         </div>
       </section>
@@ -218,6 +286,12 @@ for chunk in resp:
       {/* 计费与账单 */}
       <section id="billing" className="mb-12 scroll-mt-20">
         <h2 className="text-2xl font-semibold text-gray-800 mb-4">计费与账单</h2>
+
+        {/* 价格生效 callout */}
+        <div className="bg-amber-50 border border-amber-300 rounded-lg p-4 mb-4 text-sm text-amber-900">
+          <strong>提供者请注意</strong>：首次注册后端的价格立即生效，此后通过「我的服务」修改 <code>input_price</code> / <code>output_price</code> / <code>cache_price</code> / <code>currency</code> 一律在<strong>次日 00:00（CST, UTC+8）</strong>才生效，写入后服务卡片显示「次日生效」徽标。当天涨价不会立刻吃到收益，当天降价也不会立刻让用户便宜。
+        </div>
+
         <div className="bg-white rounded-lg border p-6 space-y-3 text-sm text-gray-700 leading-relaxed">
           <ul className="list-disc list-inside space-y-1 ml-2">
             <li>
@@ -226,9 +300,6 @@ for chunk in resp:
             <li>单价由提供者在注册后端时设定，单位为「货币 / 百万 token」，分输入与输出两档；货币支持 CNY / USD</li>
             <li>
               <strong>时区与计量颗粒度</strong>：所有时间按 <code>CST（UTC+8）</code> 统计。每次请求实时写入<strong>小时桶</strong>（<code>usage_hourly</code>），每日 00:00 把前一日的小时桶聚合归档到日表（<code>usage_daily</code>）
-            </li>
-            <li>
-              <strong>价格生效时间</strong>：首次注册后端的价格立即生效；注册后通过「我的服务」修改价格/货币一律在<strong>次日 00:00（CST, UTC+8）</strong>生效。当前挂起的价格会在服务卡片上以「次日生效」徽标展示
             </li>
             <li>
               <strong>缓存命中统计</strong>：若上游返回 <code>usage.prompt_tokens_details.cached_tokens</code>（OpenAI / vLLM 前缀缓存）、<code>prompt_cache_hit_tokens</code>（DeepSeek）或 <code>cache_read_input_tokens</code>（Anthropic），网关会累计到 <code>cached_tokens</code>，并在使用明细与「我的服务」卡片上展示命中率。如果服务提供者设置了 <code>cache_price</code>，则缓存命中部分按缓存价计费、其余输入按 <code>input_price</code> 计费；若未设置，则默认按输入价的 10% 计费（对齐 OpenAI / Anthropic / DeepSeek / 阿里百炼显式缓存的行业通行折扣）。缓存价同样支持「次日 00:00 CST 生效」。
@@ -521,26 +592,100 @@ curl -X POST https://your-gateway/api/auth/login \
         </div>
       </section>
 
-      {/* 隧道模式 */}
-      <section id="tunnel" className="mb-12 scroll-mt-20">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-4">隧道模式接入</h2>
+      {/* 提供者接入指南 */}
+      <section id="provider" className="mb-12 scroll-mt-20">
+        <h2 className="text-2xl font-semibold text-gray-800 mb-4">提供者接入指南</h2>
+
+        {/* 直连 vs 隧道 */}
         <div className="bg-white rounded-lg border p-6 space-y-4 text-sm text-gray-700">
-          <p>
-            如果你的 GPU 机器在 NAT/内网，没有公网 IP，可以使用隧道模式。
-            在注册后端时选择「隧道」模式，然后在本地运行隧道客户端：
-          </p>
-          <div className="bg-gray-900 text-gray-100 rounded-lg p-4 text-sm overflow-x-auto">
+          <h3 className="font-semibold text-base text-gray-800">1. 选模式：直连 / 隧道</h3>
+          <ul className="list-disc list-inside space-y-1 ml-2">
+            <li><strong>直连（direct）</strong>：你的后端有公网可达地址（含通过反向 SSH 等手段暴露到本机 loopback 的）。注册时填 <code>url</code>，平台直接 httpx 转发。</li>
+            <li><strong>隧道（tunnel）</strong>：后端在 NAT/内网，没有公网 IP。注册后在本地跑 <code>tunnel_client.py</code>，由 client 主动 WebSocket 连到平台，平台借这条连接反向请求后端。</li>
+          </ul>
+        </div>
+
+        {/* 字段含义 */}
+        <div className="bg-white rounded-lg border p-6 space-y-3 text-sm text-gray-700 mt-4">
+          <h3 className="font-semibold text-base text-gray-800">2. 注册表单关键字段</h3>
+          <ul className="list-disc list-inside space-y-1.5 ml-2">
+            <li><code>name</code>：后端名（全局唯一）。隧道模式下，<code>tunnel_client.py</code> 的 <code>--backend-name</code> 必须与之一致。</li>
+            <li><code>models</code>：你对外暴露的 OpenAI 兼容模型 ID 列表（用户请求里的 <code>model</code> 字段）。多模型用换行分隔。</li>
+            <li><code>client_info.model_map</code>（可选）：把对外 ID 翻译成上游真实 ID。例：对外 <code>Qwen/Qwen3.6-35B-A3B</code> → 上游 <code>qwen36-awq</code>。不填即透传。</li>
+            <li><code>client_info.api_key</code>（可选，仅 direct）：转发时附加的 <code>Authorization: Bearer &lt;key&gt;</code>。<strong>仅 owner / admin 可见</strong>。</li>
+            <li><code>input_price / output_price / cache_price</code>：单位「货币 / 1M tokens」。<code>cache_price</code> 不填默认按 <code>input_price × 0.1</code> 计费。</li>
+          </ul>
+        </div>
+
+        {/* 隧道客户端 */}
+        <div className="bg-white rounded-lg border p-6 space-y-3 text-sm text-gray-700 mt-4">
+          <h3 className="font-semibold text-base text-gray-800">3. 隧道客户端</h3>
+          <p>仓库 <code>backend/tunnel_client.py</code>，依赖 <code>websockets</code> + <code>httpx</code>：</p>
+          <div className="bg-gray-900 text-gray-100 rounded-lg p-4 text-xs overflow-x-auto">
             <pre>{`python tunnel_client.py \\
-  --gateway wss://your-gateway/ws/tunnel \\
-  --token sk-你的-provider-token \\
-  --backend-name 你的后端名称 \\
-  --local-url http://localhost:8000`}</pre>
+  --gateway   wss://your-gateway/ws/tunnel \\
+  --token     sk-你的-provider-API-Key \\
+  --backend-name 你注册的后端名 \\
+  --local-url http://127.0.0.1:8000`}</pre>
           </div>
           <ul className="list-disc list-inside space-y-1 ml-2">
-            <li>连接建立后后端自动标记为 <code>online</code>，断开后自动 <code>offline</code></li>
-            <li>平台对每个 WebSocket 帧不设总超时（流式生成可任意长），仅对空闲做保护</li>
-            <li>SSE 流按行实时转发，首字延迟与直连接近</li>
-            <li>平台定期发送健康探测验证后端可用性</li>
+            <li><code>--token</code> 用你账号下任一 API Key（<code>sk-xxxx</code>），不是登录密码。</li>
+            <li>连接建立后后端自动标记 <code>online</code>，断开自动 <code>offline</code>。客户端内置自动重连与心跳，无需 systemd 之外的额外守护。</li>
+            <li>SSE 按行实时转发；流式生成无总超时，仅做空闲保护。</li>
+          </ul>
+
+          <p className="text-gray-800 font-medium mt-2">推荐用 systemd 托管（24×7）：</p>
+          <div className="bg-gray-900 text-gray-100 rounded-lg p-4 text-xs overflow-x-auto">
+            <pre>{`# /etc/systemd/system/tianshu-tunnel@.service
+[Unit]
+Description=Tianshu tunnel client (%i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=lkang
+WorkingDirectory=/home/lkang/llm-gateway/backend
+EnvironmentFile=/etc/tianshu/%i.env
+ExecStart=/home/lkang/llm-gateway/backend/.venv/bin/python tunnel_client.py \\
+  --gateway   \${GATEWAY} \\
+  --token     \${TOKEN} \\
+  --backend-name \${BACKEND_NAME} \\
+  --local-url \${LOCAL_URL}
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target`}</pre>
+          </div>
+          <div className="bg-gray-900 text-gray-100 rounded-lg p-4 text-xs overflow-x-auto">
+            <pre>{`# /etc/tianshu/qwen36.env
+GATEWAY=wss://your-gateway/ws/tunnel
+TOKEN=sk-xxxxxxxx
+BACKEND_NAME=vllm-qwen36-awq
+LOCAL_URL=http://127.0.0.1:8002
+
+# 启用
+sudo systemctl daemon-reload
+sudo systemctl enable --now tianshu-tunnel@qwen36
+sudo journalctl -u tianshu-tunnel@qwen36 -f`}</pre>
+          </div>
+        </div>
+
+        {/* 审核状态机 */}
+        <div className="bg-white rounded-lg border p-6 space-y-3 text-sm text-gray-700 mt-4">
+          <h3 className="font-semibold text-base text-gray-800">4. 上架审核流程</h3>
+          <p>新注册的后端默认 <code>offline</code> + <code>private</code>，只对 owner 可见。状态机：</p>
+          <pre className="bg-gray-50 border rounded p-3 text-xs leading-relaxed overflow-x-auto">{`offline ──[申请上架]──▶ pending ──[admin approve]──▶ listed
+   ▲                       │
+   │                       └─[admin reject + note]──▶ offline (附 review_note)
+   │
+   └──[owner 主动下架 / admin 强制下架]── listed`}</pre>
+          <ul className="list-disc list-inside space-y-1 ml-2">
+            <li>「申请上架」按钮在 <a href="/dashboard/services" className="text-indigo-700 underline">我的服务</a> 卡片上。</li>
+            <li>被驳回时 <code>review_note</code> 会显示在卡片上；按 note 修改后再次点「申请上架」即可重新进入 pending。</li>
+            <li>已 listed 的后端，编辑价格/货币/cache 价不会触发重新审核，但会按上面「次日 00:00 CST 生效」的规则延后。</li>
+            <li>注销账号或下架前必须先把所有 listed/pending 的后端撤回到 offline。</li>
           </ul>
         </div>
       </section>
