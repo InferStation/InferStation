@@ -247,8 +247,14 @@ export default function MyModelsPage() {
               groups[g].rows.push(s)
             })
             groups.sort((a, b) => a.firstIdx - b.firstIdx)
-            const activatedGroups = groups.filter((g) => g.rows.some((r) => !!r.is_activated))
-            const inactiveGroups = groups.filter((g) => g.rows.every((r) => !r.is_activated))
+            // 按行（每个 backend）分别归入"已激活"/"未激活"。同一个 model 若同时有激活和未激活的 backend，
+            // 会在两个区各出现一张卡，分别只列对应的 backend。
+            const activatedGroups = groups
+              .map((g) => ({ ...g, rows: g.rows.filter((r) => !!r.is_activated) }))
+              .filter((g) => g.rows.length > 0)
+            const inactiveGroups = groups
+              .map((g) => ({ ...g, rows: g.rows.filter((r) => !r.is_activated) }))
+              .filter((g) => g.rows.length > 0)
 
             const renderGroup = (g: { model: string; rows: Sub[] }, sectionKey: "act" | "inact") => {
               const cardKey = `${sectionKey}:${g.model}`
