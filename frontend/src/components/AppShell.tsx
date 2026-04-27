@@ -19,10 +19,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
-      <div className="flex gap-6 min-h-[calc(100vh-8rem)]">
+    <main className="flex-1 w-full">
+      <div className="flex min-h-[calc(100vh-8rem)]">
         <SideNav />
-        <div className="flex-1 min-w-0">{children}</div>
+        <div className="flex-1 min-w-0 px-4 sm:px-6 lg:px-8 py-6">
+          <div className="max-w-7xl mx-auto w-full">{children}</div>
+        </div>
       </div>
     </main>
   )

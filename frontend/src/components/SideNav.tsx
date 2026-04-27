@@ -62,8 +62,8 @@ export default function SideNav() {
   }
 
   return (
-    <aside className="w-56 shrink-0 hidden md:block">
-      <nav className="bg-white rounded-lg border p-3 sticky top-20 space-y-4">
+    <aside className="w-56 shrink-0 hidden md:block border-r border-gray-200 bg-white">
+      <nav className="sticky top-16 p-3 space-y-4 max-h-[calc(100vh-4rem)] overflow-y-auto">
         {groups.map((g) => (
           <div key={g.title}>
             <div className="px-2 mb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
