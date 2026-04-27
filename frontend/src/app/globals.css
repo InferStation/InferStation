@@ -73,3 +73,52 @@ html, body {
 .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
 .scrollbar-thin::-webkit-scrollbar-thumb { background: rgb(var(--line-strong)); border-radius: 999px; }
 .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+
+/* Dark mode: 把残留的白底/浅灰底输入控件、卡片、悬浮层统一压暗，避免白色刺眼 */
+.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+.dark textarea,
+.dark select {
+  background-color: rgb(var(--elevated));
+  color: rgb(var(--fg));
+  border-color: rgb(var(--line-strong));
+}
+.dark input::placeholder,
+.dark textarea::placeholder { color: rgb(var(--fg-subtle)); }
+.dark input:disabled,
+.dark textarea:disabled,
+.dark select:disabled {
+  background-color: rgb(var(--surface));
+  color: rgb(var(--fg-muted));
+  opacity: 0.7;
+}
+/* autofill 黄白底 */
+.dark input:-webkit-autofill,
+.dark textarea:-webkit-autofill,
+.dark select:-webkit-autofill {
+  -webkit-text-fill-color: rgb(var(--fg));
+  -webkit-box-shadow: 0 0 0 1000px rgb(var(--elevated)) inset;
+  caret-color: rgb(var(--fg));
+}
+
+/* 把页面里大量散落的硬编码 bg-white / bg-gray-50 / bg-gray-100 在深色下重映射成 surface 色 */
+.dark .bg-white { background-color: rgb(var(--surface)) !important; }
+.dark .bg-gray-50 { background-color: rgb(var(--bg)) !important; }
+.dark .bg-gray-100 { background-color: rgb(var(--accent-soft)) !important; }
+.dark .bg-gray-200 { background-color: rgb(var(--line-strong)) !important; }
+
+/* 边框灰 → 深色边框 */
+.dark .border-gray-100,
+.dark .border-gray-200,
+.dark .border-gray-300 { border-color: rgb(var(--line)) !important; }
+
+/* 文本灰阶 → 深色阅读色 */
+.dark .text-gray-900 { color: rgb(var(--fg)) !important; }
+.dark .text-gray-800,
+.dark .text-gray-700 { color: rgb(var(--fg)) !important; }
+.dark .text-gray-600,
+.dark .text-gray-500 { color: rgb(var(--fg-muted)) !important; }
+.dark .text-gray-400 { color: rgb(var(--fg-subtle)) !important; }
+
+/* hover 浅底 */
+.dark .hover\:bg-gray-50:hover,
+.dark .hover\:bg-gray-100:hover { background-color: rgb(var(--accent-soft)) !important; }
