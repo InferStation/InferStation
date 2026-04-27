@@ -347,10 +347,10 @@ export default function MyModelsPage() {
                                 </span>
                                 {!!s.is_owned && (
                                   <span
-                                    className="inline-flex items-center gap-1 text-amber-600"
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200"
                                     title="自己注册的模型服务（自动订阅，无法取消订阅）"
                                   >
-                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/></svg>
+                                    自有
                                   </span>
                                 )}
                               </div>
