@@ -263,27 +263,19 @@ export default function ModelsPage() {
                               </div>
                               <div className="flex items-center gap-2">
                                 {subscribed ? (
-                                  <>
+                                  owned ? (
+                                    <span className="px-3 py-1.5 rounded-lg text-xs font-medium text-gray-500 bg-gray-100" title="自己注册的模型服务，无法取消订阅">
+                                      自动订阅
+                                    </span>
+                                  ) : (
                                     <button
-                                      onClick={(e) => copyApi(e, m)}
-                                      className="px-3 py-1.5 rounded-lg text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors"
+                                      onClick={(e) => handleUnsubscribe(e, m)}
+                                      disabled={subLoading === rowKey}
+                                      className="px-3 py-1.5 rounded-lg text-xs font-medium text-red-500 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-50"
                                     >
-                                      {copied === rowKey ? "已复制 API" : "复制 API 地址"}
+                                      {subLoading === rowKey ? "..." : "取消订阅"}
                                     </button>
-                                    {owned ? (
-                                      <span className="px-3 py-1.5 rounded-lg text-xs font-medium text-gray-500 bg-gray-100" title="自己注册的模型服务，无法取消订阅">
-                                        自动订阅
-                                      </span>
-                                    ) : (
-                                      <button
-                                        onClick={(e) => handleUnsubscribe(e, m)}
-                                        disabled={subLoading === rowKey}
-                                        className="px-3 py-1.5 rounded-lg text-xs font-medium text-red-500 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-50"
-                                      >
-                                        {subLoading === rowKey ? "..." : "取消订阅"}
-                                      </button>
-                                    )}
-                                  </>
+                                  )
                                 ) : (
                                   <button
                                     onClick={(e) => handleSubscribe(e, m)}
