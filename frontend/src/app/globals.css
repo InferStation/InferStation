@@ -28,6 +28,32 @@
   --danger: 220 38 38;          /* red-600 */
 }
 
+.dark {
+  /* Surface */
+  --bg: 14 14 16;               /* page background */
+  --surface: 22 22 24;          /* cards / panels */
+  --elevated: 28 28 30;         /* popovers / modals */
+
+  /* Lines */
+  --line: 38 38 42;
+  --line-strong: 60 60 66;
+
+  /* Foreground */
+  --fg: 240 240 242;
+  --fg-muted: 168 168 174;
+  --fg-subtle: 120 120 128;
+
+  /* Accent — invert: white on dark */
+  --accent: 240 240 242;
+  --accent-fg: 14 14 16;
+  --accent-soft: 38 38 42;
+
+  /* Status */
+  --success: 52 211 153;        /* emerald-400 */
+  --warning: 251 191 36;        /* amber-400 */
+  --danger: 248 113 113;        /* red-400 */
+}
+
 html, body {
   background-color: rgb(var(--bg));
   color: rgb(var(--fg));

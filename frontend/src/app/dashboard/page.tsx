@@ -3,12 +3,14 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useAuth } from "@/context/AuthContext"
+import { useTheme, type ThemeMode } from "@/context/ThemeContext"
 import { apiFetch } from "@/lib/api"
 import { formatByCurrency } from "@/lib/currency"
 import PasswordInput, { checkStrength } from "@/components/PasswordInput"
 
 export default function AccountPage() {
   const { user, refreshUser, logout } = useAuth()
+  const { mode: themeMode, setMode: setThemeMode } = useTheme()
   const [oldPw, setOldPw] = useState("")
   const [newPw, setNewPw] = useState("")
   const [confirmPw, setConfirmPw] = useState("")
@@ -180,6 +182,36 @@ export default function AccountPage() {
             <span className="font-medium">
               {user.role === "admin" ? "管理员" : user.role === "both" ? "消费者+提供者" : user.role === "provider" ? "提供者" : "消费者"}
             </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg border p-6 mb-6">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h2 className="font-semibold">外观主题</h2>
+            <p className="text-xs text-gray-500 mt-1">默认跟随系统；切换后会立即生效并记住选择</p>
+          </div>
+          <div className="inline-flex items-center rounded-lg border border-line bg-white p-0.5">
+            {(
+              [
+                { value: "light", label: "浅色" },
+                { value: "dark", label: "深色" },
+                { value: "system", label: "跟随系统" },
+              ] as { value: ThemeMode; label: string }[]
+            ).map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setThemeMode(opt.value)}
+                className={`px-3 h-8 text-xs rounded-md transition-colors ${
+                  themeMode === opt.value
+                    ? "bg-fg text-accent-fg"
+                    : "text-gray-600 hover:bg-accent-soft"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
         </div>
       </div>

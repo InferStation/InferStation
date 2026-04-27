@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { Inter, Noto_Sans_SC, JetBrains_Mono } from "next/font/google"
 import "./globals.css"
 import { AuthProvider } from "@/context/AuthContext"
+import { ThemeProvider } from "@/context/ThemeContext"
 import Footer from "@/components/Footer"
 import AppShell from "@/components/AppShell"
 
@@ -15,13 +16,21 @@ export const metadata: Metadata = {
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // Pre-hydration script: read theme preference and apply class before paint
+  // to avoid light/dark flash.
+  const themeInit = `(function(){try{var s=localStorage.getItem('theme');var m=(s==='light'||s==='dark'||s==='system')?s:'system';var d=m==='dark'||(m==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d)document.documentElement.classList.add('dark');document.documentElement.style.colorScheme=d?'dark':'light';}catch(e){}})();`
   return (
     <html lang="zh-CN" className={`${inter.variable} ${noto.variable} ${mono.variable}`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInit }} />
+      </head>
       <body className="bg-bg text-fg min-h-screen flex flex-col font-sans antialiased">
-        <AuthProvider>
-          <AppShell>{children}</AppShell>
-          <Footer />
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <AppShell>{children}</AppShell>
+            <Footer />
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   )
