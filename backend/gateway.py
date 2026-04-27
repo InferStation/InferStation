@@ -1650,8 +1650,10 @@ async def list_subscriptions(user=Depends(get_current_user)):
         cur = await db.execute(
             "SELECT s.id, s.backend_id, s.model, s.sub_key, s.is_active, s.is_activated, s.created_at, s.sort_order, "
             "b.name as backend, b.status as backend_status, b.input_price, b.output_price, b.cache_price, b.currency, "
+            "u.username as provider, "
             "CASE WHEN b.owner_id = ? THEN 1 ELSE 0 END as is_owned "
             "FROM subscriptions s JOIN backends b ON s.backend_id = b.id "
+            "LEFT JOIN users u ON b.owner_id = u.id "
             "WHERE s.user_id = ? ORDER BY s.sort_order ASC, s.id ASC",
             (user["id"], user["id"]),
         )

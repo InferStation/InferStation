@@ -17,6 +17,7 @@ interface Sub {
   input_price: number | null
   output_price: number | null
   currency: string
+  provider?: string | null
   is_owned?: number | boolean
 }
 
@@ -281,13 +282,9 @@ export default function MyModelsPage() {
                       >
                         ▶
                       </span>
-                      <Link
-                        href={`/models/${g.rows[0].backend_id}/${g.model}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="font-semibold text-lg text-gray-900 hover:text-indigo-600"
-                      >
+                      <span className="font-semibold text-lg text-gray-900 break-all">
                         {g.model}
-                      </Link>
+                      </span>
                       <span
                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
                           anyOnline ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"
@@ -334,15 +331,31 @@ export default function MyModelsPage() {
                               className={`${g.rows.length > 1 ? "px-3 py-3" : ""} flex items-center justify-between flex-wrap gap-2`}
                             >
                               <div className="flex items-center gap-3 flex-wrap text-sm">
-                                <span className="text-gray-700">
-                                  后端：<span className="font-medium text-gray-900">{s.backend}</span>
+                                <span className="inline-flex items-center gap-1 text-gray-700" title={`后端：${s.backend}`}>
+                                  <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" /></svg>
+                                  <span className="font-medium text-gray-900">{s.backend}</span>
                                 </span>
+                                <span className="inline-flex items-center gap-1 text-gray-600" title={`提供者：${s.provider || "共享"}`}>
+                                  <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                                  <span>{s.provider || "共享"}</span>
+                                </span>
+                                {s.input_price != null && (
+                                  <span className="inline-flex items-center gap-1 text-gray-600" title="价格（输入 / 输出，每 1M tokens）">
+                                    <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                    {s.input_price === 0 && s.output_price === 0 ? (
+                                      <span className="text-emerald-600 font-semibold">Free</span>
+                                    ) : (
+                                      <span>{s.currency === "USD" ? "$" : "¥"}{s.input_price}/M · {s.currency === "USD" ? "$" : "¥"}{s.output_price}/M <span className="text-[10px] text-gray-400">{s.currency || "CNY"}</span></span>
+                                    )}
+                                  </span>
+                                )}
                                 <span
                                   className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] font-medium ${
                                     s.backend_status === "online"
                                       ? "bg-green-50 text-green-700"
                                       : "bg-red-50 text-red-600"
                                   }`}
+                                  title={s.backend_status === "online" ? "在线" : "离线"}
                                 >
                                   <span
                                     className={`w-1 h-1 rounded-full ${
@@ -352,24 +365,16 @@ export default function MyModelsPage() {
                                   {s.backend_status === "online" ? "在线" : "离线"}
                                 </span>
                                 {myRank !== null && (
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[11px] font-medium bg-indigo-100 text-indigo-700 border border-indigo-200">
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[11px] font-medium bg-indigo-100 text-indigo-700 border border-indigo-200" title="按优先级回退顺序">
                                     优先级 {myRank}
                                   </span>
                                 )}
                                 {s.is_owned && (
                                   <span
-                                    className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200"
-                                    title="自己注册的模型服务，无法取消订阅"
+                                    className="inline-flex items-center gap-1 text-amber-600"
+                                    title="自己注册的模型服务（自动订阅，无法取消订阅）"
                                   >
-                                    自动订阅
-                                  </span>
-                                )}
-                                <span className="text-xs text-gray-400">订阅于 {s.created_at?.replace("T", " ")}</span>
-                                {s.input_price != null && (
-                                  <span className="text-xs text-gray-400">
-                                    {s.input_price === 0 && s.output_price === 0
-                                      ? "Free"
-                                      : `${s.currency === "USD" ? "$" : "¥"}${s.input_price}/M 输入 / ${s.currency === "USD" ? "$" : "¥"}${s.output_price}/M 输出 (${s.currency || "CNY"})`}
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/></svg>
                                   </span>
                                 )}
                               </div>
