@@ -27,7 +27,7 @@ export default function SlaPage() {
         </p>
         <ul className="list-disc list-inside space-y-1">
           <li>定期对在线后端执行健康探测（<code>/v1/models</code> 检查），离线后端自动从路由中剔除</li>
-          <li>用户可激活多条订阅并设置优先级，<strong>auto_fallback</strong> 开启后首选不可用会自动尝试其他订阅</li>
+          <li>用户可激活多条订阅并设置优先级：请求体 <code>model</code> 为 <code>Auto</code> 时跨订阅回退；为 <code>&lt;model&gt;</code> 时仅在该 model 的多个后端间回退；为 <code>&lt;model&gt;/&lt;backend_name&gt;</code> 时锁定单一后端不回退</li>
           <li>隧道后端连接断开自动下线，恢复后自动上线</li>
         </ul>
 
@@ -37,7 +37,7 @@ export default function SlaPage() {
             上游返回的 <code>usage</code> 是计费依据；若上游未返回 usage（如连接中途断开），该请求不计费
           </li>
           <li>
-            启用 auto_fallback 时，若首选后端无完整响应，则不按首选计费；只对最终<strong>成功产生 usage</strong>
+            请求 <code>model</code> 为 <code>Auto</code> 或 <code>&lt;model&gt;</code> 会触发回退；若首选后端无完整响应，则不按首选计费，只对最终<strong>成功产生 usage</strong>
             的那一跳计费
           </li>
           <li>账单和用量明细可随时在「用量」「账单」页查询</li>

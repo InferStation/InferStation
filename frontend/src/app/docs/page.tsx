@@ -154,7 +154,7 @@ export default function DocsPage() {
   -H "Content-Type: application/json" \\
   -H "Authorization: Bearer sk-your-api-key" \\
   -d '{
-    "model": "Qwen/Qwen3-8B",
+    "model": "Auto",
     "messages": [{"role": "user", "content": "你好"}],
     "stream": true
   }'`}</pre>
@@ -176,7 +176,8 @@ client = OpenAI(
 )
 
 resp = client.chat.completions.create(
-    model="Qwen/Qwen3-8B",
+    # 三种形态: "Auto" / "<model>" / "<model>/<backend_name>"
+    model="Auto",
     messages=[{"role": "user", "content": "你好"}],
     stream=True,
 )
@@ -193,40 +194,39 @@ for chunk in resp:
       <section id="routing" className="mb-12 scroll-mt-20">
         <h2 className="text-2xl font-semibold text-gray-800 mb-4">路由与失败转移</h2>
         <div className="bg-white rounded-lg border p-6 space-y-3 text-sm text-gray-700 leading-relaxed">
-          <p>调用 <code>/v1/chat/completions</code>、<code>/v1/completions</code>、<code>/v1/responses</code> 时，平台只在你<strong>已激活的订阅</strong>中按优先级（订阅页可拖拽 ↑↓）选后端。同一个模型可同时订阅多个 provider，订阅时默认按 <code>input_price + output_price</code> 升序插入到该模型组末尾，可手动再调整顺序。</p>
+          <p>
+            调用 <code>/v1/chat/completions</code>、<code>/v1/completions</code>、<code>/v1/responses</code> 时，平台只在你<strong>已激活的订阅</strong>里按优先级（订阅页可拖拽 ↑↓）选后端。同一个模型可同时订阅多个 provider，订阅时默认按 <code>input_price + output_price</code> 升序插入到该模型组末尾，可手动再调整顺序。<strong>路由完全由请求体的 <code>model</code> 字段决定</strong>，三种形态：
+          </p>
 
-          <div className="rounded-lg border border-line bg-accent-soft p-3 text-xs text-fg space-y-1.5">
-            <div className="font-semibold">两级回退（auto_fallback = ON）</div>
-            <div><span className="font-mono bg-white/60 px-1 rounded">第 1 级</span> 同一 <code>model</code> 内：按订阅优先级依次尝试，连接失败 / 5xx / 首字节超时 → 跳到下一个 provider</div>
-            <div><span className="font-mono bg-white/60 px-1 rounded">第 2 级</span> 该 model 的所有 provider 全部失败 → 退到下一个已激活 model（按全局优先级），重复第 1 级</div>
-            <div className="text-fg">✅ 流式请求：仅在<strong>首个 chunk 之前</strong>可重试；一旦开始向客户端 yield 数据就不再切换。</div>
-            <div className="text-fg">✅ 4xx（你的请求自身有问题，比如 token 超限、参数非法）<strong>不重试</strong>，直接透传。</div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 my-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 my-2">
             <div className="border rounded-lg p-3 bg-emerald-50 border-emerald-200">
-              <div className="font-semibold text-emerald-900 mb-1">auto_fallback = ON（默认）</div>
-              <ul className="text-xs space-y-1 list-disc list-inside">
-                <li>第 1 级：先把候选限定到 <code>model</code> 匹配的那一组，按优先级穷尽</li>
-                <li>第 2 级：该组全部失败 → 跨 model 退到下一组（仍按全局优先级）</li>
-                <li>没有激活订阅：退化到自有 / 公开 online 后端按 <code>model</code> 查找；都没有 → 404</li>
-                <li>所有候选均失败 → <strong>503</strong>，错误体里带最多 5 条尝试摘要</li>
-              </ul>
+              <div className="font-mono font-semibold text-emerald-900 mb-1">"model": "Auto"</div>
+              <div className="text-xs">在<strong>所有已激活订阅</strong>之间按全局优先级回退（先在线后离线，组内 sort_order 升序）。</div>
+            </div>
+            <div className="border rounded-lg p-3 bg-sky-50 border-sky-200">
+              <div className="font-mono font-semibold text-sky-900 mb-1">"model": "&lt;model&gt;"</div>
+              <div className="text-xs">例如 <code>"Qwen/Qwen3-32B-AWQ"</code>。仅在该模型对应的多个后端之间回退，<strong>不</strong>跨模型。</div>
             </div>
             <div className="border rounded-lg p-3 bg-rose-50 border-rose-200">
-              <div className="font-semibold text-rose-900 mb-1">auto_fallback = OFF</div>
-              <ul className="text-xs space-y-1 list-disc list-inside">
-                <li>必须显式指定 <code>model</code>，且 model 必须等于某条已激活订阅</li>
-                <li>同一 model 多个订阅：仍会按优先级回退（第 1 级），只是<strong>不会</strong>跨 model</li>
-                <li>不指定 model → <strong>400</strong></li>
-                <li>没匹配到 → <strong>404</strong></li>
-                <li>该 model 全部 provider 都失败 → <strong>503</strong></li>
-              </ul>
+              <div className="font-mono font-semibold text-rose-900 mb-1">"model": "&lt;model&gt;/&lt;backend_name&gt;"</div>
+              <div className="text-xs">例如 <code>"Qwen/Qwen3-32B-AWQ/vllm-qwen36-awq-45"</code>。<strong>锁定</strong>到该一个后端，离线即 503，<strong>不</strong>回退。</div>
             </div>
           </div>
 
-          <p className="text-xs text-gray-500">开关在「我的订阅」页顶部，或通过 <code>POST /api/user/auto-fallback</code> 切换（请求体 <code>&#123;"enabled": true|false&#125;</code>）。</p>
-          <p className="text-xs text-gray-500">没有激活任何订阅时，<code>/v1</code> 退化为按 <code>model</code> 参数在你<strong>自有或公开的 online 后端</strong>里查找；这条路径不计入路由日志的「按订阅命中」统计。</p>
+          <div className="rounded-lg border border-line bg-accent-soft p-3 text-xs text-fg space-y-1.5">
+            <div className="font-semibold">回退机制</div>
+            <div>· 候选清单按上述三种形态生成后，平台按顺序逐个尝试。<strong>连接失败 / 5xx / 首字节超时</strong> → 跳到下一个候选。</div>
+            <div>· <strong>4xx</strong>（你的请求自身有问题：参数非法、上游 401、context 超限）<strong>不重试</strong>，直接透传错误。</div>
+            <div>· 流式请求：仅在<strong>首个 chunk 之前</strong>可重试；一旦开始向客户端 yield 数据就锁死该 provider。</div>
+            <div>· 全部候选失败 → <strong>503</strong>，错误体里带最多 5 条尝试摘要。</div>
+          </div>
+
+          <p className="text-xs text-gray-500">
+            可用 model 列表（含 Auto / 模型名 / 模型名/后端名 三种形态）通过 <code>GET /v1/models</code> 拉取，需要 Bearer API Key。
+          </p>
+          <p className="text-xs text-gray-500">
+            没有激活任何订阅时，<code>/v1</code> 会退化为按原始 <code>model</code> 字段在你<strong>自有或公开的 online 后端</strong>里查找；这条路径不计入路由日志的「按订阅命中」统计。
+          </p>
         </div>
       </section>
 
@@ -245,11 +245,11 @@ for chunk in resp:
                 </tr>
               </thead>
               <tbody>
-                <tr><td className="px-3 py-2 border font-mono">400</td><td className="px-3 py-2 border">关闭了 auto_fallback 但请求未指定 <code>model</code></td><td className="px-3 py-2 border">补上 <code>model</code>，或开启 auto_fallback</td></tr>
+                <tr><td className="px-3 py-2 border font-mono">400</td><td className="px-3 py-2 border">请求未指定 <code>model</code></td><td className="px-3 py-2 border">补上 <code>model</code> 字段（<code>Auto</code> / <code>&lt;model&gt;</code> / <code>&lt;model&gt;/&lt;backend_name&gt;</code> 三种之一）</td></tr>
                 <tr><td className="px-3 py-2 border font-mono">401</td><td className="px-3 py-2 border">缺少 / 无效 / 已禁用的 API Key</td><td className="px-3 py-2 border">检查 Authorization 头；在「API Key」页确认未禁用</td></tr>
                 <tr><td className="px-3 py-2 border font-mono">402</td><td className="px-3 py-2 border">有逾期未付账单，账户已挂起</td><td className="px-3 py-2 border">在「账单」页结清逾期账单后自动恢复</td></tr>
                 <tr><td className="px-3 py-2 border font-mono">403</td><td className="px-3 py-2 border">用户被管理员停用 / 账号已注销</td><td className="px-3 py-2 border">联系平台管理员</td></tr>
-                <tr><td className="px-3 py-2 border font-mono">404</td><td className="px-3 py-2 border">没激活任何订阅 / 关闭 fallback 时 model 未匹配 / 模型不存在</td><td className="px-3 py-2 border">在「我的订阅」激活；或换 model；或在广场重新订阅</td></tr>
+                <tr><td className="px-3 py-2 border font-mono">404</td><td className="px-3 py-2 border">model 未匹配任何已激活订阅 / 模型不存在</td><td className="px-3 py-2 border">在「我的订阅」激活；或换 model；或在广场重新订阅</td></tr>
                 <tr><td className="px-3 py-2 border font-mono">429</td><td className="px-3 py-2 border">邮件验证码相关接口的限流（登录/注册/改邮箱/注销）</td><td className="px-3 py-2 border">60 秒后或下一小时再试</td></tr>
                 <tr><td className="px-3 py-2 border font-mono">503</td><td className="px-3 py-2 border">候选后端全部 offline / 隧道未连接</td><td className="px-3 py-2 border">稍后重试；提供者请检查 tunnel_client 是否在跑</td></tr>
                 <tr><td className="px-3 py-2 border font-mono">5xx</td><td className="px-3 py-2 border">上游 backend 或 SSE 中途异常</td><td className="px-3 py-2 border">建议客户端实现一次小退避重试</td></tr>
@@ -452,11 +452,6 @@ curl -X POST https://your-gateway/api/auth/login \
                 <td className="px-4 py-2"><code className="text-red-600">DELETE</code></td>
                 <td className="px-4 py-2 font-mono text-xs">/api/keys/&#123;key_id&#125;</td>
                 <td className="px-4 py-2 text-gray-600">删除 Key</td>
-              </tr>
-              <tr>
-                <td className="px-4 py-2"><code className="text-fg">POST</code></td>
-                <td className="px-4 py-2 font-mono text-xs">/api/user/auto-fallback</td>
-                <td className="px-4 py-2 text-gray-600">开关自动失败转移</td>
               </tr>
               <tr>
                 <td className="px-4 py-2"><code className="text-green-600">GET</code></td>

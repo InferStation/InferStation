@@ -613,24 +613,6 @@ async def settle_now(user=Depends(get_current_user)):
     }
 
 
-class AutoFallbackRequest(BaseModel):
-    enabled: bool
-
-
-@app.post("/api/user/auto-fallback")
-async def set_auto_fallback(req: AutoFallbackRequest, user=Depends(get_current_user)):
-    db = await get_db()
-    try:
-        await db.execute(
-            "UPDATE users SET auto_fallback = ? WHERE id = ?",
-            (1 if req.enabled else 0, user["id"]),
-        )
-        await db.commit()
-    finally:
-        await db.close()
-    return {"ok": True, "auto_fallback": req.enabled}
-
-
 # ══════════════════════════════════════════════════════════
 #  User - Role upgrade
 # ══════════════════════════════════════════════════════════
@@ -1803,31 +1785,25 @@ async def authenticate_api_key(request: Request):
     return row
 
 
-async def get_active_subscription_candidates(user_id: int, auto_fallback: bool = True,
+async def get_active_subscription_candidates(user_id: int,
                                                requested_model: str | None = None):
-    """Return an ordered list of (backend_row, forced_model) candidates the
-    request can be tried against, plus the canonical model name to bill against.
+    """Return an ordered list of candidate backends for the request.
 
-    Ordering rules:
-      - All subscriptions are activated subs (is_active=1 AND is_activated=1) joined with
-        their backends, ordered by ``sort_order ASC, id ASC``.
-      - When ``requested_model`` is given AND ``auto_fallback=True``: candidates
-        whose model == requested_model come first (in sort_order); the rest of
-        the activated subs follow as cross-model fallback.
-      - When ``requested_model`` is given AND ``auto_fallback=False``: only
-        candidates whose model == requested_model are returned. 404 if none.
-      - When ``requested_model`` is empty AND ``auto_fallback=True``: all
-        activated subs in sort_order.
-      - When ``requested_model`` is empty AND ``auto_fallback=False``: 400 (caller
-        must specify model).
+    The ``model`` field in the request controls routing in 3 modes:
 
-    Offline candidates (status != 'online') are still returned but pushed to the
-    end of their respective tier so we try online ones first; the actual call-site
-    loops and skips/retries based on real connection result.
+      - ``"Auto"`` (case-insensitive): full auto-fallback across **all** of the
+        user's activated subscriptions, in sort_order, online first.
+      - ``"<model>"`` (e.g. ``"Qwen/Qwen3-32B-AWQ"``): fallback **only within**
+        backends serving that exact model, in sort_order, online first.
+      - ``"<model>/<backend_name>"`` (e.g.
+        ``"Qwen/Qwen3-32B-AWQ/vllm-qwen36-awq-45"``): pin to one specific
+        backend; **no** fallback. Only one candidate returned.
 
-    Returns: list of dicts each containing the backend row plus 'forced_model'
-    (the canonical model name to use). Empty list means "fallback to public
-    backend lookup" (only when user has no activated subs AND auto_fallback=True).
+    Empty / unknown model → 4xx with the available list spelled out.
+
+    Returns: list of dicts each containing the backend row plus ``forced_model``
+    (the canonical model name to bill against). Empty list means "user has no
+    activated subscriptions" — caller may fall back to public backend lookup.
     """
     db = await get_db()
     try:
@@ -1843,38 +1819,46 @@ async def get_active_subscription_candidates(user_id: int, auto_fallback: bool =
         await db.close()
 
     if not rows:
-        if auto_fallback:
-            return []
-        raise HTTPException(404, "你还没有激活任何订阅模型服务")
+        return []
 
-    # Manual mode: must match requested_model and only that group is tried.
-    if not auto_fallback:
-        if not requested_model:
-            available = sorted({r["model"] for r in rows})
-            raise HTTPException(400,
-                f"自动回退已关闭，请在请求中显式指定 model，可用：{available}")
-        matches = [r for r in rows if r["model"] == requested_model]
-        if not matches:
-            available = sorted({r["model"] for r in rows})
-            raise HTTPException(404,
-                f"模型 '{requested_model}' 不在你已激活的订阅中。可用：{available}")
-        # Online first, offline after (call site will skip offline tunnels).
-        matches.sort(key=lambda r: 0 if r.get("status") == "online" else 1)
+    def available_models() -> list[str]:
+        out: list[str] = ["Auto"]
+        seen_models: set[str] = set()
+        for r in rows:
+            if r["model"] not in seen_models:
+                seen_models.add(r["model"])
+                out.append(r["model"])
+        for r in rows:
+            out.append(f"{r['model']}/{r['name']}")
+        return out
+
+    if not requested_model:
+        raise HTTPException(400,
+            f"请在请求中指定 model；可用：{available_models()}")
+
+    online_first = lambda r: 0 if r.get("status") == "online" else 1
+
+    # Mode 1: Auto → all activated subs.
+    if requested_model.lower() == "auto":
+        ordered = sorted(rows, key=lambda r: (online_first(r), r["sort_order"]))
+        return [_candidate(r) for r in ordered]
+
+    # Mode 2: exact model match → fallback within that model only.
+    matches = [r for r in rows if r["model"] == requested_model]
+    if matches:
+        matches.sort(key=online_first)
         return [_candidate(r) for r in matches]
 
-    # Auto-fallback ON: requested model group first (online > offline within group),
-    # then everything else (online > offline within rest).
-    if requested_model:
-        same = [r for r in rows if r["model"] == requested_model]
-        rest = [r for r in rows if r["model"] != requested_model]
-        same.sort(key=lambda r: 0 if r.get("status") == "online" else 1)
-        rest.sort(key=lambda r: (0 if r.get("status") == "online" else 1, r["sort_order"]))
-        ordered = same + rest
-    else:
-        ordered = sorted(rows,
-            key=lambda r: (0 if r.get("status") == "online" else 1, r["sort_order"]))
+    # Mode 3: "<model>/<backend_name>" → pin to one backend, no fallback.
+    if "/" in requested_model:
+        prefix, last = requested_model.rsplit("/", 1)
+        pinned = [r for r in rows
+                  if r["model"] == prefix and r["name"] == last]
+        if pinned:
+            return [_candidate(pinned[0])]
 
-    return [_candidate(r) for r in ordered]
+    raise HTTPException(404,
+        f"未找到匹配的 model '{requested_model}'。可用：{available_models()}")
 
 
 def _candidate(row: dict) -> dict:
@@ -1885,7 +1869,7 @@ def _candidate(row: dict) -> dict:
     return out
 
 
-async def get_active_subscription_backend(user_id: int, auto_fallback: bool = True,
+async def get_active_subscription_backend(user_id: int,
                                           requested_model: str | None = None):
     """Compatibility shim: return the FIRST online candidate as (backend, model).
 
@@ -1893,17 +1877,15 @@ async def get_active_subscription_backend(user_id: int, auto_fallback: bool = Tr
     working. New /v1 request routing uses get_active_subscription_candidates
     directly so it can iterate on call failure.
     """
-    cands = await get_active_subscription_candidates(user_id, auto_fallback, requested_model)
+    cands = await get_active_subscription_candidates(user_id, requested_model)
     if not cands:
         return None, None
     for c in cands:
         if c.get("status") == "online":
             forced_model = c.pop("forced_model")
             return c, forced_model
-    if auto_fallback:
-        raise HTTPException(503, "所有已激活的订阅模型服务都当前离线")
     forced_model = cands[0].pop("forced_model")
-    raise HTTPException(503, f"模型 '{forced_model}' 的订阅服务当前离线（自动回退已关闭）")
+    raise HTTPException(503, f"模型 '{forced_model}' 的订阅服务当前离线")
 
 
 async def get_activated_models(user_id: int) -> list[str]:
@@ -1960,12 +1942,33 @@ def get_pricing(backend: dict) -> tuple[float, float, float]:
 @app.get("/v1/models")
 async def openai_models(request: Request):
     api_user = await authenticate_api_key(request)
-    # If user has activated subscriptions, only expose those models
-    activated_models = await get_activated_models(api_user["user_id"])
-    if activated_models:
+    # If the user has activated subscriptions, expose the three model id forms
+    # the routing layer understands:  Auto / <model> / <model>/<backend_name>
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            "SELECT s.model, s.sort_order, b.name as backend_name "
+            "FROM subscriptions s JOIN backends b ON b.id = s.backend_id "
+            "WHERE s.user_id = ? AND s.is_active = 1 AND s.is_activated = 1 "
+            "ORDER BY s.sort_order ASC, s.id ASC",
+            (api_user["user_id"],),
+        )
+        sub_rows = [dict(r) for r in await cur.fetchall()]
+    finally:
+        await db.close()
+
+    if sub_rows:
+        ids: list[str] = ["Auto"]
+        seen_models: set[str] = set()
+        for r in sub_rows:
+            if r["model"] not in seen_models:
+                seen_models.add(r["model"])
+                ids.append(r["model"])
+        for r in sub_rows:
+            ids.append(f"{r['model']}/{r['backend_name']}")
         return {
             "object": "list",
-            "data": [{"id": m, "object": "model", "owned_by": "llm-gateway"} for m in activated_models],
+            "data": [{"id": m, "object": "model", "owned_by": "llm-gateway"} for m in ids],
         }
 
     db = await get_db()
@@ -2012,18 +2015,19 @@ async def _handle_openai_request(request: Request, path: str, usage_keys: tuple[
     body = await request.json()
     stream = body.get("stream", False)
 
-    auto_fallback = bool(api_user.get("auto_fallback", 1))
     requested_model = body.get("model", "")
 
     candidates = await get_active_subscription_candidates(
-        api_user["user_id"], auto_fallback, requested_model)
+        api_user["user_id"], requested_model)
 
     if not candidates:
-        # User has no activated subscriptions; fall back to public-backend lookup.
+        # User has no activated subscriptions; fall back to public-backend lookup
+        # using the raw model field (only meaningful when it's a real model name).
         model = requested_model
         backend = await find_backend_for_model(model, api_user["user_id"])
         if not backend:
-            raise HTTPException(404, f"Model '{model}' not available")
+            raise HTTPException(404,
+                f"你尚未激活任何订阅，且公开后端中找不到 model '{model}'")
         candidates = [{**backend, "forced_model": model}]
 
     errors_seen: list[str] = []

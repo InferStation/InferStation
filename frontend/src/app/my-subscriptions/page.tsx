@@ -29,8 +29,6 @@ export default function MyModelsPage() {
   const [showInactive, setShowInactive] = useState(true)
   const [collapsedCards, setCollapsedCards] = useState<Set<string>>(new Set())
   const [saving, setSaving] = useState<number | null>(null)
-  const [autoFallback, setAutoFallback] = useState(true)
-  const [savingAuto, setSavingAuto] = useState(false)
 
   const toggleCard = (key: string) => {
     setCollapsedCards((prev) => {
@@ -45,28 +43,10 @@ export default function MyModelsPage() {
     try {
       const subsRes = await apiFetch("/api/subscriptions")
       setSubs(subsRes)
-      try {
-        const me = await apiFetch("/api/auth/me")
-        if (typeof me.auto_fallback === "boolean") setAutoFallback(me.auto_fallback)
-      } catch { /* ignore */ }
     } catch {
       /* ignore */
     } finally {
       setLoading(false)
-    }
-  }
-
-  const toggleAutoFallback = async () => {
-    const next = !autoFallback
-    setSavingAuto(true)
-    try {
-      await apiFetch("/api/user/auto-fallback", {
-        method: "POST",
-        body: JSON.stringify({ enabled: next }),
-      })
-      setAutoFallback(next)
-    } finally {
-      setSavingAuto(false)
     }
   }
 
@@ -167,7 +147,7 @@ export default function MyModelsPage() {
           <h2 className="text-sm font-semibold text-fg">API 链接</h2>
           {activatedSubs.length > 0 ? (
             <span className="text-xs text-fg">
-              已激活 {activatedSubs.length} 个服务，{autoFallback ? "按优先级自动回退" : "需在请求中指定 model"}
+              已激活 {activatedSubs.length} 个服务
             </span>
           ) : (
             <span className="text-xs text-amber-600">尚未激活任何订阅，请在下方点击「激活」</span>
@@ -185,30 +165,31 @@ export default function MyModelsPage() {
           </button>
         </div>
         <div className="text-sm text-gray-700 mt-3 space-y-2 leading-relaxed">
-          <div className="flex items-center justify-between bg-white border border-line rounded px-3 py-2">
-            <div className="text-xs text-gray-700">
-              <span className="font-semibold text-gray-900">自动回退 (auto fallback)</span>
-              <span className="ml-2 text-gray-500">
-                {autoFallback
-                  ? "按优先级自动挑选已激活的在线模型；高优先级离线时自动切换到下一个。请求里的 model 字段会被忽略。"
-                  : "必须在请求中显式指定 model；只走该模型对应的订阅，不会自动切换到其它订阅。"}
+          <p className="text-xs text-gray-700">
+            用你<span className="font-semibold">自己的 API Key</span>请求上方 URL，按请求体里 <code className="font-mono bg-white px-1 rounded">model</code> 字段决定路由：
+          </p>
+          <ul className="text-xs space-y-1.5">
+            <li className="bg-white border border-line rounded px-3 py-2">
+              <code className="font-mono font-semibold text-fg">"model": "Auto"</code>
+              <span className="ml-2 text-gray-600">
+                在<strong>所有已激活订阅</strong>之间按优先级自动回退（越靠上优先级越高，可用「上移/下移」调整）
               </span>
-            </div>
-            <button
-              onClick={toggleAutoFallback}
-              disabled={savingAuto}
-              className={`shrink-0 ml-3 relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${autoFallback ? "bg-fg" : "bg-gray-300"} ${savingAuto ? "opacity-50 cursor-not-allowed" : ""}`}
-              aria-label="toggle auto fallback"
-            >
-              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${autoFallback ? "translate-x-6" : "translate-x-1"}`} />
-            </button>
-          </div>
-          <p className="bg-amber-100 border border-amber-300 text-amber-900 rounded px-3 py-2 font-medium">
-            {autoFallback ? (
-              <>⚠ 使用你<span className="font-bold">自己的 API Key</span>调用上方 API 链接，即可访问你<span className="font-bold">已激活的订阅模型服务</span>；平台按<span className="font-bold">优先级</span>转发并在高优先级离线时<span className="font-bold">自动回退</span>，可通过「<span className="font-bold">上移 / 下移</span>」调整顺序（<span className="font-bold">越靠上优先级越高</span>）。</>
-            ) : (
-              <>⚠ 自动回退已关闭：使用你<span className="font-bold">自己的 API Key</span>调用上方 API 链接时，<span className="font-bold">必须在请求体中指定 model</span>，且只能是你<span className="font-bold">已激活订阅</span>里的模型名；匹配后仅使用对应那一个订阅，不会自动切换到其它订阅。</>
-            )}
+            </li>
+            <li className="bg-white border border-line rounded px-3 py-2">
+              <code className="font-mono font-semibold text-fg">"model": "&lt;model&gt;"</code>
+              <span className="ml-2 text-gray-600">
+                例如 <code className="font-mono">"Qwen/Qwen3-32B-AWQ"</code>，仅在该模型对应的多个后端之间回退，<strong>不</strong>跨模型
+              </span>
+            </li>
+            <li className="bg-white border border-line rounded px-3 py-2">
+              <code className="font-mono font-semibold text-fg">"model": "&lt;model&gt;/&lt;backend_name&gt;"</code>
+              <span className="ml-2 text-gray-600">
+                例如 <code className="font-mono">"Qwen/Qwen3-32B-AWQ/vllm-qwen36-awq-45"</code>，<strong>锁定</strong>到这一个后端，不回退
+              </span>
+            </li>
+          </ul>
+          <p className="text-xs text-gray-500">
+            可用 model 列表也能通过 <code className="font-mono">GET /v1/models</code> 拉取（含 Auto / 模型名 / 模型名/后端名 三种形态）。
           </p>
         </div>
       </div>
