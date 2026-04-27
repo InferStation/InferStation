@@ -79,17 +79,9 @@ export default function MyModelsPage() {
     fetchAll()
   }
 
-  const handleMove = async (id: number, dir: -1 | 1) => {
-    const active = subs.filter((s) => s.is_active)
+  const persistOrder = async (newActive: Sub[]) => {
     const inactive = subs.filter((s) => !s.is_active)
-    const idx = active.findIndex((s) => s.id === id)
-    if (idx < 0) return
-    const newIdx = idx + dir
-    if (newIdx < 0 || newIdx >= active.length) return
-    const reordered = [...active]
-    const [m] = reordered.splice(idx, 1)
-    reordered.splice(newIdx, 0, m)
-    const newSubs = [...reordered, ...inactive]
+    const newSubs = [...newActive, ...inactive]
     setSubs(newSubs)
     try {
       await apiFetch("/api/subscriptions/reorder", {
@@ -99,6 +91,45 @@ export default function MyModelsPage() {
     } catch {
       fetchAll()
     }
+  }
+
+  // 在同一个 model 卡片内、相邻的同 model 订阅之间换位
+  const handleMoveInCard = (id: number, dir: -1 | 1) => {
+    const active = subs.filter((s) => s.is_active)
+    const idx = active.findIndex((s) => s.id === id)
+    if (idx < 0) return
+    const me = active[idx]
+    // 找同 model 的前一个/后一个
+    let neighborIdx = -1
+    if (dir === -1) {
+      for (let i = idx - 1; i >= 0; i--) if (active[i].model === me.model) { neighborIdx = i; break }
+    } else {
+      for (let i = idx + 1; i < active.length; i++) if (active[i].model === me.model) { neighborIdx = i; break }
+    }
+    if (neighborIdx < 0) return
+    const reordered = [...active]
+    ;[reordered[idx], reordered[neighborIdx]] = [reordered[neighborIdx], reordered[idx]]
+    persistOrder(reordered)
+  }
+
+  // 整组（同 model）跟相邻组互换：把整组行从原位置抽出，插到目标组的位置
+  const handleMoveGroup = (model: string, dir: -1 | 1) => {
+    const active = subs.filter((s) => s.is_active)
+    // 按出现顺序聚合 model -> 行
+    const order: string[] = []
+    const buckets = new Map<string, Sub[]>()
+    active.forEach((s) => {
+      if (!buckets.has(s.model)) { order.push(s.model); buckets.set(s.model, []) }
+      buckets.get(s.model)!.push(s)
+    })
+    const gi = order.indexOf(model)
+    if (gi < 0) return
+    const newGi = gi + dir
+    if (newGi < 0 || newGi >= order.length) return
+    ;[order[gi], order[newGi]] = [order[newGi], order[gi]]
+    const reordered: Sub[] = []
+    order.forEach((m) => reordered.push(...buckets.get(m)!))
+    persistOrder(reordered)
   }
 
   const handleToggleActivate = async (id: number, activated: boolean) => {
@@ -221,6 +252,11 @@ export default function MyModelsPage() {
             const renderGroup = (g: { model: string; rows: Sub[] }, sectionKey: "act" | "inact") => {
               const cardKey = `${sectionKey}:${g.model}`
               const collapsed = collapsedCards.has(cardKey)
+              const disabled = sectionKey === "inact"
+              // 卡间排序的依据：所有已激活订阅中按出现顺序聚合的 model 列表
+              const allOrder: string[] = []
+              activeSubs.forEach((s) => { if (!allOrder.includes(s.model)) allOrder.push(s.model) })
+              const globalGroupIdx = allOrder.indexOf(g.model)
               const anyOnline = g.rows.some((r) => r.backend_status === "online")
               const groupActivatedRanks = g.rows
                 .map((r) => activatedRank.get(r.id))
@@ -234,47 +270,64 @@ export default function MyModelsPage() {
                     groupActivated ? "border-indigo-400 ring-2 ring-indigo-100" : ""
                   }`}
                 >
-                  <button
-                    type="button"
-                    onClick={() => toggleCard(cardKey)}
-                    className="w-full flex items-center gap-3 flex-wrap px-5 py-4 hover:bg-gray-50 rounded-lg text-left"
-                  >
-                    <span
-                      className={`shrink-0 inline-block text-gray-400 transition-transform ${collapsed ? "" : "rotate-90"}`}
+                  <div className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 rounded-lg">
+                    <button
+                      type="button"
+                      onClick={() => toggleCard(cardKey)}
+                      className="flex-1 flex items-center gap-3 flex-wrap text-left"
                     >
-                      ▶
-                    </span>
-                    <Link
-                      href={`/models/${g.rows[0].backend_id}/${g.model}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="font-semibold text-lg text-gray-900 hover:text-indigo-600"
-                    >
-                      {g.model}
-                    </Link>
-                    <span
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                        anyOnline ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"
-                      }`}
-                    >
-                      <span className={`w-1.5 h-1.5 rounded-full ${anyOnline ? "bg-green-500" : "bg-red-400"}`} />
-                      {anyOnline ? "在线" : "离线"}
-                    </span>
-                    {minActivatedRank !== null && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-600 text-white">
-                        优先级 {minActivatedRank}
+                      <span
+                        className={`shrink-0 inline-block text-gray-400 transition-transform ${collapsed ? "" : "rotate-90"}`}
+                      >
+                        ▶
                       </span>
-                    )}
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
-                      {g.rows.length} 个服务
-                    </span>
-                  </button>
+                      <Link
+                        href={`/models/${g.rows[0].backend_id}/${g.model}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="font-semibold text-lg text-gray-900 hover:text-indigo-600"
+                      >
+                        {g.model}
+                      </Link>
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                          anyOnline ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"
+                        }`}
+                      >
+                        <span className={`w-1.5 h-1.5 rounded-full ${anyOnline ? "bg-green-500" : "bg-red-400"}`} />
+                        {anyOnline ? "在线" : "离线"}
+                      </span>
+                      {minActivatedRank !== null && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-600 text-white">
+                          优先级 {minActivatedRank}
+                        </span>
+                      )}
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                        {g.rows.length} 个服务
+                      </span>
+                    </button>
+                    <div className="flex items-center gap-1 shrink-0" title={disabled ? "未激活模型不可调整顺序" : "在所有模型间调整该模型的优先级"}>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleMoveGroup(g.model, -1) }}
+                        disabled={disabled || globalGroupIdx <= 0}
+                        title="模型上移（在所有模型间提高优先级）"
+                        className="w-8 h-8 flex items-center justify-center text-lg font-bold rounded border border-gray-200 text-gray-600 bg-white hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-300 disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
+                      >↑</button>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleMoveGroup(g.model, 1) }}
+                        disabled={disabled || globalGroupIdx === allOrder.length - 1}
+                        title="模型下移（在所有模型间降低优先级）"
+                        className="w-8 h-8 flex items-center justify-center text-lg font-bold rounded border border-gray-200 text-gray-600 bg-white hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-300 disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
+                      >↓</button>
+                    </div>
+                  </div>
                   {!collapsed && (
                     <div className="px-5 pb-5">
                       <div className={g.rows.length > 1 ? "divide-y divide-gray-100 border border-gray-100 rounded" : ""}>
-                        {g.rows.map((s) => {
+                        {g.rows.map((s, rowIdx) => {
                           const isActivated = !!s.is_activated
                           const myRank = activatedRank.get(s.id) ?? null
-                          const globalIdx = activeSubs.findIndex((x) => x.id === s.id)
                           return (
                             <div
                               key={s.id}
@@ -321,19 +374,19 @@ export default function MyModelsPage() {
                                 )}
                               </div>
                               <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-1" title={disabled ? "未激活模型不可调整顺序" : g.rows.length <= 1 ? "该模型只有一个后端，无需排序" : "在该模型的多个后端之间调整顺序"}>
                                   <button
-                                    onClick={() => handleMove(s.id, -1)}
-                                    disabled={globalIdx === 0}
-                                    title="上移（提高优先级）"
+                                    onClick={() => handleMoveInCard(s.id, -1)}
+                                    disabled={disabled || g.rows.length <= 1 || rowIdx === 0}
+                                    title="后端上移（同模型内提高优先级）"
                                     className="w-7 h-7 flex items-center justify-center text-base font-bold rounded border border-gray-200 text-gray-600 bg-white hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-300 disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
                                   >
                                     ↑
                                   </button>
                                   <button
-                                    onClick={() => handleMove(s.id, 1)}
-                                    disabled={globalIdx === activeSubs.length - 1}
-                                    title="下移（降低优先级）"
+                                    onClick={() => handleMoveInCard(s.id, 1)}
+                                    disabled={disabled || g.rows.length <= 1 || rowIdx === g.rows.length - 1}
+                                    title="后端下移（同模型内降低优先级）"
                                     className="w-7 h-7 flex items-center justify-center text-base font-bold rounded border border-gray-200 text-gray-600 bg-white hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-300 disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
                                   >
                                     ↓
