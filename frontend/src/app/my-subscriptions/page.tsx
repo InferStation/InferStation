@@ -345,7 +345,7 @@ export default function MyModelsPage() {
                                   />
                                   {s.backend_status === "online" ? "在线" : "离线"}
                                 </span>
-                                {s.is_owned && (
+                                {!!s.is_owned && (
                                   <span
                                     className="inline-flex items-center gap-1 text-amber-600"
                                     title="自己注册的模型服务（自动订阅，无法取消订阅）"
