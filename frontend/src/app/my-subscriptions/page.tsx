@@ -308,16 +308,16 @@ export default function MyModelsPage() {
                         type="button"
                         onClick={(e) => { e.stopPropagation(); handleMoveGroup(g.model, -1) }}
                         disabled={disabled || globalGroupIdx <= 0}
-                        title="模型上移（在所有模型间提高优先级）"
+                        title="在所有模型间提高该模型的优先级"
                         className="px-2 h-7 flex items-center text-xs rounded border border-gray-200 text-gray-600 bg-white hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-300 disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
-                      >上移</button>
+                      >上移模型</button>
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); handleMoveGroup(g.model, 1) }}
                         disabled={disabled || globalGroupIdx === allOrder.length - 1}
-                        title="模型下移（在所有模型间降低优先级）"
+                        title="在所有模型间降低该模型的优先级"
                         className="px-2 h-7 flex items-center text-xs rounded border border-gray-200 text-gray-600 bg-white hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-300 disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
-                      >下移</button>
+                      >下移模型</button>
                     </div>
                   </div>
                   {!collapsed && (
@@ -379,18 +379,18 @@ export default function MyModelsPage() {
                                   <button
                                     onClick={() => handleMoveInCard(s.id, -1)}
                                     disabled={disabled || g.rows.length <= 1 || rowIdx === 0}
-                                    title="后端上移（同模型内提高优先级）"
+                                    title="同模型内提高该服务的优先级"
                                     className="px-2 h-7 flex items-center text-xs rounded border border-gray-200 text-gray-600 bg-white hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-300 disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
                                   >
-                                    上移
+                                    上移服务
                                   </button>
                                   <button
                                     onClick={() => handleMoveInCard(s.id, 1)}
                                     disabled={disabled || g.rows.length <= 1 || rowIdx === g.rows.length - 1}
-                                    title="后端下移（同模型内降低优先级）"
+                                    title="同模型内降低该服务的优先级"
                                     className="px-2 h-7 flex items-center text-xs rounded border border-gray-200 text-gray-600 bg-white hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-300 disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
                                   >
-                                    下移
+                                    下移服务
                                   </button>
                                 </div>
                                 {isActivated ? (
