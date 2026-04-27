@@ -1303,13 +1303,12 @@ async def delete_backend(name: str, user=Depends(require_provider)):
 
 @app.put("/api/backends/{name}/toggle")
 async def toggle_backend(name: str, user=Depends(require_provider)):
-    """Provider-facing listing toggle with review workflow.
+    """Provider-facing listing toggle. **审核制：上架只能走 approve 接口。**
 
-    - listed    -> offline  (立即下架，变为仅私有)
-    - offline   -> pending  (提交上架审核)
-    
-    - pending   -> offline  (撤回申请)
-    Admins bypass review and flip listed<->offline directly.
+    任何调用方（包括 admin）通过 toggle 都不能把状态置为 listed：
+      - listed    -> offline  (立即下架，变为仅私有)
+      - pending   -> offline  (撤回申请)
+      - offline   -> pending  (提交上架审核，需 admin approve 后才会变 listed)
     """
     db = await get_db()
     try:
@@ -1325,43 +1324,29 @@ async def toggle_backend(name: str, user=Depends(require_provider)):
             raise HTTPException(404, "Backend not found")
         status = row["listing_status"] or ("listed" if row["enabled"] else "offline")
         now = sh_now().strftime("%Y-%m-%d %H:%M:%S")
-        if user["role"] == "admin":
-            # Admin toggle: flip listed<->offline directly, skip review.
-            if status == "listed":
-                new_status, new_enabled = "offline", 0
-            else:
-                new_status, new_enabled = "listed", 1
+        owner_filter = "" if user["role"] == "admin" else " AND owner_id = ?"
+        owner_args: tuple = () if user["role"] == "admin" else (user["id"],)
+        if status == "listed":
+            # Take offline immediately.
             await db.execute(
-                """UPDATE backends SET enabled = ?, listing_status = ?,
-                   reviewed_at = ?, reviewed_by = ? WHERE name = ?""",
-                (new_enabled, new_status, now, user["id"], name),
+                f"UPDATE backends SET enabled = 0, listing_status = 'offline' WHERE name = ?{owner_filter}",
+                (name, *owner_args),
             )
+            new_status, new_enabled = "offline", 0
+        elif status == "pending":
+            # Withdraw the pending request.
+            await db.execute(
+                f"UPDATE backends SET listing_status = 'offline', review_requested_at = NULL WHERE name = ?{owner_filter}",
+                (name, *owner_args),
+            )
+            new_status, new_enabled = "offline", 0
         else:
-            if status == "listed":
-                # Take offline immediately.
-                await db.execute(
-                    """UPDATE backends SET enabled = 0, listing_status = 'offline'
-                       WHERE name = ? AND owner_id = ?""",
-                    (name, user["id"]),
-                )
-                new_status, new_enabled = "offline", 0
-            elif status == "pending":
-                # Withdraw the pending request.
-                await db.execute(
-                    """UPDATE backends SET listing_status = 'offline',
-                       review_requested_at = NULL WHERE name = ? AND owner_id = ?""",
-                    (name, user["id"]),
-                )
-                new_status, new_enabled = "offline", 0
-            else:
-                # offline -> pending review (keep review_note for history display).
-                await db.execute(
-                    """UPDATE backends SET listing_status = 'pending',
-                       review_requested_at = ?
-                       WHERE name = ? AND owner_id = ?""",
-                    (now, name, user["id"]),
-                )
-                new_status, new_enabled = "pending", 0
+            # offline -> pending review.
+            await db.execute(
+                f"UPDATE backends SET listing_status = 'pending', review_requested_at = ? WHERE name = ?{owner_filter}",
+                (now, name, *owner_args),
+            )
+            new_status, new_enabled = "pending", 0
         await db.commit()
     finally:
         await db.close()
