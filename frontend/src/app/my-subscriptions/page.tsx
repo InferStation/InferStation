@@ -359,7 +359,7 @@ export default function MyModelsPage() {
                                   <button
                                     onClick={() => handleToggleActivate(s.id, false)}
                                     disabled={saving === s.id}
-                                    className="text-xs text-gray-500 hover:text-gray-700 disabled:opacity-50"
+                                    className="px-2 h-7 flex items-center text-xs rounded border border-line text-gray-600 bg-white hover:bg-accent-soft hover:text-fg hover:border-line-strong disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
                                   >
                                     取消激活
                                   </button>
@@ -367,7 +367,7 @@ export default function MyModelsPage() {
                                   <button
                                     onClick={() => handleToggleActivate(s.id, true)}
                                     disabled={saving === s.id}
-                                    className="text-xs px-2 py-1 bg-fg hover:bg-fg/90 text-white rounded disabled:opacity-50"
+                                    className="px-2 h-7 flex items-center text-xs rounded border border-fg bg-fg text-white hover:bg-fg/90 disabled:opacity-50 disabled:cursor-not-allowed"
                                   >
                                     激活
                                   </button>
@@ -376,7 +376,7 @@ export default function MyModelsPage() {
                                   onClick={() => handleUnsubscribe(s.id)}
                                   disabled={!!s.is_owned}
                                   title={s.is_owned ? "自己注册的模型服务，无法取消订阅" : undefined}
-                                  className="text-xs text-red-500 hover:text-red-700 disabled:text-gray-300 disabled:cursor-not-allowed disabled:hover:text-gray-300"
+                                  className="px-2 h-7 flex items-center text-xs rounded border border-red-300 text-red-600 bg-white hover:bg-red-50 hover:border-red-400 disabled:text-gray-300 disabled:border-line disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
                                 >
                                   取消订阅
                                 </button>
