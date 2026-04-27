@@ -155,10 +155,6 @@ export default function ModelDetailPage() {
             <p className="font-medium text-gray-900">{model.provider || "共享"}</p>
           </div>
           <div className="bg-gray-50 rounded-lg p-4">
-            <p className="text-gray-500 mb-1">接入方式</p>
-            <p className="font-medium text-gray-900">{model.mode === "tunnel" ? "隧道" : "直连"}</p>
-          </div>
-          <div className="bg-gray-50 rounded-lg p-4">
             <p className="text-gray-500 mb-1">定价</p>
             <p className="font-medium text-gray-900">
               {model.input_price == null ? (
