@@ -181,105 +181,174 @@ export default function MyModelsPage() {
         <>
           {subs.filter((s) => s.is_active).length > 0 && (
             <div className="space-y-4 mb-8">
-              {subs.filter((s) => s.is_active).map((s, idx, arr) => {
-                const isActivated = !!s.is_activated
-                return (
-                  <div
-                    key={s.id}
-                    className={`bg-white rounded-lg border p-5 ${
-                      isActivated ? "border-indigo-400 ring-2 ring-indigo-100" : ""
-                    }`}
-                  >
-                    <div className="flex items-start justify-between mb-3 flex-wrap gap-2">
-                      <div className="flex items-center gap-3 flex-wrap">
+              {(() => {
+                const activeSubs = subs.filter((s) => s.is_active)
+                // 计算每条订阅在"已激活订阅"里的全局优先级（用于徽章显示）
+                const activatedRank = new Map<number, number>()
+                let rank = 0
+                activeSubs.forEach((s) => {
+                  if (s.is_activated) {
+                    rank += 1
+                    activatedRank.set(s.id, rank)
+                  }
+                })
+                // 按 model 分组，组的展示顺序 = 组内首条 sub 在 activeSubs 里的下标
+                const groups: { model: string; rows: Sub[]; firstIdx: number }[] = []
+                const groupIdx = new Map<string, number>()
+                activeSubs.forEach((s, i) => {
+                  let g = groupIdx.get(s.model)
+                  if (g === undefined) {
+                    g = groups.length
+                    groupIdx.set(s.model, g)
+                    groups.push({ model: s.model, rows: [], firstIdx: i })
+                  }
+                  groups[g].rows.push(s)
+                })
+                groups.sort((a, b) => a.firstIdx - b.firstIdx)
+                return groups.map((g) => {
+                  const anyOnline = g.rows.some((r) => r.backend_status === "online")
+                  const groupActivatedRanks = g.rows
+                    .map((r) => activatedRank.get(r.id))
+                    .filter((x): x is number => typeof x === "number")
+                  const minActivatedRank = groupActivatedRanks.length ? Math.min(...groupActivatedRanks) : null
+                  const groupActivated = groupActivatedRanks.length > 0
+                  return (
+                    <div
+                      key={g.model}
+                      className={`bg-white rounded-lg border p-5 ${
+                        groupActivated ? "border-indigo-400 ring-2 ring-indigo-100" : ""
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 flex-wrap mb-3">
                         <Link
-                          href={`/models/${s.backend_id}/${s.model}`}
+                          href={`/models/${g.rows[0].backend_id}/${g.model}`}
                           className="font-semibold text-lg text-gray-900 hover:text-indigo-600"
                         >
-                          {s.model}
+                          {g.model}
                         </Link>
                         <span
                           className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                            s.backend_status === "online"
-                              ? "bg-green-50 text-green-700"
-                              : "bg-red-50 text-red-600"
+                            anyOnline ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"
                           }`}
                         >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              s.backend_status === "online" ? "bg-green-500" : "bg-red-400"
-                            }`}
-                          />
-                          {s.backend_status === "online" ? "在线" : "离线"}
+                          <span className={`w-1.5 h-1.5 rounded-full ${anyOnline ? "bg-green-500" : "bg-red-400"}`} />
+                          {anyOnline ? "在线" : "离线"}
                         </span>
-                        {isActivated && (
+                        {minActivatedRank !== null && (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-600 text-white">
-                            优先级 {arr.filter((x, i) => i <= idx && x.is_activated).length}
+                            优先级 {minActivatedRank}
                           </span>
                         )}
-                        {s.is_owned && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200" title="自己注册的模型服务，无法取消订阅">
-                            自动订阅
+                        {g.rows.length > 1 && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                            {g.rows.length} 个服务
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => handleMove(s.id, -1)}
-                            disabled={idx === 0}
-                            title="上移（提高优先级）"
-                            className="w-8 h-8 flex items-center justify-center text-lg font-bold rounded border border-gray-200 text-gray-600 bg-white hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-300 disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
-                          >↑</button>
-                          <button
-                            onClick={() => handleMove(s.id, 1)}
-                            disabled={idx === arr.length - 1}
-                            title="下移（降低优先级）"
-                            className="w-8 h-8 flex items-center justify-center text-lg font-bold rounded border border-gray-200 text-gray-600 bg-white hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-300 disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
-                          >↓</button>
-                        </div>
-                        {isActivated ? (
-                          <button
-                            onClick={() => handleToggleActivate(s.id, false)}
-                            disabled={saving === s.id}
-                            className="text-xs text-gray-500 hover:text-gray-700 disabled:opacity-50"
-                          >
-                            取消激活
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleToggleActivate(s.id, true)}
-                            disabled={saving === s.id}
-                            className="text-xs px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded disabled:opacity-50"
-                          >
-                            激活
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleUnsubscribe(s.id)}
-                          disabled={!!s.is_owned}
-                          title={s.is_owned ? "自己注册的模型服务，无法取消订阅" : undefined}
-                          className="text-xs text-red-500 hover:text-red-700 disabled:text-gray-300 disabled:cursor-not-allowed disabled:hover:text-gray-300"
-                        >
-                          取消订阅
-                        </button>
-                      </div>
-                    </div>
 
-                    <div className="flex gap-4 text-xs text-gray-400 flex-wrap">
-                      <span>后端：{s.backend}</span>
-                      <span>订阅于 {s.created_at?.replace("T", " ")}</span>
-                      {s.input_price != null && (
-                        <span>
-                          {s.input_price === 0 && s.output_price === 0
-                            ? "Free"
-                            : `${s.currency === "USD" ? "$" : "¥"}${s.input_price}/M 输入 / ${s.currency === "USD" ? "$" : "¥"}${s.output_price}/M 输出 (${s.currency || "CNY"})`}
-                        </span>
-                      )}
+                      <div className={g.rows.length > 1 ? "divide-y divide-gray-100 border border-gray-100 rounded" : ""}>
+                        {g.rows.map((s) => {
+                          const isActivated = !!s.is_activated
+                          const myRank = activatedRank.get(s.id) ?? null
+                          const globalIdx = activeSubs.findIndex((x) => x.id === s.id)
+                          return (
+                            <div
+                              key={s.id}
+                              className={`${g.rows.length > 1 ? "px-3 py-3" : ""} flex items-center justify-between flex-wrap gap-2`}
+                            >
+                              <div className="flex items-center gap-3 flex-wrap text-sm">
+                                <span className="text-gray-700">
+                                  后端：<span className="font-medium text-gray-900">{s.backend}</span>
+                                </span>
+                                <span
+                                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] font-medium ${
+                                    s.backend_status === "online"
+                                      ? "bg-green-50 text-green-700"
+                                      : "bg-red-50 text-red-600"
+                                  }`}
+                                >
+                                  <span
+                                    className={`w-1 h-1 rounded-full ${
+                                      s.backend_status === "online" ? "bg-green-500" : "bg-red-400"
+                                    }`}
+                                  />
+                                  {s.backend_status === "online" ? "在线" : "离线"}
+                                </span>
+                                {myRank !== null && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[11px] font-medium bg-indigo-100 text-indigo-700 border border-indigo-200">
+                                    优先级 {myRank}
+                                  </span>
+                                )}
+                                {s.is_owned && (
+                                  <span
+                                    className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200"
+                                    title="自己注册的模型服务，无法取消订阅"
+                                  >
+                                    自动订阅
+                                  </span>
+                                )}
+                                <span className="text-xs text-gray-400">订阅于 {s.created_at?.replace("T", " ")}</span>
+                                {s.input_price != null && (
+                                  <span className="text-xs text-gray-400">
+                                    {s.input_price === 0 && s.output_price === 0
+                                      ? "Free"
+                                      : `${s.currency === "USD" ? "$" : "¥"}${s.input_price}/M 输入 / ${s.currency === "USD" ? "$" : "¥"}${s.output_price}/M 输出 (${s.currency || "CNY"})`}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => handleMove(s.id, -1)}
+                                    disabled={globalIdx === 0}
+                                    title="上移（提高优先级）"
+                                    className="w-7 h-7 flex items-center justify-center text-base font-bold rounded border border-gray-200 text-gray-600 bg-white hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-300 disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
+                                  >
+                                    ↑
+                                  </button>
+                                  <button
+                                    onClick={() => handleMove(s.id, 1)}
+                                    disabled={globalIdx === activeSubs.length - 1}
+                                    title="下移（降低优先级）"
+                                    className="w-7 h-7 flex items-center justify-center text-base font-bold rounded border border-gray-200 text-gray-600 bg-white hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-300 disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
+                                  >
+                                    ↓
+                                  </button>
+                                </div>
+                                {isActivated ? (
+                                  <button
+                                    onClick={() => handleToggleActivate(s.id, false)}
+                                    disabled={saving === s.id}
+                                    className="text-xs text-gray-500 hover:text-gray-700 disabled:opacity-50"
+                                  >
+                                    取消激活
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => handleToggleActivate(s.id, true)}
+                                    disabled={saving === s.id}
+                                    className="text-xs px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded disabled:opacity-50"
+                                  >
+                                    激活
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => handleUnsubscribe(s.id)}
+                                  disabled={!!s.is_owned}
+                                  title={s.is_owned ? "自己注册的模型服务，无法取消订阅" : undefined}
+                                  className="text-xs text-red-500 hover:text-red-700 disabled:text-gray-300 disabled:cursor-not-allowed disabled:hover:text-gray-300"
+                                >
+                                  取消订阅
+                                </button>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
                     </div>
-                  </div>
-                )
-              })}
+                  )
+                })
+              })()}
             </div>
           )}
 
