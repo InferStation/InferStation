@@ -16,6 +16,7 @@ interface ModelDetail {
   tags: Record<string, string>
   input_price: number | null
   output_price: number | null
+  cache_price: number | null
   currency: string
   created_at: string
   updated_at: string
@@ -118,16 +119,27 @@ export default function ModelDetailPage() {
 
       <div className="bg-white rounded-lg border border-line p-8">
         {/* Header */}
-        <div className="flex items-start justify-between mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">{model.id}</h1>
-          <span
-            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
-              model.status === "online" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"
-            }`}
-          >
-            <span className={`w-2 h-2 rounded-full ${model.status === "online" ? "bg-green-500" : "bg-red-400"}`} />
-            {model.status === "online" ? "在线" : "离线"}
-          </span>
+        <div className="flex items-start justify-between gap-3 mb-6 flex-wrap">
+          <h1 className="text-2xl font-bold text-gray-900 break-all">{model.id}</h1>
+          <div className="flex items-center gap-2 shrink-0">
+            {sub && (
+              <span
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700"
+                title={sub.is_owned ? "自己注册的模型服务（自动订阅）" : "已订阅"}
+              >
+                <span className="w-2 h-2 rounded-full bg-green-500" />
+                {sub.is_owned ? "自动订阅" : "已订阅"}
+              </span>
+            )}
+            <span
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
+                model.status === "online" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full ${model.status === "online" ? "bg-green-500" : "bg-red-400"}`} />
+              {model.status === "online" ? "在线" : "离线"}
+            </span>
+          </div>
         </div>
 
         {/* Tags */}
@@ -154,22 +166,35 @@ export default function ModelDetailPage() {
             <p className="text-gray-500 mb-1">提供者</p>
             <p className="font-medium text-gray-900">{model.provider || "共享"}</p>
           </div>
-          <div className="bg-gray-50 rounded-lg p-4">
-            <p className="text-gray-500 mb-1">定价</p>
-            <p className="font-medium text-gray-900">
-              {model.input_price == null ? (
-                "未设置"
-              ) : model.input_price === 0 && model.output_price === 0 ? (
-                <span className="text-green-600">Free</span>
-              ) : (
-                <>
-                  <span className="text-green-600">{model.currency === "USD" ? "$" : "¥"}{model.input_price}/M 输入</span>
-                  {" / "}
-                  <span className="text-green-600">{model.currency === "USD" ? "$" : "¥"}{model.output_price}/M 输出</span>
-                  <span className="ml-1 text-xs text-gray-500">({model.currency || "CNY"})</span>
-                </>
-              )}
-            </p>
+          <div className="bg-gray-50 rounded-lg p-4 col-span-2">
+            <p className="text-gray-500 mb-2">定价（每 1M tokens，{model.currency || "CNY"}）</p>
+            {model.input_price == null ? (
+              <p className="font-medium text-gray-900">未设置</p>
+            ) : model.input_price === 0 && model.output_price === 0 ? (
+              <p className="font-semibold text-green-600">Free</p>
+            ) : (() => {
+              const sym = model.currency === "USD" ? "$" : "¥"
+              const cache = model.cache_price != null ? model.cache_price : (model.input_price ?? 0) * 0.1
+              const cacheImplicit = model.cache_price == null
+              return (
+                <div className="grid grid-cols-3 gap-3 text-sm">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-0.5">输入</p>
+                    <p className="font-semibold text-green-600">{sym}{model.input_price}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-0.5">输出</p>
+                    <p className="font-semibold text-green-600">{sym}{model.output_price}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-0.5">
+                      缓存命中{cacheImplicit && <span className="ml-1 text-gray-400">(=输入×0.1)</span>}
+                    </p>
+                    <p className="font-semibold text-green-600">{sym}{Number(cache).toFixed(4).replace(/\.?0+$/, "")}</p>
+                  </div>
+                </div>
+              )
+            })()}
           </div>
         </div>
 
@@ -184,29 +209,22 @@ export default function ModelDetailPage() {
               {subLoading ? "订阅中..." : model.status !== "online" ? "模型离线，暂不可订阅" : "订阅此模型"}
             </button>
           ) : (
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700">
-                  <span className="w-2 h-2 rounded-full bg-green-500" />
-                  {sub.is_owned ? "自动订阅" : "已订阅"}
-                </span>
-                {sub.is_owned ? (
-                  <span className="text-xs text-gray-400" title="自己注册的模型服务，无法取消订阅">自己的服务</span>
-                ) : (
-                  <button
-                    onClick={handleUnsubscribe}
-                    className="text-xs text-red-500 hover:text-red-700"
-                  >
-                    取消订阅
-                  </button>
-                )}
-              </div>
-
-              <div className="space-y-3">
-                <p className="text-sm text-fg-muted">
-                  通过你的 <Link href="/dashboard/keys" className="underline hover:text-fg">API Key</Link> 调用 <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">{baseUrl}/v1/chat/completions</code>，把 <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">model</code> 设为 <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">{model.id}</code> 即可。详细路由规则见 <Link href="/docs" className="underline hover:text-fg">使用文档</Link>。
-                </p>
-              </div>
+            <div className="space-y-4">
+              {sub.is_owned ? (
+                <div className="w-full py-3 rounded-lg font-medium text-center bg-gray-100 text-gray-500 cursor-not-allowed" title="自己注册的模型服务，无法取消订阅">
+                  自己的服务（已自动订阅）
+                </div>
+              ) : (
+                <button
+                  onClick={handleUnsubscribe}
+                  className="w-full py-3 rounded-lg font-medium text-red-600 bg-white border border-red-300 hover:bg-red-50 hover:border-red-400 transition-colors"
+                >
+                  取消订阅
+                </button>
+              )}
+              <p className="text-sm text-fg-muted">
+                通过你的 <Link href="/dashboard/keys" className="underline hover:text-fg">API Key</Link> 调用 <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">{baseUrl}/v1/chat/completions</code>，把 <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">model</code> 设为 <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">{model.id}</code> 即可。详细路由规则见 <Link href="/docs" className="underline hover:text-fg">使用文档</Link>。
+              </p>
             </div>
           )}
         </div>
