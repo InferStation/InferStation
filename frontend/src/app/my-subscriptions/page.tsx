@@ -163,8 +163,6 @@ export default function MyModelsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">我的订阅</h1>
-
       <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-5 mb-8">
         <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
           <h2 className="text-sm font-semibold text-indigo-900">API 链接</h2>

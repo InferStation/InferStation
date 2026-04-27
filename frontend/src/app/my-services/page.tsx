@@ -205,7 +205,6 @@ export default function ServicesPage() {
   if (!isProvider) {
     return (
       <div>
-        <h1 className="text-2xl font-bold mb-6">我的服务</h1>
         <div className="bg-white rounded-lg border p-6">
           <h2 className="font-semibold mb-2">成为模型服务提供者</h2>
           <p className="text-sm text-gray-600 mb-4">激活提供者身份后，你可以注册自己的模型后端，将模型服务分享给其他用户。</p>
@@ -223,8 +222,7 @@ export default function ServicesPage() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">我的服务</h1>
+      <div className="flex justify-end items-center mb-6">
         <button
           onClick={() => setShowForm(!showForm)}
           className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700"
