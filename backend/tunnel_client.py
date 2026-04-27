@@ -54,18 +54,34 @@ async def health_check_local(local_url: str) -> int:
 
 
 async def run_tunnel(gateway_ws_url: str, token: str, backend_name: str, local_url: str):
-    """Main tunnel loop with auto-reconnect."""
+    """Main tunnel loop with auto-reconnect.
+
+    Reconnect policy: exponential backoff (1s -> 2 -> 4 -> 8 -> 16 -> 32 -> capped at 60s),
+    reset to 1s after a successful authenticated session. NEVER gives up — even auth
+    failures are treated as transient (backend may be mid-restart / mid-migration).
+    Press Ctrl-C / send SIGTERM to stop.
+    """
+    backoff = 1.0
+    max_backoff = 60.0
+    attempt = 0
     while True:
+        attempt += 1
         try:
-            logger.info(f"Connecting to {gateway_ws_url} ...")
+            logger.info(f"[attempt {attempt}] Connecting to {gateway_ws_url} ...")
             async with websockets.connect(gateway_ws_url, ping_interval=20, ping_timeout=60) as ws:
                 # Send auth
                 await ws.send(json.dumps({"token": token, "backend_name": backend_name}))
                 resp = json.loads(await ws.recv())
                 if "error" in resp:
-                    logger.error(f"Auth failed: {resp['error']}")
-                    return
+                    # Treat as transient: token may be temporarily rejected during
+                    # backend restart / migration. Don't kill the client.
+                    logger.error(f"Auth rejected: {resp['error']}. Will retry in {backoff:.0f}s.")
+                    await asyncio.sleep(backoff)
+                    backoff = min(backoff * 2, max_backoff)
+                    continue
                 logger.info(f"Connected! backend_id={resp.get('backend_id')}")
+                # Successful auth -> reset backoff
+                backoff = 1.0
 
                 # Handle requests
                 async for raw in ws:
@@ -82,12 +98,17 @@ async def run_tunnel(gateway_ws_url: str, token: str, backend_name: str, local_u
                     elif msg_type == "health_check":
                         asyncio.create_task(_handle_health_check(ws, req_id, local_url))
 
+        except asyncio.CancelledError:
+            logger.info("Tunnel loop cancelled, exiting.")
+            raise
         except (websockets.ConnectionClosed, ConnectionError, OSError) as e:
-            logger.warning(f"Disconnected: {e}. Reconnecting in 5s...")
-            await asyncio.sleep(5)
+            logger.warning(f"Disconnected: {type(e).__name__}: {e}. Reconnecting in {backoff:.0f}s...")
+            await asyncio.sleep(backoff)
+            backoff = min(backoff * 2, max_backoff)
         except Exception as e:
-            logger.error(f"Unexpected error: {e}. Reconnecting in 10s...")
-            await asyncio.sleep(10)
+            logger.exception(f"Unexpected error: {type(e).__name__}: {e}. Reconnecting in {backoff:.0f}s...")
+            await asyncio.sleep(backoff)
+            backoff = min(backoff * 2, max_backoff)
 
 
 async def _handle_request(ws, req_id: str, local_url: str, data: dict, path: str = "/v1/chat/completions"):
