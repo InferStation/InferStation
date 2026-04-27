@@ -242,7 +242,6 @@ export default function MyModelsPage() {
               const allOrder: string[] = []
               activeSubs.forEach((s) => { if (!allOrder.includes(s.model)) allOrder.push(s.model) })
               const globalGroupIdx = allOrder.indexOf(g.model)
-              const anyOnline = g.rows.some((r) => r.backend_status === "online")
               const groupActivatedRanks = g.rows
                 .map((r) => activatedRank.get(r.id))
                 .filter((x): x is number => typeof x === "number")
@@ -268,14 +267,6 @@ export default function MyModelsPage() {
                       </span>
                       <span className="font-semibold text-lg text-gray-900 break-all">
                         {g.model}
-                      </span>
-                      <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                          anyOnline ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"
-                        }`}
-                      >
-                        <span className={`w-1.5 h-1.5 rounded-full ${anyOnline ? "bg-green-500" : "bg-red-400"}`} />
-                        {anyOnline ? "在线" : "离线"}
                       </span>
                       {g.rows.length > 0 && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-line">
