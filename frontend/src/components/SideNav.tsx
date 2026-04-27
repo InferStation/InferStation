@@ -72,7 +72,7 @@ export default function SideNav() {
         </Link>
         <nav className="flex-1 overflow-y-auto scrollbar-thin px-3 py-4 space-y-5">
           {groups.map((g) => (
-            <div key={g.title}>
+            <div key={g.title.en}>
               <div className="px-2.5 mb-1.5 text-[10px] font-medium uppercase tracking-[0.08em] text-fg-subtle">
                 {t(g.title)}
               </div>
