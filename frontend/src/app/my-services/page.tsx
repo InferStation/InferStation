@@ -370,7 +370,7 @@ export default function ServicesPage() {
             return (
               <Link
                 key={`${b.id}-${m ?? "_"}`}
-                href={`/dashboard/services/${encodeURIComponent(b.name)}`}
+                href={`/my-services/${encodeURIComponent(b.name)}`}
                 className={`block bg-white rounded-xl border border-gray-200 hover:border-indigo-300 hover:shadow-md transition-all overflow-hidden ${!b.enabled ? "opacity-60" : ""}`}
               >
                 {/* Header */}

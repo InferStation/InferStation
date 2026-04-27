@@ -101,7 +101,7 @@ export default function DocsPage() {
           <ol className="list-decimal list-inside space-y-1.5 ml-1">
             <li>在 <a href="/register" className="text-indigo-700 underline">注册</a> 页用邮箱验证码完成注册</li>
             <li>在 <a href="/models" className="text-indigo-700 underline">模型广场</a> 选一个免费模型，点「订阅」</li>
-            <li>进入 <a href="/dashboard/services" className="text-indigo-700 underline">我的订阅</a>，把它<strong>激活</strong></li>
+            <li>进入 <a href="/my-subscriptions" className="text-indigo-700 underline">我的订阅</a>，把它<strong>激活</strong></li>
             <li>在 <a href="/dashboard/keys" className="text-indigo-700 underline">API Key</a> 页创建一个 <code>sk-xxxx</code></li>
             <li>把下面这条 curl 里的 <code>sk-your-api-key</code> 和 <code>MODEL_NAME</code> 换成自己的：</li>
           </ol>
@@ -691,7 +691,7 @@ sudo journalctl -u tianshu-tunnel@qwen36 -f`}</pre>
    │
    └──[owner 主动下架 / admin 强制下架]── listed`}</pre>
           <ul className="list-disc list-inside space-y-1 ml-2">
-            <li>「申请上架」按钮在 <a href="/dashboard/services" className="text-indigo-700 underline">我的服务</a> 卡片上。</li>
+            <li>「申请上架」按钮在 <a href="/my-services" className="text-indigo-700 underline">我的服务</a> 卡片上。</li>
             <li>被驳回时 <code>review_note</code> 会显示在卡片上；按 note 修改后再次点「申请上架」即可重新进入 pending。</li>
             <li>已 listed 的后端，编辑价格/货币/cache 价不会触发重新审核，但会按上面「次日 00:00 CST 生效」的规则延后。</li>
             <li>注销账号或下架前必须先把所有 listed/pending 的后端撤回到 offline。</li>

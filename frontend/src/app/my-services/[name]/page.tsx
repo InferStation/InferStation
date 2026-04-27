@@ -174,7 +174,7 @@ export default function ServiceDetailPage() {
   const handleDelete = async () => {
     if (!confirm(`确定要删除后端 "${name}" 吗？`)) return
     await apiFetch(`/api/backends/${encodeURIComponent(name)}`, { method: "DELETE" })
-    router.push("/dashboard/services")
+    router.push("/my-services")
   }
 
   if (loading) return <div className="text-center py-20 text-gray-500">加载中...</div>
@@ -182,14 +182,14 @@ export default function ServiceDetailPage() {
     return (
       <div className="text-center py-20">
         <p className="text-gray-500 mb-4">{error || "后端不存在"}</p>
-        <button onClick={() => router.push("/dashboard/services")} className="text-indigo-600 hover:underline">返回我的服务</button>
+        <button onClick={() => router.push("/my-services")} className="text-indigo-600 hover:underline">返回我的服务</button>
       </div>
     )
   }
 
   return (
     <div className="max-w-3xl mx-auto">
-      <button onClick={() => router.push("/dashboard/services")} className="text-sm text-gray-500 hover:text-gray-700 mb-6 inline-flex items-center gap-1">
+      <button onClick={() => router.push("/my-services")} className="text-sm text-gray-500 hover:text-gray-700 mb-6 inline-flex items-center gap-1">
         ← 返回我的服务
       </button>
 
