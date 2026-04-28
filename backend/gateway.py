@@ -2566,4 +2566,5 @@ if __name__ == "__main__":
     port = CONFIG.get("server", {}).get("port", 8080) if CONFIG else 8080
     load_config()
     port = CONFIG.get("server", {}).get("port", 8080)
-    uvicorn.run("gateway:app", host="0.0.0.0", port=port, reload=False)
+    host = CONFIG.get("server", {}).get("host", "127.0.0.1")
+    uvicorn.run("gateway:app", host=host, port=port, reload=False)
