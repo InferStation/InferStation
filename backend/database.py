@@ -62,6 +62,9 @@ async def init_db():
             review_requested_at TEXT,
             reviewed_at TEXT,
             reviewed_by INTEGER,
+            context_length INTEGER,
+            capabilities TEXT NOT NULL DEFAULT '[]',
+            description TEXT,
             updated_at TEXT NOT NULL DEFAULT (datetime('now')),
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
@@ -226,6 +229,16 @@ async def init_db():
             await db.execute("ALTER TABLE backends ADD COLUMN reviewed_at TEXT")
         if "reviewed_by" not in cols:
             await db.execute("ALTER TABLE backends ADD COLUMN reviewed_by INTEGER")
+        # Migration: model-card metadata (added 2026-04-28). Used by the
+        # /models/[id] page (capability badges, context length, description).
+        if "context_length" not in cols:
+            await db.execute("ALTER TABLE backends ADD COLUMN context_length INTEGER")
+        if "capabilities" not in cols:
+            await db.execute(
+                "ALTER TABLE backends ADD COLUMN capabilities TEXT NOT NULL DEFAULT '[]'"
+            )
+        if "description" not in cols:
+            await db.execute("ALTER TABLE backends ADD COLUMN description TEXT")
         # Migration: collapse deprecated 'rejected' status into 'offline'.
         await db.execute("UPDATE backends SET listing_status = 'offline' WHERE listing_status = 'rejected'")
         # Migration: usage_logs records the backend's pricing currency at the time

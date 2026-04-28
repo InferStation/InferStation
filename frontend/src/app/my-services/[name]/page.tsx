@@ -27,7 +27,14 @@ interface Backend {
   updated_at: string
   created_at: string
   client_info?: { model_map?: Record<string, string>; api_key?: string }
+  // Model-card metadata (added 2026-04-28).
+  context_length?: number | null
+  capabilities?: string[]
+  description?: string | null
 }
+
+const CAPABILITY_KEYS = ["streaming", "tools", "reasoning", "json_output"] as const
+type CapabilityKey = typeof CAPABILITY_KEYS[number]
 
 export default function ServiceDetailPage() {
   const t = useT()
@@ -60,6 +67,9 @@ export default function ServiceDetailPage() {
     cache_price: "",
     currency: "CNY",
     is_public: true,
+    context_length: "",
+    capabilities: [] as CapabilityKey[],
+    description: "",
   })
 
   useEffect(() => {
@@ -99,6 +109,11 @@ export default function ServiceDetailPage() {
       cache_price: b.cache_price != null ? String(b.cache_price) : "",
       currency: b.currency || "CNY",
       is_public: !!b.is_public,
+      context_length: b.context_length != null ? String(b.context_length) : "",
+      capabilities: (b.capabilities || []).filter((c): c is CapabilityKey =>
+        (CAPABILITY_KEYS as readonly string[]).includes(c)
+      ),
+      description: b.description || "",
     })
   }
 
@@ -134,6 +149,8 @@ export default function ServiceDetailPage() {
         else delete client_info.api_key
       }
 
+      const ctxLen = editForm.context_length.trim()
+      const desc = editForm.description.trim()
       await apiFetch(`/api/backends/${encodeURIComponent(name)}`, {
         method: "PUT",
         body: JSON.stringify({
@@ -148,6 +165,11 @@ export default function ServiceDetailPage() {
           is_public: editForm.is_public,
           client_info,
           clear_price: !editForm.input_price && !editForm.output_price,
+          context_length: ctxLen ? parseInt(ctxLen, 10) : undefined,
+          clear_context_length: !ctxLen,
+          capabilities: editForm.capabilities,
+          description: desc || undefined,
+          clear_description: !desc,
         }),
       })
       // Reload
@@ -365,6 +387,81 @@ export default function ServiceDetailPage() {
               </div>
             </div>
             <p className="text-xs text-gray-500 -mt-2">{t({ en: "Cache-hit tokens are billed at the cache price; if blank, charged at input price × 0.1 (industry-standard discount).", zh: "缓存命中部分按缓存价计费；留空时按输入价×0.1（行业通行折扣）计费。" })}</p>
+
+            {/* Model card metadata: context length, capabilities, description */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t({ en: "Context length (tokens)", zh: "上下文长度（tokens）" })}
+              </label>
+              <input
+                type="number"
+                step="1024"
+                min="0"
+                value={editForm.context_length}
+                onChange={(e) => setEditForm({ ...editForm, context_length: e.target.value })}
+                placeholder={t({ en: "e.g. 131072 — leave blank if unknown", zh: "例如 131072，未知请留空" })}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none"
+              />
+              <p className="mt-1 text-xs text-gray-500">{t({ en: "Shown on the model detail page next to the price row.", zh: "显示在模型详情页价格行旁边。" })}</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {t({ en: "Capabilities", zh: "能力标签" })}
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {CAPABILITY_KEYS.map((cap) => {
+                  const checked = editForm.capabilities.includes(cap)
+                  const labelEn: Record<CapabilityKey, string> = {
+                    streaming: "Streaming",
+                    tools: "Tools",
+                    reasoning: "Reasoning",
+                    json_output: "JSON Output",
+                  }
+                  const labelZh: Record<CapabilityKey, string> = {
+                    streaming: "流式",
+                    tools: "工具调用",
+                    reasoning: "推理",
+                    json_output: "JSON 输出",
+                  }
+                  return (
+                    <label
+                      key={cap}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer text-sm ${
+                        checked ? "border-fg bg-accent-soft text-fg" : "border-line text-gray-600 hover:bg-gray-50"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => {
+                          const next = e.target.checked
+                            ? [...editForm.capabilities, cap]
+                            : editForm.capabilities.filter((c) => c !== cap)
+                          setEditForm({ ...editForm, capabilities: next })
+                        }}
+                      />
+                      {t({ en: labelEn[cap], zh: labelZh[cap] })}
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t({ en: "Description (optional)", zh: "描述（可选）" })}
+              </label>
+              <textarea
+                rows={3}
+                maxLength={500}
+                value={editForm.description}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                placeholder={t({ en: "Short description shown under the model name on the detail page.", zh: "在详情页模型名下方展示的简短介绍。" })}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none"
+              />
+            </div>
+
             <div className="flex items-center">
               <input type="checkbox" checked={editForm.is_public} onChange={(e) => setEditForm({ ...editForm, is_public: e.target.checked })} className="mr-2" />
               <span className="text-sm text-gray-600">{t({ en: "Public (callable by all users)", zh: "公开可见（所有用户可调用）" })}</span>

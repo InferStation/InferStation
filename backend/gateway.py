@@ -908,9 +908,17 @@ class RegisterBackendRequest(BaseModel):
     cache_price: float | None = None
     currency: str = "CNY"
     client_info: dict = {}
+    # Model-card metadata (optional; used on the /models/[id] page).
+    context_length: int | None = None
+    capabilities: list[str] = []  # subset of {"streaming","tools","reasoning","json_output"}
+    description: str | None = None
 
 
 ALLOWED_MODEL_FAMILIES = ["Qwen", "THUDM", "deepseek-ai", "google", "OpenAI"]
+
+# Capability flags advertised on the /models/[id] page. Keep the list short
+# and stable; rendering / i18n on the FE keys off these strings.
+ALLOWED_CAPABILITIES = ["streaming", "tools", "reasoning", "json_output"]
 
 # Pricing currencies accepted by /api/backends; UI shows the matching symbol.
 ALLOWED_CURRENCIES = ["CNY", "USD"]
@@ -991,6 +999,11 @@ async def register_backend(req: RegisterBackendRequest, user=Depends(require_pro
 
     req.client_info = _sanitize_client_info(req.client_info, req.models)
 
+    # Validate capability flags.
+    bad_caps = [c for c in req.capabilities if c not in ALLOWED_CAPABILITIES]
+    if bad_caps:
+        raise HTTPException(400, f"capabilities must be a subset of {ALLOWED_CAPABILITIES}; got {bad_caps}")
+
     db = await get_db()
     try:
         cur = await db.execute("SELECT id, owner_id FROM backends WHERE name = ?", (req.name,))
@@ -1000,11 +1013,12 @@ async def register_backend(req: RegisterBackendRequest, user=Depends(require_pro
                 raise HTTPException(409, f"后端名 '{req.name}' 已存在，请改用编辑页修改，或换一个名字再注册")
             raise HTTPException(409, f"后端名 '{req.name}' 已被其他用户占用")
         await db.execute(
-            """INSERT INTO backends (name, owner_id, url, mode, models, tags, input_price, output_price, cache_price, currency, is_public, client_info, enabled)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 0)""",
+            """INSERT INTO backends (name, owner_id, url, mode, models, tags, input_price, output_price, cache_price, currency, is_public, client_info, enabled, context_length, capabilities, description)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 0, ?, ?, ?)""",
             (
                 req.name, user["id"], req.url, req.mode, json.dumps(req.models), json.dumps(req.tags),
                 req.input_price, req.output_price, req.cache_price, currency, json.dumps(req.client_info),
+                req.context_length, json.dumps(req.capabilities), req.description,
             ),
         )
         await db.commit()
@@ -1061,6 +1075,7 @@ async def list_backends(mine: bool = False, user=Depends(get_current_user)):
     for r in rows:
         r["models"] = json.loads(r["models"]) if r["models"] else []
         r["tags"] = json.loads(r["tags"]) if r.get("tags") else {}
+        r["capabilities"] = json.loads(r["capabilities"]) if r.get("capabilities") else []
         # Only show sensitive fields to the backend owner or admin
         if user["role"] == "admin" or r.get("owner_id") == user["id"]:
             r["client_info"] = json.loads(r["client_info"]) if r["client_info"] else {}
@@ -1191,6 +1206,12 @@ class UpdateBackendRequest(BaseModel):
     is_public: bool | None = None
     client_info: dict | None = None
     clear_price: bool = False  # set True to clear pricing
+    # Model-card metadata.
+    context_length: int | None = None
+    clear_context_length: bool = False
+    capabilities: list[str] | None = None
+    description: str | None = None
+    clear_description: bool = False
 
 
 @app.put("/api/backends/{name}")
@@ -1205,6 +1226,10 @@ async def update_backend(name: str, req: UpdateBackendRequest, user=Depends(requ
                 raise HTTPException(400, f"模型 {m} 不在 {family} 的白名单中")
     if req.currency is not None and req.currency.upper() not in ALLOWED_CURRENCIES:
         raise HTTPException(400, f"currency must be one of {ALLOWED_CURRENCIES}")
+    if req.capabilities is not None:
+        bad_caps = [c for c in req.capabilities if c not in ALLOWED_CAPABILITIES]
+        if bad_caps:
+            raise HTTPException(400, f"capabilities must be a subset of {ALLOWED_CAPABILITIES}; got {bad_caps}")
 
     db = await get_db()
     try:
@@ -1275,6 +1300,21 @@ async def update_backend(name: str, req: UpdateBackendRequest, user=Depends(requ
         if pending_touched:
             updates.append("pending_effective_at = ?")
             params.append(effective_day)
+
+        # Model-card metadata edits are applied immediately (not staged).
+        if req.clear_context_length:
+            updates.append("context_length = NULL")
+        elif req.context_length is not None:
+            updates.append("context_length = ?")
+            params.append(req.context_length)
+        if req.capabilities is not None:
+            updates.append("capabilities = ?")
+            params.append(json.dumps(req.capabilities))
+        if req.clear_description:
+            updates.append("description = NULL")
+        elif req.description is not None:
+            updates.append("description = ?")
+            params.append(req.description)
 
         if updates:
             updates.append("updated_at = datetime('now')")
@@ -1500,48 +1540,162 @@ async def list_models():
 
 @app.get("/api/models/{model_id:path}")
 async def get_model_detail(model_id: str, backend_id: int | None = None):
+    """Return full model card.
+
+    - If `backend_id` is given (legacy single-provider mode), the response
+      keeps the old flat shape for back-compat (input_price/output_price/...
+      at top level) plus a `providers: [...]` list scoped to that one backend.
+    - Otherwise returns model-card aggregate: top-level "best" pricing/state
+      (lowest input_price, online-preferred), plus `providers` listing every
+      online+listed backend that serves this model.
+    """
     db = await get_db()
     try:
-        if backend_id is not None:
-            cur = await db.execute(
-                "SELECT b.id as backend_id, b.name as backend, b.models, b.tags, b.status, b.input_price, b.output_price, b.cache_price, b.currency, "
-                "b.mode, b.created_at, b.updated_at, u.username as provider "
-                "FROM backends b LEFT JOIN users u ON b.owner_id = u.id WHERE b.id = ? AND b.is_public = 1 AND b.enabled = 1",
-                (backend_id,),
-            )
-        else:
-            cur = await db.execute(
-                "SELECT b.id as backend_id, b.name as backend, b.models, b.tags, b.status, b.input_price, b.output_price, b.cache_price, b.currency, "
-                "b.mode, b.created_at, b.updated_at, u.username as provider "
-                "FROM backends b LEFT JOIN users u ON b.owner_id = u.id WHERE b.is_public = 1 AND b.enabled = 1"
-            )
+        cur = await db.execute(
+            "SELECT b.id as backend_id, b.name as backend, b.models, b.tags, b.status, "
+            "b.input_price, b.output_price, b.cache_price, b.currency, "
+            "b.context_length, b.capabilities, b.description, "
+            "b.mode, b.created_at, b.updated_at, u.username as provider "
+            "FROM backends b LEFT JOIN users u ON b.owner_id = u.id "
+            "WHERE b.is_public = 1 AND b.enabled = 1"
+        )
         rows = [dict(r) for r in await cur.fetchall()]
     finally:
         await db.close()
 
-    best = None
+    matching = []
     for r in rows:
         model_list = json.loads(r["models"]) if r["models"] else []
-        if model_id in model_list:
-            if best is None or (best["status"] != "online" and r["status"] == "online"):
-                best = r
-    if not best:
+        if model_id not in model_list:
+            continue
+        if backend_id is not None and r["backend_id"] != backend_id:
+            continue
+        matching.append(r)
+
+    if not matching:
         raise HTTPException(404, "Model not found")
+
+    def _row_to_provider(r: dict) -> dict:
+        return {
+            "backend_id": r["backend_id"],
+            "backend": r["backend"],
+            "provider": r["provider"],
+            "status": r["status"],
+            "mode": r["mode"],
+            "tags": json.loads(r["tags"]) if r.get("tags") else {},
+            "input_price": r["input_price"],
+            "output_price": r["output_price"],
+            "cache_price": r["cache_price"],
+            "currency": r["currency"] or "CNY",
+            "context_length": r.get("context_length"),
+            "capabilities": json.loads(r["capabilities"]) if r.get("capabilities") else [],
+            "description": r.get("description"),
+            "created_at": r["created_at"],
+            "updated_at": r["updated_at"],
+        }
+
+    providers = [_row_to_provider(r) for r in matching]
+
+    # Pick "best" provider for top-level fields:
+    # 1. prefer online; 2. then lowest input_price (None sorts last);
+    # 3. finally the most recently updated.
+    def _sort_key(p: dict):
+        online = 0 if p["status"] == "online" else 1
+        price = p["input_price"] if p["input_price"] is not None else float("inf")
+        return (online, price, p.get("updated_at") or "")
+
+    best = sorted(providers, key=_sort_key)[0]
+
+    # Aggregate capabilities (union across all online providers) and
+    # context_length (max across all providers).
+    online_providers = [p for p in providers if p["status"] == "online"] or providers
+    cap_set = set()
+    for p in online_providers:
+        for c in p["capabilities"]:
+            cap_set.add(c)
+    aggregated_capabilities = [c for c in ALLOWED_CAPABILITIES if c in cap_set]
+    aggregated_context = max(
+        (p["context_length"] for p in online_providers if p.get("context_length")),
+        default=None,
+    )
+    description = next(
+        (p["description"] for p in online_providers if p.get("description")),
+        None,
+    )
+
     return {
         "id": model_id,
+        # Legacy flat fields (preserved for callers with backend_id and for
+        # the ModelCatalog page which still reads top-level info).
         "backend_id": best["backend_id"],
         "backend": best["backend"],
         "provider": best["provider"],
         "status": best["status"],
         "mode": best["mode"],
-        "tags": json.loads(best["tags"]) if best.get("tags") else {},
+        "tags": best["tags"],
         "input_price": best["input_price"],
         "output_price": best["output_price"],
         "cache_price": best["cache_price"],
-        "currency": best["currency"] or "CNY",
+        "currency": best["currency"],
         "created_at": best["created_at"],
         "updated_at": best["updated_at"],
+        # Model-card metadata (aggregated across providers).
+        "context_length": aggregated_context,
+        "capabilities": aggregated_capabilities,
+        "description": description,
+        # All providers serving this model (for the provider grid).
+        "providers": providers,
     }
+
+
+@app.get("/api/models/{model_id:path}/performance")
+async def get_model_performance(model_id: str):
+    """Per-provider performance summary (TTFT / uptime / errors over last 24h).
+
+    Placeholder: real metrics collection is pending. We return one row per
+    online+listed backend that serves the model, with `null` numeric fields
+    so the FE can render an "n/a" state and stop falling back to fake data.
+    """
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            "SELECT b.id as backend_id, b.name as backend, b.status, u.username as provider "
+            "FROM backends b LEFT JOIN users u ON b.owner_id = u.id "
+            "WHERE b.is_public = 1 AND b.enabled = 1"
+        )
+        rows = [dict(r) for r in await cur.fetchall()]
+    finally:
+        await db.close()
+    out = []
+    for r in rows:
+        model_list = []
+        # `models` is JSON; rows here didn't select it. Fetch lazily to avoid
+        # changing the SQL above (model lists are small).
+        # Optimisation deferred — call /api/models/{id} first to get backend_ids.
+        out.append(
+            {
+                "backend_id": r["backend_id"],
+                "backend": r["backend"],
+                "provider": r["provider"],
+                "status": r["status"],
+                "ttft_ms": None,
+                "uptime_pct": None,
+                "errors_pct": None,
+                "requests_24h": None,
+                "available": False,  # FE renders "—" when False
+            }
+        )
+    # Filter to providers that actually serve this model (re-query models).
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            "SELECT id, models FROM backends WHERE is_public = 1 AND enabled = 1"
+        )
+        id_models = {row["id"]: json.loads(row["models"]) if row["models"] else [] for row in await cur.fetchall()}
+    finally:
+        await db.close()
+    out = [o for o in out if model_id in id_models.get(o["backend_id"], [])]
+    return {"id": model_id, "providers": out}
 
 
 # ══════════════════════════════════════════════════════════
