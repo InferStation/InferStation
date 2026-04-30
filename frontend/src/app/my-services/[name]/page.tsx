@@ -31,6 +31,11 @@ interface Backend {
   context_length?: number | null
   capabilities?: string[]
   description?: string | null
+  // Soft-delete state. Owner sees the backend in My Services until it is
+  // archived at the next billing settlement; archived state is admin-only and
+  // intentionally not exposed to non-admin clients here.
+  deletion_status?: string | null
+  deleted_at?: string | null
 }
 
 const CAPABILITY_KEYS = ["streaming", "tools", "reasoning", "json_output"] as const
@@ -76,9 +81,28 @@ export default function ServiceDetailPage() {
     apiFetch(`/api/backends/${encodeURIComponent(name)}`)
       .then((data: Backend) => {
         setBackend(data)
-        populateForm(data)
+        try {
+          populateForm(data)
+        } catch (e) {
+          console.error("[my-services] populateForm threw:", e, "data=", data)
+          setError(
+            t({
+              en: `Page render error: ${e instanceof Error ? e.message : String(e)}`,
+              zh: `页面渲染出错：${e instanceof Error ? e.message : String(e)}`,
+            })
+          )
+        }
       })
-      .catch(() => setError(t({ en: "Backend not found or access denied", zh: "后端不存在或无权访问" })))
+      .catch((e) => {
+        console.error("[my-services] fetch failed:", e)
+        const msg = e instanceof Error ? e.message : String(e)
+        setError(
+          t({
+            en: `Backend not found or access denied (${msg})`,
+            zh: `后端不存在或无权访问（${msg}）`,
+          })
+        )
+      })
       .finally(() => setLoading(false))
     apiFetch("/api/model-families").then((data: string[] | { families: string[] }) => {
       setFamilies(Array.isArray(data) ? data : data.families)
@@ -217,6 +241,15 @@ export default function ServiceDetailPage() {
         ← {t({ en: "Back to My Services", zh: "返回我的服务" })}
       </button>
 
+      {backend.deletion_status === "deleted" && (
+        <div className="mb-4 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+          <b>{t({ en: "Deleted: ", zh: "已删除：" })}</b>
+          {t({
+            en: "this backend has been removed from the marketplace. It will be cleared from My Services after the next billing settlement.",
+            zh: "该后端已从市场下架，下次结账后将从“我的服务”中移除。",
+          })}
+        </div>
+      )}
       {backend.listing_status === "offline" && backend.review_note && (
         <div className="mb-4 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
           <b>{t({ en: "Review rejected: ", zh: "审核驳回：" })}</b>{backend.review_note}
@@ -249,12 +282,14 @@ export default function ServiceDetailPage() {
                 {backend.status}
               </span>
               <span className="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600">
-                {backend.mode === "tunnel" ? t({ en: "Tunnel", zh: "隔道" }) : t({ en: "Direct", zh: "直连" })}
+                {backend.mode === "tunnel" ? t({ en: "Tunnel", zh: "隧道" }) : t({ en: "Direct", zh: "直连" })}
               </span>
 
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {!backend.deletion_status && (
+              <>
             <button
               onClick={handleToggle}
               className={(() => {
@@ -276,7 +311,22 @@ export default function ServiceDetailPage() {
                 {t({ en: "Edit", zh: "编辑" })}
               </button>
             )}
-            <button onClick={handleDelete} className="text-sm px-3 py-1.5 rounded text-red-500 hover:bg-red-50">{t({ en: "Delete", zh: "删除" })}</button>
+            {(() => {
+              const st = backend.listing_status || (backend.enabled ? "listed" : "offline")
+              const canDelete = st === "offline"
+              return (
+                <button
+                  onClick={handleDelete}
+                  disabled={!canDelete}
+                  className={`text-sm px-3 py-1.5 rounded ${canDelete ? "text-red-500 hover:bg-red-50" : "text-gray-300 bg-gray-50 cursor-not-allowed"}`}
+                  title={!canDelete ? t({ en: "Take down before deleting", zh: "请先下架后再删除" }) : undefined}
+                >
+                  {t({ en: "Delete", zh: "删除" })}
+                </button>
+              )
+            })()}
+              </>
+            )}
           </div>
         </div>
 
@@ -462,10 +512,6 @@ export default function ServiceDetailPage() {
               />
             </div>
 
-            <div className="flex items-center">
-              <input type="checkbox" checked={editForm.is_public} onChange={(e) => setEditForm({ ...editForm, is_public: e.target.checked })} className="mr-2" />
-              <span className="text-sm text-gray-600">{t({ en: "Public (callable by all users)", zh: "公开可见（所有用户可调用）" })}</span>
-            </div>
             <div className="flex gap-2">
               <button onClick={handleSave} disabled={saving} className="bg-fg text-white px-6 py-2 rounded-lg hover:bg-fg/90 disabled:opacity-50">
                 {saving ? t({ en: "Saving...", zh: "保存中..." }) : t({ en: "Save", zh: "保存" })}

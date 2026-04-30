@@ -239,6 +239,15 @@ async def init_db():
             )
         if "description" not in cols:
             await db.execute("ALTER TABLE backends ADD COLUMN description TEXT")
+        # Migration: soft-delete lifecycle (added 2026-04-28).
+        # deletion_status:  NULL  → active backend (default)
+        #                   'deleted'  → owner-soft-deleted, awaiting next billing cycle close
+        #                   'archived' → finalised; only admin can see (internal state, do
+        #                                not surface in public docs)
+        if "deletion_status" not in cols:
+            await db.execute("ALTER TABLE backends ADD COLUMN deletion_status TEXT")
+        if "deleted_at" not in cols:
+            await db.execute("ALTER TABLE backends ADD COLUMN deleted_at TEXT")
         # Migration: collapse deprecated 'rejected' status into 'offline'.
         await db.execute("UPDATE backends SET listing_status = 'offline' WHERE listing_status = 'rejected'")
         # Migration: usage_logs records the backend's pricing currency at the time

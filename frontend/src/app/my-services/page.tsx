@@ -30,6 +30,11 @@ interface Backend {
   is_public: number
   owner_name: string
   updated_at: string
+  // Soft-delete state. NULL/undefined = active. "deleted" = pending archive
+  // (still visible to owner in My Services). The terminal "archived" state
+  // is intentionally not surfaced to non-admin clients.
+  deletion_status?: string | null
+  deleted_at?: string | null
 }
 
 interface ModelStat {
@@ -105,7 +110,7 @@ export default function ServicesPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (form.mode !== "direct") {
-      alert(t({ en: "Tunnel mode requires the client tool; the web form only supports direct mode.", zh: "隔道模式请使用客户端注册，网页仅支持直连模式。" }))
+      alert(t({ en: "Tunnel mode requires the client tool; the web form only supports direct mode.", zh: "隧道模式请使用客户端注册，网页仅支持直连模式。" }))
       return
     }
     if (!form.family) {
@@ -253,11 +258,11 @@ export default function ServicesPage() {
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none"
                 >
                   <option value="direct">{t({ en: "Direct (publicly reachable)", zh: "直连（公网可达）" })}</option>
-                  <option value="tunnel">{t({ en: "Tunnel (NAT, requires client registration)", zh: "隔道（NAT 内网，需客户端注册）" })}</option>
+                  <option value="tunnel">{t({ en: "Tunnel (NAT, requires client registration)", zh: "隧道（NAT 内网，需客户端注册）" })}</option>
                 </select>
                 {form.mode === "tunnel" && (
                   <p className="mt-1 text-xs text-red-600">
-                    {t({ en: "Tunnel mode is not yet supported in the web form, ", zh: "隔道模式暂不支持网页注册，" })}
+                    {t({ en: "Tunnel mode is not yet supported in the web form, ", zh: "隧道模式暂不支持网页注册，" })}
                     <button type="button" onClick={() => setTunnelNoticeOpen(true)} className="underline hover:text-red-700">{t({ en: "see onboarding instructions", zh: "查看接入说明" })}</button>
                   </p>
                 )}
@@ -363,7 +368,8 @@ export default function ServicesPage() {
       )}
 
       <div className="space-y-3">
-        {backends.flatMap((b) => {
+        {(() => {
+          const renderRowsForBackend = (b: Backend) => {
           const rows = b.models.length > 0 ? b.models : [null]
           return rows.map((m, idx) => {
             const s = m ? (statsMap[b.id] || []).find((x) => x.model === m) : undefined
@@ -373,7 +379,7 @@ export default function ServicesPage() {
               <Link
                 key={`${b.id}-${m ?? "_"}`}
                 href={`/my-services/${encodeURIComponent(b.name)}`}
-                className={`block bg-white rounded-lg border border-line hover:border-line-strong transition-colors ${!b.enabled ? "opacity-60" : ""}`}
+                className={`block bg-white rounded-lg border border-line hover:border-line-strong transition-colors ${!b.enabled || b.deletion_status ? "opacity-60" : ""}`}
               >
                 {/* Header */}
                 <div className="flex justify-between items-start gap-3 px-5 py-3 border-b border-line flex-wrap">
@@ -393,6 +399,11 @@ export default function ServicesPage() {
                           </span>
                         )
                       })()}
+                      {b.deletion_status === "deleted" && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-600">
+                          {t({ en: "Deleted (pending settlement)", zh: "已删除（待结账）" })}
+                        </span>
+                      )}
                       <span
                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
                           b.status === "online" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"
@@ -406,7 +417,7 @@ export default function ServicesPage() {
                       <span className="text-gray-400">{t({ en: "Backend", zh: "后端" })}</span>
                       <span className="text-gray-700 font-mono">{b.name}</span>
                       <span className="text-gray-300">·</span>
-                      <span className="text-gray-500">{b.mode === "tunnel" ? t({ en: "Tunnel", zh: "隔道" }) : t({ en: "Direct", zh: "直连" })}</span>
+                      <span className="text-gray-500">{b.mode === "tunnel" ? t({ en: "Tunnel", zh: "隧道" }) : t({ en: "Direct", zh: "直连" })}</span>
                       {Object.entries(b.tags || {}).map(([k, v]) => (
                         <span key={k} className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-accent-soft text-fg border border-line">
                           {v}
@@ -414,7 +425,7 @@ export default function ServicesPage() {
                       ))}
                     </div>
                   </div>
-                  {idx === 0 && (() => {
+                  {idx === 0 && !b.deletion_status && (() => {
                     const st = b.listing_status || (b.enabled ? "listed" : "offline")
                     const canApply = st === "offline"
                     const canTakedown = st === "listed" || st === "pending"
@@ -528,7 +539,26 @@ export default function ServicesPage() {
               </Link>
             )
           })
-        })}
+          }
+          const activeBackends = backends.filter((b) => !b.deletion_status)
+          const deletedBackends = backends.filter((b) => b.deletion_status === "deleted")
+          return (
+            <>
+              {activeBackends.flatMap(renderRowsForBackend)}
+              {deletedBackends.length > 0 && (
+                <details className="mt-2 group">
+                  <summary className="cursor-pointer select-none text-sm text-gray-600 hover:text-gray-900 py-2 px-1 flex items-center gap-2">
+                    <span className="inline-block transition-transform group-open:rotate-90">▶</span>
+                    <span>{t({ en: `Deleted services (${deletedBackends.length}, archived after next settlement)`, zh: `已删除服务（${deletedBackends.length}，下次结账后归档）` })}</span>
+                  </summary>
+                  <div className="space-y-3 mt-2">
+                    {deletedBackends.flatMap(renderRowsForBackend)}
+                  </div>
+                </details>
+              )}
+            </>
+          )
+        })()}
         {backends.length === 0 && <div className="text-center py-12 text-gray-500">{t({ en: "No registered backends yet", zh: "暂无注册的后端服务" })}</div>}
       </div>
 
@@ -537,7 +567,7 @@ export default function ServicesPage() {
           <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between gap-4 mb-3">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">{t({ en: "Tunnel mode is not supported in the web form", zh: "隔道模式暂不支持网页注册" })}</h3>
+                <h3 className="text-lg font-semibold text-gray-900">{t({ en: "Tunnel mode is not supported in the web form", zh: "隧道模式暂不支持网页注册" })}</h3>
                 <p className="text-sm text-gray-500 mt-1">{t({ en: "Please register from the provider machine using the client CLI.", zh: "请在提供方机器上通过客户端命令行注册。" })}</p>
               </div>
               <button onClick={() => setTunnelNoticeOpen(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>

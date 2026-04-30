@@ -50,3 +50,7 @@ export const IconExternal = make(<><path d="M14 3h7v7" /><path d="M21 3l-9 9" />
 export const IconTrash = make(<><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M6 6v14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6" /></>)
 export const IconHelp = make(<><circle cx="12" cy="12" r="10" /><path d="M9.1 9a3 3 0 1 1 5.8 1c0 2-3 2.5-3 4" /><path d="M12 17h.01" /></>)
 export const IconLayers = make(<><path d="M12 2l9 5-9 5-9-5 9-5z" /><path d="M3 12l9 5 9-5" /><path d="M3 17l9 5 9-5" /></>)
+export const IconSun = make(<><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" /></>)
+export const IconMoon = make(<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />)
+export const IconMonitor = make(<><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" /></>)
+export const IconLanguages = make(<><path d="M5 8h12" /><path d="M9 4v4" /><path d="M5 14c2.5 4 6 5.5 9 6" /><path d="M14 12c-1 4-4 7-9 8" /><path d="M14 14h7l-3.5 7L14 14z" /></>)

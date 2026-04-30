@@ -19,6 +19,24 @@ from database import get_db
 GRACE_DAYS = 7  # days after period_end before an invoice is considered overdue
 
 
+async def _archive_owner_deletions(db, owner_id: int, period_end_iso: str) -> None:
+    """Soft-deleted backends whose deletion timestamp falls within the just-billed
+    period are advanced to the terminal 'archived' state. Internal-only: this
+    state is invisible to the owner and to all non-admin endpoints.
+
+    Called immediately after invoice insert (both auto and early-settle paths)
+    so that deletion → archive aligns with the billing cycle close.
+    """
+    await db.execute(
+        """UPDATE backends
+              SET deletion_status = 'archived'
+            WHERE owner_id = ?
+              AND deletion_status = 'deleted'
+              AND COALESCE(deleted_at, '') < ?""",
+        (owner_id, period_end_iso),
+    )
+
+
 def _month_first(d: date) -> date:
     return d.replace(day=1)
 
@@ -114,6 +132,9 @@ async def ensure_invoices_for_user(user_id: int) -> None:
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                     (user_id, period_start, period_end, total, currency, status, due_date, paid_at),
                 )
+            # Once a month closes, advance the user's soft-deleted backends
+            # whose deletion fell within that period to the terminal state.
+            await _archive_owner_deletions(db, user_id, period_end)
         await db.commit()
     finally:
         await db.close()
@@ -313,6 +334,9 @@ async def settle_user_partial(user_id: int, today: date | None = None) -> list[d
                 "due_date": due_date,
                 "paid_at": paid_at,
             })
+        # Early settlement also closes off the running month for this user;
+        # any pending soft-deleted backends become archived now.
+        await _archive_owner_deletions(db, user_id, period_end)
         await db.commit()
         return created
     finally:

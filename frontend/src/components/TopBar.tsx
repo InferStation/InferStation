@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext"
 import { useT, type Bilingual } from "@/context/LocaleContext"
 import { IconLogout, IconUser, IconCog, IconChevronDown } from "@/components/ui/Icon"
 import { cn } from "@/lib/cn"
+import { ThemeToggle, LanguageToggle } from "@/components/TopBarToggles"
 
 const TITLE_MAP: Array<[RegExp, Bilingual]> = [
   [/^\/$/, { en: "Home", zh: "首页" }],
@@ -57,6 +58,9 @@ export default function TopBar() {
         {title && <span className="text-fg font-medium truncate">{title}</span>}
       </div>
       <div className="flex items-center gap-2">
+        <ThemeToggle />
+        <LanguageToggle />
+        <span aria-hidden className="h-5 w-px bg-line mx-1" />
         {user ? (
           <div className="relative" ref={ref}>
             <button

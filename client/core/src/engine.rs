@@ -119,6 +119,7 @@ impl Engines {
 
         #[cfg(unix)]
         {
+            #[allow(unused_imports)]
             use std::os::unix::process::CommandExt as _;
             cmd.process_group(0);
         }
@@ -144,7 +145,8 @@ impl Engines {
             },
         );
 
-        Ok(status.lock().await.clone())
+        let snapshot = status.lock().await.clone();
+        Ok(snapshot)
     }
 
     pub async fn stop(&self, name: &str) -> Result<()> {

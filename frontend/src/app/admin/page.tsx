@@ -312,7 +312,7 @@ export default function AdminPage() {
                     <td className="px-4 py-3 font-medium">{b.name}</td>
                     <td className="px-4 py-3">{b.owner_name}</td>
                     <td className="px-4 py-3">
-                      <span className="px-2 py-0.5 rounded text-xs bg-gray-100">{b.mode === "tunnel" ? t({ en: "Tunnel", zh: "隔道" }) : t({ en: "Direct", zh: "直连" })}</span>
+                      <span className="px-2 py-0.5 rounded text-xs bg-gray-100">{b.mode === "tunnel" ? t({ en: "Tunnel", zh: "隧道" }) : t({ en: "Direct", zh: "直连" })}</span>
                     </td>
                     <td className="px-4 py-3 font-mono text-xs">{(b.models || []).join(", ") || "—"}</td>
                     <td className="px-4 py-3 text-right font-mono text-xs">

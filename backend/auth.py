@@ -72,3 +72,21 @@ async def require_provider(user=Depends(get_current_user)):
     if user["role"] not in ("provider", "both", "admin"):
         raise HTTPException(status_code=403, detail="Provider access required")
     return user
+
+
+async def get_optional_user(creds: HTTPAuthorizationCredentials = Depends(security)):
+    """Like get_current_user but returns None when no/invalid token."""
+    if not creds:
+        return None
+    try:
+        payload = jwt.decode(creds.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        user_id = int(payload["sub"])
+    except (JWTError, KeyError, ValueError):
+        return None
+    db = await get_db()
+    try:
+        cur = await db.execute("SELECT * FROM users WHERE id = ? AND is_active = 1", (user_id,))
+        user = await cur.fetchone()
+    finally:
+        await db.close()
+    return dict(user) if user else None

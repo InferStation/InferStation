@@ -194,8 +194,10 @@ for chunk in resp:
 | GET/POST | `/api/keys` | 列出/创建 API Key | JWT |
 | DELETE | `/api/keys/{id}` | 吊销 Key | JWT |
 | GET/POST | `/api/backends` | 列出/注册后端 | JWT (Provider) |
-| DELETE | `/api/backends/{name}` | 删除后端 | JWT (Provider) |
+| DELETE | `/api/backends/{name}` | 软删除后端（要求 listing_status=offline；订阅停用，下次结账归档） | JWT (Provider) |
 | GET | `/api/models` | 模型市场（公开在线模型）| 无 |
+| GET | `/api/models/{model_id}` | 模型详情（默认公开已上架；登录后 owner 可预览自己未上架/未公开后端） | 可选 JWT |
+| GET | `/api/models/{model_id}/performance` | 按 provider 的性能概要（占位实现，数值字段为 `null`、`available=false`） | 无 |
 | GET | `/api/usage` | 用户用量统计 | JWT |
 | GET | `/api/billing/status` | 本月用量与未付账单 | JWT |
 | GET | `/api/billing/settle-now/eligibility` | 能否提前结清本月账单 | JWT |

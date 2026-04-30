@@ -16,6 +16,7 @@ interface Sub {
   backend_status: string
   input_price: number | null
   output_price: number | null
+  cache_price?: number | null
   currency: string
   provider?: string | null
   is_owned?: number | boolean
@@ -256,146 +257,165 @@ export default function MyModelsPage() {
                     groupActivated ? "border-fg/40 ring-2 ring-fg/10" : ""
                   }`}
                 >
-                  <div className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-2 px-4 py-2.5 hover:bg-bg/40 rounded-t-lg">
                     <button
                       type="button"
                       onClick={() => toggleCard(cardKey)}
-                      className="flex-1 flex items-center gap-3 flex-wrap text-left"
+                      className="shrink-0 inline-flex items-center text-fg-subtle hover:text-fg"
+                      aria-label="toggle"
                     >
-                      <span
-                        className={`shrink-0 inline-block text-gray-400 transition-transform ${collapsed ? "" : "rotate-90"}`}
-                      >
-                        ▶
-                      </span>
-                      <span className="font-semibold text-lg text-gray-900 break-all">
-                        {g.model}
-                      </span>
-                      {g.rows.length > 0 && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-line">
-                          {g.rows.length} {t({ en: "backend(s)", zh: "个服务" })}
-                        </span>
-                      )}
+                      <span className={`inline-block transition-transform ${collapsed ? "" : "rotate-90"}`}>▶</span>
                     </button>
-                    <div className="flex items-center gap-1 shrink-0" title={disabled ? t({ en: "Inactive models cannot be reordered", zh: "未激活模型不可调整顺序" }) : t({ en: "Adjust this model's priority among all models", zh: "在所有模型间调整该模型的优先级" })}>
+                    <Link
+                      href={`/models/${g.model}?from=subscriptions`}
+                      className="font-semibold text-base text-fg break-all hover:underline"
+                    >{g.model}</Link>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-600 border border-line">
+                      {g.rows.length} {t({ en: "backend(s)", zh: "个服务" })}
+                    </span>
+                    {groupActivated && minActivatedRank != null && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-fg text-accent-fg" title={t({ en: "Auto-failover priority", zh: "Auto 路由优先级" })}>
+                        #{minActivatedRank}
+                      </span>
+                    )}
+                    <div className="flex-1" />
+                    <div className="flex items-center" title={disabled ? t({ en: "Inactive models cannot be reordered", zh: "未激活模型不可调整顺序" }) : t({ en: "Adjust this model's priority among all models", zh: "在所有模型间调整该模型优先级" })}>
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); handleMoveGroup(g.model, -1) }}
                         disabled={disabled || globalGroupIdx <= 0}
-                        title={t({ en: "Move this model up across all models", zh: "在所有模型间提高该模型的优先级" })}
-                        className="px-2 h-7 flex items-center text-xs rounded border border-line text-gray-600 bg-white hover:bg-accent-soft hover:text-fg hover:border-line-strong disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
-                      >{t({ en: "Move up model", zh: "上移模型" })}</button>
+                        title={t({ en: "Move model up", zh: "上移模型" })}
+                        className="w-7 h-7 flex items-center justify-center text-xs rounded-l border border-line text-gray-600 bg-white hover:bg-accent-soft hover:text-fg disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                      >↑</button>
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); handleMoveGroup(g.model, 1) }}
                         disabled={disabled || globalGroupIdx === allOrder.length - 1}
-                        title={t({ en: "Move this model down across all models", zh: "在所有模型间降低该模型的优先级" })}
-                        className="px-2 h-7 flex items-center text-xs rounded border border-line text-gray-600 bg-white hover:bg-accent-soft hover:text-fg hover:border-line-strong disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
-                      >{t({ en: "Move down model", zh: "下移模型" })}</button>
+                        title={t({ en: "Move model down", zh: "下移模型" })}
+                        className="w-7 h-7 flex items-center justify-center text-xs rounded-r border-y border-r border-line text-gray-600 bg-white hover:bg-accent-soft hover:text-fg disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                      >↓</button>
                     </div>
                   </div>
                   {!collapsed && (
-                    <div className="px-5 pb-5">
-                      <div className={g.rows.length > 1 ? "divide-y divide-line border border-line rounded" : ""}>
+                    <div className="border-t border-line">
+                      <table className="w-full text-sm table-fixed">
+                        <colgroup>
+                          <col style={{ width: "26%" }} />
+                          <col style={{ width: "12%" }} />
+                          <col style={{ width: "9%" }} />
+                          <col style={{ width: "9%" }} />
+                          <col style={{ width: "9%" }} />
+                          <col style={{ width: "11%" }} />
+                          <col style={{ width: "24%" }} />
+                        </colgroup>
+                        <thead>
+                          <tr className="text-left text-[10px] uppercase tracking-wider text-fg-subtle bg-bg/40">
+                            <th className="px-4 py-2 font-medium">{t({ en: "Backend", zh: "后端" })}</th>
+                            <th className="px-3 py-2 font-medium">{t({ en: "Provider", zh: "提供者" })}</th>
+                            <th className="px-3 py-2 font-medium text-right">{t({ en: "Input /M", zh: "输入 /M" })}</th>
+                            <th className="px-3 py-2 font-medium text-right">{t({ en: "Output /M", zh: "输出 /M" })}</th>
+                            <th className="px-3 py-2 font-medium text-right">{t({ en: "Cache /M", zh: "缓存 /M" })}</th>
+                            <th className="px-3 py-2 font-medium text-center">{t({ en: "Status", zh: "状态" })}</th>
+                            <th className="px-3 py-2 font-medium text-right">{t({ en: "Action", zh: "操作" })}</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-line">
                         {g.rows.map((s, rowIdx) => {
                           const isActivated = !!s.is_activated
-                          const myRank = activatedRank.get(s.id) ?? null
+                          const sym = s.currency === "USD" ? "$" : "¥"
+                          const isFree = s.input_price === 0 && s.output_price === 0
                           return (
-                            <div
-                              key={s.id}
-                              className={`${g.rows.length > 1 ? "px-3 py-3" : ""} flex items-center justify-between flex-wrap gap-2`}
-                            >
-                              <div className="flex items-center gap-3 flex-wrap text-sm">
-                                <span className="inline-flex items-center gap-1 text-gray-700" title={t({ en: `Backend: ${s.backend}`, zh: `后端：${s.backend}` })}>
-                                  <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" /></svg>
-                                  <span className="font-medium text-gray-900">{s.backend}</span>
-                                </span>
-                                <span className="inline-flex items-center gap-1 text-gray-600" title={t({ en: `Provider: ${s.provider || "shared"}`, zh: `提供者：${s.provider || "共享"}` })}>
-                                  <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                                  <span>{s.provider || t({ en: "shared", zh: "共享" })}</span>
-                                </span>
-                                {s.input_price != null && (
-                                  <span className="inline-flex items-center gap-1 text-gray-600" title={t({ en: "Price (input / output, per 1M tokens)", zh: "价格（输入 / 输出，每 1M tokens）" })}>
-                                    <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                    {s.input_price === 0 && s.output_price === 0 ? (
-                                      <span className="text-emerald-600 font-semibold">Free</span>
-                                    ) : (
-                                      <span>{s.currency === "USD" ? "$" : "¥"}{s.input_price}/M · {s.currency === "USD" ? "$" : "¥"}{s.output_price}/M <span className="text-[10px] text-gray-400">{s.currency || "CNY"}</span></span>
-                                    )}
-                                  </span>
-                                )}
-                                <span
-                                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] font-medium ${
-                                    s.backend_status === "online"
-                                      ? "bg-green-50 text-green-700"
-                                      : "bg-red-50 text-red-600"
-                                  }`}
-                                  title={s.backend_status === "online" ? t({ en: "Online", zh: "在线" }) : t({ en: "Offline", zh: "离线" })}
-                                >
-                                  <span
-                                    className={`w-1 h-1 rounded-full ${
-                                      s.backend_status === "online" ? "bg-green-500" : "bg-red-400"
-                                    }`}
-                                  />
+                            <tr key={s.id} className="hover:bg-bg/30">
+                              {/* Backend */}
+                              <td className="px-4 py-2.5 align-middle">
+                                <div className="inline-flex items-center gap-1.5">
+                                  <svg className="w-3.5 h-3.5 text-fg-subtle shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" /></svg>
+                                  <Link
+                                    href={`/models/${s.model}?backend_id=${s.backend_id}&from=subscriptions`}
+                                    className="font-mono text-[12.5px] font-medium text-fg break-all hover:underline"
+                                  >{s.backend}</Link>
+                                  {!!s.is_owned && (
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200" title={t({ en: "Your own backend (auto-subscribed)", zh: "自有服务（自动订阅）" })}>
+                                      {t({ en: "Owned", zh: "自有" })}
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              {/* Provider */}
+                              <td className="px-3 py-2.5 align-middle text-fg-muted">
+                                {s.provider || t({ en: "shared", zh: "共享" })}
+                              </td>
+                              {/* Input price */}
+                              <td className="px-3 py-2.5 align-middle text-right whitespace-nowrap">
+                                {s.input_price == null ? <span className="text-fg-subtle">—</span>
+                                  : isFree ? <span className="text-emerald-600 font-medium">Free</span>
+                                  : <span className="text-fg">{sym}{s.input_price}</span>}
+                              </td>
+                              {/* Output price */}
+                              <td className="px-3 py-2.5 align-middle text-right whitespace-nowrap">
+                                {s.output_price == null ? <span className="text-fg-subtle">—</span>
+                                  : isFree ? <span className="text-emerald-600 font-medium">Free</span>
+                                  : <span className="text-fg">{sym}{s.output_price}</span>}
+                              </td>
+                              {/* Cache price */}
+                              <td className="px-3 py-2.5 align-middle text-right whitespace-nowrap">
+                                {(() => {
+                                  const cache = s.cache_price != null ? s.cache_price : (s.input_price != null ? s.input_price * 0.1 : null)
+                                  if (cache == null) return <span className="text-fg-subtle">—</span>
+                                  if (cache === 0) return <span className="text-emerald-600 font-medium">Free</span>
+                                  return <span className="text-fg-muted">{sym}{cache.toFixed(cache < 1 ? 4 : 2).replace(/0+$/, "").replace(/\.$/, "")}</span>
+                                })()}
+                              </td>
+                              {/* Status */}
+                              <td className="px-3 py-2.5 align-middle text-center">
+                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] font-medium ${s.backend_status === "online" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
+                                  <span className={`w-1 h-1 rounded-full ${s.backend_status === "online" ? "bg-emerald-500" : "bg-red-400"}`} />
                                   {s.backend_status === "online" ? t({ en: "Online", zh: "在线" }) : t({ en: "Offline", zh: "离线" })}
                                 </span>
-                                {!!s.is_owned && (
-                                  <span
-                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200"
-                                    title={t({ en: "Your own backend (auto-subscribed; cannot unsubscribe)", zh: "自己注册的模型服务（自动订阅，无法取消订阅）" })}
-                                  >
-                                    {t({ en: "Owned", zh: "自有" })}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                {isActivated ? (
+                              </td>
+                              {/* Action */}
+                              <td className="px-3 py-2.5 align-middle">
+                                <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                                  {isActivated ? (
+                                    <button
+                                      onClick={() => handleToggleActivate(s.id, false)}
+                                      disabled={saving === s.id}
+                                      className="px-2 h-7 flex items-center text-xs rounded border border-line text-gray-600 bg-white hover:bg-accent-soft hover:text-fg hover:border-line-strong disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                                    >{t({ en: "Deactivate", zh: "取消激活" })}</button>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleToggleActivate(s.id, true)}
+                                      disabled={saving === s.id}
+                                      className="px-2 h-7 flex items-center text-xs rounded border border-fg bg-fg text-white hover:bg-fg/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >{t({ en: "Activate", zh: "激活" })}</button>
+                                  )}
                                   <button
-                                    onClick={() => handleToggleActivate(s.id, false)}
-                                    disabled={saving === s.id}
-                                    className="px-2 h-7 flex items-center text-xs rounded border border-line text-gray-600 bg-white hover:bg-accent-soft hover:text-fg hover:border-line-strong disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
-                                  >
-                                    {t({ en: "Deactivate", zh: "取消激活" })}
-                                  </button>
-                                ) : (
-                                  <button
-                                    onClick={() => handleToggleActivate(s.id, true)}
-                                    disabled={saving === s.id}
-                                    className="px-2 h-7 flex items-center text-xs rounded border border-fg bg-fg text-white hover:bg-fg/90 disabled:opacity-50 disabled:cursor-not-allowed"
-                                  >
-                                    {t({ en: "Activate", zh: "激活" })}
-                                  </button>
-                                )}
-                                <button
-                                  onClick={() => handleUnsubscribe(s.id)}
-                                  disabled={!!s.is_owned}
-                                  title={s.is_owned ? t({ en: "Your own backend — cannot unsubscribe", zh: "自己注册的模型服务，无法取消订阅" }) : undefined}
-                                  className="px-2 h-7 flex items-center text-xs rounded border border-red-300 text-red-600 bg-white hover:bg-red-50 hover:border-red-400 disabled:text-gray-300 disabled:border-line disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
-                                >
-                                  {t({ en: "Unsubscribe", zh: "取消订阅" })}
-                                </button>
-                                <div className="flex items-center gap-1" title={disabled ? t({ en: "Inactive models cannot be reordered", zh: "未激活模型不可调整顺序" }) : g.rows.length <= 1 ? t({ en: "Only one backend — nothing to reorder", zh: "该模型只有一个后端，无需排序" }) : t({ en: "Reorder backends within this model", zh: "在该模型的多个后端之间调整顺序" })}>
-                                  <button
-                                    onClick={() => handleMoveInCard(s.id, -1)}
-                                    disabled={disabled || g.rows.length <= 1 || rowIdx === 0}
-                                    title={t({ en: "Move this backend up within the model", zh: "同模型内提高该服务的优先级" })}
-                                    className="px-2 h-7 flex items-center text-xs rounded border border-line text-gray-600 bg-white hover:bg-accent-soft hover:text-fg hover:border-line-strong disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
-                                  >
-                                    {t({ en: "Move up", zh: "上移服务" })}
-                                  </button>
-                                  <button
-                                    onClick={() => handleMoveInCard(s.id, 1)}
-                                    disabled={disabled || g.rows.length <= 1 || rowIdx === g.rows.length - 1}
-                                    title={t({ en: "Move this backend down within the model", zh: "同模型内降低该服务的优先级" })}
-                                    className="px-2 h-7 flex items-center text-xs rounded border border-line text-gray-600 bg-white hover:bg-accent-soft hover:text-fg hover:border-line-strong disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
-                                  >
-                                    {t({ en: "Move down", zh: "下移服务" })}
-                                  </button>
+                                    onClick={() => handleUnsubscribe(s.id)}
+                                    disabled={!!s.is_owned}
+                                    title={s.is_owned ? t({ en: "Your own backend — cannot unsubscribe", zh: "自有服务，无法取消订阅" }) : undefined}
+                                    className="px-2 h-7 flex items-center text-xs rounded border border-red-300 text-red-600 bg-white hover:bg-red-50 hover:border-red-400 disabled:text-gray-300 disabled:border-line disabled:bg-gray-50 disabled:cursor-not-allowed"
+                                  >{t({ en: "Unsubscribe", zh: "取消订阅" })}</button>
+                                  <div className="flex items-center" title={disabled ? t({ en: "Inactive models cannot be reordered", zh: "未激活模型不可调整顺序" }) : g.rows.length <= 1 ? t({ en: "Only one backend", zh: "仅一个后端" }) : t({ en: "Reorder within model", zh: "在该模型内调整顺序" })}>
+                                    <button
+                                      onClick={() => handleMoveInCard(s.id, -1)}
+                                      disabled={disabled || g.rows.length <= 1 || rowIdx === 0}
+                                      title={t({ en: "Move up within model", zh: "同模型内上移" })}
+                                      className="w-7 h-7 flex items-center justify-center text-xs rounded-l border border-line text-gray-600 bg-white hover:bg-accent-soft hover:text-fg disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                                    >↑</button>
+                                    <button
+                                      onClick={() => handleMoveInCard(s.id, 1)}
+                                      disabled={disabled || g.rows.length <= 1 || rowIdx === g.rows.length - 1}
+                                      title={t({ en: "Move down within model", zh: "同模型内下移" })}
+                                      className="w-7 h-7 flex items-center justify-center text-xs rounded-r border-y border-r border-line text-gray-600 bg-white hover:bg-accent-soft hover:text-fg disabled:text-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                                    >↓</button>
+                                  </div>
                                 </div>
-                              </div>
-                            </div>
+                              </td>
+                            </tr>
                           )
                         })}
-                      </div>
+                        </tbody>
+                      </table>
                     </div>
                   )}
                 </div>
@@ -464,7 +484,7 @@ export default function MyModelsPage() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <Link
-                              href={`/models/${s.backend_id}/${s.model}`}
+                              href={`/models/${s.model}?backend_id=${s.backend_id}&from=subscriptions`}
                               className="font-medium text-gray-700 hover:text-fg"
                             >
                               {s.model}

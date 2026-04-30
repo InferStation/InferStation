@@ -309,6 +309,7 @@ async fn spawn_one(state: &AppState, cfg: &TunnelConfig, log_path: &Path) -> Res
 
     #[cfg(unix)]
     {
+        #[allow(unused_imports)]
         use std::os::unix::process::CommandExt as _;
         cmd.process_group(0); // own group so SIGTERM hits the python only
     }

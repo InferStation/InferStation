@@ -134,9 +134,9 @@ export default function ModelDetailPage() {
   useEffect(() => {
     if (!modelId) return
     setLoading(true)
-    const url = backendId
-      ? `/api/models/${encodeURIComponent(modelId)}?backend_id=${backendId}`
-      : `/api/models/${encodeURIComponent(modelId)}`
+    // Always fetch the full providers list — backend filters by backend_id
+    // when given, which would hide sibling providers in the chip selector.
+    const url = `/api/models/${encodeURIComponent(modelId)}`
     Promise.all([
       apiFetch(url) as Promise<ModelDetail>,
       apiFetch(`/api/models/${encodeURIComponent(modelId)}/performance`).catch(() => ({ providers: [] as PerformanceRow[] })),
@@ -144,11 +144,13 @@ export default function ModelDetailPage() {
       .then(([m, p]) => {
         setModel(m)
         setPerf((p as { providers: PerformanceRow[] }).providers || [])
-        if (m.providers && m.providers.length > 0) {
-          const initial = backendId
-            ? m.providers.find((pr) => String(pr.backend_id) === String(backendId))?.backend_id ?? m.providers[0].backend_id
-            : m.providers[0].backend_id
-          setSelected(initial)
+        // Default = no provider selected → show All Providers grid.
+        // If the URL pinned a specific backend_id we honour it (legacy).
+        if (backendId && m.providers && m.providers.length > 0) {
+          const pinned = m.providers.find((pr) => String(pr.backend_id) === String(backendId))
+          setSelected(pinned ? pinned.backend_id : null)
+        } else {
+          setSelected(null)
         }
       })
       .catch(() => setError(t({ en: "Model not found", zh: "模型不存在" })))
@@ -213,9 +215,16 @@ export default function ModelDetailPage() {
 
   // ── derived ─────────────────────────────────────────────────────────
   const selectedProvider = useMemo(() => {
-    if (!model) return null
-    return model.providers.find((p) => p.backend_id === selected) || model.providers[0] || null
+    if (!model || selected == null) return null
+    return model.providers.find((p) => p.backend_id === selected) || null
   }, [model, selected])
+
+  // For the hero "Get Started" button we still need a default target when
+  // nothing is selected — pick the cheapest online provider.
+  const heroProvider = useMemo(() => {
+    if (!model) return null
+    return selectedProvider || model.providers[0] || null
+  }, [model, selectedProvider])
 
   const baseUrl = typeof window !== "undefined" ? window.location.origin : ""
 
@@ -267,11 +276,15 @@ print(resp.choices[0].message.content)`
   }
 
   if (error || !model) {
+    const backTo = search.get("from") === "subscriptions" ? "/my-subscriptions" : "/models"
+    const backLabel = search.get("from") === "subscriptions"
+      ? { en: "Back to My Subscriptions", zh: "返回我的订阅" }
+      : { en: "Back to model catalog", zh: "返回模型广场" }
     return (
       <div className="text-center py-20">
         <p className="text-gray-500 mb-4">{error || t({ en: "Model not found", zh: "模型不存在" })}</p>
-        <button onClick={() => router.push("/models")} className="text-fg hover:underline">
-          {t({ en: "Back to model catalog", zh: "返回模型广场" })}
+        <button onClick={() => router.push(backTo)} className="text-fg hover:underline">
+          {t(backLabel)}
         </button>
       </div>
     )
@@ -296,12 +309,21 @@ print(resp.choices[0].message.content)`
   return (
     <div className="max-w-5xl mx-auto pb-16">
       {/* Back */}
-      <button
-        onClick={() => router.push("/models")}
-        className="text-sm text-gray-500 hover:text-gray-700 mb-6 inline-flex items-center gap-1"
-      >
-        ← {t({ en: "Back to all models", zh: "返回模型广场" })}
-      </button>
+      {(() => {
+        const fromSubs = search.get("from") === "subscriptions"
+        const backTo = fromSubs ? "/my-subscriptions" : "/models"
+        const backLabel = fromSubs
+          ? { en: "Back to My Subscriptions", zh: "返回我的订阅" }
+          : { en: "Back to all models", zh: "返回模型广场" }
+        return (
+          <button
+            onClick={() => router.push(backTo)}
+            className="text-sm text-gray-500 hover:text-gray-700 mb-6 inline-flex items-center gap-1"
+          >
+            ← {t(backLabel)}
+          </button>
+        )
+      })()}
 
       {/* ── Header ─────────────────────────────────────────────────── */}
       <div className="mb-8">
@@ -337,18 +359,18 @@ print(resp.choices[0].message.content)`
               {family}
             </span>
           )}
-          {selectedProvider && (
+          {heroProvider && (
             <button
               onClick={() => {
-                if (subs[selectedProvider.backend_id]) router.push("/dashboard/keys")
-                else handleSubscribe(selectedProvider.backend_id)
+                if (subs[heroProvider.backend_id]) router.push("/dashboard/keys")
+                else handleSubscribe(heroProvider.backend_id)
               }}
-              disabled={subBusy === selectedProvider.backend_id || selectedProvider.status !== "online"}
+              disabled={subBusy === heroProvider.backend_id || heroProvider.status !== "online"}
               className="ml-auto inline-flex items-center gap-1 h-9 px-4 rounded-lg bg-fg text-accent-fg text-sm font-medium hover:bg-fg/90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {subs[selectedProvider.backend_id]
+              {subs[heroProvider.backend_id]
                 ? t({ en: "Get API key →", zh: "获取 API Key →" })
-                : selectedProvider.status !== "online"
+                : heroProvider.status !== "online"
                 ? t({ en: "Offline", zh: "离线" })
                 : t({ en: "Get Started →", zh: "立即接入 →" })}
             </button>
@@ -398,112 +420,229 @@ print(resp.choices[0].message.content)`
       </div>
 
       {/* ── Select Provider chips ─────────────────────────────────── */}
-      {sortedProviders.length > 1 && (
-        <div className="mb-4">
-          <h2 className="text-sm font-semibold text-fg mb-2">{t({ en: "Select Provider", zh: "选择服务方" })}</h2>
-          <div className="flex flex-wrap gap-2">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold tracking-tight text-fg mb-3">
+          {t({ en: "Select Provider", zh: "选择服务方" })}
+        </h2>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setSelected(null)}
+            className={`inline-flex items-center gap-2 px-4 h-10 rounded-lg border text-sm transition-colors ${
+              selected == null
+                ? "bg-fg text-accent-fg border-fg"
+                : "bg-surface text-fg border-line hover:bg-accent-soft"
+            }`}
+          >
+            {t({ en: "All", zh: "全部" })}
+            <span className="text-xs opacity-70">({sortedProviders.length})</span>
+          </button>
+          {sortedProviders.map((p) => {
+            const active = p.backend_id === selected
+            return (
+              <button
+                key={p.backend_id}
+                onClick={() => setSelected(active ? null : p.backend_id)}
+                className={`inline-flex items-center gap-2 px-4 h-10 rounded-lg border text-sm transition-colors ${
+                  active
+                    ? "bg-fg text-accent-fg border-fg"
+                    : "bg-surface text-fg border-line hover:bg-accent-soft"
+                }`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${p.status === "online" ? (active ? "bg-green-300" : "bg-green-500") : "bg-red-400"}`} />
+                {p.provider || p.backend}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* ── All Providers grid (when no provider is selected) ─────── */}
+      {selected == null && (
+        <div className="mb-10">
+          <h2 className="text-2xl font-bold tracking-tight text-fg mb-1">
+            {t({ en: `All Providers for ${displayName}`, zh: `${displayName} 的所有服务方` })}
+          </h2>
+          <p className="text-sm text-fg-muted mb-4">
+            {t({
+              en: "Compare pricing across providers, or pick one above to see details.",
+              zh: "对比各服务方的定价，或在上方选中一个查看详情。",
+            })}
+          </p>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {sortedProviders.map((p) => {
-              const active = p.backend_id === selected
+              const isSubbed = !!subs[p.backend_id]
+              const isOwned = !!subs[p.backend_id]?.is_owned
+              const sym = symbolFor(p.currency)
+              const cache = p.cache_price != null ? p.cache_price : (p.input_price != null ? p.input_price * 0.1 : null)
+              const providerName = p.provider || p.backend
               return (
-                <button
+                <div
                   key={p.backend_id}
-                  onClick={() => setSelected(p.backend_id)}
-                  className={`inline-flex items-center gap-2 px-3 h-9 rounded-full border text-sm transition-colors ${
-                    active
-                      ? "bg-fg text-accent-fg border-fg"
-                      : "bg-surface text-fg border-line hover:bg-accent-soft"
-                  }`}
+                  className="rounded-xl border border-line bg-surface p-4 flex flex-col"
                 >
-                  <span className={`w-1.5 h-1.5 rounded-full ${p.status === "online" ? (active ? "bg-green-300" : "bg-green-500") : "bg-red-400"}`} />
-                  {p.provider || p.backend}
-                </button>
+                  <div className="flex items-start justify-between mb-3">
+                    <button
+                      onClick={() => setSelected(p.backend_id)}
+                      className="flex items-center gap-2 min-w-0 text-left hover:underline"
+                      title={t({ en: "View details", zh: "查看详情" })}
+                    >
+                      <span className="font-medium text-fg truncate">{providerName}</span>
+                      <span className={`w-1.5 h-1.5 rounded-full ${p.status === "online" ? "bg-green-500" : "bg-red-400"}`} />
+                    </button>
+                    <span className="text-[10px] uppercase tracking-wider text-fg-subtle">
+                      {p.context_length ? `Ctx ${fmtContext(p.context_length)}` : ""}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-center bg-bg/60 rounded-lg p-3 mb-3">
+                    <div>
+                      <div className="text-[10px] uppercase text-fg-subtle">{t({ en: "Input", zh: "输入" })}</div>
+                      <div className="text-sm font-semibold text-fg mt-0.5">{p.input_price == null ? "—" : `${sym}${fmtPrice(p.input_price)}`}</div>
+                      <div className="text-[10px] text-fg-subtle">/M tokens</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase text-fg-subtle">{t({ en: "Cached", zh: "缓存" })}</div>
+                      <div className="text-sm font-semibold text-fg mt-0.5">{cache == null ? "—" : `${sym}${fmtPrice(cache)}`}</div>
+                      <div className="text-[10px] text-fg-subtle">/M tokens</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase text-fg-subtle">{t({ en: "Output", zh: "输出" })}</div>
+                      <div className="text-sm font-semibold text-fg mt-0.5">{p.output_price == null ? "—" : `${sym}${fmtPrice(p.output_price)}`}</div>
+                      <div className="text-[10px] text-fg-subtle">/M tokens</div>
+                    </div>
+                  </div>
+                  <div className="flex-1" />
+                  {isSubbed ? (
+                    <Link
+                      href="/dashboard/keys"
+                      className="block text-center h-10 leading-10 rounded-lg bg-fg text-accent-fg text-sm font-semibold hover:bg-fg/90"
+                    >
+                      {t({ en: "Get API key →", zh: "获取 API Key →" })}
+                    </Link>
+                  ) : (
+                    <button
+                      onClick={() => handleSubscribe(p.backend_id)}
+                      disabled={subBusy === p.backend_id || p.status !== "online"}
+                      className="h-10 rounded-lg bg-fg text-accent-fg text-sm font-semibold hover:bg-fg/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {subBusy === p.backend_id
+                        ? t({ en: "Subscribing...", zh: "订阅中..." })
+                        : p.status !== "online"
+                        ? t({ en: "Offline", zh: "离线" })
+                        : t({ en: "Get Started →", zh: "立即接入 →" })}
+                    </button>
+                  )}
+                </div>
               )
             })}
           </div>
         </div>
       )}
 
-      {/* ── All Providers grid ───────────────────────────────────── */}
-      <h2 className="text-base font-semibold text-fg mb-1">
-        {t({ en: `All Providers for ${displayName}`, zh: `${displayName} 的所有服务方` })}
-      </h2>
-      <p className="text-sm text-fg-muted mb-4">
-        {t({
-          en: "LLM Gateway routes requests to the best provider that can handle your prompt size and parameters.",
-          zh: "网关会根据你的提示长度和参数自动路由到合适的服务方。",
-        })}
-      </p>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-10">
-        {sortedProviders.map((p) => {
-          const isSubbed = !!subs[p.backend_id]
-          const isOwned = !!subs[p.backend_id]?.is_owned
-          const sym = symbolFor(p.currency)
-          const cache = p.cache_price != null ? p.cache_price : (p.input_price != null ? p.input_price * 0.1 : null)
-          const cacheImplicit = p.cache_price == null
-          return (
-            <div
-              key={p.backend_id}
-              className={`rounded-xl border bg-surface p-4 flex flex-col ${
-                p.backend_id === selected ? "border-fg/40 ring-1 ring-fg/20" : "border-line"
-              }`}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-fg truncate">{p.provider || p.backend}</span>
-                    <span className={`w-1.5 h-1.5 rounded-full ${p.status === "online" ? "bg-green-500" : "bg-red-400"}`} />
+      {/* ── Selected Provider pricing ─────────────────────────────── */}
+      {selectedProvider && (() => {
+        const p = selectedProvider
+        const isSubbed = !!subs[p.backend_id]
+        const isOwned = !!subs[p.backend_id]?.is_owned
+        const sym = symbolFor(p.currency)
+        const cache = p.cache_price != null ? p.cache_price : (p.input_price != null ? p.input_price * 0.1 : null)
+        const cacheImplicit = p.cache_price == null
+        const providerName = p.provider || p.backend
+        return (
+          <div className="mb-10">
+            <h2 className="text-2xl font-bold tracking-tight text-fg mb-1">
+              {t({
+                en: `${providerName} Pricing for ${displayName}`,
+                zh: `${providerName} 提供的 ${displayName} 计费`,
+              })}
+            </h2>
+            <p className="text-sm text-fg-muted mb-4">
+              {t({
+                en: "View detailed pricing and capabilities for this provider.",
+                zh: "查看该服务方的计费明细与能力。",
+              })}
+            </p>
+
+            <div className="rounded-xl border border-line bg-surface p-5">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="font-semibold text-fg text-lg truncate">{providerName}</span>
+                  <span className={`w-2 h-2 rounded-full ${p.status === "online" ? "bg-green-500" : "bg-red-400"}`} />
+                </div>
+                <div className="flex items-center gap-1 text-fg-subtle">
+                  <button
+                    onClick={() => navigator.clipboard.writeText(typeof window !== "undefined" ? window.location.href : "").catch(() => {})}
+                    title={t({ en: "Share link", zh: "复制链接" })}
+                    className="w-8 h-8 grid place-items-center rounded hover:bg-accent-soft hover:text-fg"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.59 13.51 6.83 3.98M15.41 6.51l-6.82 3.98"/></svg>
+                  </button>
+                  <button
+                    onClick={copyId}
+                    title={t({ en: "Copy model id", zh: "复制模型 ID" })}
+                    className="w-8 h-8 grid place-items-center rounded hover:bg-accent-soft hover:text-fg"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  </button>
+                  <button
+                    onClick={() => setExampleLang((l) => l)}
+                    title={t({ en: "Code sample", zh: "代码示例" })}
+                    className="w-8 h-8 grid place-items-center rounded hover:bg-accent-soft hover:text-fg"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-sm text-fg-muted">
+                  <span>{t({ en: "Context", zh: "上下文" })}: </span>
+                  <span className="text-fg font-semibold">{fmtContext(p.context_length || model.context_length)}</span>
+                </div>
+                {p.tags && Object.keys(p.tags).length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {Object.entries(p.tags).map(([k, v]) => (
+                      <span key={k} className="text-[10px] px-1.5 py-0.5 rounded bg-accent-soft text-fg-muted border border-line">
+                        {v}
+                      </span>
+                    ))}
                   </div>
-                  {p.tags && Object.keys(p.tags).length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1.5">
-                      {Object.entries(p.tags).map(([k, v]) => (
-                        <span key={k} className="text-[10px] px-1.5 py-0.5 rounded bg-accent-soft text-fg-muted border border-line">
-                          {v}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="text-[10px] uppercase tracking-wider text-fg-subtle text-right">
-                  {p.context_length ? <>Ctx&nbsp;{fmtContext(p.context_length)}</> : ""}
-                </div>
+                )}
               </div>
 
-              <div className="grid grid-cols-3 gap-2 text-center bg-bg/60 rounded-lg p-2 mb-3">
+              <div className="grid grid-cols-3 gap-2 text-center bg-bg/60 rounded-lg p-4 mb-4">
                 <div>
-                  <div className="text-[10px] uppercase text-fg-subtle">{t({ en: "Input", zh: "输入" })}</div>
-                  <div className="text-sm font-semibold text-fg mt-0.5">{p.input_price == null ? "—" : `${sym}${fmtPrice(p.input_price)}`}</div>
-                  <div className="text-[10px] text-fg-subtle">/M tokens</div>
+                  <div className="text-[11px] uppercase tracking-wider text-fg-subtle">{t({ en: "Input", zh: "输入" })}</div>
+                  <div className="text-xl font-bold text-fg mt-1">{p.input_price == null ? "—" : `${sym}${fmtPrice(p.input_price)}`}</div>
+                  <div className="text-[11px] text-fg-subtle">/M tokens</div>
+                </div>
+                <div className="border-x border-line">
+                  <div className="text-[11px] uppercase tracking-wider text-fg-subtle">{t({ en: "Cached", zh: "缓存" })}</div>
+                  <div className="text-xl font-bold text-fg mt-1">{cache == null ? "—" : `${sym}${fmtPrice(cache)}`}</div>
+                  <div className="text-[11px] text-fg-subtle">{cacheImplicit && cache != null ? t({ en: "(input × 0.1)", zh: "(输入×0.1)" }) : "/M tokens"}</div>
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase text-fg-subtle">{t({ en: "Cached", zh: "缓存" })}</div>
-                  <div className="text-sm font-semibold text-fg mt-0.5">{cache == null ? "—" : `${sym}${fmtPrice(cache)}`}</div>
-                  <div className="text-[10px] text-fg-subtle">{cacheImplicit && cache != null ? t({ en: "(input × 0.1)", zh: "(输入×0.1)" }) : "/M tokens"}</div>
-                </div>
-                <div>
-                  <div className="text-[10px] uppercase text-fg-subtle">{t({ en: "Output", zh: "输出" })}</div>
-                  <div className="text-sm font-semibold text-fg mt-0.5">{p.output_price == null ? "—" : `${sym}${fmtPrice(p.output_price)}`}</div>
-                  <div className="text-[10px] text-fg-subtle">/M tokens</div>
+                  <div className="text-[11px] uppercase tracking-wider text-fg-subtle">{t({ en: "Output", zh: "输出" })}</div>
+                  <div className="text-xl font-bold text-fg mt-1">{p.output_price == null ? "—" : `${sym}${fmtPrice(p.output_price)}`}</div>
+                  <div className="text-[11px] text-fg-subtle">/M tokens</div>
                 </div>
               </div>
-
-              <div className="flex-1" />
 
               {isSubbed ? (
                 <div className="flex items-center gap-2">
                   <Link
                     href="/dashboard/keys"
-                    className="flex-1 text-center h-9 leading-9 rounded-lg bg-fg text-accent-fg text-sm font-medium hover:bg-fg/90"
+                    className="flex-1 text-center h-12 leading-[3rem] rounded-lg bg-fg text-accent-fg text-base font-semibold hover:bg-fg/90"
                   >
-                    {isOwned ? t({ en: "Your service →", zh: "我的服务 →" }) : t({ en: "Get API key →", zh: "获取 API Key →" })}
+                    {t({ en: "Get API key →", zh: "获取 API Key →" })}
                   </Link>
                   {!isOwned && (
                     <button
                       onClick={() => handleUnsubscribe(p.backend_id)}
                       disabled={subBusy === p.backend_id}
-                      className="px-3 h-9 rounded-lg border border-line text-fg-muted text-sm hover:text-red-600 hover:border-red-300 disabled:opacity-50"
+                      className="px-4 h-12 rounded-lg border border-line text-fg-muted text-sm hover:text-red-600 hover:border-red-300 disabled:opacity-50"
                       title={t({ en: "Unsubscribe", zh: "取消订阅" })}
                     >
-                      ×
+                      {t({ en: "Unsubscribe", zh: "取消订阅" })}
                     </button>
                   )}
                 </div>
@@ -511,7 +650,7 @@ print(resp.choices[0].message.content)`
                 <button
                   onClick={() => handleSubscribe(p.backend_id)}
                   disabled={subBusy === p.backend_id || p.status !== "online"}
-                  className="h-9 rounded-lg bg-fg text-accent-fg text-sm font-medium hover:bg-fg/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full h-12 rounded-lg bg-fg text-accent-fg text-base font-semibold hover:bg-fg/90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {subBusy === p.backend_id
                     ? t({ en: "Subscribing...", zh: "订阅中..." })
@@ -521,11 +660,12 @@ print(resp.choices[0].message.content)`
                 </button>
               )}
             </div>
-          )
-        })}
-      </div>
+          </div>
+        )
+      })()}
 
-      {/* ── Provider Performance ───────────────────────────────────── */}
+      {/* ── Provider Performance (only when no provider selected) ── */}
+      {selected == null && (
       <div className="mb-10">
         <div className="flex items-baseline gap-2 mb-3">
           <h2 className="text-base font-semibold text-fg">
@@ -585,6 +725,7 @@ print(resp.choices[0].message.content)`
           })}
         </div>
       </div>
+      )}
 
       {/* ── Code example for the selected provider ─────────────────── */}
       {selectedProvider && subs[selectedProvider.backend_id] && (

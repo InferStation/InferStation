@@ -24,6 +24,7 @@ from auth import (
     create_access_token,
     generate_api_key,
     get_current_user,
+    get_optional_user,
     hash_password,
     require_admin,
     require_provider,
@@ -173,6 +174,13 @@ async def probe_backend_status(b: dict) -> tuple[str, str | None]:
     """Probe a single backend (tunnel or direct) and return (status, error).
 
     `b` must contain id / mode / url / client_info. Does not touch DB.
+
+    Direct probe levels:
+      1. If `client_info.model_map` is set: send a 1-token chat dry-run with the
+         first mapped upstream model. This catches broken deployment names that
+         `/v1/models` would silently 200 through (see 4-28 incident with
+         backend id=20 mapping to a non-existent `openai-qwen36-a3b`).
+      2. Otherwise fall back to `GET /v1/models` 200 = online.
     """
     if b["mode"] == "tunnel":
         if await tunnel_manager.health_probe(b["id"]):
@@ -185,8 +193,41 @@ async def probe_backend_status(b: dict) -> tuple[str, str | None]:
         ci = json.loads(b["client_info"]) if b.get("client_info") else {}
         if ci.get("api_key"):
             headers["Authorization"] = f"Bearer {ci['api_key']}"
-        async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.get(f"{b['url'].rstrip('/')}/v1/models", headers=headers)
+        base = b["url"].rstrip("/")
+        model_map = ci.get("model_map") or {}
+        async with httpx.AsyncClient(timeout=15) as client:
+            if model_map:
+                # Pick a deterministic upstream model so the same row is probed
+                # consistently across restarts.
+                upstream = sorted(model_map.values())[0]
+                payload = {
+                    "model": upstream,
+                    "messages": [{"role": "user", "content": "ping"}],
+                    "max_tokens": 1,
+                    "stream": False,
+                }
+                _normalize_max_tokens(payload, upstream)
+                resp = await client.post(f"{base}/v1/chat/completions",
+                                         json=payload, headers=headers)
+                body_excerpt = (resp.text or "")[:200].replace("\n", " ")
+                if not (200 <= resp.status_code < 300):
+                    return "offline", f"chat dry-run 返回 {resp.status_code}: {body_excerpt}"
+                # Some providers (e.g. SiliconFlow) return HTTP 200 with an
+                # error envelope `{"code":30003,"message":"Model disabled"}`
+                # for delisted models. Require a real `choices` array.
+                try:
+                    j = resp.json()
+                except Exception:
+                    return "offline", f"chat dry-run 返回非 JSON: {body_excerpt}"
+                if isinstance(j, dict) and j.get("choices"):
+                    return "online", None
+                # Extract upstream error code/message if present.
+                code = j.get("code") if isinstance(j, dict) else None
+                msg = j.get("message") if isinstance(j, dict) else None
+                if code is not None or msg:
+                    return "offline", f"chat dry-run 上游错误 code={code} message={msg}"
+                return "offline", f"chat dry-run 响应缺少 choices: {body_excerpt}"
+            resp = await client.get(f"{base}/v1/models", headers=headers)
             if resp.status_code == 200:
                 return "online", None
             return "offline", f"上游 /v1/models 返回 {resp.status_code}"
@@ -206,19 +247,42 @@ async def update_backend_status(backend_id: int, status: str) -> None:
         await db.close()
 
 
+# Per-backend timestamp (monotonic seconds) of the last successful upstream
+# response. The health-check loop skips backends with a recent success, so
+# active traffic alone keeps a backend marked online without paying for an
+# extra dry-run round-trip.
+_last_upstream_success: dict[int, float] = {}
+
+
+def mark_backend_success(backend_id: int) -> None:
+    """Record that ``backend_id`` just returned a successful upstream response."""
+    try:
+        _last_upstream_success[int(backend_id)] = time.monotonic()
+    except Exception:  # pragma: no cover - defensive, backend_id should always be int
+        pass
+
+
 async def health_check_loop():
-    interval = CONFIG.get("health_check", {}).get("interval_seconds", 30)
+    interval = CONFIG.get("health_check", {}).get("interval_seconds", 600)
     while True:
         await asyncio.sleep(interval)
         try:
             db = await get_db()
             try:
-                cur = await db.execute("SELECT id, name, url, mode, client_info FROM backends")
+                cur = await db.execute("SELECT id, name, url, mode, client_info, status FROM backends")
                 backends = [dict(r) for r in await cur.fetchall()]
             finally:
                 await db.close()
 
+            now = time.monotonic()
             for b in backends:
+                # Skip the dry-run if a real call succeeded inside the last
+                # interval window AND the row is already marked online.
+                last_ok = _last_upstream_success.get(b["id"])
+                if (last_ok is not None
+                        and now - last_ok < interval
+                        and b.get("status") == "online"):
+                    continue
                 new_status, _ = await probe_backend_status(b)
                 await update_backend_status(b["id"], new_status)
         except Exception as e:
@@ -952,6 +1016,7 @@ ALLOWED_MODELS_BY_FAMILY: dict[str, list[str]] = {
     ],
     "OpenAI": [
         "GPT-5.4",
+        "GPT-oss-120B",
     ],
 }
 
@@ -1054,9 +1119,14 @@ async def register_backend(req: RegisterBackendRequest, user=Depends(require_pro
 async def list_backends(mine: bool = False, user=Depends(get_current_user)):
     db = await get_db()
     try:
+        # Visibility model for soft-deletion:
+        #   - admin: sees everything (including 'archived')
+        #   - owner via mine=true: sees own active + own 'deleted' (NOT 'archived')
+        #   - non-owner / non-admin: only active rows are visible
         if mine:
             cur = await db.execute(
-                "SELECT b.*, u.username as owner_name FROM backends b LEFT JOIN users u ON b.owner_id = u.id WHERE b.owner_id = ? ORDER BY b.name",
+                "SELECT b.*, u.username as owner_name FROM backends b LEFT JOIN users u ON b.owner_id = u.id "
+                "WHERE b.owner_id = ? AND COALESCE(b.deletion_status,'') != 'archived' ORDER BY b.name",
                 (user["id"],),
             )
         elif user["role"] == "admin":
@@ -1066,7 +1136,9 @@ async def list_backends(mine: bool = False, user=Depends(get_current_user)):
         else:
             cur = await db.execute(
                 """SELECT b.*, u.username as owner_name FROM backends b LEFT JOIN users u ON b.owner_id = u.id
-                   WHERE b.is_public = 1 OR b.owner_id = ? ORDER BY b.name""",
+                   WHERE (b.is_public = 1 OR b.owner_id = ?)
+                     AND b.deletion_status IS NULL
+                   ORDER BY b.name""",
                 (user["id"],),
             )
         rows = [dict(r) for r in await cur.fetchall()]
@@ -1178,8 +1250,11 @@ async def get_backend_detail(name: str, user=Depends(require_provider)):
                 (name,),
             )
         else:
+            # Owner can preview own backends including soft-deleted ones, but
+            # not after archive (which is admin-only).
             cur = await db.execute(
-                "SELECT b.*, u.username as owner_name FROM backends b LEFT JOIN users u ON b.owner_id = u.id WHERE b.name = ? AND b.owner_id = ?",
+                "SELECT b.*, u.username as owner_name FROM backends b LEFT JOIN users u ON b.owner_id = u.id "
+                "WHERE b.name = ? AND b.owner_id = ? AND COALESCE(b.deletion_status,'') != 'archived'",
                 (name, user["id"]),
             )
         row = await cur.fetchone()
@@ -1191,6 +1266,7 @@ async def get_backend_detail(name: str, user=Depends(require_provider)):
     r["models"] = json.loads(r["models"]) if r["models"] else []
     r["tags"] = json.loads(r["tags"]) if r.get("tags") else {}
     r["client_info"] = json.loads(r["client_info"]) if r["client_info"] else {}
+    r["capabilities"] = json.loads(r["capabilities"]) if r.get("capabilities") else []
     return r
 
 
@@ -1234,12 +1310,17 @@ async def update_backend(name: str, req: UpdateBackendRequest, user=Depends(requ
     db = await get_db()
     try:
         if user["role"] == "admin":
-            cur = await db.execute("SELECT id FROM backends WHERE name = ?", (name,))
+            cur = await db.execute("SELECT id, deletion_status FROM backends WHERE name = ?", (name,))
         else:
-            cur = await db.execute("SELECT id FROM backends WHERE name = ? AND owner_id = ?", (name, user["id"]))
+            cur = await db.execute(
+                "SELECT id, deletion_status FROM backends WHERE name = ? AND owner_id = ?",
+                (name, user["id"]),
+            )
         row = await cur.fetchone()
         if not row:
             raise HTTPException(404, "Backend not found")
+        if row["deletion_status"] is not None and user["role"] != "admin":
+            raise HTTPException(409, "Backend has been deleted; edits are not allowed.")
 
         updates = []
         params = []
@@ -1328,16 +1409,55 @@ async def update_backend(name: str, req: UpdateBackendRequest, user=Depends(requ
 
 @app.delete("/api/backends/{name}")
 async def delete_backend(name: str, user=Depends(require_provider)):
+    """Soft-delete a backend.
+
+    Sets `deletion_status='deleted'` and stops routing to it (`enabled=0`,
+    `listing_status='offline'`). Active subscriptions to it are deactivated.
+    The row is kept until the owner's next billing cycle close, at which point
+    `billing._archive_owner_deletions` advances it to `'archived'` (admin-only
+    visibility). Hard delete only happens via DB maintenance.
+    """
     db = await get_db()
     try:
         if user["role"] == "admin":
-            await db.execute("DELETE FROM backends WHERE name = ?", (name,))
+            cur = await db.execute(
+                "SELECT id, deletion_status, listing_status, enabled FROM backends WHERE name = ?", (name,))
         else:
-            await db.execute("DELETE FROM backends WHERE name = ? AND owner_id = ?", (name, user["id"]))
+            cur = await db.execute(
+                "SELECT id, deletion_status, listing_status, enabled FROM backends WHERE name = ? AND owner_id = ?",
+                (name, user["id"]),
+            )
+        row = await cur.fetchone()
+        if not row:
+            raise HTTPException(404, "Backend not found")
+        if row["deletion_status"] is not None:
+            # Already deleted (or archived) — idempotent for owners.
+            return {"ok": True, "already": True}
+        # Require the backend to be off the marketplace before deletion so that
+        # consumers see it disappear from listings before subscriptions break.
+        # Admins bypass this guard for emergency takedowns.
+        if user["role"] != "admin":
+            st = row["listing_status"] or ("listed" if row["enabled"] else "offline")
+            if st != "offline":
+                raise HTTPException(409, "请先下架后再删除")
+        bid = row["id"]
+        now = sh_now().strftime("%Y-%m-%d %H:%M:%S")
+        await db.execute(
+            "UPDATE backends SET deletion_status = 'deleted', deleted_at = ?, "
+            "enabled = 0, listing_status = 'offline' WHERE id = ?",
+            (now, bid),
+        )
+        # Subscriptions stay (so usage history references resolve), but are
+        # deactivated so consumers stop getting routed.
+        await db.execute(
+            "UPDATE subscriptions SET is_active = 0, is_activated = 0 WHERE backend_id = ?",
+            (bid,),
+        )
         await db.commit()
     finally:
         await db.close()
-    tunnel_manager.unregister_by_name(name) if hasattr(tunnel_manager, "unregister_by_name") else None
+    if hasattr(tunnel_manager, "unregister_by_name"):
+        tunnel_manager.unregister_by_name(name)
     return {"ok": True}
 
 
@@ -1358,11 +1478,13 @@ async def toggle_backend(name: str, user=Depends(require_provider)):
                 "SELECT enabled, listing_status FROM backends WHERE name = ?", (name,))
         else:
             cur = await db.execute(
-                "SELECT enabled, listing_status FROM backends WHERE name = ? AND owner_id = ?",
+                "SELECT enabled, listing_status, deletion_status FROM backends WHERE name = ? AND owner_id = ?",
                 (name, user["id"]))
         row = await cur.fetchone()
         if not row:
             raise HTTPException(404, "Backend not found")
+        if user["role"] != "admin" and row["deletion_status"] is not None:
+            raise HTTPException(409, "Backend has been deleted; listing changes are not allowed.")
         status = row["listing_status"] or ("listed" if row["enabled"] else "offline")
         now = sh_now().strftime("%Y-%m-%d %H:%M:%S")
         if user["role"] == "admin":
@@ -1418,12 +1540,12 @@ async def check_backend(name: str, user=Depends(require_provider)):
     try:
         if user["role"] == "admin":
             cur = await db.execute(
-                "SELECT id, name, url, mode, client_info FROM backends WHERE name = ?",
+                "SELECT id, name, url, mode, client_info, deletion_status FROM backends WHERE name = ?",
                 (name,),
             )
         else:
             cur = await db.execute(
-                "SELECT id, name, url, mode, client_info FROM backends "
+                "SELECT id, name, url, mode, client_info, deletion_status FROM backends "
                 "WHERE name = ? AND owner_id = ?",
                 (name, user["id"]),
             )
@@ -1433,6 +1555,8 @@ async def check_backend(name: str, user=Depends(require_provider)):
     if not row:
         raise HTTPException(404, "Backend not found")
     b = dict(row)
+    if user["role"] != "admin" and b.get("deletion_status") is not None:
+        raise HTTPException(409, "Backend has been deleted; probes are not allowed.")
     status, error = await probe_backend_status(b)
     await update_backend_status(b["id"], status)
     return {"ok": True, "status": status, "error": error}
@@ -1513,7 +1637,8 @@ async def list_models():
     try:
         cur = await db.execute(
             "SELECT b.id as backend_id, b.name as backend, b.models, b.tags, b.status, b.input_price, b.output_price, b.cache_price, b.currency, u.username as provider "
-            "FROM backends b LEFT JOIN users u ON b.owner_id = u.id WHERE b.is_public = 1 AND b.enabled = 1"
+            "FROM backends b LEFT JOIN users u ON b.owner_id = u.id "
+            "WHERE b.is_public = 1 AND b.enabled = 1 AND b.deletion_status IS NULL"
         )
         rows = [dict(r) for r in await cur.fetchall()]
     finally:
@@ -1538,8 +1663,50 @@ async def list_models():
     return result
 
 
+@app.get("/api/models/{model_id:path}/performance")
+async def get_model_performance(model_id: str):
+    """Per-provider performance summary (TTFT / uptime / errors over last 24h).
+
+    Placeholder: real metrics collection is pending. We return one row per
+    online+listed backend that serves the model, with `null` numeric fields
+    so the FE can render an "n/a" state and stop falling back to fake data.
+    """
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            "SELECT b.id as backend_id, b.name as backend, b.status, u.username as provider "
+            "FROM backends b LEFT JOIN users u ON b.owner_id = u.id "
+            "WHERE b.is_public = 1 AND b.enabled = 1 AND b.deletion_status IS NULL"
+        )
+        rows = [dict(r) for r in await cur.fetchall()]
+        cur = await db.execute(
+            "SELECT id, models FROM backends WHERE is_public = 1 AND enabled = 1 AND deletion_status IS NULL"
+        )
+        id_models = {row["id"]: json.loads(row["models"]) if row["models"] else [] for row in await cur.fetchall()}
+    finally:
+        await db.close()
+    out = []
+    for r in rows:
+        if model_id not in id_models.get(r["backend_id"], []):
+            continue
+        out.append(
+            {
+                "backend_id": r["backend_id"],
+                "backend": r["backend"],
+                "provider": r["provider"],
+                "status": r["status"],
+                "ttft_ms": None,
+                "uptime_pct": None,
+                "errors_pct": None,
+                "requests_24h": None,
+                "available": False,  # FE renders "—" when False
+            }
+        )
+    return {"id": model_id, "providers": out}
+
+
 @app.get("/api/models/{model_id:path}")
-async def get_model_detail(model_id: str, backend_id: int | None = None):
+async def get_model_detail(model_id: str, backend_id: int | None = None, user=Depends(get_optional_user)):
     """Return full model card.
 
     - If `backend_id` is given (legacy single-provider mode), the response
@@ -1551,13 +1718,26 @@ async def get_model_detail(model_id: str, backend_id: int | None = None):
     """
     db = await get_db()
     try:
+        # Public visibility: is_public AND enabled. Owners and admins also see
+        # their own / all backends so that "preview" and own-detail pages work
+        # for offline / private backends.
+        if user and user.get("role") == "admin":
+            visibility_clause = "1=1"
+            params: tuple = ()
+        elif user:
+            visibility_clause = "((b.is_public = 1 AND b.enabled = 1) OR b.owner_id = ?) AND b.deletion_status IS NULL"
+            params = (user["id"],)
+        else:
+            visibility_clause = "b.is_public = 1 AND b.enabled = 1 AND b.deletion_status IS NULL"
+            params = ()
         cur = await db.execute(
             "SELECT b.id as backend_id, b.name as backend, b.models, b.tags, b.status, "
             "b.input_price, b.output_price, b.cache_price, b.currency, "
             "b.context_length, b.capabilities, b.description, "
             "b.mode, b.created_at, b.updated_at, u.username as provider "
             "FROM backends b LEFT JOIN users u ON b.owner_id = u.id "
-            "WHERE b.is_public = 1 AND b.enabled = 1"
+            f"WHERE {visibility_clause}",
+            params,
         )
         rows = [dict(r) for r in await cur.fetchall()]
     finally:
@@ -1648,56 +1828,6 @@ async def get_model_detail(model_id: str, backend_id: int | None = None):
     }
 
 
-@app.get("/api/models/{model_id:path}/performance")
-async def get_model_performance(model_id: str):
-    """Per-provider performance summary (TTFT / uptime / errors over last 24h).
-
-    Placeholder: real metrics collection is pending. We return one row per
-    online+listed backend that serves the model, with `null` numeric fields
-    so the FE can render an "n/a" state and stop falling back to fake data.
-    """
-    db = await get_db()
-    try:
-        cur = await db.execute(
-            "SELECT b.id as backend_id, b.name as backend, b.status, u.username as provider "
-            "FROM backends b LEFT JOIN users u ON b.owner_id = u.id "
-            "WHERE b.is_public = 1 AND b.enabled = 1"
-        )
-        rows = [dict(r) for r in await cur.fetchall()]
-    finally:
-        await db.close()
-    out = []
-    for r in rows:
-        model_list = []
-        # `models` is JSON; rows here didn't select it. Fetch lazily to avoid
-        # changing the SQL above (model lists are small).
-        # Optimisation deferred — call /api/models/{id} first to get backend_ids.
-        out.append(
-            {
-                "backend_id": r["backend_id"],
-                "backend": r["backend"],
-                "provider": r["provider"],
-                "status": r["status"],
-                "ttft_ms": None,
-                "uptime_pct": None,
-                "errors_pct": None,
-                "requests_24h": None,
-                "available": False,  # FE renders "—" when False
-            }
-        )
-    # Filter to providers that actually serve this model (re-query models).
-    db = await get_db()
-    try:
-        cur = await db.execute(
-            "SELECT id, models FROM backends WHERE is_public = 1 AND enabled = 1"
-        )
-        id_models = {row["id"]: json.loads(row["models"]) if row["models"] else [] for row in await cur.fetchall()}
-    finally:
-        await db.close()
-    out = [o for o in out if model_id in id_models.get(o["backend_id"], [])]
-    return {"id": model_id, "providers": out}
-
-
 # ══════════════════════════════════════════════════════════
 #  Subscriptions (consumer → model binding)
 # ══════════════════════════════════════════════════════════
@@ -1759,12 +1889,18 @@ async def list_subscriptions(user=Depends(get_current_user)):
     """List all subscriptions for the current user."""
     db = await get_db()
     try:
+        # Hide subscriptions whose underlying backend has been archived; the
+        # consumer sub_key was already deactivated at delete time, but row still
+        # exists for billing-history references.
         cur = await db.execute(
             "SELECT s.id, s.backend_id, s.model, s.sub_key, s.is_active, s.is_activated, s.created_at, s.sort_order, "
             "b.name as backend, b.status as backend_status, b.input_price, b.output_price, b.cache_price, b.currency, "
+            "u.username as provider, "
             "CASE WHEN b.owner_id = ? THEN 1 ELSE 0 END as is_owned "
             "FROM subscriptions s JOIN backends b ON s.backend_id = b.id "
-            "WHERE s.user_id = ? ORDER BY s.sort_order ASC, s.id ASC",
+            "LEFT JOIN users u ON b.owner_id = u.id "
+            "WHERE s.user_id = ? AND COALESCE(b.deletion_status,'') != 'archived' "
+            "ORDER BY s.sort_order ASC, s.id ASC",
             (user["id"], user["id"]),
         )
         rows = [dict(r) for r in await cur.fetchall()]
@@ -1934,6 +2070,12 @@ async def sub_chat(sub_key: str, request: Request):
     if sub["model"] in model_map:
         body["model"] = model_map[sub["model"]]
 
+    # Normalize max_tokens / max_completion_tokens for the upstream model.
+    _normalize_max_tokens(body, body.get("model", ""))
+    _normalize_for_reasoning(body, body.get("model", ""))
+    _normalize_thinking(body, backend, body.get("model", ""))
+    _inject_stream_usage(body, stream, "/v1/chat/completions")
+
     input_price, output_price, cache_price = get_pricing(backend)
     api_user = {"user_id": sub["user_id"], "key_id": 0}
 
@@ -2092,6 +2234,194 @@ async def find_backend_for_model(model: str, user_id: int):
     return None
 
 
+# Models that REQUIRE `max_completion_tokens` and reject `max_tokens` (HTTP 400).
+# OpenAI 2024-09 introduced this for reasoning models (o-series) and applied it
+# to GPT-5.x as well. Both OpenAI and Azure OpenAI enforce this on these models.
+# Other backends (DeepSeek/Qwen/Llama/vLLM/SGLang/Claude/Gemini) keep using
+# `max_tokens`, so we normalize bidirectionally based on the upstream model name.
+_REASONING_MODEL_RE = re.compile(r"^(o[1-9]|gpt-5|gpt5)", re.IGNORECASE)
+
+
+def _normalize_max_tokens(body: dict, upstream_model: str) -> None:
+    """In-place rewrite ``max_tokens`` <-> ``max_completion_tokens`` so callers
+    can use either field regardless of which upstream the backend points to.
+
+    - Upstream is an OpenAI reasoning / GPT-5 model: force `max_completion_tokens`
+      (rename `max_tokens` if only the old name is present).
+    - Otherwise: force `max_tokens` (rename `max_completion_tokens` if only the
+      new name is present), since most OpenAI-compatible engines silently
+      ignore `max_completion_tokens`.
+    """
+    if not isinstance(body, dict) or not isinstance(upstream_model, str):
+        return
+    is_reasoning = bool(_REASONING_MODEL_RE.match(upstream_model or ""))
+    if is_reasoning:
+        if "max_tokens" in body and "max_completion_tokens" not in body:
+            body["max_completion_tokens"] = body.pop("max_tokens")
+    else:
+        if "max_completion_tokens" in body and "max_tokens" not in body:
+            body["max_tokens"] = body.pop("max_completion_tokens")
+
+
+# Fields that Azure OpenAI / OpenAI reject on reasoning models (HTTP 400). We
+# silently strip them rather than fail the request, so a generic OpenAI client
+# can target a reasoning backend without changing its request shape. Callers
+# that genuinely want them should target a non-reasoning backend.
+_REASONING_REJECTED_FIELDS = (
+    "top_p", "top_k", "presence_penalty", "frequency_penalty",
+    "logprobs", "top_logprobs",
+)
+
+
+def _normalize_for_reasoning(body: dict, upstream_model: str) -> None:
+    """Strip / coerce parameters that reasoning models (o-series, GPT-5.x) reject.
+
+    - `temperature`: only `1` is accepted; drop any other value (Azure 400s).
+    - `top_p`/`top_k`/penalties/logprobs: drop entirely.
+    - Pass-through whitelist: `reasoning_effort` (low/medium/high) if present.
+    """
+    if not isinstance(body, dict):
+        return
+    if not _REASONING_MODEL_RE.match(upstream_model or ""):
+        return
+    t = body.get("temperature")
+    if t is not None and t != 1 and t != 1.0:
+        body.pop("temperature", None)
+    for k in _REASONING_REJECTED_FIELDS:
+        body.pop(k, None)
+    eff = body.get("reasoning_effort")
+    if eff is not None and eff not in ("low", "medium", "high"):
+        body.pop("reasoning_effort", None)
+
+
+def _inject_stream_usage(body: dict, stream: bool, path: str) -> None:
+    """Force ``stream_options.include_usage = True`` on streaming OpenAI chat /
+    completions calls so the final SSE chunk carries token counts. vLLM and
+    several OpenAI-compatible backends omit usage in stream by default."""
+    if not stream or path not in ("/v1/chat/completions", "/v1/completions"):
+        return
+    if not isinstance(body, dict):
+        return
+    opts = body.get("stream_options")
+    if not isinstance(opts, dict):
+        opts = {}
+    opts.setdefault("include_usage", True)
+    body["stream_options"] = opts
+
+
+# Valid values for `reasoning_effort` (OpenAI 2025 spec, incl. "minimal").
+_REASONING_EFFORT_VALUES = ("minimal", "low", "medium", "high")
+
+
+def _backend_family(backend: dict, upstream_model: str) -> str:
+    """Classify the upstream so we know how to translate `reasoning_effort`.
+
+    Returns one of:
+      - "azure_reasoning": OpenAI o-series / GPT-5.x via Azure or OpenAI direct.
+      - "siliconflow": SiliconFlow `api.siliconflow.cn` direct.
+      - "vllm": self-hosted vLLM (tunnel) or AMD bridge to vLLM-compat engines.
+      - "other": generic OpenAI-compatible (no thinking knob).
+    """
+    if _REASONING_MODEL_RE.match(upstream_model or ""):
+        return "azure_reasoning"
+    url = (backend or {}).get("url") or ""
+    if "siliconflow.cn" in url:
+        return "siliconflow"
+    if (backend or {}).get("mode") == "tunnel":
+        return "vllm"
+    # AMD bridge :17590 currently fronts vLLM-compat (Qwen3.6) and OpenAI/GPT-oss.
+    # GPT-oss isn't a thinking model, so vllm-style enable_thinking is harmless
+    # for it (most servers ignore unknown chat_template_kwargs); but we play it
+    # safe and default unknown OpenAI-style upstreams to "other".
+    if "127.0.0.1:17590" in url or "amd" in url.lower():
+        # Heuristic: if upstream model looks like a Qwen/GLM thinking variant,
+        # treat as vllm; else "other".
+        m = (upstream_model or "").lower()
+        if "qwen" in m or "glm" in m or "thinking" in m:
+            return "vllm"
+        return "other"
+    return "other"
+
+
+def _normalize_thinking(body: dict, backend: dict, upstream_model: str) -> None:
+    """Translate the unified ``reasoning_effort`` field to whatever the upstream
+    actually understands, then strip the original field for non-OpenAI upstreams.
+
+    Accepted incoming values (case-insensitive):
+      - "off" / False / 0  → disable thinking
+      - "minimal" / "low" / "medium" / "high" → enable thinking (level passed
+        through to OpenAI reasoning models; vLLM/SF only have on/off, so any
+        non-off value enables thinking).
+
+    Per upstream:
+      - azure_reasoning: keep `reasoning_effort` as-is (drop "off"; OpenAI
+        accepts minimal/low/medium/high). Drop unknown values.
+      - siliconflow / vllm: set
+        ``extra_body.chat_template_kwargs.enable_thinking = bool``; remove the
+        top-level `reasoning_effort` field so SF/vLLM don't 400 on unknown arg.
+      - other: drop `reasoning_effort` silently.
+    """
+    if not isinstance(body, dict):
+        return
+    raw = body.get("reasoning_effort", None)
+    family = _backend_family(backend or {}, upstream_model or "")
+
+    # Decode incoming value into (enabled, normalized_effort).
+    if raw is None:
+        enabled = None  # not specified → don't touch upstream defaults
+        effort = None
+    elif raw is False or raw == 0 or (isinstance(raw, str) and raw.lower() == "off"):
+        enabled = False
+        effort = None
+    elif isinstance(raw, str) and raw.lower() in _REASONING_EFFORT_VALUES:
+        enabled = True
+        effort = raw.lower()
+    else:
+        # Unknown value (e.g. True / "on" / 1 / "auto"): treat as enable, default level.
+        enabled = True
+        effort = "medium"
+
+    if family == "azure_reasoning":
+        if enabled is False:
+            body.pop("reasoning_effort", None)
+        elif enabled is True:
+            body["reasoning_effort"] = effort or "medium"
+        # else: leave as-is (caller didn't ask).
+        return
+
+    if family in ("siliconflow", "vllm"):
+        body.pop("reasoning_effort", None)
+        if enabled is None:
+            return
+        # SiliconFlow expects extra_body.chat_template_kwargs.enable_thinking.
+        # vLLM accepts extra_body.chat_template_kwargs as well (it forwards the
+        # dict into the chat template). Use extra_body for both — when the body
+        # is sent to the upstream, the OpenAI SDK convention is to merge
+        # `extra_body` into the top-level JSON; since we forward raw JSON we
+        # send `chat_template_kwargs` at top level for vLLM, and inside
+        # `extra_body` for SiliconFlow.
+        if family == "siliconflow":
+            extra = body.get("extra_body")
+            if not isinstance(extra, dict):
+                extra = {}
+            ctk = extra.get("chat_template_kwargs")
+            if not isinstance(ctk, dict):
+                ctk = {}
+            ctk["enable_thinking"] = bool(enabled)
+            extra["chat_template_kwargs"] = ctk
+            body["extra_body"] = extra
+        else:  # vllm
+            ctk = body.get("chat_template_kwargs")
+            if not isinstance(ctk, dict):
+                ctk = {}
+            ctk["enable_thinking"] = bool(enabled)
+            body["chat_template_kwargs"] = ctk
+        return
+
+    # other: drop silently.
+    body.pop("reasoning_effort", None)
+
+
 def get_pricing(backend: dict) -> tuple[float, float, float]:
     """Return (input_price, output_price, cache_price).
 
@@ -2190,6 +2520,11 @@ async def _handle_openai_request(request: Request, path: str, usage_keys: tuple[
     if model in model_map:
         body["model"] = model_map[model]
 
+    # Normalize max_tokens / max_completion_tokens for the upstream model.
+    _normalize_max_tokens(body, body.get("model", ""))
+    _normalize_for_reasoning(body, body.get("model", ""))
+    _normalize_thinking(body, backend, body.get("model", ""))
+
     # For OpenAI chat/completions streaming, force include_usage so the final
     # chunk carries token counts (vLLM/OpenAI omit usage in stream by default).
     if stream and path in ("/v1/chat/completions", "/v1/completions"):
@@ -2235,7 +2570,20 @@ async def _proxy_direct(api_user, backend, body, stream, input_price, output_pri
 
     async with httpx.AsyncClient(timeout=UPSTREAM_TIMEOUT) as client:
         resp = await client.post(url, json=body, headers=headers)
-        data = resp.json()
+        try:
+            data = resp.json()
+        except Exception:
+            raise HTTPException(502, f"上游返回非 JSON ({resp.status_code}): {(resp.text or '')[:200]}")
+    if not (200 <= resp.status_code < 300):
+        raise HTTPException(resp.status_code, data if isinstance(data, dict) else {"error": str(data)[:500]})
+    # Some upstreams (e.g. SiliconFlow) return HTTP 200 with `{"code":<nonzero>,
+    # "message":...,"data":null}` instead of a real chat completion. Treat as
+    # error so callers don't get a silent empty body.
+    if isinstance(data, dict) and not data.get("choices"):
+        code = data.get("code")
+        msg = data.get("message") or data.get("error")
+        if code is not None or msg:
+            raise HTTPException(502, {"upstream_code": code, "upstream_message": msg, "backend": backend.get("name")})
 
     usage = _extract_usage(data, usage_keys)
     await _record_usage(api_user, backend, log_model, usage, input_price, output_price,
@@ -2250,6 +2598,25 @@ async def _stream_direct(api_user, backend, body, url, input_price, output_price
     total_cached = 0
     async with httpx.AsyncClient(timeout=UPSTREAM_TIMEOUT) as client:
         async with client.stream("POST", url, json=body, headers=headers) as resp:
+            # If upstream rejected the request (4xx/5xx) or returned a JSON
+            # error envelope with HTTP 200 (SiliconFlow style), surface it as
+            # a single SSE error chunk instead of a silent 0-byte stream.
+            ctype = (resp.headers.get("content-type") or "").lower()
+            non_sse = ("text/event-stream" not in ctype)
+            if not (200 <= resp.status_code < 300) or non_sse:
+                raw = await resp.aread()
+                excerpt = raw.decode("utf-8", "replace")[:500]
+                payload = {
+                    "error": {
+                        "message": f"upstream {resp.status_code} {ctype or 'unknown'}: {excerpt}",
+                        "type": "upstream_error",
+                        "code": resp.status_code,
+                        "backend": backend.get("name"),
+                    }
+                }
+                yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+                yield "data: [DONE]\n\n"
+                return
             async for line in resp.aiter_lines():
                 if line.startswith("data: "):
                     yield line + "\n\n"
@@ -2352,6 +2719,12 @@ def _extract_usage(obj: dict, usage_keys: tuple[str, str]) -> dict:
 
 
 async def _record_usage(api_user, backend, model, usage, input_price, output_price, cache_price=None):
+    # Reaching _record_usage means the upstream returned a usable response;
+    # tell the health-check loop it can skip its next dry-run for this backend.
+    try:
+        mark_backend_success(backend["id"])
+    except Exception:
+        pass
     input_tokens = usage.get("prompt_tokens", 0)
     output_tokens = usage.get("completion_tokens", 0)
     cached_tokens = usage.get("cached_tokens", 0) or 0
