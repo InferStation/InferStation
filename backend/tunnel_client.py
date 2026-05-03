@@ -57,10 +57,18 @@ async def run_tunnel(gateway_ws_url: str, token: str, backend_name: str, local_u
     """Main tunnel loop with auto-reconnect.
 
     Reconnect policy: exponential backoff (1s -> 2 -> 4 -> 8 -> 16 -> 32 -> capped at 60s),
-    reset to 1s after a successful authenticated session. NEVER gives up — even auth
-    failures are treated as transient (backend may be mid-restart / mid-migration).
-    Press Ctrl-C / send SIGTERM to stop.
+    reset to 1s after a successful authenticated session. NEVER gives up.
+
+    Liveness: websockets pings every PING_INTERVAL s and expects a pong within
+    PING_TIMEOUT s. On top of that, an application-level read watchdog forces a
+    reconnect if no frame at all arrives for READ_IDLE_TIMEOUT s. This catches
+    the rare case where Cloudflare / NAT silently drops the TCP connection and
+    the websockets library doesn't surface the failure.
     """
+    PING_INTERVAL = 20
+    PING_TIMEOUT = 20
+    READ_IDLE_TIMEOUT = 300.0
+
     backoff = 1.0
     max_backoff = 60.0
     attempt = 0
@@ -68,23 +76,39 @@ async def run_tunnel(gateway_ws_url: str, token: str, backend_name: str, local_u
         attempt += 1
         try:
             logger.info(f"[attempt {attempt}] Connecting to {gateway_ws_url} ...")
-            async with websockets.connect(gateway_ws_url, ping_interval=20, ping_timeout=60) as ws:
+            async with websockets.connect(
+                gateway_ws_url,
+                ping_interval=PING_INTERVAL,
+                ping_timeout=PING_TIMEOUT,
+                close_timeout=5,
+                max_size=None,
+            ) as ws:
                 # Send auth
                 await ws.send(json.dumps({"token": token, "backend_name": backend_name}))
                 resp = json.loads(await ws.recv())
                 if "error" in resp:
-                    # Treat as transient: token may be temporarily rejected during
-                    # backend restart / migration. Don't kill the client.
                     logger.error(f"Auth rejected: {resp['error']}. Will retry in {backoff:.0f}s.")
                     await asyncio.sleep(backoff)
                     backoff = min(backoff * 2, max_backoff)
                     continue
                 logger.info(f"Connected! backend_id={resp.get('backend_id')}")
-                # Successful auth -> reset backoff
                 backoff = 1.0
 
-                # Handle requests
-                async for raw in ws:
+                # Handle requests with a read watchdog.
+                while True:
+                    try:
+                        raw = await asyncio.wait_for(ws.recv(), timeout=READ_IDLE_TIMEOUT)
+                    except asyncio.TimeoutError:
+                        logger.warning(
+                            f"No frame received for {READ_IDLE_TIMEOUT:.0f}s; "
+                            "assuming dead connection, forcing reconnect."
+                        )
+                        try:
+                            await ws.close(code=1011, reason="read idle timeout")
+                        except Exception:
+                            pass
+                        break
+
                     msg = json.loads(raw)
                     req_id = msg.get("id", "")
                     msg_type = msg.get("type", "")
