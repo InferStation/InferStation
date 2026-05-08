@@ -1,5 +1,8 @@
 """Monthly post-paid billing.
 
+USD-only as of 2026-05-09. The historical multi-currency code paths
+were removed; every invoice / usage row is treated as USD.
+
 Design:
 - Users do NOT have a balance. Usage is logged per-request with a cost.
 - Each calendar month becomes one invoice per user (generated lazily after
@@ -11,6 +14,7 @@ Design:
 """
 from __future__ import annotations
 
+import os
 from datetime import date, datetime, timedelta
 from typing import Iterable
 
@@ -18,15 +22,16 @@ from database import get_db
 
 GRACE_DAYS = 7  # days after period_end before an invoice is considered overdue
 
+# Test-mode auto-pay: while the platform is in beta we do not actually
+# collect money. Every freshly generated invoice is immediately marked
+# paid (with paid_at = now) so that no user accumulates dunning state.
+# Flip BILLING_TEST_AUTOPAY=0 in the environment to restore real billing.
+TEST_AUTOPAY = os.environ.get("BILLING_TEST_AUTOPAY", "1") not in ("", "0", "false", "False")
+
 
 async def _archive_owner_deletions(db, owner_id: int, period_end_iso: str) -> None:
     """Soft-deleted backends whose deletion timestamp falls within the just-billed
-    period are advanced to the terminal 'archived' state. Internal-only: this
-    state is invisible to the owner and to all non-admin endpoints.
-
-    Called immediately after invoice insert (both auto and early-settle paths)
-    so that deletion → archive aligns with the billing cycle close.
-    """
+    period are advanced to the terminal 'archived' state."""
     await db.execute(
         """UPDATE backends
               SET deletion_status = 'archived'
@@ -60,11 +65,9 @@ def _month_range_labels(start_ym: str, end_excl_ym: str) -> Iterable[tuple[str, 
 
 async def ensure_invoices_for_user(user_id: int) -> None:
     """Generate any missing invoices for months that have fully elapsed.
-    One invoice is generated per (user, month, currency)."""
+    One invoice per (user, month)."""
     db = await get_db()
     try:
-        # Earliest usage month for this user — derived from usage_daily (past)
-        # plus usage_hourly (today).  All timestamps are Asia/Shanghai local.
         cur = await db.execute(
             """SELECT MIN(ym) FROM (
                    SELECT substr(day,1,7) AS ym FROM usage_daily WHERE user_id = ?
@@ -81,59 +84,51 @@ async def ensure_invoices_for_user(user_id: int) -> None:
         today = date.today()
         current_ym = today.strftime("%Y-%m")
         if earliest_ym >= current_ym:
-            return  # no elapsed month yet
+            return
 
-        # Existing invoice (period, currency) pairs
         cur = await db.execute(
-            "SELECT strftime('%Y-%m', period_start), currency FROM invoices WHERE user_id = ?",
+            "SELECT strftime('%Y-%m', period_start) FROM invoices WHERE user_id = ?",
             (user_id,),
         )
-        existing = {(r[0], r[1] or "CNY") for r in await cur.fetchall()}
+        existing = {r[0] for r in await cur.fetchall()}
 
         for period_start, period_end in _month_range_labels(earliest_ym, current_ym):
             ym = period_start[:7]
-            # Sum usage for that month, grouped by currency
+            if ym in existing:
+                continue
             # Self-owned model waiver: usage on the user's own backends is
-            # fully waived in summaries and invoices. We still keep the raw
-            # rows in usage_hourly/usage_daily for transparency.
+            # fully waived in summaries and invoices.
             cur = await db.execute(
-                """SELECT COALESCE(currency,'CNY') AS currency,
-                          COALESCE(SUM(cost),0) AS total
-                   FROM (
-                       SELECT u.currency, u.cost
+                """SELECT COALESCE(SUM(cost),0) AS total FROM (
+                       SELECT u.cost
                        FROM usage_daily u
                        LEFT JOIN backends b ON u.backend_id = b.id
                        WHERE u.user_id = ? AND u.day >= ? AND u.day < ?
                          AND (b.owner_id IS NULL OR b.owner_id != ?)
                        UNION ALL
-                       SELECT u.currency, u.cost
+                       SELECT u.cost
                        FROM usage_hourly u
                        LEFT JOIN backends b ON u.backend_id = b.id
                        WHERE u.user_id = ? AND substr(u.hour_start,1,10) >= ?
                                             AND substr(u.hour_start,1,10) <  ?
                          AND (b.owner_id IS NULL OR b.owner_id != ?)
-                   )
-                   GROUP BY COALESCE(currency,'CNY')""",
+                   )""",
                 (user_id, period_start, period_end, user_id,
                  user_id, period_start, period_end, user_id),
             )
-            sums = await cur.fetchall()
+            total = float((await cur.fetchone())["total"] or 0.0)
             pe = date.fromisoformat(period_end)
             due_date = (pe - timedelta(days=1) + timedelta(days=GRACE_DAYS)).isoformat()
-            for r in sums:
-                currency = r["currency"] or "CNY"
-                if (ym, currency) in existing:
-                    continue
-                total = float(r["total"] or 0.0)
-                status = "paid" if total <= 0 else "unpaid"
-                paid_at = datetime.utcnow().isoformat(sep=" ", timespec="seconds") if total <= 0 else None
-                await db.execute(
-                    "INSERT INTO invoices (user_id, period_start, period_end, total_cost, currency, status, due_date, paid_at) "
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                    (user_id, period_start, period_end, total, currency, status, due_date, paid_at),
-                )
-            # Once a month closes, advance the user's soft-deleted backends
-            # whose deletion fell within that period to the terminal state.
+            if TEST_AUTOPAY or total <= 0:
+                status = "paid"
+                paid_at = datetime.utcnow().isoformat(sep=" ", timespec="seconds")
+            else:
+                status, paid_at = "unpaid", None
+            await db.execute(
+                "INSERT INTO invoices (user_id, period_start, period_end, total_cost, status, due_date, paid_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (user_id, period_start, period_end, total, status, due_date, paid_at),
+            )
             await _archive_owner_deletions(db, user_id, period_end)
         await db.commit()
     finally:
@@ -141,7 +136,7 @@ async def ensure_invoices_for_user(user_id: int) -> None:
 
 
 async def get_billing_status(user_id: int) -> dict:
-    """Return current-month running cost (per currency) and unpaid invoices."""
+    """Return current-month running cost (USD) and unpaid invoices."""
     await ensure_invoices_for_user(user_id)
     db = await get_db()
     try:
@@ -149,66 +144,51 @@ async def get_billing_status(user_id: int) -> dict:
         month_start = _month_first(today).isoformat()
         next_month = _next_month_first(today).isoformat()
         cur = await db.execute(
-            """SELECT COALESCE(currency,'CNY') AS currency,
-                      COALESCE(SUM(cost),0) AS total
-               FROM (
-                   SELECT u.currency, u.cost
+            """SELECT COALESCE(SUM(cost),0) AS total FROM (
+                   SELECT u.cost
                    FROM usage_daily u
                    LEFT JOIN backends b ON u.backend_id = b.id
                    WHERE u.user_id = ? AND u.day >= ? AND u.day < ?
                      AND (b.owner_id IS NULL OR b.owner_id != ?)
                    UNION ALL
-                   SELECT u.currency, u.cost
+                   SELECT u.cost
                    FROM usage_hourly u
                    LEFT JOIN backends b ON u.backend_id = b.id
                    WHERE u.user_id = ? AND substr(u.hour_start,1,10) >= ?
                                         AND substr(u.hour_start,1,10) <  ?
                      AND (b.owner_id IS NULL OR b.owner_id != ?)
-               )
-               GROUP BY COALESCE(currency,'CNY')""",
+               )""",
             (user_id, month_start, next_month, user_id,
              user_id, month_start, next_month, user_id),
         )
-        cm_rows = await cur.fetchall()
-        current_month_by_currency: dict[str, float] = {
-            (r["currency"] or "CNY"): float(r["total"] or 0.0) for r in cm_rows
-        }
+        current_month_cost = float((await cur.fetchone())["total"] or 0.0)
 
         cur = await db.execute(
-            "SELECT id, period_start, period_end, total_cost, COALESCE(currency,'CNY') AS currency, "
+            "SELECT id, period_start, period_end, total_cost, "
             "status, due_date, created_at, paid_at "
-            "FROM invoices WHERE user_id = ? ORDER BY period_start DESC, currency ASC",
+            "FROM invoices WHERE user_id = ? ORDER BY period_start DESC",
             (user_id,),
         )
-        invoices = [dict(r) for r in await cur.fetchall()]
+        invoices = []
+        for r in await cur.fetchall():
+            d = dict(r)
+            d["currency"] = "USD"
+            invoices.append(d)
         today_s = today.isoformat()
         unpaid = [i for i in invoices if i["status"] == "unpaid"]
         overdue = [i for i in unpaid if i["due_date"] < today_s]
 
-        unpaid_by_currency: dict[str, float] = {}
-        for i in unpaid:
-            c = i.get("currency") or "CNY"
-            unpaid_by_currency[c] = unpaid_by_currency.get(c, 0.0) + float(i["total_cost"] or 0.0)
-        overdue_by_currency: dict[str, float] = {}
-        for i in overdue:
-            c = i.get("currency") or "CNY"
-            overdue_by_currency[c] = overdue_by_currency.get(c, 0.0) + float(i["total_cost"] or 0.0)
-
-        # Legacy single-number fields kept for backward compatibility.
-        # They sum across currencies (numerically meaningless for mixed-currency
-        # users, but UIs should prefer the *_by_currency dicts).
-        current_month_cost = sum(current_month_by_currency.values())
-        unpaid_total = sum(unpaid_by_currency.values())
-        overdue_total = sum(overdue_by_currency.values())
+        unpaid_total = sum(float(i["total_cost"] or 0.0) for i in unpaid)
+        overdue_total = sum(float(i["total_cost"] or 0.0) for i in overdue)
         return {
             "current_month_cost": current_month_cost,
-            "current_month_by_currency": current_month_by_currency,
+            "current_month_by_currency": {"USD": current_month_cost},
             "current_month_period": {"start": month_start, "end": next_month},
             "invoices": invoices,
             "unpaid_total": unpaid_total,
-            "unpaid_by_currency": unpaid_by_currency,
+            "unpaid_by_currency": {"USD": unpaid_total} if unpaid_total else {},
             "overdue_total": overdue_total,
-            "overdue_by_currency": overdue_by_currency,
+            "overdue_by_currency": {"USD": overdue_total} if overdue_total else {},
             "is_suspended": len(overdue) > 0,
             "grace_days": GRACE_DAYS,
         }
@@ -233,15 +213,10 @@ async def is_user_suspended(user_id: int) -> tuple[bool, float]:
         await db.close()
 
 
-# Idle window required before a user may proactively close out the running
-# month early.  In-flight streaming requests commit usage when they finish, so
-# we wait until at least this many minutes have elapsed since the user's last
-# usage_hourly bucket update before allowing early settlement.
 SETTLE_IDLE_MINUTES = 30
 
 
 async def is_user_idle_for_settle(user_id: int, idle_minutes: int = SETTLE_IDLE_MINUTES) -> tuple[bool, str | None]:
-    """Return (idle_ok, last_activity_str)."""
     db = await get_db()
     try:
         cur = await db.execute(
@@ -251,7 +226,6 @@ async def is_user_idle_for_settle(user_id: int, idle_minutes: int = SETTLE_IDLE_
         latest = (await cur.fetchone())[0]
         if not latest:
             return True, None
-        # usage_hourly.hour_start is Asia/Shanghai local; compare to local now.
         cur = await db.execute(
             "SELECT datetime('now','+8 hours','-' || ? || ' minutes')",
             (idle_minutes,),
@@ -265,10 +239,10 @@ async def is_user_idle_for_settle(user_id: int, idle_minutes: int = SETTLE_IDLE_
 async def settle_user_partial(user_id: int, today: date | None = None) -> list[dict]:
     """Generate an early-settlement invoice for the running month.
 
-    Sums usage from month-start through today (inclusive) per currency, and
-    inserts one invoice per (currency) that does not yet have a current-month
-    invoice.  Returns the rows just created.  Idempotent: a second call within
-    the same calendar month returns [] for already-billed currencies.
+    Sums usage from month-start through today (inclusive) and inserts one
+    invoice that does not yet have a current-month invoice.  Returns the rows
+    just created.  Idempotent: a second call within the same calendar month
+    returns [].
     """
     today = today or date.today()
     month_start = _month_first(today).isoformat()
@@ -278,64 +252,54 @@ async def settle_user_partial(user_id: int, today: date | None = None) -> list[d
     created: list[dict] = []
     try:
         cur = await db.execute(
-            """SELECT COALESCE(currency,'CNY') AS currency,
-                      COALESCE(SUM(cost),0) AS total
-               FROM (
-                   SELECT u.currency, u.cost
+            "SELECT 1 FROM invoices WHERE user_id = ? AND strftime('%Y-%m', period_start) = ?",
+            (user_id, ym),
+        )
+        if await cur.fetchone():
+            return []
+
+        cur = await db.execute(
+            """SELECT COALESCE(SUM(cost),0) AS total FROM (
+                   SELECT u.cost
                    FROM usage_daily u
                    LEFT JOIN backends b ON u.backend_id = b.id
                    WHERE u.user_id = ? AND u.day >= ? AND u.day < ?
                      AND (b.owner_id IS NULL OR b.owner_id != ?)
                    UNION ALL
-                   SELECT u.currency, u.cost
+                   SELECT u.cost
                    FROM usage_hourly u
                    LEFT JOIN backends b ON u.backend_id = b.id
                    WHERE u.user_id = ? AND substr(u.hour_start,1,10) >= ?
                                         AND substr(u.hour_start,1,10) <  ?
                      AND (b.owner_id IS NULL OR b.owner_id != ?)
-               )
-               GROUP BY COALESCE(currency,'CNY')""",
+               )""",
             (user_id, month_start, next_day, user_id,
              user_id, month_start, next_day, user_id),
         )
-        sums = await cur.fetchall()
+        total = float((await cur.fetchone())["total"] or 0.0)
 
-        cur = await db.execute(
-            "SELECT COALESCE(currency,'CNY') AS currency FROM invoices "
-            "WHERE user_id = ? AND strftime('%Y-%m', period_start) = ?",
-            (user_id, ym),
-        )
-        existing_curr = {r["currency"] or "CNY" for r in await cur.fetchall()}
-
-        period_end = next_day  # exclusive: covers today
+        period_end = next_day
         due_date = (today + timedelta(days=GRACE_DAYS)).isoformat()
         now_iso = datetime.utcnow().isoformat(sep=" ", timespec="seconds")
-        for r in sums:
-            currency = r["currency"] or "CNY"
-            if currency in existing_curr:
-                continue
-            total = float(r["total"] or 0.0)
-            if total <= 0:
-                status, paid_at = "paid", now_iso
-            else:
-                status, paid_at = "unpaid", None
-            cur = await db.execute(
-                "INSERT INTO invoices (user_id, period_start, period_end, total_cost, currency, status, due_date, paid_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                (user_id, month_start, period_end, total, currency, status, due_date, paid_at),
-            )
-            created.append({
-                "id": cur.lastrowid,
-                "period_start": month_start,
-                "period_end": period_end,
-                "currency": currency,
-                "total_cost": total,
-                "status": status,
-                "due_date": due_date,
-                "paid_at": paid_at,
-            })
-        # Early settlement also closes off the running month for this user;
-        # any pending soft-deleted backends become archived now.
+        if TEST_AUTOPAY or total <= 0:
+            status, paid_at = "paid", now_iso
+        else:
+            status, paid_at = "unpaid", None
+        cur = await db.execute(
+            "INSERT INTO invoices (user_id, period_start, period_end, total_cost, status, due_date, paid_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (user_id, month_start, period_end, total, status, due_date, paid_at),
+        )
+        created.append({
+            "id": cur.lastrowid,
+            "period_start": month_start,
+            "period_end": period_end,
+            "currency": "USD",
+            "total_cost": total,
+            "status": status,
+            "due_date": due_date,
+            "paid_at": paid_at,
+        })
         await _archive_owner_deletions(db, user_id, period_end)
         await db.commit()
         return created

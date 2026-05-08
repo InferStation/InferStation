@@ -54,7 +54,6 @@ async def init_db():
             input_price REAL,
             output_price REAL,
             cache_price REAL,
-            currency TEXT NOT NULL DEFAULT 'CNY',
             is_public INTEGER NOT NULL DEFAULT 1,
             enabled INTEGER NOT NULL DEFAULT 0,
             listing_status TEXT NOT NULL DEFAULT 'offline',
@@ -79,7 +78,6 @@ async def init_db():
             output_tokens INTEGER NOT NULL DEFAULT 0,
             cached_tokens INTEGER NOT NULL DEFAULT 0,
             cost REAL NOT NULL DEFAULT 0.0,
-            currency TEXT NOT NULL DEFAULT 'CNY',
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
 
@@ -89,14 +87,13 @@ async def init_db():
             user_id INTEGER NOT NULL,
             backend_id INTEGER NOT NULL,
             model TEXT NOT NULL,
-            currency TEXT NOT NULL DEFAULT 'CNY',
             hour_start TEXT NOT NULL,
             requests INTEGER NOT NULL DEFAULT 0,
             input_tokens INTEGER NOT NULL DEFAULT 0,
             output_tokens INTEGER NOT NULL DEFAULT 0,
             cached_tokens INTEGER NOT NULL DEFAULT 0,
             cost REAL NOT NULL DEFAULT 0.0,
-            PRIMARY KEY (user_id, backend_id, model, currency, hour_start)
+            PRIMARY KEY (user_id, backend_id, model, hour_start)
         );
         CREATE INDEX IF NOT EXISTS idx_usage_hourly_user_hour ON usage_hourly(user_id, hour_start);
         CREATE INDEX IF NOT EXISTS idx_usage_hourly_hour ON usage_hourly(hour_start);
@@ -106,14 +103,13 @@ async def init_db():
             user_id INTEGER NOT NULL,
             backend_id INTEGER NOT NULL,
             model TEXT NOT NULL,
-            currency TEXT NOT NULL DEFAULT 'CNY',
             day TEXT NOT NULL,
             requests INTEGER NOT NULL DEFAULT 0,
             input_tokens INTEGER NOT NULL DEFAULT 0,
             output_tokens INTEGER NOT NULL DEFAULT 0,
             cached_tokens INTEGER NOT NULL DEFAULT 0,
             cost REAL NOT NULL DEFAULT 0.0,
-            PRIMARY KEY (user_id, backend_id, model, currency, day)
+            PRIMARY KEY (user_id, backend_id, model, day)
         );
         CREATE INDEX IF NOT EXISTS idx_usage_daily_user_day ON usage_daily(user_id, day);
         CREATE INDEX IF NOT EXISTS idx_usage_daily_day ON usage_daily(day);
@@ -148,7 +144,6 @@ async def init_db():
             period_start TEXT NOT NULL,   -- YYYY-MM-01 (inclusive)
             period_end   TEXT NOT NULL,   -- next month YYYY-MM-01 (exclusive)
             total_cost   REAL NOT NULL DEFAULT 0,
-            currency     TEXT NOT NULL DEFAULT 'CNY',
             status       TEXT NOT NULL DEFAULT 'unpaid',  -- unpaid | paid | void
             due_date     TEXT NOT NULL,   -- YYYY-MM-DD
             created_at   TEXT NOT NULL DEFAULT (datetime('now')),
@@ -200,17 +195,12 @@ async def init_db():
                 "CREATE INDEX IF NOT EXISTS idx_sub_user_model_lookup "
                 "ON subscriptions(user_id, model)"
             )
-        # Migration: per-backend pricing currency (CNY default for back-compat)
-        if "currency" not in cols:
-            await db.execute("ALTER TABLE backends ADD COLUMN currency TEXT NOT NULL DEFAULT 'CNY'")
-        # Migration: pending pricing fields. Price/currency edits land here and
+        # Migration: pending pricing fields. Price edits land here and
         # are promoted to live columns at 00:00 Asia/Shanghai each day.
         if "pending_input_price" not in cols:
             await db.execute("ALTER TABLE backends ADD COLUMN pending_input_price REAL")
         if "pending_output_price" not in cols:
             await db.execute("ALTER TABLE backends ADD COLUMN pending_output_price REAL")
-        if "pending_currency" not in cols:
-            await db.execute("ALTER TABLE backends ADD COLUMN pending_currency TEXT")
         if "pending_effective_at" not in cols:
             await db.execute("ALTER TABLE backends ADD COLUMN pending_effective_at TEXT")
         if "cache_price" not in cols:
@@ -250,12 +240,9 @@ async def init_db():
             await db.execute("ALTER TABLE backends ADD COLUMN deleted_at TEXT")
         # Migration: collapse deprecated 'rejected' status into 'offline'.
         await db.execute("UPDATE backends SET listing_status = 'offline' WHERE listing_status = 'rejected'")
-        # Migration: usage_logs records the backend's pricing currency at the time
+        # Migration: cached_tokens (prompt-cache hits) on usage tables.
         cur = await db.execute("PRAGMA table_info(usage_logs)")
         ulcols = {r[1] for r in await cur.fetchall()}
-        if "currency" not in ulcols:
-            await db.execute("ALTER TABLE usage_logs ADD COLUMN currency TEXT NOT NULL DEFAULT 'CNY'")
-        # Migration: cached_tokens (prompt-cache hits) on usage tables.
         if "cached_tokens" not in ulcols:
             await db.execute("ALTER TABLE usage_logs ADD COLUMN cached_tokens INTEGER NOT NULL DEFAULT 0")
         cur = await db.execute("PRAGMA table_info(usage_hourly)")
@@ -266,24 +253,7 @@ async def init_db():
         udcols = {r[1] for r in await cur.fetchall()}
         if "cached_tokens" not in udcols:
             await db.execute("ALTER TABLE usage_daily ADD COLUMN cached_tokens INTEGER NOT NULL DEFAULT 0")
-        # Migration: invoices stored in their backend's currency. One invoice
-        # per (user, period, currency).
-        cur = await db.execute("PRAGMA table_info(invoices)")
-        icols = {r[1] for r in await cur.fetchall()}
-        if "currency" not in icols:
-            await db.execute("ALTER TABLE invoices ADD COLUMN currency TEXT NOT NULL DEFAULT 'CNY'")
-            # Replace the (user, period) unique index with one that includes currency.
-            try:
-                await db.execute("DROP INDEX IF EXISTS idx_invoice_user_period")
-            except Exception:
-                pass
-        # Always (re)create the currency-aware unique index, now that the
-        # column is guaranteed to exist on both fresh and migrated DBs.
-        await db.execute(
-            "CREATE UNIQUE INDEX IF NOT EXISTS idx_invoice_user_period_cur "
-            "ON invoices(user_id, period_start, currency)"
-        )
-        # Email verification codes (register / change-email).
+                # Email verification codes (register / change-email).
         await db.execute("""
         CREATE TABLE IF NOT EXISTS email_verifications (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
