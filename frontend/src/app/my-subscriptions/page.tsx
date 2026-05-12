@@ -322,7 +322,7 @@ export default function MyModelsPage() {
                         <tbody className="divide-y divide-line">
                         {g.rows.map((s, rowIdx) => {
                           const isActivated = !!s.is_activated
-                          const sym = s.currency === "USD" ? "$" : "¥"
+                          const sym = "$"
                           const isFree = s.input_price === 0 && s.output_price === 0
                           return (
                             <tr key={s.id} className="hover:bg-bg/30">

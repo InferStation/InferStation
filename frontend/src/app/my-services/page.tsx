@@ -74,7 +74,7 @@ export default function ServicesPage() {
     input_price: "",
     output_price: "",
     cache_price: "",
-    currency: "CNY",
+    currency: "USD",
   })
   const [families, setFamilies] = useState<string[]>([])
   const [catalog, setCatalog] = useState<Record<string, string[]>>({})
@@ -152,7 +152,7 @@ export default function ServicesPage() {
         }),
       })
       setShowForm(false)
-      setForm({ name: "", url: "", api_key: "", mode: "direct", family: "", model: "", served_as: "", tag_hardware: "", tag_framework: "", tag_quantization: "", input_price: "", output_price: "", cache_price: "", currency: "CNY" })
+      setForm({ name: "", url: "", api_key: "", mode: "direct", family: "", model: "", served_as: "", tag_hardware: "", tag_framework: "", tag_quantization: "", input_price: "", output_price: "", cache_price: "", currency: "USD" })
       loadBackends()
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : t({ en: "Operation failed", zh: "操作失败" }))
@@ -342,20 +342,19 @@ export default function ServicesPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t({ en: "Currency", zh: "货币" })}</label>
                 <select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none">
-                  <option value="CNY">CNY (¥)</option>
                   <option value="USD">USD ($)</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t({ en: `Input price (${form.currency === "USD" ? "$" : "¥"}/M tokens)`, zh: `输入定价（${form.currency === "USD" ? "$" : "¥"}/百万token）` })}</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t({ en: `Input price (${"$"}/M tokens)`, zh: `输入定价（${"$"}/百万token）` })}</label>
                 <input type="number" step="0.01" value={form.input_price} onChange={(e) => setForm({ ...form, input_price: e.target.value })} placeholder={t({ en: "default", zh: "默认" })} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t({ en: `Output price (${form.currency === "USD" ? "$" : "¥"}/M tokens)`, zh: `输出定价（${form.currency === "USD" ? "$" : "¥"}/百万token）` })}</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t({ en: `Output price (${"$"}/M tokens)`, zh: `输出定价（${"$"}/百万token）` })}</label>
                 <input type="number" step="0.01" value={form.output_price} onChange={(e) => setForm({ ...form, output_price: e.target.value })} placeholder={t({ en: "default", zh: "默认" })} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t({ en: `Cache-hit price (${form.currency === "USD" ? "$" : "¥"}/M tokens)`, zh: `缓存命中定价（${form.currency === "USD" ? "$" : "¥"}/百万token）` })}</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t({ en: `Cache-hit price (${"$"}/M tokens)`, zh: `缓存命中定价（${"$"}/百万token）` })}</label>
                 <input type="number" step="0.01" value={form.cache_price} onChange={(e) => setForm({ ...form, cache_price: e.target.value })} placeholder={t({ en: "defaults to input × 0.1", zh: "默认为输入×0.1" })} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none" />
               </div>
             </div>
@@ -373,8 +372,8 @@ export default function ServicesPage() {
           const rows = b.models.length > 0 ? b.models : [null]
           return rows.map((m, idx) => {
             const s = m ? (statsMap[b.id] || []).find((x) => x.model === m) : undefined
-            const sym = b.currency === "USD" ? "$" : "¥"
-            const psym = (b.pending_currency ?? b.currency) === "USD" ? "$" : "¥"
+            const sym = "$"
+            const psym = "$"
             return (
               <Link
                 key={`${b.id}-${m ?? "_"}`}

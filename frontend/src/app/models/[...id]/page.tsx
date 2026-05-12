@@ -78,7 +78,7 @@ const CAPABILITY_LABEL: Record<string, { en: string; zh: string }> = {
 }
 
 const symbolFor = (currency: string | null | undefined) =>
-  currency === "USD" ? "$" : "¥"
+  "$"
 
 const fmtPrice = (v: number | null | undefined) => {
   if (v == null) return "—"

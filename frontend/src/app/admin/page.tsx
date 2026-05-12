@@ -169,11 +169,11 @@ export default function AdminPage() {
                   </td>
                   <td className="px-4 py-3 text-right font-mono text-xs">
                     <span className={u.unpaid_total > 0 ? "text-amber-600" : "text-gray-400"}>
-                      {formatByCurrency(u.unpaid_by_currency ?? { CNY: u.unpaid_total ?? 0 })}
+                      {formatByCurrency(u.unpaid_by_currency ?? { USD: u.unpaid_total ?? 0 })}
                     </span>
                     <span className="mx-1 text-gray-300">/</span>
                     <span className={u.overdue_total > 0 ? "text-red-600 font-semibold" : "text-gray-400"}>
-                      {formatByCurrency(u.overdue_by_currency ?? { CNY: u.overdue_total ?? 0 })}
+                      {formatByCurrency(u.overdue_by_currency ?? { USD: u.overdue_total ?? 0 })}
                     </span>
                   </td>
                   <td className="px-4 py-3">
@@ -220,7 +220,7 @@ export default function AdminPage() {
                   <td className="px-4 py-3 text-right">{u.requests}</td>
                   <td className="px-4 py-3 text-right">{formatTokens(u.total_input)}</td>
                   <td className="px-4 py-3 text-right">{formatTokens(u.total_output)}</td>
-                  <td className="px-4 py-3 text-right text-green-600">{symbolOf(u.currency)}{u.total_cost.toFixed(4)} <span className="text-xs text-gray-400">{u.currency || "CNY"}</span></td>
+                  <td className="px-4 py-3 text-right text-green-600">{symbolOf(u.currency)}{u.total_cost.toFixed(4)} <span className="text-xs text-gray-400">{u.currency || "USD"}</span></td>
                 </tr>
               ))}
               {usage.length === 0 && (
@@ -255,7 +255,7 @@ export default function AdminPage() {
                   <tr key={inv.id}>
                     <td className="px-4 py-3 font-medium">{inv.username}</td>
                     <td className="px-4 py-3">{inv.period_start.slice(0, 7)}</td>
-                    <td className="px-4 py-3 text-right font-mono">{symbolOf(inv.currency)}{inv.total_cost.toFixed(6)} <span className="text-xs text-gray-400">{inv.currency || "CNY"}</span></td>
+                    <td className="px-4 py-3 text-right font-mono">{symbolOf(inv.currency)}{inv.total_cost.toFixed(6)} <span className="text-xs text-gray-400">{inv.currency || "USD"}</span></td>
                     <td className="px-4 py-3">{inv.due_date}</td>
                     <td className="px-4 py-3">
                       {inv.status === "paid" ? (
@@ -306,7 +306,7 @@ export default function AdminPage() {
             </thead>
             <tbody className="divide-y">
               {pending.map((b) => {
-                const sym = b.currency === "USD" ? "$" : "¥"
+                const sym = "$"
                 return (
                   <tr key={b.id}>
                     <td className="px-4 py-3 font-medium">{b.name}</td>

@@ -8,7 +8,7 @@ import { symbolOf } from "@/lib/currency"
  * `intervalMs` (default 3s).  Currencies with a zero / missing value are
  * skipped.  When only one currency has a value, no rotation happens.
  *
- * Currency display order: CNY, USD, then others alphabetically — same as
+ * Currency display order: USD first, then others alphabetically — same as
  * formatByCurrency in lib/currency.ts.
  */
 export function RotatingAmount({
@@ -25,7 +25,7 @@ export function RotatingAmount({
   const entries = Object.entries(map || {})
     .filter(([, v]) => Number(v) > 0)
     .sort(([a], [b]) => {
-      const order = (k: string) => (k === "CNY" ? 0 : k === "USD" ? 1 : 2)
+      const order = (k: string) => (k === "USD" ? 0 : 1)
       const oa = order(a), ob = order(b)
       if (oa !== ob) return oa - ob
       return a.localeCompare(b)
@@ -44,7 +44,7 @@ export function RotatingAmount({
   if (entries.length === 0) {
     return (
       <span>
-        {prefix}¥0.{"0".repeat(digits)}
+        {prefix}$0.{"0".repeat(digits)}
       </span>
     )
   }

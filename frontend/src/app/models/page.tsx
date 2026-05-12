@@ -39,7 +39,7 @@ function fmtPrice(n: number) {
 }
 
 function symbolFor(currency: string) {
-  return currency === "USD" ? "$" : "¥"
+  return "$"
 }
 
 function copy(text: string) {

@@ -90,13 +90,13 @@ export default function InvoicesPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="bg-white border rounded-lg p-5">
           <div className="text-xs text-gray-500 mb-1">{t({ en: "Usage this month", zh: "本月累计用量" })}</div>
-          <div className="text-2xl font-semibold">{formatByCurrency(data.current_month_by_currency ?? { CNY: data.current_month_cost })}</div>
+          <div className="text-2xl font-semibold">{formatByCurrency(data.current_month_by_currency ?? { USD: data.current_month_cost })}</div>
           <div className="text-xs text-gray-400 mt-1">{fmtMonth(data.current_month_period.start)} {t({ en: "· invoiced on the 1st", zh: "· 每月 1 日出账" })}</div>
         </div>
         <div className="bg-white border rounded-lg p-5">
           <div className="text-xs text-gray-500 mb-1">{t({ en: "Unpaid", zh: "未付账单" })}</div>
           <div className={`text-2xl font-semibold ${data.unpaid_total > 0 ? "text-amber-600" : "text-gray-400"}`}>
-            {formatByCurrency(data.unpaid_by_currency ?? { CNY: data.unpaid_total })}
+            {formatByCurrency(data.unpaid_by_currency ?? { USD: data.unpaid_total })}
           </div>
           <div className="text-xs text-gray-400 mt-1">
             {data.unpaid_total > 0 ? t({ en: `${data.invoices.filter((i) => i.status === "unpaid").length} invoice(s)`, zh: `${data.invoices.filter((i) => i.status === "unpaid").length} 张` }) : t({ en: "None", zh: "无" })}
@@ -105,7 +105,7 @@ export default function InvoicesPage() {
         <div className={`border rounded-lg p-5 ${data.is_suspended ? "bg-red-50 border-red-200" : "bg-white"}`}>
           <div className={`text-xs mb-1 ${data.is_suspended ? "text-red-700" : "text-gray-500"}`}>{t({ en: "Overdue", zh: "逾期金额" })}</div>
           <div className={`text-2xl font-semibold ${data.is_suspended ? "text-red-600" : "text-gray-400"}`}>
-            {formatByCurrency(data.overdue_by_currency ?? { CNY: data.overdue_total })}
+            {formatByCurrency(data.overdue_by_currency ?? { USD: data.overdue_total })}
           </div>
           <div className={`text-xs mt-1 ${data.is_suspended ? "text-red-700" : "text-gray-400"}`}>
             {data.is_suspended ? t({ en: "⚠ Service suspended; restored after settlement", zh: "⚠ 服务已暂停，结清后恢复" }) : t({ en: `Due within ${data.grace_days} days after issue date`, zh: `到期后 ${data.grace_days} 天内付清` })}
@@ -172,7 +172,7 @@ export default function InvoicesPage() {
                 return (
                   <tr key={inv.id} className="border-t">
                     <td className="px-4 py-3 font-medium">{fmtMonth(inv.period_start)}</td>
-                    <td className="px-4 py-3 text-xs text-gray-500">{inv.currency || "CNY"}</td>
+                    <td className="px-4 py-3 text-xs text-gray-500">{inv.currency || "USD"}</td>
                     <td className="px-4 py-3 text-right font-mono">{symbolOf(inv.currency)}{inv.total_cost.toFixed(6)}</td>
                     <td className="px-4 py-3">{inv.due_date}</td>
                     <td className="px-4 py-3">

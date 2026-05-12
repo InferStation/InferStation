@@ -162,14 +162,14 @@ export default function AccountPage() {
           </div>
           <div>
             <span className="text-gray-500">{t({ en: "Usage this month: ", zh: "本月用量：" })}</span>
-            <span className="font-medium">{formatByCurrency(user.billing?.current_month_by_currency ?? { CNY: user.billing?.current_month_cost ?? 0 })}</span>
+            <span className="font-medium">{formatByCurrency(user.billing?.current_month_by_currency ?? { USD: user.billing?.current_month_cost ?? 0 })}</span>
             <span className="ml-2 text-xs text-gray-400">{t({ en: "(invoiced on the 1st of each month)", zh: "（每月 1 日结算出账）" })}</span>
           </div>
           {user.billing && user.billing.unpaid_total > 0 && (
             <div>
               <span className="text-gray-500">{t({ en: "Unpaid invoices: ", zh: "未付账单：" })}</span>
               <span className={`font-medium ${user.billing.is_suspended ? "text-red-600" : "text-amber-600"}`}>
-                {formatByCurrency(user.billing.unpaid_by_currency ?? { CNY: user.billing.unpaid_total })}
+                {formatByCurrency(user.billing.unpaid_by_currency ?? { USD: user.billing.unpaid_total })}
               </span>
               {user.billing.is_suspended && (
                 <span className="ml-2 text-xs text-red-600">{t({ en: "⚠ Overdue — service suspended", zh: "⚠ 已逾期，服务已暂停" })}</span>

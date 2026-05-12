@@ -64,7 +64,7 @@ export default function UsagePage() {
 
   if (!user) return null
 
-  const symbol = (c: string) => (c === "USD" ? "$" : "¥")
+  const symbol = (_c: string) => "$"
   const fmtCost = (v: number, c: string) => {
     const s = symbol(c)
     if (v > 0 && v < 0.0000005) return t({ en: `below ${s}0.000000`, zh: `低于 ${s}0.000000` })
@@ -76,23 +76,23 @@ export default function UsagePage() {
   const totalOutput = usage.reduce((s, u) => s + u.total_output, 0)
   const totalCached = usage.reduce((s, u) => s + (u.total_cached || 0), 0)
   const costByCurrency = usage.reduce<Record<string, number>>((acc, u) => {
-    const cur = u.currency || "CNY"
+    const cur = u.currency || "USD"
     acc[cur] = (acc[cur] || 0) + u.total_cost
     return acc
   }, {})
   const selfByCurrency = usage.reduce<Record<string, number>>((acc, u) => {
-    const cur = u.currency || "CNY"
+    const cur = u.currency || "USD"
     acc[cur] = (acc[cur] || 0) + (u.self_cost || 0)
     return acc
   }, {})
   const billableByCurrency = usage.reduce<Record<string, number>>((acc, u) => {
-    const cur = u.currency || "CNY"
+    const cur = u.currency || "USD"
     acc[cur] = (acc[cur] || 0) + (u.billable_cost ?? (u.total_cost - (u.self_cost || 0)))
     return acc
   }, {})
   const fmtCurrencyMap = (m: Record<string, number>) =>
     Object.keys(m).length === 0
-      ? "¥0.000000"
+      ? "$0.000000"
       : Object.entries(m).map(([c, v]) => fmtCost(v, c)).join(" + ")
   const totalCostStr = fmtCurrencyMap(costByCurrency)
   const totalSelfStr = fmtCurrencyMap(selfByCurrency)
@@ -182,7 +182,7 @@ export default function UsagePage() {
                 </thead>
                 <tbody className="divide-y">
                   {usage.map((u, i) => {
-                    const cur = u.currency || "CNY"
+                    const cur = u.currency || "USD"
                     const self = u.self_cost || 0
                     const billable = u.billable_cost ?? (u.total_cost - self)
                     return (
@@ -229,7 +229,7 @@ export default function UsagePage() {
               </thead>
               <tbody className="divide-y">
                 {hourly.map((r, i) => {
-                  const cur = r.currency || "CNY"
+                  const cur = r.currency || "USD"
                   const self = r.self_cost || 0
                   const billable = r.billable_cost ?? (r.total_cost - self)
                   return (
@@ -273,7 +273,7 @@ export default function UsagePage() {
               </thead>
               <tbody className="divide-y">
                 {daily.map((r, i) => {
-                  const cur = r.currency || "CNY"
+                  const cur = r.currency || "USD"
                   const self = r.self_cost || 0
                   const billable = r.billable_cost ?? (r.total_cost - self)
                   return (

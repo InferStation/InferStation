@@ -70,7 +70,7 @@ export default function ServiceDetailPage() {
     input_price: "",
     output_price: "",
     cache_price: "",
-    currency: "CNY",
+    currency: "USD",
     is_public: true,
     context_length: "",
     capabilities: [] as CapabilityKey[],
@@ -131,7 +131,7 @@ export default function ServiceDetailPage() {
       input_price: b.input_price != null ? String(b.input_price) : "",
       output_price: b.output_price != null ? String(b.output_price) : "",
       cache_price: b.cache_price != null ? String(b.cache_price) : "",
-      currency: b.currency || "CNY",
+      currency: b.currency || "USD",
       is_public: !!b.is_public,
       context_length: b.context_length != null ? String(b.context_length) : "",
       capabilities: (b.capabilities || []).filter((c): c is CapabilityKey =>
@@ -419,20 +419,19 @@ export default function ServiceDetailPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t({ en: "Currency", zh: "货币" })}</label>
                 <select value={editForm.currency} onChange={(e) => setEditForm({ ...editForm, currency: e.target.value })} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none">
-                  <option value="CNY">CNY (¥)</option>
                   <option value="USD">USD ($)</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t({ en: `Input price (${editForm.currency === "USD" ? "$" : "¥"}/M tokens)`, zh: `输入定价（${editForm.currency === "USD" ? "$" : "¥"}/百万token）` })}</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t({ en: `Input price (${"$"}/M tokens)`, zh: `输入定价（${"$"}/百万token）` })}</label>
                 <input type="number" step="0.01" value={editForm.input_price} onChange={(e) => setEditForm({ ...editForm, input_price: e.target.value })} placeholder={t({ en: "Leave blank for free", zh: "留空为免费" })} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t({ en: `Output price (${editForm.currency === "USD" ? "$" : "¥"}/M tokens)`, zh: `输出定价（${editForm.currency === "USD" ? "$" : "¥"}/百万token）` })}</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t({ en: `Output price (${"$"}/M tokens)`, zh: `输出定价（${"$"}/百万token）` })}</label>
                 <input type="number" step="0.01" value={editForm.output_price} onChange={(e) => setEditForm({ ...editForm, output_price: e.target.value })} placeholder={t({ en: "Leave blank for free", zh: "留空为免费" })} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t({ en: `Cache-hit price (${editForm.currency === "USD" ? "$" : "¥"}/M tokens)`, zh: `缓存命中定价（${editForm.currency === "USD" ? "$" : "¥"}/百万token）` })}</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t({ en: `Cache-hit price (${"$"}/M tokens)`, zh: `缓存命中定价（${"$"}/百万token）` })}</label>
                 <input type="number" step="0.01" value={editForm.cache_price} onChange={(e) => setEditForm({ ...editForm, cache_price: e.target.value })} placeholder={t({ en: "defaults to input × 0.1", zh: "默认为输入×0.1" })} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none" />
               </div>
             </div>
@@ -550,7 +549,7 @@ export default function ServiceDetailPage() {
                   ) : backend.input_price === 0 && backend.output_price === 0 ? (
                     <span className="text-green-600">Free</span>
                   ) : (
-                    <>{backend.currency === "USD" ? "$" : "¥"}{backend.input_price}/M {t({ en: "input", zh: "输入" })} / {backend.currency === "USD" ? "$" : "¥"}{backend.output_price}/M {t({ en: "output", zh: "输出" })} / {backend.cache_price != null ? `${backend.currency === "USD" ? "$" : "¥"}${backend.cache_price}/M ${t({ en: "cache", zh: "缓存" })}` : t({ en: "cache defaults to input × 0.1", zh: "缓存默认按输入价×0.1" })} <span className="text-xs text-gray-500">({backend.currency || "CNY"})</span></>
+                    <>{"$"}{backend.input_price}/M {t({ en: "input", zh: "输入" })} / {"$"}{backend.output_price}/M {t({ en: "output", zh: "输出" })} / {backend.cache_price != null ? `${"$"}${backend.cache_price}/M ${t({ en: "cache", zh: "缓存" })}` : t({ en: "cache defaults to input × 0.1", zh: "缓存默认按输入价×0.1" })} <span className="text-xs text-gray-500">({backend.currency || "USD"})</span></>
                   )}
                 </p>
               </div>
