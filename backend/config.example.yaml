@@ -28,13 +28,12 @@ payments:
   freemius:
     enabled: false
     sandbox: true
-    product_id: ""
-    product_public_key: ""
-    product_secret: ""        # signs webhooks (x-signature header)
-    developer_secret: ""      # legacy signing fallback
-    api_bearer: ""            # REST API auth (refunds / subscription cancel)
+    product_id: "29647"
+    product_public_key: ""     # pk_xxxxxxxxxx
+    product_secret: ""         # sk_xxxxxxxxxx — signs webhooks (x-signature)
+    developer_secret: ""       # legacy signing fallback (optional)
+    api_bearer: ""             # REST API auth (refunds / cancellations)
     presets:
-      starter:  { usd_cents: 2000,   plan_id: "",  pricing_id: "", label: "$20" }
-      standard: { usd_cents: 10000,  plan_id: "",  pricing_id: "", label: "$100" }
-      pro:      { usd_cents: 50000,  plan_id: "",  pricing_id: "", label: "$500" }
-      studio:   { usd_cents: 200000, plan_id: "",  pricing_id: "", label: "$2000" }
+      starter:  { usd_cents: 2000,  plan_id: "48779", pricing_id: "63580", label: "$20" }
+      standard: { usd_cents: 10000, plan_id: "48781", pricing_id: "63581", label: "$100" }
+      pro:      { usd_cents: 50000, plan_id: "48782", pricing_id: "63582", label: "$500" }

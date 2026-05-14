@@ -148,7 +148,7 @@ export default function BillingPage() {
               {t({ en: "Sandbox mode — test cards only, no real charges.", zh: "沙箱模式 — 仅可用测试卡，不会真实扣款。" })}
             </div>
           )}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
             {presets.presets.map((p) => (
               <button
                 key={p.key}

@@ -77,7 +77,7 @@ r = client.get("/api/payments/topup/presets", headers=hdr)
 assert r.status_code == 200, r.text
 print(" ", r.json()["enabled"], len(r.json()["presets"]))
 assert r.json()["enabled"] is True
-assert len(r.json()["presets"]) == 4
+assert len(r.json()["presets"]) == 3
 
 print("== POST /api/payments/topup/checkout ==")
 r = client.post("/api/payments/topup/checkout", headers=hdr,
@@ -105,8 +105,8 @@ event = {
             "custom_data": {"user_id": 1, "preset": "standard"},
         },
         "user": {"id": 100, "email": "c@x"},
-        "plan": {"id": "TBD_STANDARD"},
-        "pricing": {"id": "TBD_STANDARD_P"},
+        "plan": {"id": "48781"},
+        "pricing": {"id": "63581"},
     },
 }
 raw = json.dumps(event).encode()

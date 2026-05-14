@@ -85,8 +85,8 @@ async def main():
                 "custom_data": {"user_id": 2, "preset": "standard"},
             },
             "user": {"id": 555, "email": "c@x"},
-            "plan": {"id": "TBD_STANDARD"},
-            "pricing": {"id": "TBD_STANDARD_P"},
+            "plan": {"id": "48781"},
+            "pricing": {"id": "63581"},
         },
     }
     raw = json.dumps(event).encode("utf-8")

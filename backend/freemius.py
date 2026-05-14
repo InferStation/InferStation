@@ -48,14 +48,13 @@ def _sandbox_qs(cfg: dict) -> list[tuple[str, str]]:
     return [("sandbox", token), ("s_ctx_ts", ts)]
 
 
-# v1 topup presets. plan_id / pricing_id must be created on Freemius dashboard
-# under product type = SaaS (4.7% base, no +2.3% WordPress surcharge) and set
-# to ONE-TIME billing_cycle = lifetime.
+# v1 topup presets. plan_id / pricing_id are Freemius dashboard ids for
+# product 29647 (InferStation / Tianshu), product type = SaaS, billing_cycle =
+# lifetime (one-off).
 PRESETS: dict[str, dict] = {
-    "starter":  {"usd_cents": 2000,   "plan_id": "TBD_STARTER",  "pricing_id": "TBD_STARTER_P",  "label": "$20"},
-    "standard": {"usd_cents": 10000,  "plan_id": "TBD_STANDARD", "pricing_id": "TBD_STANDARD_P", "label": "$100"},
-    "pro":      {"usd_cents": 50000,  "plan_id": "TBD_PRO",      "pricing_id": "TBD_PRO_P",      "label": "$500"},
-    "studio":   {"usd_cents": 200000, "plan_id": "TBD_STUDIO",   "pricing_id": "TBD_STUDIO_P",   "label": "$2000"},
+    "starter":  {"usd_cents": 2000,  "plan_id": "48779", "pricing_id": "63580", "label": "$20"},
+    "standard": {"usd_cents": 10000, "plan_id": "48781", "pricing_id": "63581", "label": "$100"},
+    "pro":      {"usd_cents": 50000, "plan_id": "48782", "pricing_id": "63582", "label": "$500"},
 }
 
 

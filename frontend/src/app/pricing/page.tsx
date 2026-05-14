@@ -7,7 +7,6 @@ const TIERS: { key: string; usd: number; label: string; bonus?: string }[] = [
   { key: "starter",  usd: 20,   label: "$20" },
   { key: "standard", usd: 100,  label: "$100" },
   { key: "pro",      usd: 500,  label: "$500" },
-  { key: "studio",   usd: 2000, label: "$2000" },
 ]
 
 export default function PricingPage() {
@@ -27,7 +26,7 @@ export default function PricingPage() {
       </section>
 
       <section className="max-w-4xl mx-auto px-3">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {TIERS.map((tier) => (
             <div key={tier.key} className="bg-surface border border-line rounded-xl p-5 text-center">
               <div className="text-xs uppercase tracking-wider text-fg-subtle mb-1">{tier.key}</div>
