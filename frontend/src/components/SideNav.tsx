@@ -42,6 +42,7 @@ export default function SideNav() {
       { href: "/dashboard", label: { en: "Account info", zh: "账号信息" }, Icon: IconUser, exact: true },
       { href: "/dashboard/keys", label: { en: "API Keys", zh: "API 密钥" }, Icon: IconKey },
       { href: "/dashboard/usage", label: { en: "Usage", zh: "使用明细" }, Icon: IconChart },
+      { href: "/dashboard/billing", label: { en: "Top up", zh: "充值" }, Icon: IconInvoice },
       { href: "/dashboard/invoices", label: { en: "Invoices", zh: "账单" }, Icon: IconInvoice },
     ]
     if (user.role === "provider" || user.role === "both" || user.role === "admin") {

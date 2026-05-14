@@ -611,6 +611,21 @@ async def billing_status(user=Depends(get_current_user)):
     return await get_billing_status(user["id"])
 
 
+@app.get("/api/billing/balance")
+async def billing_balance(user=Depends(get_current_user)):
+    """Current prepaid balance, credit limit, and available headroom.
+
+    Returns both USD floats (legacy) and *_cents (used by the v2 frontend).
+    """
+    s = await get_balance_status(user["id"])
+    return {
+        **s,
+        "balance_cents": round(s["balance"] * 100),
+        "credit_limit_cents": round(s["credit_limit_usd"] * 100),
+        "available_cents": round(s["available_credit_usd"] * 100),
+    }
+
+
 @app.get("/api/billing/settle-now/eligibility")
 async def settle_now_eligibility(user=Depends(get_current_user)):
     """Tell the UI whether the user is currently allowed to early-settle."""

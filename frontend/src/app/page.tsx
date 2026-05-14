@@ -55,23 +55,27 @@ export default function Home() {
       <section className="text-center pt-20 pb-8">
         <div className="inline-flex items-center gap-2 px-3 h-7 rounded-full border border-line bg-surface text-xs text-fg-muted mb-6">
           <span className="w-1.5 h-1.5 rounded-full bg-success" />
-          {t({ en: "OpenAI compatible · Post-paid · No content retention", zh: "OpenAI 兼容 · 后付费 · 内容不留存" })}
+          {t({ en: "OpenAI compatible · Prepaid balance · No content retention", zh: "OpenAI 兼容 · 预付余额 · 内容不留存" })}
         </div>
         <h1 className="text-[44px] leading-[1.05] font-semibold tracking-tight text-fg mb-4">
-          {t({ en: "One API,", zh: "一个 API，" })}<br className="md:hidden" />{t({ en: "every LLM backend", zh: "接入所有大模型" })}
+          {t({ en: "Earn from your idle GPU.", zh: "把闲置 GPU 变成现金。" })}<br />
+          <span className="text-fg-muted">{t({ en: "Pay less for LLMs.", zh: "用更低成本调用大模型。" })}</span>
         </h1>
         <p className="text-base text-fg-muted max-w-xl mx-auto mb-8">
           {t({
-            en: "Tianshu aggregates fragmented LLM backends behind a single OpenAI-compatible interface — priority routing, automatic failover, and billing on real tokens.",
-            zh: "天枢把分散的 LLM 后端聚合为统一的 OpenAI 兼容接口，按优先级自动调度、失败转移、按 token 真实计费。",
+            en: "Tianshu turns spare consumer-grade GPUs into a single OpenAI-compatible endpoint. Providers earn 82.4% of every token billed; consumers pay below hyperscaler rates with priority routing and automatic failover.",
+            zh: "天枢把闲置的消费级 / 工作站 GPU 聚合成统一的 OpenAI 兼容接口：提供者拿走每个 token 的 82.4%；调用者以低于云厂商的价格享受多备份、自动故障转移。",
           })}
         </p>
         <div className="flex justify-center gap-2 flex-wrap">
-          <Link href="/models" className="h-10 px-5 inline-flex items-center rounded-lg bg-fg text-accent-fg text-sm font-medium hover:bg-fg/90">
+          <Link href="/providers" className="h-10 px-5 inline-flex items-center rounded-lg bg-fg text-accent-fg text-sm font-medium hover:bg-fg/90">
+            {t({ en: "Become a provider", zh: "成为服务商" })}
+          </Link>
+          <Link href="/models" className="h-10 px-5 inline-flex items-center rounded-lg bg-surface border border-line text-fg text-sm font-medium hover:bg-accent-soft">
             {t({ en: "Browse Models", zh: "浏览模型广场" })}
           </Link>
-          <Link href="/docs" className="h-10 px-5 inline-flex items-center rounded-lg bg-surface border border-line text-fg text-sm font-medium hover:bg-accent-soft">
-            {t({ en: "Developer Docs", zh: "开发者文档" })}
+          <Link href="/pricing" className="h-10 px-5 inline-flex items-center rounded-lg bg-surface border border-line text-fg text-sm font-medium hover:bg-accent-soft">
+            {t({ en: "Pricing", zh: "定价" })}
           </Link>
         </div>
       </section>
