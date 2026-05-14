@@ -177,12 +177,25 @@ async def _handle_health_check(ws, req_id: str, local_url: str):
 
 
 def main():
+    import os
     parser = argparse.ArgumentParser(description="LLM Gateway Provider Client")
-    parser.add_argument("--gateway", required=True, help="Gateway WebSocket URL (ws://host:port/ws/tunnel)")
-    parser.add_argument("--token", required=True, help="API key for authentication")
-    parser.add_argument("--backend-name", required=True, help="Registered backend name")
-    parser.add_argument("--local-url", default="http://localhost:8000", help="Local vLLM server URL")
+    parser.add_argument("--gateway", default=os.environ.get("GATEWAY_URL"),
+                        help="Gateway WebSocket URL (ws://host:port/ws/tunnel). "
+                             "Env: GATEWAY_URL")
+    parser.add_argument("--token", default=os.environ.get("GATEWAY_TOKEN"),
+                        help="Provider API key. Env: GATEWAY_TOKEN")
+    parser.add_argument("--backend-name", default=os.environ.get("BACKEND_NAME"),
+                        help="Registered backend name. Env: BACKEND_NAME")
+    parser.add_argument("--local-url", default=os.environ.get("LOCAL_URL", "http://localhost:8000"),
+                        help="Local vLLM/OpenAI server URL. Env: LOCAL_URL")
     args = parser.parse_args()
+    missing = [k for k, v in {
+        "--gateway / GATEWAY_URL": args.gateway,
+        "--token / GATEWAY_TOKEN": args.token,
+        "--backend-name / BACKEND_NAME": args.backend_name,
+    }.items() if not v]
+    if missing:
+        parser.error("missing required arguments: " + ", ".join(missing))
 
     loop = asyncio.new_event_loop()
     try:

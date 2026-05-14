@@ -61,6 +61,22 @@ interface Invoice {
   paid_at: string | null
 }
 
+interface AdminWithdrawal {
+  id: number
+  user_id: number
+  username: string
+  email: string
+  amount_usd_cents: number
+  payout_method: string
+  payout_address: string
+  status: "pending" | "approved" | "paid" | "rejected"
+  channel_ref: string | null
+  review_note: string | null
+  created_at: string
+  reviewed_at: string | null
+  paid_at: string | null
+}
+
 export default function AdminPage() {
   const t = useT()
   const { user, loading } = useAuth()
@@ -69,7 +85,8 @@ export default function AdminPage() {
   const [usage, setUsage] = useState<UsageStat[]>([])
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [pending, setPending] = useState<PendingBackend[]>([])
-  const [tab, setTab] = useState<"users" | "usage" | "invoices" | "review">("users")
+  const [withdrawals, setWithdrawals] = useState<AdminWithdrawal[]>([])
+  const [tab, setTab] = useState<"users" | "usage" | "invoices" | "review" | "withdrawals">("users")
 
   useEffect(() => {
     if (!loading && (!user || user.role !== "admin")) router.push("/dashboard")
@@ -80,6 +97,7 @@ export default function AdminPage() {
     apiFetch("/api/admin/usage").then(setUsage).catch(() => {})
     apiFetch("/api/admin/invoices").then(setInvoices).catch(() => {})
     apiFetch("/api/admin/backends/pending").then(setPending).catch(() => {})
+    apiFetch("/api/admin/withdrawals").then((r) => setWithdrawals(r.withdrawals || [])).catch(() => {})
   }
 
   const approveBackend = async (name: string) => {
@@ -92,6 +110,29 @@ export default function AdminPage() {
     const note = prompt(t({ en: `Reject listing of "${name}" — enter a reason:`, zh: `驳回「${name}」的上架申请，请填写原因：` }))
     if (!note) return
     await apiFetch(`/api/admin/backends/${encodeURIComponent(name)}/reject`, { method: "POST", body: JSON.stringify({ note }) })
+    reloadAll()
+  }
+
+  const approveWithdrawal = async (id: number) => {
+    if (!confirm(t({ en: `Approve withdrawal #${id}? Funds are not transferred yet.`, zh: `通过提现 #${id}？此步骤不实际打款。` }))) return
+    await apiFetch(`/api/admin/withdrawals/${id}/approve`, { method: "POST", body: JSON.stringify({}) })
+    reloadAll()
+  }
+
+  const rejectWithdrawal = async (id: number) => {
+    const note = prompt(t({ en: `Reject withdrawal #${id} — enter a reason:`, zh: `驳回提现 #${id}，请填写原因：` }))
+    if (!note) return
+    await apiFetch(`/api/admin/withdrawals/${id}/reject`, { method: "POST", body: JSON.stringify({ note }) })
+    reloadAll()
+  }
+
+  const markWithdrawalPaid = async (id: number) => {
+    const ref = prompt(t({ en: `Mark withdrawal #${id} as paid — enter the transaction id / tx hash:`, zh: `标记提现 #${id} 已打款，请填写交易号 / 交易哈希：` }))
+    if (!ref) return
+    await apiFetch(`/api/admin/withdrawals/${id}/paid`, {
+      method: "POST",
+      body: JSON.stringify({ channel_ref: ref }),
+    })
     reloadAll()
   }
 
@@ -141,6 +182,12 @@ export default function AdminPage() {
           className={`px-4 py-2 rounded-lg text-sm ${tab === "review" ? "bg-fg text-white" : "bg-white border text-gray-600"} ${pending.length > 0 ? "ring-2 ring-amber-400" : ""}`}
         >
           {t({ en: "Service review", zh: "服务审核" })} ({pending.length})
+        </button>
+        <button
+          onClick={() => setTab("withdrawals")}
+          className={`px-4 py-2 rounded-lg text-sm ${tab === "withdrawals" ? "bg-fg text-white" : "bg-white border text-gray-600"} ${withdrawals.filter(w => w.status === "pending").length > 0 ? "ring-2 ring-amber-400" : ""}`}
+        >
+          {t({ en: "Withdrawals", zh: "提现审核" })} ({withdrawals.filter(w => w.status === "pending").length})
         </button>
       </div>
 
@@ -329,6 +376,67 @@ export default function AdminPage() {
               {pending.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-gray-500">{t({ en: "No pending listing requests", zh: "暂无待审核的上架申请" })}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {tab === "withdrawals" && (
+        <div className="bg-white rounded-lg border overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="text-left px-4 py-3 font-medium">{t({ en: "Filed", zh: "申请时间" })}</th>
+                <th className="text-left px-4 py-3 font-medium">{t({ en: "Provider", zh: "提供者" })}</th>
+                <th className="text-right px-4 py-3 font-medium">{t({ en: "Amount", zh: "金额" })}</th>
+                <th className="text-left px-4 py-3 font-medium">{t({ en: "Method", zh: "方式" })}</th>
+                <th className="text-left px-4 py-3 font-medium">{t({ en: "Payout address", zh: "收款地址" })}</th>
+                <th className="text-left px-4 py-3 font-medium">{t({ en: "Status", zh: "状态" })}</th>
+                <th className="text-left px-4 py-3 font-medium">{t({ en: "Ref / note", zh: "交易号 / 备注" })}</th>
+                <th className="text-right px-4 py-3 font-medium">{t({ en: "Actions", zh: "操作" })}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {withdrawals.map((w) => (
+                <tr key={w.id}>
+                  <td className="px-4 py-3 text-xs text-gray-500">{w.created_at}</td>
+                  <td className="px-4 py-3">
+                    <div className="font-medium">{w.username}</div>
+                    <div className="text-xs text-gray-500">{w.email}</div>
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono font-semibold">${(w.amount_usd_cents / 100).toFixed(2)}</td>
+                  <td className="px-4 py-3">{w.payout_method}</td>
+                  <td className="px-4 py-3 text-xs text-gray-600 font-mono max-w-[280px] truncate" title={w.payout_address}>{w.payout_address}</td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-0.5 rounded text-xs ${
+                      w.status === "paid" ? "bg-green-100 text-green-700" :
+                      w.status === "approved" ? "bg-blue-100 text-blue-700" :
+                      w.status === "rejected" ? "bg-gray-100 text-gray-600" :
+                      "bg-amber-100 text-amber-700"
+                    }`}>{w.status}</span>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-gray-500">
+                    {w.channel_ref ? <span className="font-mono">{w.channel_ref}</span> : "—"}
+                    {w.review_note && <div className="mt-0.5">{w.review_note}</div>}
+                  </td>
+                  <td className="px-4 py-3 text-right whitespace-nowrap space-x-3">
+                    {w.status === "pending" && (
+                      <>
+                        <button onClick={() => approveWithdrawal(w.id)} className="text-sm text-blue-600 hover:text-blue-800">{t({ en: "Approve", zh: "通过" })}</button>
+                        <button onClick={() => rejectWithdrawal(w.id)} className="text-sm text-red-600 hover:text-red-800">{t({ en: "Reject", zh: "驳回" })}</button>
+                      </>
+                    )}
+                    {(w.status === "pending" || w.status === "approved") && (
+                      <button onClick={() => markWithdrawalPaid(w.id)} className="text-sm text-green-600 hover:text-green-800">{t({ en: "Mark paid", zh: "标记已打款" })}</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {withdrawals.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="px-4 py-8 text-center text-gray-500">{t({ en: "No withdrawal requests", zh: "暂无提现申请" })}</td>
                 </tr>
               )}
             </tbody>
