@@ -38,16 +38,20 @@ export default function SideNav() {
   groups.push({ title: { en: "Models", zh: "模型" }, items: modelItems })
 
   if (user) {
-    groups.push({
-      title: { en: "Account", zh: "账户管理" },
-      items: [
-        { href: "/dashboard", label: { en: "Account info", zh: "账号信息" }, Icon: IconUser, exact: true },
-        { href: "/dashboard/keys", label: { en: "API Keys", zh: "API 密钥" }, Icon: IconKey },
-        { href: "/dashboard/usage", label: { en: "Usage", zh: "使用明细" }, Icon: IconChart },
-        { href: "/dashboard/invoices", label: { en: "Invoices", zh: "账单" }, Icon: IconInvoice },
-        { href: "/dashboard/other", label: { en: "Other", zh: "其他" }, Icon: IconCog },
-      ],
-    })
+    const accountItems: Item[] = [
+      { href: "/dashboard", label: { en: "Account info", zh: "账号信息" }, Icon: IconUser, exact: true },
+      { href: "/dashboard/keys", label: { en: "API Keys", zh: "API 密钥" }, Icon: IconKey },
+      { href: "/dashboard/usage", label: { en: "Usage", zh: "使用明细" }, Icon: IconChart },
+      { href: "/dashboard/invoices", label: { en: "Invoices", zh: "账单" }, Icon: IconInvoice },
+    ]
+    if (user.role === "provider" || user.role === "both" || user.role === "admin") {
+      accountItems.push(
+        { href: "/dashboard/earnings", label: { en: "Earnings", zh: "我的收益" }, Icon: IconChart },
+        { href: "/dashboard/withdrawals", label: { en: "Withdrawals", zh: "提现" }, Icon: IconInvoice },
+      )
+    }
+    accountItems.push({ href: "/dashboard/other", label: { en: "Other", zh: "其他" }, Icon: IconCog })
+    groups.push({ title: { en: "Account", zh: "账户管理" }, items: accountItems })
   }
 
   if (user && user.role === "admin") {
