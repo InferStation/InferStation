@@ -368,6 +368,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Freemius topup endpoints (prepaid balance, USD only, hosted checkout).
+from payments import router as payments_router  # noqa: E402
+app.include_router(payments_router)
+
 
 # ══════════════════════════════════════════════════════════
 #  Auth Routes

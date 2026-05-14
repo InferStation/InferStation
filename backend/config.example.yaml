@@ -19,3 +19,22 @@ pricing:
 
 health_check:
   interval_seconds: 30
+
+# Freemius MoR for one-time topups (USD). Leave 'enabled: false' to skip.
+# webhook URL on dashboard:  https://<gateway>/api/payments/freemius/webhook
+# Product type on dashboard MUST be 'SaaS / Web App' (avoid +2.3% WP surcharge).
+# Each preset must point to a one-time plan with billing_cycle=lifetime.
+payments:
+  freemius:
+    enabled: false
+    sandbox: true
+    product_id: ""
+    product_public_key: ""
+    product_secret: ""        # signs webhooks (x-signature header)
+    developer_secret: ""      # legacy signing fallback
+    api_bearer: ""            # REST API auth (refunds / subscription cancel)
+    presets:
+      starter:  { usd_cents: 2000,   plan_id: "",  pricing_id: "", label: "$20" }
+      standard: { usd_cents: 10000,  plan_id: "",  pricing_id: "", label: "$100" }
+      pro:      { usd_cents: 50000,  plan_id: "",  pricing_id: "", label: "$500" }
+      studio:   { usd_cents: 200000, plan_id: "",  pricing_id: "", label: "$2000" }
