@@ -168,6 +168,15 @@ async def run_daily_rollover():
         logger.info(f"daily_rollover: archived {yesterday}, promoted pending prices")
     finally:
         await db.close()
+    # On the 1st of the (Asia/Shanghai) month, finalize last month's provider
+    # earnings ledger so /api/provider/earnings can show definitive payouts.
+    if sh_now().day == 1:
+        try:
+            from billing import settle_provider_earnings
+            rows = await settle_provider_earnings(None)
+            logger.info(f"daily_rollover: settled provider_earnings for {len(rows)} providers")
+        except Exception as e:
+            logger.error(f"settle_provider_earnings error: {e}")
 
 
 # ── Health Check Background Task ───────────────────────
@@ -371,6 +380,10 @@ app.add_middleware(
 # Freemius topup endpoints (prepaid balance, USD only, hosted checkout).
 from payments import router as payments_router  # noqa: E402
 app.include_router(payments_router)
+
+# Provider earnings + withdrawal endpoints.
+from withdrawals import router as withdrawals_router  # noqa: E402
+app.include_router(withdrawals_router)
 
 
 # ══════════════════════════════════════════════════════════

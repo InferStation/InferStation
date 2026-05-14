@@ -426,3 +426,129 @@ async def mark_invoice_paid(invoice_id: int) -> dict | None:
         return inv
     finally:
         await db.close()
+
+
+# ══════════════════════════════════════════════════════════════════════
+# Provider earnings ledger (Day 3)
+# ══════════════════════════════════════════════════════════════════════
+async def settle_provider_earnings(period_ym: str | None = None) -> list[dict]:
+    """Aggregate the closed month's consumer spend by backend owner and
+    write a provider_earnings row per (owner, period_ym).
+
+    period_ym: 'YYYY-MM'. If None, settles the previous calendar month
+    (today's month - 1) — typically called by the daily rollover on the 1st.
+
+    Self-owned waiver: usage where backend.owner_id == usage.user_id is
+    excluded (consumer == provider; nothing to pay out).
+
+    Idempotent via UNIQUE(user_id, period_ym): re-running updates totals
+    in place. finalized_at is set once on first finalization and never
+    overwritten so admins can detect re-runs.
+    """
+    today = date.today()
+    if period_ym is None:
+        first = _month_first(today)
+        prev_last = first - timedelta(days=1)
+        period_ym = prev_last.strftime("%Y-%m")
+    # Guard against accidentally settling the still-open current month.
+    if period_ym >= today.strftime("%Y-%m"):
+        return []
+
+    period_start = f"{period_ym}-01"
+    pe = date.fromisoformat(period_start)
+    period_end = _next_month_first(pe).isoformat()
+
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            """SELECT b.owner_id AS owner_id, COALESCE(SUM(u.cost), 0) AS gross
+                 FROM usage_daily u
+                 JOIN backends b ON u.backend_id = b.id
+                WHERE u.day >= ? AND u.day < ?
+                  AND b.owner_id IS NOT NULL
+                  AND b.owner_id != u.user_id
+                GROUP BY b.owner_id
+                HAVING gross > 0""",
+            (period_start, period_end),
+        )
+        rows = await cur.fetchall()
+        out: list[dict] = []
+        for r in rows:
+            owner_id = int(r["owner_id"])
+            gross_usd = float(r["gross"] or 0.0)
+            gross_cents = round(gross_usd * 100)
+            channel_fee_cents = round(gross_usd * FREEMIUS_FEE_ESTIMATE * 100)
+            platform_fee_cents = round(gross_usd * PLATFORM_RATE * 100)
+            provider_cut_cents = gross_cents - channel_fee_cents - platform_fee_cents
+            await db.execute(
+                """INSERT INTO provider_earnings
+                       (user_id, period_ym, gross_usd_cents, channel_fee_cents,
+                        platform_fee_cents, provider_cut_cents, finalized_at)
+                   VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+                   ON CONFLICT(user_id, period_ym) DO UPDATE SET
+                       gross_usd_cents    = excluded.gross_usd_cents,
+                       channel_fee_cents  = excluded.channel_fee_cents,
+                       platform_fee_cents = excluded.platform_fee_cents,
+                       provider_cut_cents = excluded.provider_cut_cents
+                """,
+                (owner_id, period_ym, gross_cents, channel_fee_cents,
+                 platform_fee_cents, provider_cut_cents),
+            )
+            out.append({
+                "user_id": owner_id,
+                "period_ym": period_ym,
+                "gross_usd_cents": gross_cents,
+                "channel_fee_cents": channel_fee_cents,
+                "platform_fee_cents": platform_fee_cents,
+                "provider_cut_cents": provider_cut_cents,
+            })
+        await db.commit()
+        return out
+    finally:
+        await db.close()
+
+
+async def get_provider_earnings(user_id: int) -> dict:
+    """Lifetime earnings summary for a provider.
+
+      total_earned_cents = SUM(provider_cut_cents over all finalized months)
+      total_withdrawn_cents = SUM(amount over withdrawal_requests where status='paid')
+      pending_withdraw_cents = SUM(amount where status IN ('pending','approved'))
+      available_cents = total_earned - total_withdrawn - pending_withdraw
+    """
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            "SELECT COALESCE(SUM(provider_cut_cents),0) AS e "
+            "FROM provider_earnings WHERE user_id = ?",
+            (user_id,),
+        )
+        earned = int((await cur.fetchone())["e"] or 0)
+        cur = await db.execute(
+            "SELECT COALESCE(SUM(amount_usd_cents),0) AS a FROM withdrawal_requests "
+            "WHERE user_id = ? AND status = 'paid'",
+            (user_id,),
+        )
+        paid = int((await cur.fetchone())["a"] or 0)
+        cur = await db.execute(
+            "SELECT COALESCE(SUM(amount_usd_cents),0) AS a FROM withdrawal_requests "
+            "WHERE user_id = ? AND status IN ('pending','approved')",
+            (user_id,),
+        )
+        in_flight = int((await cur.fetchone())["a"] or 0)
+        cur = await db.execute(
+            "SELECT period_ym, gross_usd_cents, channel_fee_cents, platform_fee_cents, "
+            "provider_cut_cents, finalized_at FROM provider_earnings "
+            "WHERE user_id = ? ORDER BY period_ym DESC LIMIT 24",
+            (user_id,),
+        )
+        history = [dict(r) for r in await cur.fetchall()]
+    finally:
+        await db.close()
+    return {
+        "total_earned_cents": earned,
+        "total_paid_cents": paid,
+        "pending_withdraw_cents": in_flight,
+        "available_cents": max(0, earned - paid - in_flight),
+        "history": history,
+    }
