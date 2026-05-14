@@ -270,6 +270,86 @@ async def init_db():
             "CREATE INDEX IF NOT EXISTS idx_email_verif_lookup "
             "ON email_verifications(email, purpose, consumed)"
         )
+
+        # ════════════════════════════════════════════════════════════
+        # v2 billing migration (2026-05-14): topup-based prepaid balance,
+        # per-call balance deduction, provider earnings ledger, withdrawals.
+        # ════════════════════════════════════════════════════════════
+        cur = await db.execute("PRAGMA table_info(users)")
+        ucols2 = {r[1] for r in await cur.fetchall()}
+        if "credit_limit_cents" not in ucols2:
+            # Credit limit in USD cents (overdraft allowance below 0 balance).
+            # Default 0 = pure prepaid; admin can raise per-user for net-term clients.
+            await db.execute("ALTER TABLE users ADD COLUMN credit_limit_cents INTEGER NOT NULL DEFAULT 0")
+        if "payout_method" not in ucols2:
+            await db.execute("ALTER TABLE users ADD COLUMN payout_method TEXT")
+        if "payout_address" not in ucols2:
+            await db.execute("ALTER TABLE users ADD COLUMN payout_address TEXT")
+
+        cur = await db.execute("PRAGMA table_info(invoices)")
+        icols2 = {r[1] for r in await cur.fetchall()}
+        if "platform_fee_cents" not in icols2:
+            await db.execute("ALTER TABLE invoices ADD COLUMN platform_fee_cents INTEGER NOT NULL DEFAULT 0")
+        if "provider_cut_cents" not in icols2:
+            await db.execute("ALTER TABLE invoices ADD COLUMN provider_cut_cents INTEGER NOT NULL DEFAULT 0")
+        if "channel_fee_cents" not in icols2:
+            await db.execute("ALTER TABLE invoices ADD COLUMN channel_fee_cents INTEGER NOT NULL DEFAULT 0")
+
+        await db.executescript("""
+        CREATE TABLE IF NOT EXISTS topups (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            gross_usd_cents INTEGER NOT NULL,        -- consumer paid (credited to balance)
+            net_usd_cents INTEGER NOT NULL,          -- Freemius actually paid us
+            channel_fee_cents INTEGER NOT NULL,      -- gross - net (platform fronts; recouped via provider cut)
+            channel TEXT NOT NULL DEFAULT 'freemius',
+            channel_ref TEXT,                        -- freemius payment id
+            status TEXT NOT NULL DEFAULT 'pending',  -- pending/succeeded/refunded/failed
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            settled_at TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_topups_user ON topups(user_id, created_at);
+        CREATE INDEX IF NOT EXISTS idx_topups_ref ON topups(channel, channel_ref);
+
+        CREATE TABLE IF NOT EXISTS pending_freemius_checkouts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            fs_plan_id TEXT NOT NULL,
+            consumed_at TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_pending_checkout_lookup
+            ON pending_freemius_checkouts(user_id, fs_plan_id, consumed_at);
+
+        CREATE TABLE IF NOT EXISTS provider_earnings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id),   -- backend owner
+            period_ym TEXT NOT NULL,                          -- 'YYYY-MM'
+            gross_usd_cents INTEGER NOT NULL DEFAULT 0,
+            channel_fee_cents INTEGER NOT NULL DEFAULT 0,
+            platform_fee_cents INTEGER NOT NULL DEFAULT 0,
+            provider_cut_cents INTEGER NOT NULL DEFAULT 0,
+            finalized_at TEXT,
+            UNIQUE(user_id, period_ym)
+        );
+
+        CREATE TABLE IF NOT EXISTS withdrawal_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            amount_usd_cents INTEGER NOT NULL,
+            payout_method TEXT NOT NULL,
+            payout_address TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',  -- pending/approved/paid/rejected
+            channel_ref TEXT,
+            reviewer_id INTEGER,
+            review_note TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            reviewed_at TEXT,
+            paid_at TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_withdrawal_user ON withdrawal_requests(user_id, created_at);
+        CREATE INDEX IF NOT EXISTS idx_withdrawal_status ON withdrawal_requests(status);
+        """)
         await db.commit()
     finally:
         await db.close()

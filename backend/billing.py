@@ -22,6 +22,19 @@ from database import get_db
 
 GRACE_DAYS = 7  # days after period_end before an invoice is considered overdue
 
+# Platform monetization model (locked 2026-05-14):
+#   consumer pays gross  (= token × backend price; 100% lands in balance after topup)
+#   per-call accounting:
+#     platform_fee = gross × PLATFORM_RATE         (gateway keeps)
+#     channel_fee  = gross × FREEMIUS_FEE_ESTIMATE (Freemius takes; provider absorbs)
+#     provider_cut = gross × (1 - PLATFORM_RATE - FREEMIUS_FEE_ESTIMATE)
+# FREEMIUS_FEE_ESTIMATE is a forecast used for per-call splits; the actual
+# Freemius fee on each topup is recorded in topups.channel_fee_cents (real).
+# Quarterly admins should reconcile estimate vs realised and adjust this constant.
+PLATFORM_RATE = float(os.environ.get("BILLING_PLATFORM_RATE", "0.10"))
+FREEMIUS_FEE_ESTIMATE = float(os.environ.get("BILLING_CHANNEL_FEE_ESTIMATE", "0.076"))
+PROVIDER_CUT_RATE = max(0.0, 1.0 - PLATFORM_RATE - FREEMIUS_FEE_ESTIMATE)
+
 # Test-mode auto-pay: while the platform is in beta we do not actually
 # collect money. Every freshly generated invoice is immediately marked
 # paid (with paid_at = now) so that no user accumulates dunning state.
@@ -124,10 +137,15 @@ async def ensure_invoices_for_user(user_id: int) -> None:
                 paid_at = datetime.utcnow().isoformat(sep=" ", timespec="seconds")
             else:
                 status, paid_at = "unpaid", None
+            platform_fee_cents = round(total * PLATFORM_RATE * 100)
+            channel_fee_cents = round(total * FREEMIUS_FEE_ESTIMATE * 100)
+            provider_cut_cents = round(total * PROVIDER_CUT_RATE * 100)
             await db.execute(
-                "INSERT INTO invoices (user_id, period_start, period_end, total_cost, status, due_date, paid_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (user_id, period_start, period_end, total, status, due_date, paid_at),
+                "INSERT INTO invoices (user_id, period_start, period_end, total_cost, status, due_date, paid_at, "
+                "platform_fee_cents, channel_fee_cents, provider_cut_cents) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (user_id, period_start, period_end, total, status, due_date, paid_at,
+                 platform_fee_cents, channel_fee_cents, provider_cut_cents),
             )
             await _archive_owner_deletions(db, user_id, period_end)
         await db.commit()
@@ -213,6 +231,78 @@ async def is_user_suspended(user_id: int) -> tuple[bool, float]:
         await db.close()
 
 
+async def get_balance_status(user_id: int) -> dict:
+    """Return (balance, credit_limit_usd, available_credit_usd, over_limit).
+
+    balance can be negative (within credit_limit); over_limit is True when
+    balance + credit_limit_usd <= 0, meaning the next paid call must be refused.
+    """
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            "SELECT balance, credit_limit_cents FROM users WHERE id = ?",
+            (user_id,),
+        )
+        row = await cur.fetchone()
+        if not row:
+            return {
+                "balance": 0.0,
+                "credit_limit_usd": 0.0,
+                "available_credit_usd": 0.0,
+                "over_limit": False,
+            }
+        balance = float(row["balance"] or 0.0)
+        credit_limit_usd = float(row["credit_limit_cents"] or 0) / 100.0
+        available = balance + credit_limit_usd
+        return {
+            "balance": balance,
+            "credit_limit_usd": credit_limit_usd,
+            "available_credit_usd": available,
+            "over_limit": available <= 0,
+        }
+    finally:
+        await db.close()
+
+
+async def is_over_credit_limit(user_id: int) -> tuple[bool, float, float]:
+    """Auth-path helper. Returns (over_limit, balance, available_credit)."""
+    s = await get_balance_status(user_id)
+    return s["over_limit"], s["balance"], s["available_credit_usd"]
+
+
+async def deduct_user_balance(user_id: int, cost_usd: float) -> None:
+    """Atomically subtract cost_usd from users.balance. Skips when cost <= 0.
+
+    Caller is responsible for skipping self-owned-backend usage (waiver).
+    """
+    if cost_usd is None or cost_usd <= 0:
+        return
+    db = await get_db()
+    try:
+        await db.execute(
+            "UPDATE users SET balance = balance - ? WHERE id = ?",
+            (cost_usd, user_id),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+
+
+async def credit_user_balance(user_id: int, amount_usd: float) -> None:
+    """Atomically add amount_usd to users.balance (used by topup webhook)."""
+    if amount_usd is None or amount_usd <= 0:
+        return
+    db = await get_db()
+    try:
+        await db.execute(
+            "UPDATE users SET balance = balance + ? WHERE id = ?",
+            (amount_usd, user_id),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+
+
 SETTLE_IDLE_MINUTES = 30
 
 
@@ -285,10 +375,15 @@ async def settle_user_partial(user_id: int, today: date | None = None) -> list[d
             status, paid_at = "paid", now_iso
         else:
             status, paid_at = "unpaid", None
+        platform_fee_cents = round(total * PLATFORM_RATE * 100)
+        channel_fee_cents = round(total * FREEMIUS_FEE_ESTIMATE * 100)
+        provider_cut_cents = round(total * PROVIDER_CUT_RATE * 100)
         cur = await db.execute(
-            "INSERT INTO invoices (user_id, period_start, period_end, total_cost, status, due_date, paid_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (user_id, month_start, period_end, total, status, due_date, paid_at),
+            "INSERT INTO invoices (user_id, period_start, period_end, total_cost, status, due_date, paid_at, "
+            "platform_fee_cents, channel_fee_cents, provider_cut_cents) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (user_id, month_start, period_end, total, status, due_date, paid_at,
+             platform_fee_cents, channel_fee_cents, provider_cut_cents),
         )
         created.append({
             "id": cur.lastrowid,
@@ -299,6 +394,9 @@ async def settle_user_partial(user_id: int, today: date | None = None) -> list[d
             "status": status,
             "due_date": due_date,
             "paid_at": paid_at,
+            "platform_fee_cents": platform_fee_cents,
+            "channel_fee_cents": channel_fee_cents,
+            "provider_cut_cents": provider_cut_cents,
         })
         await _archive_owner_deletions(db, user_id, period_end)
         await db.commit()

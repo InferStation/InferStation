@@ -41,6 +41,9 @@ from billing import (
     settle_user_partial,
     is_user_idle_for_settle,
     SETTLE_IDLE_MINUTES,
+    get_balance_status,
+    is_over_credit_limit,
+    deduct_user_balance,
 )
 from tunnel import TunnelConnection, tunnel_manager
 
@@ -2032,6 +2035,9 @@ async def sub_chat(sub_key: str, request: Request):
         suspended, overdue_total = await is_user_suspended(sub["user_id"])
         if suspended:
             raise HTTPException(402, f"服务已停用：有逾期未付账单 (累计 ${overdue_total:.6f})")
+        over_limit, _bal, _avail = await is_over_credit_limit(sub["user_id"])
+        if over_limit:
+            raise HTTPException(402, f"Insufficient balance. Please top up to continue. (balance=${_bal:.6f}, credit=${_avail+(-_bal if _bal<0 else 0):.6f})")
 
         cur = await db.execute("SELECT * FROM backends WHERE id = ?", (sub["backend_id"],))
         backend = await cur.fetchone()
@@ -2123,6 +2129,9 @@ async def authenticate_api_key(request: Request):
     suspended, overdue_total = await is_user_suspended(row["user_id"])
     if suspended:
         raise HTTPException(402, f"服务已停用：有逾期未付账单 (累计 ${overdue_total:.6f})，请结清后继续使用")
+    over_limit, _bal, _avail = await is_over_credit_limit(row["user_id"])
+    if over_limit:
+        raise HTTPException(402, f"Insufficient balance. Please top up to continue. (balance=${_bal:.6f})")
     return row
 
 
@@ -2747,6 +2756,17 @@ async def _record_usage(api_user, backend, model, usage, input_price, output_pri
         await db.commit()
     finally:
         await db.close()
+
+    # Deduct balance for non-self usage (self-owned backend is fully waived
+    # — owner shouldn't pay themselves). Done outside the usage-record txn so
+    # a balance race doesn't roll back the recorded usage row.
+    try:
+        owner_id = backend.get("owner_id") if isinstance(backend, dict) else None
+        if cost > 0 and owner_id is not None and owner_id != api_user["user_id"]:
+            await deduct_user_balance(api_user["user_id"], cost)
+    except Exception:
+        # Balance deduction failure must not break the call response path.
+        pass
 
 
 # ══════════════════════════════════════════════════════════
