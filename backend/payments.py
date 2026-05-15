@@ -21,11 +21,40 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 import freemius as _fs
-from auth import get_current_user
+from auth import get_current_user, require_admin
 from billing import credit_user_balance
 from database import get_db
 
 router = APIRouter(prefix="/api/payments", tags=["payments"])
+admin_router = APIRouter(prefix="/api/admin", tags=["admin-payments"])
+
+# Refund policy: 10% retained as processing fee; 90% returned.
+REFUND_FEE_BPS = 1000   # 10.00%
+REFUND_WINDOW_DAYS = 14
+
+
+async def _record_webhook_failure(
+    *,
+    kind: str,
+    event_type: Optional[str],
+    http_status: int,
+    detail: str,
+    body_preview: bytes,
+) -> None:
+    """Best-effort log; never raise."""
+    try:
+        db = await get_db()
+        try:
+            await db.execute(
+                "INSERT INTO webhook_failures (channel, kind, event_type, http_status, detail, body_preview) "
+                "VALUES ('freemius', ?, ?, ?, ?, ?)",
+                (kind, event_type, http_status, detail[:1000], (body_preview or b"")[:512].decode("utf-8", "replace")),
+            )
+            await db.commit()
+        finally:
+            await db.close()
+    except Exception:
+        pass
 
 
 def _cfg(request: Request) -> dict:
@@ -111,26 +140,48 @@ async def topup_checkout(
 @router.post("/freemius/webhook")
 async def freemius_webhook(request: Request):
     cfg = _cfg(request)
-    if not _fs.is_configured(cfg):
-        # Refuse silently rather than letting Freemius retry forever.
-        raise HTTPException(503, "Freemius not configured")
     raw = await request.body()
+    if not _fs.is_configured(cfg):
+        await _record_webhook_failure(
+            kind="not_configured", event_type=None, http_status=503,
+            detail="Freemius not configured", body_preview=raw,
+        )
+        raise HTTPException(503, "Freemius not configured")
     sig = request.headers.get("x-signature") or request.headers.get("X-Signature")
     if not _fs.verify_webhook_signature(raw, sig, cfg):
+        await _record_webhook_failure(
+            kind="signature", event_type=None, http_status=401,
+            detail=f"sig header={sig!r}", body_preview=raw,
+        )
         raise HTTPException(401, "invalid webhook signature")
 
     event = _fs.parse_event(raw)
     event_type = (event.get("type") or "").lower()
+    try:
+        # Refunds: handled separately (debit balance, mark topup row).
+        if event_type == "payment.refund":
+            return await _handle_refund(event)
 
-    # Refunds: handled separately (debit balance, mark topup row).
-    if event_type == "payment.refund":
-        return await _handle_refund(event)
+        # We only credit balance on payment.created. Subscription/license/lifetime
+        # purchase events are acknowledged but no-op for v1.
+        if event_type != "payment.created":
+            return {"ok": True, "ignored": event_type or "unknown"}
+        return await _handle_payment_created(event)
+    except HTTPException as e:
+        await _record_webhook_failure(
+            kind="handler", event_type=event_type, http_status=e.status_code,
+            detail=str(e.detail), body_preview=raw,
+        )
+        raise
+    except Exception as e:
+        await _record_webhook_failure(
+            kind="handler", event_type=event_type, http_status=500,
+            detail=f"{type(e).__name__}: {e}", body_preview=raw,
+        )
+        raise
 
-    # We only credit balance on payment.created. Subscription/license/lifetime
-    # purchase events are acknowledged but no-op for v1.
-    if event_type != "payment.created":
-        return {"ok": True, "ignored": event_type or "unknown"}
 
+async def _handle_payment_created(event: dict) -> dict:
     summary = _fs.extract_payment_summary(event)
     if not summary["payment_id"]:
         raise HTTPException(400, "payment_id missing in event")
@@ -355,12 +406,282 @@ async def my_topups(user=Depends(get_current_user), limit: int = 50):
     try:
         cur = await db.execute(
             "SELECT id, gross_usd_cents, net_usd_cents, channel_fee_cents, "
-            "channel, channel_ref, status, created_at, settled_at "
+            "       COALESCE(refunded_cents, 0) AS refunded_cents, "
+            "       channel, channel_ref, status, created_at, settled_at "
             "FROM topups WHERE user_id = ? "
             "ORDER BY id DESC LIMIT ?",
             (user["id"], limit),
         )
+        topups = [dict(r) for r in await cur.fetchall()]
+
+        # Attach the latest non-rejected refund request per topup (so the UI
+        # can disable the button while a request is pending / approved).
+        if topups:
+            ids = [t["id"] for t in topups]
+            placeholders = ",".join("?" for _ in ids)
+            cur = await db.execute(
+                f"SELECT topup_id, status, requested_cents, fee_cents, reason, "
+                f"       review_note, created_at, reviewed_at "
+                f"FROM refund_requests "
+                f"WHERE topup_id IN ({placeholders}) "
+                f"ORDER BY id DESC",
+                ids,
+            )
+            by_topup: dict[int, dict] = {}
+            for r in await cur.fetchall():
+                tid = r["topup_id"]
+                if tid not in by_topup:
+                    by_topup[tid] = dict(r)
+            for t in topups:
+                t["refund_request"] = by_topup.get(t["id"])
+    finally:
+        await db.close()
+    return {
+        "topups": topups,
+        "count": len(topups),
+        "refund_window_days": REFUND_WINDOW_DAYS,
+        "refund_fee_bps": REFUND_FEE_BPS,
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────
+# POST /api/payments/topups/{topup_id}/refund-request
+#   User-initiated refund request. Admin must approve via the admin
+#   endpoint, which calls Freemius REST API to issue the partial refund.
+# ─────────────────────────────────────────────────────────────────────
+class RefundRequestIn(BaseModel):
+    reason: str = ""
+
+
+@router.post("/topups/{topup_id}/refund-request")
+async def create_refund_request(
+    topup_id: int,
+    payload: RefundRequestIn,
+    user=Depends(get_current_user),
+):
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            "SELECT id, user_id, gross_usd_cents, COALESCE(refunded_cents, 0) AS refunded_cents, "
+            "       status, channel, channel_ref, created_at "
+            "FROM topups WHERE id = ?",
+            (topup_id,),
+        )
+        topup = await cur.fetchone()
+        if not topup or topup["user_id"] != user["id"]:
+            raise HTTPException(404, "topup not found")
+        if topup["channel"] != "freemius" or not topup["channel_ref"]:
+            raise HTTPException(400, "this topup cannot be refunded online")
+        if topup["status"] not in ("succeeded", "partially_refunded"):
+            raise HTTPException(400, f"topup status '{topup['status']}' is not refundable")
+
+        # Refund window check (created_at is UTC datetime('now')).
+        try:
+            created = datetime.fromisoformat(topup["created_at"].replace(" ", "T"))
+            age_days = (datetime.utcnow() - created).total_seconds() / 86400
+        except (TypeError, ValueError):
+            age_days = 0
+        if age_days > REFUND_WINDOW_DAYS:
+            raise HTTPException(400, f"refund window ({REFUND_WINDOW_DAYS} days) has expired")
+
+        # Don't allow stacking: refuse if an active request already exists.
+        cur = await db.execute(
+            "SELECT id, status FROM refund_requests "
+            "WHERE topup_id = ? AND status IN ('pending', 'approved') "
+            "ORDER BY id DESC LIMIT 1",
+            (topup_id,),
+        )
+        active = await cur.fetchone()
+        if active:
+            raise HTTPException(409, f"a refund request is already {active['status']}")
+
+        gross = int(topup["gross_usd_cents"])
+        already = int(topup["refunded_cents"])
+        remaining = max(0, gross - already)
+        if remaining <= 0:
+            raise HTTPException(400, "this topup is fully refunded already")
+
+        # Refund 90% of remaining (10% retained as processing fee).
+        fee_cents = (remaining * REFUND_FEE_BPS) // 10000
+        requested_cents = remaining - fee_cents
+        if requested_cents <= 0:
+            raise HTTPException(400, "refundable amount is zero after fee")
+
+        cur = await db.execute(
+            "INSERT INTO refund_requests (user_id, topup_id, reason, requested_cents, fee_cents, status) "
+            "VALUES (?, ?, ?, ?, ?, 'pending')",
+            (user["id"], topup_id, payload.reason[:1000], requested_cents, fee_cents),
+        )
+        await db.commit()
+        new_id = cur.lastrowid
+    finally:
+        await db.close()
+    return {
+        "ok": True,
+        "refund_request_id": new_id,
+        "topup_id": topup_id,
+        "requested_usd": requested_cents / 100.0,
+        "fee_usd": fee_cents / 100.0,
+        "status": "pending",
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Admin endpoints: refund-request review, webhook failure inspection.
+# ─────────────────────────────────────────────────────────────────────
+@admin_router.get("/refund-requests")
+async def admin_list_refund_requests(
+    status: Optional[str] = None,
+    limit: int = 100,
+    admin=Depends(require_admin),
+):
+    limit = max(1, min(limit, 500))
+    db = await get_db()
+    try:
+        if status:
+            cur = await db.execute(
+                "SELECT rr.id, rr.user_id, rr.topup_id, rr.reason, rr.requested_cents, "
+                "       rr.fee_cents, rr.status, rr.reviewer_id, rr.review_note, "
+                "       rr.channel_refund_ref, rr.created_at, rr.reviewed_at, "
+                "       u.username, u.email, "
+                "       t.gross_usd_cents, COALESCE(t.refunded_cents,0) AS refunded_cents, "
+                "       t.channel_ref AS payment_id, t.created_at AS topup_created_at, t.status AS topup_status "
+                "FROM refund_requests rr "
+                "JOIN users u ON u.id = rr.user_id "
+                "JOIN topups t ON t.id = rr.topup_id "
+                "WHERE rr.status = ? ORDER BY rr.id DESC LIMIT ?",
+                (status, limit),
+            )
+        else:
+            cur = await db.execute(
+                "SELECT rr.id, rr.user_id, rr.topup_id, rr.reason, rr.requested_cents, "
+                "       rr.fee_cents, rr.status, rr.reviewer_id, rr.review_note, "
+                "       rr.channel_refund_ref, rr.created_at, rr.reviewed_at, "
+                "       u.username, u.email, "
+                "       t.gross_usd_cents, COALESCE(t.refunded_cents,0) AS refunded_cents, "
+                "       t.channel_ref AS payment_id, t.created_at AS topup_created_at, t.status AS topup_status "
+                "FROM refund_requests rr "
+                "JOIN users u ON u.id = rr.user_id "
+                "JOIN topups t ON t.id = rr.topup_id "
+                "ORDER BY rr.id DESC LIMIT ?",
+                (limit,),
+            )
         rows = [dict(r) for r in await cur.fetchall()]
     finally:
         await db.close()
-    return {"topups": rows, "count": len(rows)}
+    return {"requests": rows, "count": len(rows)}
+
+
+class ReviewNoteIn(BaseModel):
+    note: str = ""
+
+
+@admin_router.post("/refund-requests/{req_id}/approve")
+async def admin_approve_refund(
+    req_id: int,
+    payload: ReviewNoteIn,
+    request: Request,
+    admin=Depends(require_admin),
+):
+    cfg = _cfg(request)
+    if not cfg.get("api_bearer"):
+        raise HTTPException(503, "Freemius api_bearer not configured; cannot issue refunds")
+
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            "SELECT rr.id, rr.status, rr.requested_cents, rr.topup_id, "
+            "       t.channel_ref AS payment_id "
+            "FROM refund_requests rr JOIN topups t ON t.id = rr.topup_id "
+            "WHERE rr.id = ?",
+            (req_id,),
+        )
+        rr = await cur.fetchone()
+        if not rr:
+            raise HTTPException(404, "refund request not found")
+        if rr["status"] != "pending":
+            raise HTTPException(409, f"refund request is already {rr['status']}")
+        if not rr["payment_id"]:
+            raise HTTPException(400, "topup has no Freemius payment id")
+
+        # Call Freemius REST API. On failure we mark the request 'failed' with
+        # the error in review_note so admin can retry after fixing config.
+        try:
+            api_resp = await _fs.issue_partial_refund(
+                cfg,
+                payment_id=str(rr["payment_id"]),
+                amount_cents=int(rr["requested_cents"]),
+                reason=(payload.note or "")[:200],
+            )
+        except Exception as e:
+            await db.execute(
+                "UPDATE refund_requests SET status='failed', reviewer_id=?, "
+                "review_note=?, reviewed_at=datetime('now') WHERE id=?",
+                (admin["id"], f"Freemius API error: {e}"[:500], req_id),
+            )
+            await db.commit()
+            raise HTTPException(502, f"Freemius API error: {e}") from e
+
+        refund_ref = None
+        if isinstance(api_resp, dict):
+            refund_ref = str(api_resp.get("id") or api_resp.get("payment_id") or "") or None
+        await db.execute(
+            "UPDATE refund_requests SET status='approved', reviewer_id=?, "
+            "review_note=?, channel_refund_ref=?, reviewed_at=datetime('now') WHERE id=?",
+            (admin["id"], (payload.note or "")[:500], refund_ref, req_id),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+    return {"ok": True, "refund_request_id": req_id, "channel_refund_ref": refund_ref, "status": "approved"}
+
+
+@admin_router.post("/refund-requests/{req_id}/reject")
+async def admin_reject_refund(
+    req_id: int,
+    payload: ReviewNoteIn,
+    admin=Depends(require_admin),
+):
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            "SELECT id, status FROM refund_requests WHERE id = ?",
+            (req_id,),
+        )
+        rr = await cur.fetchone()
+        if not rr:
+            raise HTTPException(404, "refund request not found")
+        if rr["status"] != "pending":
+            raise HTTPException(409, f"refund request is already {rr['status']}")
+        await db.execute(
+            "UPDATE refund_requests SET status='rejected', reviewer_id=?, "
+            "review_note=?, reviewed_at=datetime('now') WHERE id=?",
+            (admin["id"], (payload.note or "")[:500], req_id),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+    return {"ok": True, "refund_request_id": req_id, "status": "rejected"}
+
+
+@admin_router.get("/webhook-failures")
+async def admin_webhook_failures(limit: int = 50, admin=Depends(require_admin)):
+    limit = max(1, min(limit, 500))
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            "SELECT id, channel, kind, event_type, http_status, detail, body_preview, created_at "
+            "FROM webhook_failures ORDER BY id DESC LIMIT ?",
+            (limit,),
+        )
+        rows = [dict(r) for r in await cur.fetchall()]
+        # Count last 24h for the badge.
+        cur = await db.execute(
+            "SELECT COUNT(*) AS n FROM webhook_failures "
+            "WHERE created_at >= datetime('now', '-1 day')",
+        )
+        recent_count = (await cur.fetchone())["n"]
+    finally:
+        await db.close()
+    return {"failures": rows, "count": len(rows), "recent_24h": recent_count}
+

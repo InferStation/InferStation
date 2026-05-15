@@ -75,6 +75,7 @@ def get_cfg(global_cfg: dict) -> dict:
         "product_public_key": fs.get("product_public_key"),
         "product_secret": fs.get("product_secret"),
         "developer_secret": fs.get("developer_secret"),
+        "developer_id": fs.get("developer_id"),
         "api_bearer": fs.get("api_bearer"),
         "presets": fs.get("presets") or PRESETS,
     }
@@ -215,3 +216,65 @@ def preset_for_plan_id(cfg: dict, plan_id) -> Optional[tuple[str, dict]]:
         if str(info.get("plan_id")) == pid:
             return key, dict(info)
     return None
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Freemius REST API client (admin refund issuance).
+# ─────────────────────────────────────────────────────────────────────
+_API_HOST = "https://api.freemius.com"
+
+
+async def issue_partial_refund(
+    cfg: dict,
+    *,
+    payment_id: str,
+    amount_cents: int,
+    reason: str = "",
+) -> dict:
+    """Issue a partial refund through the Freemius REST API.
+
+    Endpoint (Developer API v1):
+        POST /v1/developers/{developer_id}/plugins/{product_id}/payments/{payment_id}/refunds.json
+
+    Auth: ``Authorization: FSA <developer_id>:<api_bearer>`` (HMAC-style scope).
+
+    For sandbox we route through the same host but use the sandbox-mode product
+    keys; Freemius accepts the same endpoint regardless of mode.
+
+    Returns Freemius' response dict on success. Raises RuntimeError on failure
+    so callers can surface a user-friendly error.
+    """
+    import httpx  # local import: keep this module FastAPI-free
+
+    if not cfg.get("api_bearer"):
+        raise RuntimeError("Freemius api_bearer not configured")
+    if not cfg.get("product_id"):
+        raise RuntimeError("Freemius product_id not configured")
+    developer_id = cfg.get("developer_id") or "dev"
+    bearer = cfg["api_bearer"]
+    product_id = cfg["product_id"]
+
+    url = (
+        f"{_API_HOST}/v1/developers/{developer_id}/plugins/{product_id}"
+        f"/payments/{payment_id}/refunds.json"
+    )
+    payload = {"amount": round(amount_cents / 100.0, 2)}
+    if reason:
+        payload["reason"] = "other"
+        payload["note"] = reason[:255]
+
+    headers = {
+        "Authorization": f"FSA {developer_id}:{bearer}",
+        "Content-Type": "application/json",
+    }
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.post(url, json=payload, headers=headers)
+    if resp.status_code >= 400:
+        raise RuntimeError(
+            f"Freemius refund API {resp.status_code}: {resp.text[:500]}"
+        )
+    try:
+        return resp.json()
+    except ValueError:
+        return {"raw": resp.text}
+

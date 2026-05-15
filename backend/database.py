@@ -373,6 +373,43 @@ async def init_db():
         );
         CREATE INDEX IF NOT EXISTS idx_withdrawal_user ON withdrawal_requests(user_id, created_at);
         CREATE INDEX IF NOT EXISTS idx_withdrawal_status ON withdrawal_requests(status);
+
+        -- User-initiated refund requests against a topup row. Admin reviews,
+        -- approves (→ calls Freemius API to issue 90% partial refund) or
+        -- rejects. The actual balance clawback happens via the payment.refund
+        -- webhook (see payments._handle_refund) to keep one source of truth.
+        CREATE TABLE IF NOT EXISTS refund_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            topup_id INTEGER NOT NULL REFERENCES topups(id),
+            reason TEXT NOT NULL DEFAULT '',
+            requested_cents INTEGER NOT NULL,        -- 90% of topup gross by default
+            fee_cents INTEGER NOT NULL,              -- 10% processing fee retained
+            status TEXT NOT NULL DEFAULT 'pending',  -- pending/approved/rejected/failed
+            reviewer_id INTEGER,
+            review_note TEXT,
+            channel_refund_ref TEXT,                 -- Freemius refund payment id once issued
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            reviewed_at TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_refund_req_status ON refund_requests(status, created_at);
+        CREATE INDEX IF NOT EXISTS idx_refund_req_user ON refund_requests(user_id, created_at);
+        CREATE INDEX IF NOT EXISTS idx_refund_req_topup ON refund_requests(topup_id);
+
+        -- Recent webhook delivery failures (signature mismatch, parse errors,
+        -- handler exceptions). Kept for admin dashboard visibility. Rolled
+        -- over by gateway startup hook (keep last 500).
+        CREATE TABLE IF NOT EXISTS webhook_failures (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            channel TEXT NOT NULL DEFAULT 'freemius',
+            kind TEXT NOT NULL,                      -- signature/parse/handler/unknown_type
+            event_type TEXT,
+            http_status INTEGER,
+            detail TEXT,
+            body_preview TEXT,                       -- first 512B of raw body
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_webhook_failures_recent ON webhook_failures(created_at);
         """)
         await db.commit()
     finally:

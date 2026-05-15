@@ -17,22 +17,41 @@ interface PresetsResp {
   presets: Preset[]
 }
 
+interface RefundRequestInfo {
+  status: "pending" | "approved" | "rejected" | "failed"
+  requested_cents: number
+  fee_cents: number
+  reason: string | null
+  review_note: string | null
+  created_at: string
+  reviewed_at: string | null
+}
+
 interface Topup {
   id: number
   gross_usd_cents: number
   net_usd_cents: number
   channel_fee_cents: number
+  refunded_cents: number
   channel: string
   channel_ref: string | null
-  status: "pending" | "succeeded" | "refunded" | "failed" | "orphan"
+  status: "pending" | "succeeded" | "refunded" | "partially_refunded" | "failed" | "orphan"
   created_at: string
   settled_at: string | null
+  refund_request: RefundRequestInfo | null
 }
 
 interface BalanceStatus {
   balance_cents: number
   credit_limit_cents: number
   available_cents: number
+}
+
+interface TopupsResp {
+  topups: Topup[]
+  count: number
+  refund_window_days: number
+  refund_fee_bps: number
 }
 
 function usd(cents: number) {
@@ -43,18 +62,32 @@ const STATUS_STYLE: Record<Topup["status"], string> = {
   succeeded: "bg-green-50 text-green-700 border-green-200",
   pending: "bg-amber-50 text-amber-700 border-amber-200",
   refunded: "bg-gray-100 text-gray-600 border-gray-200",
+  partially_refunded: "bg-amber-50 text-amber-700 border-amber-200",
   failed: "bg-red-50 text-red-700 border-red-200",
   orphan: "bg-red-50 text-red-700 border-red-200",
+}
+
+const REQUEST_STYLE: Record<RefundRequestInfo["status"], string> = {
+  pending: "bg-amber-50 text-amber-700 border-amber-200",
+  approved: "bg-blue-50 text-blue-700 border-blue-200",
+  rejected: "bg-gray-100 text-gray-600 border-gray-200",
+  failed: "bg-red-50 text-red-700 border-red-200",
 }
 
 export default function BillingPage() {
   const t = useT()
   const [presets, setPresets] = useState<PresetsResp | null>(null)
   const [topups, setTopups] = useState<Topup[]>([])
+  const [refundWindow, setRefundWindow] = useState(14)
+  const [refundFeeBps, setRefundFeeBps] = useState(1000)
   const [balance, setBalance] = useState<BalanceStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState<string | null>(null)
   const [error, setError] = useState("")
+  const [info, setInfo] = useState("")
+  const [refundTopup, setRefundTopup] = useState<Topup | null>(null)
+  const [refundReason, setRefundReason] = useState("")
+  const [refundSubmitting, setRefundSubmitting] = useState(false)
 
   const reload = async () => {
     setLoading(true)
@@ -65,7 +98,10 @@ export default function BillingPage() {
         apiFetch("/api/billing/balance").catch(() => null),
       ])
       setPresets(p)
-      setTopups(h.topups || [])
+      const tr = h as TopupsResp
+      setTopups(tr.topups || [])
+      if (tr.refund_window_days) setRefundWindow(tr.refund_window_days)
+      if (tr.refund_fee_bps) setRefundFeeBps(tr.refund_fee_bps)
       setBalance(b)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "load failed")
@@ -96,6 +132,48 @@ export default function BillingPage() {
       setError(err instanceof Error ? err.message : t({ en: "Checkout failed", zh: "发起支付失败" }))
     } finally {
       setSubmitting(null)
+    }
+  }
+
+  const isRefundable = (r: Topup) => {
+    if (!["succeeded", "partially_refunded"].includes(r.status)) return false
+    if (r.refund_request && (r.refund_request.status === "pending" || r.refund_request.status === "approved")) return false
+    if (r.gross_usd_cents - r.refunded_cents <= 0) return false
+    try {
+      const created = new Date(r.created_at.replace(" ", "T") + "Z")
+      const days = (Date.now() - created.getTime()) / 86400000
+      if (days > refundWindow) return false
+    } catch {
+      return false
+    }
+    return true
+  }
+
+  const openRefund = (r: Topup) => {
+    setRefundTopup(r)
+    setRefundReason("")
+    setError("")
+    setInfo("")
+  }
+
+  const submitRefund = async () => {
+    if (!refundTopup) return
+    setRefundSubmitting(true)
+    try {
+      const r = await apiFetch(`/api/payments/topups/${refundTopup.id}/refund-request`, {
+        method: "POST",
+        body: JSON.stringify({ reason: refundReason }),
+      })
+      setRefundTopup(null)
+      setInfo(t({
+        en: `Refund request submitted. You will be refunded ${usd(Math.round(r.requested_usd * 100))} (10% processing fee retained) once approved.`,
+        zh: `退款申请已提交。审核通过后将退还 ${usd(Math.round(r.requested_usd * 100))}（已扣除 10% 手续费）。`,
+      }))
+      await reload()
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t({ en: "Refund request failed", zh: "申请退款失败" }))
+    } finally {
+      setRefundSubmitting(false)
     }
   }
 
@@ -173,7 +251,8 @@ export default function BillingPage() {
         </>
       )}
 
-      {error && <div className="text-red-600 text-sm mb-4">{error}</div>}
+      {error && <div className="bg-red-50 border border-red-200 rounded p-3 text-sm text-red-700 mb-4">{error}</div>}
+      {info && <div className="bg-green-50 border border-green-200 rounded p-3 text-sm text-green-700 mb-4">{info}</div>}
 
       <h2 className="text-lg font-semibold mb-3 mt-8">{t({ en: "Top up history", zh: "充值记录" })}</h2>
       <div className="bg-white border rounded-lg overflow-hidden">
@@ -182,10 +261,10 @@ export default function BillingPage() {
             <tr>
               <th className="text-left px-4 py-3 font-medium">{t({ en: "Time", zh: "时间" })}</th>
               <th className="text-right px-4 py-3 font-medium">{t({ en: "Amount", zh: "金额" })}</th>
-              <th className="text-right px-4 py-3 font-medium">{t({ en: "Channel fee", zh: "渠道费" })}</th>
-              <th className="text-left px-4 py-3 font-medium">{t({ en: "Channel", zh: "渠道" })}</th>
+              <th className="text-right px-4 py-3 font-medium">{t({ en: "Refunded", zh: "已退" })}</th>
               <th className="text-left px-4 py-3 font-medium">{t({ en: "Status", zh: "状态" })}</th>
               <th className="text-left px-4 py-3 font-medium">{t({ en: "Reference", zh: "交易号" })}</th>
+              <th className="text-right px-4 py-3 font-medium">{t({ en: "Action", zh: "操作" })}</th>
             </tr>
           </thead>
           <tbody>
@@ -196,24 +275,110 @@ export default function BillingPage() {
                 </td>
               </tr>
             ) : (
-              topups.map((r) => (
-                <tr key={r.id} className="border-t">
-                  <td className="px-4 py-3 text-xs text-gray-500">{r.created_at}</td>
-                  <td className="px-4 py-3 text-right font-mono font-semibold text-green-700">{usd(r.gross_usd_cents)}</td>
-                  <td className="px-4 py-3 text-right font-mono text-xs text-gray-500">-{usd(r.channel_fee_cents)}</td>
-                  <td className="px-4 py-3 text-xs">{r.channel}</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex px-2 py-0.5 rounded text-xs border ${STATUS_STYLE[r.status]}`}>
-                      {r.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-xs text-gray-500 font-mono">{r.channel_ref || "—"}</td>
-                </tr>
-              ))
+              topups.map((r) => {
+                const refundable = isRefundable(r)
+                return (
+                  <tr key={r.id} className="border-t align-top">
+                    <td className="px-4 py-3 text-xs text-gray-500">{r.created_at}</td>
+                    <td className="px-4 py-3 text-right font-mono font-semibold text-green-700">{usd(r.gross_usd_cents)}</td>
+                    <td className="px-4 py-3 text-right font-mono text-xs">
+                      {r.refunded_cents > 0 ? (
+                        <span className="text-amber-700">-{usd(r.refunded_cents)}</span>
+                      ) : (
+                        <span className="text-gray-300">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col gap-1">
+                        <span className={`inline-flex w-fit px-2 py-0.5 rounded text-xs border ${STATUS_STYLE[r.status]}`}>
+                          {r.status}
+                        </span>
+                        {r.refund_request && (
+                          <span
+                            className={`inline-flex w-fit px-2 py-0.5 rounded text-xs border ${REQUEST_STYLE[r.refund_request.status]}`}
+                            title={r.refund_request.review_note || r.refund_request.reason || ""}
+                          >
+                            {t({ en: "request", zh: "申请" })}: {r.refund_request.status}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-500 font-mono break-all">{r.channel_ref || "—"}</td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={() => openRefund(r)}
+                        disabled={!refundable}
+                        className="text-xs px-2 py-1 border rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        {t({ en: "Request refund", zh: "申请退款" })}
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })
             )}
           </tbody>
         </table>
       </div>
+
+      {refundTopup && (() => {
+        const remaining = refundTopup.gross_usd_cents - refundTopup.refunded_cents
+        const fee = Math.floor(remaining * refundFeeBps / 10000)
+        const refundAmount = remaining - fee
+        return (
+          <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4" onClick={() => !refundSubmitting && setRefundTopup(null)}>
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-lg font-semibold mb-2">{t({ en: "Request a refund", zh: "申请退款" })}</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                {t({
+                  en: `Original top-up: ${usd(refundTopup.gross_usd_cents)} · already refunded ${usd(refundTopup.refunded_cents)} · remaining ${usd(remaining)}.`,
+                  zh: `原充值 ${usd(refundTopup.gross_usd_cents)} · 已退 ${usd(refundTopup.refunded_cents)} · 剩余 ${usd(remaining)}。`,
+                })}
+              </p>
+              <div className="bg-gray-50 border rounded p-3 text-sm mb-4">
+                <div className="flex justify-between mb-1">
+                  <span className="text-gray-600">{t({ en: "You will receive", zh: "实际退款" })}</span>
+                  <span className="font-mono font-semibold text-green-700">{usd(refundAmount)}</span>
+                </div>
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>{t({ en: "Processing fee (10%)", zh: "手续费 (10%)" })}</span>
+                  <span className="font-mono">-{usd(fee)}</span>
+                </div>
+              </div>
+              <label className="block text-sm text-gray-700 mb-1">{t({ en: "Reason (optional)", zh: "退款原因（可选）" })}</label>
+              <textarea
+                value={refundReason}
+                onChange={(e) => setRefundReason(e.target.value)}
+                rows={3}
+                className="w-full border rounded p-2 text-sm mb-4"
+                placeholder={t({ en: "Tell us why so we can improve.", zh: "告诉我们原因，便于改进。" })}
+              />
+              <p className="text-xs text-gray-500 mb-4">
+                {t({
+                  en: `The refund will be reviewed by an admin and processed via Freemius (original payment method). Refund window: ${refundWindow} days from top up.`,
+                  zh: `退款将由管理员审核后通过 Freemius 原路退回。可退款时限：充值后 ${refundWindow} 天。`,
+                })}
+              </p>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setRefundTopup(null)}
+                  disabled={refundSubmitting}
+                  className="px-4 py-2 text-sm border rounded hover:bg-gray-50 disabled:opacity-50"
+                >
+                  {t({ en: "Cancel", zh: "取消" })}
+                </button>
+                <button
+                  onClick={submitRefund}
+                  disabled={refundSubmitting}
+                  className="px-4 py-2 text-sm bg-fg text-bg rounded hover:opacity-90 disabled:opacity-50"
+                >
+                  {refundSubmitting ? t({ en: "Submitting...", zh: "提交中..." }) : t({ en: "Submit request", zh: "提交申请" })}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

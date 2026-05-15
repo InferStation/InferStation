@@ -77,6 +77,38 @@ interface AdminWithdrawal {
   paid_at: string | null
 }
 
+interface RefundRequest {
+  id: number
+  user_id: number
+  topup_id: number
+  username: string
+  email: string
+  reason: string
+  requested_cents: number
+  fee_cents: number
+  status: "pending" | "approved" | "rejected" | "failed"
+  review_note: string | null
+  channel_refund_ref: string | null
+  gross_usd_cents: number
+  refunded_cents: number
+  payment_id: string | null
+  topup_created_at: string
+  topup_status: string
+  created_at: string
+  reviewed_at: string | null
+}
+
+interface WebhookFailure {
+  id: number
+  channel: string
+  kind: string
+  event_type: string | null
+  http_status: number | null
+  detail: string | null
+  body_preview: string | null
+  created_at: string
+}
+
 export default function AdminPage() {
   const t = useT()
   const { user, loading } = useAuth()
@@ -86,7 +118,10 @@ export default function AdminPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [pending, setPending] = useState<PendingBackend[]>([])
   const [withdrawals, setWithdrawals] = useState<AdminWithdrawal[]>([])
-  const [tab, setTab] = useState<"users" | "usage" | "invoices" | "review" | "withdrawals">("users")
+  const [refunds, setRefunds] = useState<RefundRequest[]>([])
+  const [webhookFailures, setWebhookFailures] = useState<WebhookFailure[]>([])
+  const [webhookRecent24h, setWebhookRecent24h] = useState(0)
+  const [tab, setTab] = useState<"users" | "usage" | "invoices" | "review" | "withdrawals" | "refunds" | "webhooks">("users")
 
   useEffect(() => {
     if (!loading && (!user || user.role !== "admin")) router.push("/dashboard")
@@ -98,6 +133,11 @@ export default function AdminPage() {
     apiFetch("/api/admin/invoices").then(setInvoices).catch(() => {})
     apiFetch("/api/admin/backends/pending").then(setPending).catch(() => {})
     apiFetch("/api/admin/withdrawals").then((r) => setWithdrawals(r.withdrawals || [])).catch(() => {})
+    apiFetch("/api/admin/refund-requests").then((r) => setRefunds(r.requests || [])).catch(() => {})
+    apiFetch("/api/admin/webhook-failures").then((r) => {
+      setWebhookFailures(r.failures || [])
+      setWebhookRecent24h(r.recent_24h || 0)
+    }).catch(() => {})
   }
 
   const approveBackend = async (name: string) => {
@@ -152,6 +192,43 @@ export default function AdminPage() {
     reloadAll()
   }
 
+  const approveRefund = async (req: RefundRequest) => {
+    const refundUsd = (req.requested_cents / 100).toFixed(2)
+    const msg = t({
+      en: `Issue Freemius partial refund of $${refundUsd} to user ${req.username} for payment ${req.payment_id}?\n\nThis calls the Freemius REST API immediately. The webhook will then auto-deduct user balance.`,
+      zh: `通过 Freemius 给用户 ${req.username} 退款 $${refundUsd}（支付号 ${req.payment_id}）？\n\n此操作将立即调用 Freemius 接口，余额扣减由 webhook 自动完成。`,
+    })
+    if (!confirm(msg)) return
+    const note = prompt(t({ en: "Internal note (optional):", zh: "管理员备注（可选）：" })) || ""
+    try {
+      const r = await apiFetch(`/api/admin/refund-requests/${req.id}/approve`, {
+        method: "POST",
+        body: JSON.stringify({ note }),
+      })
+      alert(t({
+        en: `Refund issued. Freemius refund id: ${r.channel_refund_ref || "(pending)"}.`,
+        zh: `退款已发起。Freemius 退款编号：${r.channel_refund_ref || "（待回填）"}。`,
+      }))
+    } catch (e: unknown) {
+      alert(t({ en: `Refund failed: ${e instanceof Error ? e.message : e}`, zh: `退款失败：${e instanceof Error ? e.message : e}` }))
+    }
+    reloadAll()
+  }
+
+  const rejectRefund = async (id: number) => {
+    const note = prompt(t({ en: "Reject refund — enter a reason (shown to user):", zh: "驳回退款，请填写原因（将展示给用户）：" }))
+    if (!note) return
+    try {
+      await apiFetch(`/api/admin/refund-requests/${id}/reject`, {
+        method: "POST",
+        body: JSON.stringify({ note }),
+      })
+    } catch (e: unknown) {
+      alert(t({ en: `Reject failed: ${e instanceof Error ? e.message : e}`, zh: `驳回失败：${e instanceof Error ? e.message : e}` }))
+    }
+    reloadAll()
+  }
+
   if (loading || !user) return <div className="text-center py-20 text-gray-500">{t({ en: "Loading...", zh: "加载中..." })}</div>
 
   return (
@@ -188,6 +265,18 @@ export default function AdminPage() {
           className={`px-4 py-2 rounded-lg text-sm ${tab === "withdrawals" ? "bg-fg text-white" : "bg-white border text-gray-600"} ${withdrawals.filter(w => w.status === "pending").length > 0 ? "ring-2 ring-amber-400" : ""}`}
         >
           {t({ en: "Withdrawals", zh: "提现审核" })} ({withdrawals.filter(w => w.status === "pending").length})
+        </button>
+        <button
+          onClick={() => setTab("refunds")}
+          className={`px-4 py-2 rounded-lg text-sm ${tab === "refunds" ? "bg-fg text-white" : "bg-white border text-gray-600"} ${refunds.filter(r => r.status === "pending").length > 0 ? "ring-2 ring-amber-400" : ""}`}
+        >
+          {t({ en: "Refunds", zh: "退款审核" })} ({refunds.filter(r => r.status === "pending").length})
+        </button>
+        <button
+          onClick={() => setTab("webhooks")}
+          className={`px-4 py-2 rounded-lg text-sm ${tab === "webhooks" ? "bg-fg text-white" : "bg-white border text-gray-600"} ${webhookRecent24h > 0 ? "ring-2 ring-red-400 text-red-600" : ""}`}
+        >
+          {t({ en: "Webhook failures", zh: "Webhook 失败" })} {webhookRecent24h > 0 && <span className="ml-1 bg-red-500 text-white rounded-full px-1.5 text-xs">{webhookRecent24h}</span>}
         </button>
       </div>
 
@@ -437,6 +526,144 @@ export default function AdminPage() {
               {withdrawals.length === 0 && (
                 <tr>
                   <td colSpan={8} className="px-4 py-8 text-center text-gray-500">{t({ en: "No withdrawal requests", zh: "暂无提现申请" })}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {tab === "refunds" && (
+        <div className="bg-white rounded-lg border overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="text-left px-4 py-3 font-medium">{t({ en: "Filed", zh: "申请时间" })}</th>
+                <th className="text-left px-4 py-3 font-medium">{t({ en: "User", zh: "用户" })}</th>
+                <th className="text-left px-4 py-3 font-medium">{t({ en: "Top up", zh: "充值" })}</th>
+                <th className="text-right px-4 py-3 font-medium">{t({ en: "Refund / Fee", zh: "退款 / 手续费" })}</th>
+                <th className="text-left px-4 py-3 font-medium">{t({ en: "Reason", zh: "原因" })}</th>
+                <th className="text-left px-4 py-3 font-medium">{t({ en: "Status", zh: "状态" })}</th>
+                <th className="text-right px-4 py-3 font-medium">{t({ en: "Actions", zh: "操作" })}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {refunds.map((r) => (
+                <tr key={r.id} className="align-top">
+                  <td className="px-4 py-3 text-xs text-gray-500">{r.created_at}</td>
+                  <td className="px-4 py-3">
+                    <div className="font-medium">{r.username}</div>
+                    <div className="text-xs text-gray-500">{r.email}</div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="font-mono font-semibold">${(r.gross_usd_cents / 100).toFixed(2)}</div>
+                    <div className="text-xs text-gray-500">{r.topup_created_at}</div>
+                    <div className="text-xs text-gray-500 font-mono truncate max-w-[160px]" title={r.payment_id || ""}>{r.payment_id || "—"}</div>
+                    {r.refunded_cents > 0 && (
+                      <div className="text-xs text-amber-700">{t({ en: "already refunded", zh: "已退" })} ${(r.refunded_cents / 100).toFixed(2)}</div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono">
+                    <div className="text-green-700 font-semibold">${(r.requested_cents / 100).toFixed(2)}</div>
+                    <div className="text-xs text-gray-500">- ${(r.fee_cents / 100).toFixed(2)} {t({ en: "fee", zh: "手续费" })}</div>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-gray-600 max-w-[260px]">
+                    <div className="whitespace-pre-wrap">{r.reason || "—"}</div>
+                    {r.review_note && (
+                      <div className="mt-1 text-amber-700 italic">{t({ en: "note", zh: "备注" })}: {r.review_note}</div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex px-2 py-0.5 rounded text-xs ${
+                      r.status === "approved" ? "bg-green-100 text-green-700" :
+                      r.status === "rejected" ? "bg-gray-100 text-gray-600" :
+                      r.status === "failed" ? "bg-red-100 text-red-700" :
+                      "bg-amber-100 text-amber-700"
+                    }`}>{r.status}</span>
+                    {r.channel_refund_ref && (
+                      <div className="text-xs text-gray-500 font-mono mt-1">{r.channel_refund_ref}</div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-right whitespace-nowrap space-x-3">
+                    {r.status === "pending" && (
+                      <>
+                        <button onClick={() => approveRefund(r)} className="text-sm text-blue-600 hover:text-blue-800">{t({ en: "Approve & refund", zh: "通过并退款" })}</button>
+                        <button onClick={() => rejectRefund(r.id)} className="text-sm text-red-600 hover:text-red-800">{t({ en: "Reject", zh: "驳回" })}</button>
+                      </>
+                    )}
+                    {r.status === "failed" && (
+                      <button onClick={() => approveRefund(r)} className="text-sm text-blue-600 hover:text-blue-800">{t({ en: "Retry", zh: "重试" })}</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {refunds.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">{t({ en: "No refund requests", zh: "暂无退款申请" })}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {tab === "webhooks" && (
+        <div className="bg-white rounded-lg border overflow-hidden">
+          <div className="px-4 py-3 bg-gray-50 border-b text-sm flex justify-between items-center">
+            <div>
+              {t({ en: "Recent webhook delivery failures.", zh: "最近 webhook 投递失败记录。" })}
+              {webhookRecent24h > 0 && (
+                <span className="ml-2 text-red-600 font-semibold">
+                  {t({ en: `${webhookRecent24h} in the last 24h`, zh: `近 24 小时 ${webhookRecent24h} 条` })}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={reloadAll}
+              className="text-xs px-2 py-1 border rounded hover:bg-white"
+            >
+              {t({ en: "Refresh", zh: "刷新" })}
+            </button>
+          </div>
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 border-b">
+              <tr>
+                <th className="text-left px-4 py-3 font-medium">{t({ en: "Time", zh: "时间" })}</th>
+                <th className="text-left px-4 py-3 font-medium">{t({ en: "Channel", zh: "渠道" })}</th>
+                <th className="text-left px-4 py-3 font-medium">{t({ en: "Kind", zh: "类型" })}</th>
+                <th className="text-left px-4 py-3 font-medium">{t({ en: "Event", zh: "事件" })}</th>
+                <th className="text-right px-4 py-3 font-medium">{t({ en: "HTTP", zh: "状态码" })}</th>
+                <th className="text-left px-4 py-3 font-medium">{t({ en: "Detail", zh: "详情" })}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {webhookFailures.map((f) => (
+                <tr key={f.id} className="align-top">
+                  <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{f.created_at}</td>
+                  <td className="px-4 py-3 text-xs">{f.channel}</td>
+                  <td className="px-4 py-3 text-xs">
+                    <span className={`px-2 py-0.5 rounded text-xs ${
+                      f.kind === "signature" ? "bg-red-100 text-red-700" :
+                      f.kind === "handler" ? "bg-amber-100 text-amber-700" :
+                      "bg-gray-100 text-gray-600"
+                    }`}>{f.kind}</span>
+                  </td>
+                  <td className="px-4 py-3 text-xs font-mono text-gray-600">{f.event_type || "—"}</td>
+                  <td className="px-4 py-3 text-right font-mono text-xs">{f.http_status ?? "—"}</td>
+                  <td className="px-4 py-3 text-xs text-gray-600 max-w-[420px]">
+                    <div className="whitespace-pre-wrap break-words">{f.detail || "—"}</div>
+                    {f.body_preview && (
+                      <details className="mt-1">
+                        <summary className="text-xs text-gray-400 cursor-pointer">{t({ en: "body preview", zh: "原始 body" })}</summary>
+                        <pre className="text-xs bg-gray-50 p-2 rounded mt-1 overflow-x-auto">{f.body_preview}</pre>
+                      </details>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {webhookFailures.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">{t({ en: "No webhook failures recorded", zh: "暂无 webhook 失败记录" })}</td>
                 </tr>
               )}
             </tbody>
