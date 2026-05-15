@@ -164,6 +164,12 @@ export default function BillingPage() {
               </button>
             ))}
           </div>
+          <p className="text-xs text-gray-500 mt-3">
+            {t({
+              en: "Top ups credit your balance at face value. Refunds available within 14 days minus a 10% processing fee (covers non-recoverable Freemius / card-network fees).",
+              zh: "充值按面值进入余额。14 天内可申请退款，扣除 10% 手续费（用于抵消 Freemius / 卡组织已收取的通道费）。",
+            })}
+          </p>
         </>
       )}
 

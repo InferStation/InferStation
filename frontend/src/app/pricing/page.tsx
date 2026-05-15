@@ -83,7 +83,7 @@ export default function PricingPage() {
         <div className="space-y-3">
           <Faq q={t({ en: "What currency do you charge?", zh: "用什么货币计费？" })} a={t({ en: "USD only. Freemius accepts cards in 60+ local currencies and converts to USD at the prevailing rate.", zh: "仅 USD。Freemius 支持 60+ 本地货币卡支付，按当时汇率结算为 USD。" })} />
           <Faq q={t({ en: "Where does my money go?", zh: "我的钱去哪了？" })} a={t({ en: "Your top up amount is credited as balance in full. Per-token deductions are tracked against this balance; the splits above are accounting entries — you never pay them on top of the token price.", zh: "充值金额按面值进入你的余额。按 token 扣费时直接从余额扣减；上面的费用拆分仅是平台与服务商之间的账务，对你而言不会额外加收。" })} />
-          <Faq q={t({ en: "Refunds?", zh: "可以退款吗？" })} a={t({ en: "Yes — within 14 days of top up, contact admin and we'll refund any unused portion via Freemius. After 14 days the balance is non-refundable but never expires.", zh: "可以。充值 14 天内联系管理员，余额未消费部分原路退回。超过 14 天不再退款，但余额永不过期。" })} />
+          <Faq q={t({ en: "Refunds?", zh: "可以退款吗？" })} a={t({ en: "Yes — within 14 days of top up, contact admin and we'll refund the unused portion via Freemius minus a 10% processing fee (we cannot recover the Freemius / card-network fees already paid on the original charge). After 14 days the balance is non-refundable but never expires.", zh: "可以。充值 14 天内联系管理员，未消费余额原路退回，扣除 10% 手续费（Freemius / 卡组织已收取的通道费无法追回，由该手续费抵消）。超过 14 天不再退款，但余额永不过期。" })} />
           <Faq q={t({ en: "When am I suspended?", zh: "什么时候会被暂停？" })} a={t({ en: "When your balance drops below your credit limit (default $0, i.e. when balance hits zero). Top up to resume immediately.", zh: "当余额跌破你的信用额度（默认 $0，也就是余额归零时）。充值后立即恢复调用。" })} />
         </div>
       </section>
