@@ -3028,38 +3028,16 @@ async def admin_list_users(admin=Depends(require_admin)):
     db = await get_db()
     try:
         cur = await db.execute(
-            "SELECT id, username, email, role, is_active, verified, created_at FROM users ORDER BY id"
+            "SELECT id, username, email, role, is_active, verified, created_at, "
+            "COALESCE(balance, 0) AS balance, COALESCE(credit_limit_cents, 0) AS credit_limit_cents "
+            "FROM users ORDER BY id"
         )
         users = [dict(r) for r in await cur.fetchall()]
     finally:
         await db.close()
-    # Attach billing summary
     for u in users:
-        try:
-            await ensure_invoices_for_user(u["id"])
-        except Exception:
-            pass
-    db = await get_db()
-    try:
-        for u in users:
-            cur = await db.execute(
-                "SELECT COALESCE(SUM(total_cost),0) AS total FROM invoices "
-                "WHERE user_id = ? AND status = 'unpaid'",
-                (u["id"],),
-            )
-            unpaid_total = float((await cur.fetchone())["total"] or 0.0)
-            u["unpaid_by_currency"] = {"USD": unpaid_total} if unpaid_total else {}
-            u["unpaid_total"] = unpaid_total
-            cur = await db.execute(
-                "SELECT COALESCE(SUM(total_cost),0) AS total FROM invoices "
-                "WHERE user_id = ? AND status = 'unpaid' AND due_date < date('now')",
-                (u["id"],),
-            )
-            overdue_total = float((await cur.fetchone())["total"] or 0.0)
-            u["overdue_by_currency"] = {"USD": overdue_total} if overdue_total else {}
-            u["overdue_total"] = overdue_total
-    finally:
-        await db.close()
+        u["balance"] = float(u.get("balance") or 0.0)
+        u["credit_limit_usd"] = float(u.get("credit_limit_cents") or 0) / 100.0
     return users
 
 

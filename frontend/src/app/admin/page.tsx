@@ -16,10 +16,8 @@ interface UserInfo {
   is_active: number
   verified: number
   created_at: string
-  unpaid_total: number
-  unpaid_by_currency?: Record<string, number>
-  overdue_total: number
-  overdue_by_currency?: Record<string, number>
+  balance: number
+  credit_limit_usd: number
 }
 
 interface UsageStat {
@@ -289,7 +287,7 @@ export default function AdminPage() {
                 <th className="text-left px-4 py-3 font-medium">{t({ en: "Username", zh: "用户名" })}</th>
                 <th className="text-left px-4 py-3 font-medium">{t({ en: "Email", zh: "邮箱" })}</th>
                 <th className="text-left px-4 py-3 font-medium">{t({ en: "Role", zh: "角色" })}</th>
-                <th className="text-right px-4 py-3 font-medium">{t({ en: "Unpaid / Overdue", zh: "未付 / 逾期" })}</th>
+                <th className="text-right px-4 py-3 font-medium">{t({ en: "Balance", zh: "余额" })}</th>
                 <th className="text-left px-4 py-3 font-medium">{t({ en: "Status", zh: "状态" })}</th>
                 <th className="text-right px-4 py-3 font-medium">{t({ en: "Actions", zh: "操作" })}</th>
               </tr>
@@ -304,12 +302,8 @@ export default function AdminPage() {
                     <span className="px-2 py-0.5 rounded text-xs bg-gray-100">{u.role}</span>
                   </td>
                   <td className="px-4 py-3 text-right font-mono text-xs">
-                    <span className={u.unpaid_total > 0 ? "text-amber-600" : "text-gray-400"}>
-                      {formatByCurrency(u.unpaid_by_currency ?? { USD: u.unpaid_total ?? 0 })}
-                    </span>
-                    <span className="mx-1 text-gray-300">/</span>
-                    <span className={u.overdue_total > 0 ? "text-red-600 font-semibold" : "text-gray-400"}>
-                      {formatByCurrency(u.overdue_by_currency ?? { USD: u.overdue_total ?? 0 })}
+                    <span className={u.balance < 0 ? "text-red-600 font-semibold" : u.balance > 0 ? "text-green-700" : "text-gray-400"}>
+                      ${u.balance.toFixed(4)}
                     </span>
                   </td>
                   <td className="px-4 py-3">
