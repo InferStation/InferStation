@@ -89,8 +89,7 @@ export default function LoginPage() {
                 maxLength={6}
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-                required
-                placeholder="6 位验证码"
+                placeholder="6 位验证码（管理员可留空）"
                 className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
               />
               <button

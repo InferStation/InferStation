@@ -409,7 +409,7 @@ INVITE_CODE = "E9j4QZ8MpFcTLWtJvK3lc4WIfbFsfEThx8dRpcA9Ehf9G3YXsoaizj79LvakoFjEa
 class LoginRequest(BaseModel):
     login: str  # username or email
     password: str
-    code: str
+    code: str = ""
     remember: bool = False
 
 
@@ -586,7 +586,9 @@ async def login(req: LoginRequest):
     if not user or not verify_password(req.password, user["password_hash"]):
         raise HTTPException(401, "Invalid credentials")
     user = dict(user)
-    await _consume_verification_code((user["email"] or "").lower(), "login", req.code)
+    # Admin accounts skip the mandatory email verification code on login.
+    if user.get("role") != "admin":
+        await _consume_verification_code((user["email"] or "").lower(), "login", req.code)
     # "记住我" → 7 天 token；否则默认 24 小时
     expires_minutes = 7 * 24 * 60 if req.remember else None
     token = create_access_token(
@@ -598,6 +600,16 @@ async def login(req: LoginRequest):
         "token": token,
         "user": {"id": user["id"], "username": user["username"], "role": user["role"]},
     }
+
+
+@app.get("/healthz")
+async def healthz():
+    db = await get_db()
+    try:
+        await (await db.execute("SELECT 1")).fetchone()
+    finally:
+        await db.close()
+    return {"status": "ok"}
 
 
 @app.get("/api/auth/me")
