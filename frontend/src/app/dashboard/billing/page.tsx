@@ -120,7 +120,7 @@ export default function BillingPage() {
         method: "POST",
         body: JSON.stringify({
           preset,
-          return_url: typeof window !== "undefined" ? `${window.location.origin}/dashboard/billing` : undefined,
+          return_url: typeof window !== "undefined" ? `${window.location.origin}/payment/return` : undefined,
         }),
       })
       if (r.url) {

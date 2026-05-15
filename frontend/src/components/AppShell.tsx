@@ -15,6 +15,7 @@ const NO_SHELL = ["/login", "/register"]
 const PUBLIC_PATHS = new Set([
   "/login", "/register",
   "/about", "/docs", "/privacy", "/terms", "/sla",
+  "/payment/return",
 ])
 
 export default function AppShell({ children }: { children: React.ReactNode }) {

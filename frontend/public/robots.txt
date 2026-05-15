@@ -12,6 +12,7 @@ Disallow: /dashboard
 Disallow: /admin
 Disallow: /my-services
 Disallow: /my-subscriptions
+Disallow: /payment/
 Disallow: /api/
 
 Sitemap: https://tianshu-gateway.cloud/sitemap.xml
