@@ -122,9 +122,13 @@ async def freemius_webhook(request: Request):
     event = _fs.parse_event(raw)
     event_type = (event.get("type") or "").lower()
 
-    # We only credit balance on payment.created / payment.installments. Refunds,
-    # subscription.* and license.* events are acknowledged but no-op for v1.
-    if event_type not in ("payment.created", "payment.installments", "payment.completed"):
+    # Refunds: handled separately (debit balance, mark topup row).
+    if event_type == "payment.refund":
+        return await _handle_refund(event)
+
+    # We only credit balance on payment.created. Subscription/license/lifetime
+    # purchase events are acknowledged but no-op for v1.
+    if event_type != "payment.created":
         return {"ok": True, "ignored": event_type or "unknown"}
 
     summary = _fs.extract_payment_summary(event)
@@ -200,6 +204,84 @@ async def freemius_webhook(request: Request):
     await credit_user_balance(user_id, gross / 100.0)
 
     return {"ok": True, "credited_usd": gross / 100.0, "user_id": user_id}
+
+
+# ─────────────────────────────────────────────────────────────────────
+# payment.refund handler (clawback balance, mark topup row)
+# ─────────────────────────────────────────────────────────────────────
+async def _handle_refund(event: dict) -> dict:
+    """Process a Freemius payment.refund event.
+
+    The event references the original payment via objects.payment.id.
+    Strategy:
+      - Find topup row by (channel='freemius', channel_ref=payment_id).
+      - Determine refund amount: prefer payment.refund_amount fields if
+        present, else default to the topup's full gross.
+      - Atomically: mark topup.status='refunded' (or 'partially_refunded'),
+        debit user balance by refund amount.
+      - Idempotent: a topup already in 'refunded' state with the same
+        cumulative refund cents short-circuits.
+    """
+    objects = event.get("objects") or {}
+    payment = objects.get("payment") or {}
+    parent_payment_id = (
+        str(payment.get("id") or "")
+        or str(payment.get("parent_payment_id") or "")
+        or ""
+    )
+    if not parent_payment_id:
+        return {"ok": True, "ignored": "refund missing payment id"}
+
+    # Refund amount: try payment.refund_amount, else payment.gross (a refund
+    # event echoes the original gross when full).
+    refund_raw = (
+        payment.get("refund_amount")
+        or payment.get("amount")
+        or payment.get("gross")
+        or "0"
+    )
+    try:
+        refund_cents = int(round(float(refund_raw) * 100))
+    except (TypeError, ValueError):
+        refund_cents = 0
+
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            "SELECT id, user_id, gross_usd_cents, status FROM topups "
+            "WHERE channel = 'freemius' AND channel_ref = ?",
+            (parent_payment_id,),
+        )
+        topup = await cur.fetchone()
+        if not topup:
+            return {"ok": True, "ignored": "no matching topup", "payment_id": parent_payment_id}
+        if topup["status"] in ("refunded", "orphan"):
+            return {"ok": True, "duplicate": True, "topup_id": topup["id"], "status": topup["status"]}
+
+        if refund_cents <= 0 or refund_cents > topup["gross_usd_cents"]:
+            refund_cents = topup["gross_usd_cents"]
+        new_status = "refunded" if refund_cents >= topup["gross_usd_cents"] else "partially_refunded"
+
+        await db.execute(
+            "UPDATE topups SET status = ?, settled_at = datetime('now') WHERE id = ?",
+            (new_status, topup["id"]),
+        )
+        # Clawback balance (allowed to go negative; user can be put on hold).
+        await db.execute(
+            "UPDATE users SET balance = balance - ? WHERE id = ?",
+            (refund_cents / 100.0, topup["user_id"]),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+
+    return {
+        "ok": True,
+        "refunded_usd": refund_cents / 100.0,
+        "user_id": topup["user_id"],
+        "topup_id": topup["id"],
+        "status": new_status,
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────
