@@ -3,11 +3,11 @@ Allow: /$
 Allow: /login
 Allow: /register
 Allow: /about
-Allow: /pricing
 Allow: /docs
 Allow: /privacy
 Allow: /terms
 Allow: /sla
+Disallow: /pricing
 Disallow: /dashboard
 Disallow: /admin
 Disallow: /my-services

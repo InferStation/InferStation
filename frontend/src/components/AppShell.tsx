@@ -14,7 +14,7 @@ const NO_SHELL = ["/login", "/register"]
 // gated behind login (closed-beta access control).
 const PUBLIC_PATHS = new Set([
   "/", "/login", "/register",
-  "/about", "/pricing", "/docs", "/privacy", "/terms", "/sla",
+  "/about", "/docs", "/privacy", "/terms", "/sla",
 ])
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
