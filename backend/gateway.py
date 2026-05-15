@@ -401,7 +401,7 @@ class RegisterRequest(BaseModel):
 
 # Hardcoded invite code for closed beta. Only required at registration; once
 # the account is created, login + all subsequent access have no extra gate.
-INVITE_CODE = "TIANSHU2026"
+INVITE_CODE = "E9j4QZ8MpFcTLWtJvK3lc4WIfbFsfEThx8dRpcA9Ehf9G3YXsoaizj79LvakoFjEaE5nl8NwDKDH297rWYRVw1Q7uRpE2V0DpPdIFbHBTOvCAFbP33PPqN4CGArvCd2oqaYcVlD9wnrP73N8LSicjeoGb8VOVNLIn9F5CakTXGFaUueVllMbkfyGAgUpVmSxkm9cVlmtnsQHDq2O0WXHF0mm4gACwRU9E6udFUaovYOZMVR7hj4UU98cmBOO55bO"
 
 
 class LoginRequest(BaseModel):
