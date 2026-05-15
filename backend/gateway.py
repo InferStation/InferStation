@@ -396,6 +396,12 @@ class RegisterRequest(BaseModel):
     email: str
     password: str
     code: str
+    invite_code: str = ""
+
+
+# Hardcoded invite code for closed beta. Only required at registration; once
+# the account is created, login + all subsequent access have no extra gate.
+INVITE_CODE = "TIANSHU2026"
 
 
 class LoginRequest(BaseModel):
@@ -536,6 +542,8 @@ async def send_code(req: SendCodeRequest):
 
 @app.post("/api/auth/register")
 async def register(req: RegisterRequest):
+    if (req.invite_code or "").strip() != INVITE_CODE:
+        raise HTTPException(400, "邀请码无效 / Invalid invite code")
     if len(req.password) < 6:
         raise HTTPException(400, "Password must be at least 6 characters")
     email = req.email.strip().lower()

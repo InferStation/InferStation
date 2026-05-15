@@ -15,6 +15,7 @@ export default function RegisterPage() {
   const [username, setUsername] = useState("")
   const [email, setEmail] = useState("")
   const [code, setCode] = useState("")
+  const [inviteCode, setInviteCode] = useState("")
   const [password, setPassword] = useState("")
   const [confirm, setConfirm] = useState("")
   const [error, setError] = useState("")
@@ -66,6 +67,7 @@ export default function RegisterPage() {
       return
     }
     if (!/^\d{6}$/.test(code.trim())) { setError(t({ en: "Please enter the 6-digit email verification code", zh: "请输入 6 位邮箱验证码" })); return }
+    if (!inviteCode.trim()) { setError(t({ en: "Invite code is required during closed beta", zh: "内测期间注册需要邀请码" })); return }
     setLoading(true)
     try {
       const data = await apiFetch("/api/auth/register", {
@@ -75,6 +77,7 @@ export default function RegisterPage() {
           email: email.trim().toLowerCase(),
           password,
           code: code.trim(),
+          invite_code: inviteCode.trim(),
         }),
       })
       await auth.login(data.token, true)
@@ -166,6 +169,17 @@ export default function RegisterPage() {
             </div>
             <PasswordInput label={t({ en: "Password", zh: "密码" })} value={password} onChange={setPassword} required minLength={8} showStrength />
             <PasswordInput label={t({ en: "Confirm password", zh: "确认密码" })} value={confirm} onChange={setConfirm} required />
+            <div>
+              <label className="block text-xs font-medium text-fg mb-1.5">{t({ en: "Invite code", zh: "邀请码" })}</label>
+              <input
+                type="text"
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value)}
+                required
+                placeholder={t({ en: "Closed beta invite code", zh: "内测邀请码" })}
+                className="w-full h-10 px-3 text-sm rounded-lg bg-surface border border-line placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-fg/15 focus:border-fg/40"
+              />
+            </div>
             <button
               type="submit"
               disabled={loading}

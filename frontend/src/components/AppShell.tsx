@@ -1,7 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
+import { useEffect } from "react"
 import { useAuth } from "@/context/AuthContext"
 import { useT } from "@/context/LocaleContext"
 import SideNav from "@/components/SideNav"
@@ -9,17 +10,33 @@ import TopBar from "@/components/TopBar"
 import { IconLayers } from "@/components/ui/Icon"
 
 const NO_SHELL = ["/login", "/register"]
+// During closed beta, only the home page, /login and /register are reachable
+// without an auth token. Every other route redirects to /login.
+const PUBLIC_PATHS = new Set(["/", "/login", "/register"])
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const { user } = useAuth()
+  const router = useRouter()
+  const { user, loading } = useAuth()
   const t = useT()
   const hideShell = NO_SHELL.some((p) => pathname === p || pathname.startsWith(p + "/"))
+  const isPublic = PUBLIC_PATHS.has(pathname)
   const showSide = !!user && !hideShell
+
+  useEffect(() => {
+    if (!loading && !user && !isPublic) {
+      router.replace("/login")
+    }
+  }, [loading, user, isPublic, router])
 
   // For login / register: render full-bleed children, no shell, no footer wrapper.
   if (hideShell) {
     return <>{children}</>
+  }
+
+  // Block non-public routes while we wait for the auth check / redirect.
+  if (!isPublic && (loading || !user)) {
+    return <div className="text-center py-20 text-fg-muted">{t({ en: "Loading...", zh: "加载中..." })}</div>
   }
 
   if (!showSide) {
