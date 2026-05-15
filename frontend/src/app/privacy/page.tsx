@@ -71,7 +71,7 @@ export default function PrivacyPage() {
 
         <h2 className="text-lg font-semibold text-gray-800">{t({ en: "8. Contact", zh: "8. 联系方式" })}</h2>
         <p>
-          {t({ en: "Questions about this Privacy Policy? Email ", zh: "对本隐私政策有任何问题，请发送邮件至 " })}<a className="text-fg" href="mailto:support@tianshu-gateway.cloud">support@tianshu-gateway.cloud</a>.
+          {t({ en: "Questions about this Privacy Policy? Email ", zh: "对本隐私政策有任何问题，请发送邮件至 " })}<a className="text-fg" href="mailto:bleu_jours@outlook.com">bleu_jours@outlook.com</a>.
         </p>
       </section>
     </article>

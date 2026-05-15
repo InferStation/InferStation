@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://tianshu-gateway.cloud/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://tianshu-gateway.cloud/login</loc><changefreq>monthly</changefreq></url>
+  <url><loc>https://tianshu-gateway.cloud/register</loc><changefreq>monthly</changefreq></url>
+  <url><loc>https://tianshu-gateway.cloud/about</loc><changefreq>monthly</changefreq></url>
+  <url><loc>https://tianshu-gateway.cloud/pricing</loc><changefreq>monthly</changefreq></url>
+  <url><loc>https://tianshu-gateway.cloud/docs</loc><changefreq>weekly</changefreq></url>
+  <url><loc>https://tianshu-gateway.cloud/privacy</loc><changefreq>yearly</changefreq></url>
+  <url><loc>https://tianshu-gateway.cloud/terms</loc><changefreq>yearly</changefreq></url>
+  <url><loc>https://tianshu-gateway.cloud/sla</loc><changefreq>yearly</changefreq></url>
+</urlset>

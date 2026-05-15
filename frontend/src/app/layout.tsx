@@ -14,6 +14,12 @@ const mono = JetBrains_Mono({ subsets: ["latin"], display: "swap", variable: "--
 export const metadata: Metadata = {
   title: "Tianshu — LLM API Gateway",
   description: "Tianshu · lightweight LLM API gateway connecting consumers and model providers",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.png", type: "image/png" },
+    ],
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

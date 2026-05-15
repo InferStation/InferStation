@@ -35,7 +35,7 @@ export default function Footer() {
             <ul className="space-y-1.5 text-fg-muted">
               <li><Link href="/about" className="hover:text-fg">{t({ en: "About Tianshu", zh: "关于天枢" })}</Link></li>
               <li>
-                <a href="mailto:support@tianshu-gateway.cloud" className="hover:text-fg">{t({ en: "Contact", zh: "联系我们" })}</a>
+                <a href="mailto:bleu_jours@outlook.com" className="hover:text-fg">{t({ en: "Contact", zh: "联系我们" })}</a>
               </li>
             </ul>
           </div>

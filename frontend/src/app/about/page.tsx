@@ -46,7 +46,7 @@ export default function AboutPage() {
         <ul className="list-disc list-inside space-y-1">
           <li>{t({ en: "Read the ", zh: "查看 " })}<Link href="/docs" className="text-fg hover:underline">{t({ en: "developer docs", zh: "开发者文档" })}</Link></li>
           <li>{t({ en: "Browse the ", zh: "浏览 " })}<Link href="/models" className="text-fg hover:underline">{t({ en: "model catalog", zh: "模型广场" })}</Link></li>
-          <li>{t({ en: "Feedback: ", zh: "问题反馈：" })}<a className="text-fg" href="mailto:support@tianshu-gateway.cloud">support@tianshu-gateway.cloud</a></li>
+          <li>{t({ en: "Feedback: ", zh: "问题反馈：" })}<a className="text-fg" href="mailto:bleu_jours@outlook.com">bleu_jours@outlook.com</a></li>
         </ul>
       </section>
     </article>

@@ -48,7 +48,7 @@ export default function SlaPage() {
         <h2 className="text-lg font-semibold text-gray-800">{t({ en: "4. Incident reporting", zh: "4. 故障报告" })}</h2>
         <p>
           {t({ en: "If you encounter a platform issue or unexpected billing, email ", zh: "如果您遇到平台故障或异常计费，请发送邮件至 " })}
-          <a className="text-fg ml-1" href="mailto:support@tianshu-gateway.cloud">support@tianshu-gateway.cloud</a>
+          <a className="text-fg ml-1" href="mailto:bleu_jours@outlook.com">bleu_jours@outlook.com</a>
           {t({ en: " — please include the timestamp, API key prefix, and the rough request parameters so we can investigate. After verification, abnormal charges can be credited to your invoice.", zh: "，建议附上时间、API Key 前缀、请求的大致参数以便定位。核实后可对异常扣费进行账单抵扣。" })}
         </p>
 
