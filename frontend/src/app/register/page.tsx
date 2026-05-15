@@ -81,7 +81,7 @@ export default function RegisterPage() {
         }),
       })
       await auth.login(data.token, true)
-      router.push("/dashboard")
+      router.push("/models")
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t({ en: "Sign-up failed", zh: "注册失败" }))
     } finally {
