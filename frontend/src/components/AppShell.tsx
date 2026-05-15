@@ -13,7 +13,7 @@ const NO_SHELL = ["/login", "/register"]
 // Public pages: home, auth, and marketing/legal/docs. Everything else is
 // gated behind login (closed-beta access control).
 const PUBLIC_PATHS = new Set([
-  "/", "/login", "/register",
+  "/login", "/register",
   "/about", "/docs", "/privacy", "/terms", "/sla",
 ])
 
