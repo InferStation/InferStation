@@ -10,9 +10,12 @@ import TopBar from "@/components/TopBar"
 import { IconLayers } from "@/components/ui/Icon"
 
 const NO_SHELL = ["/login", "/register"]
-// During closed beta, only the home page, /login and /register are reachable
-// without an auth token. Every other route redirects to /login.
-const PUBLIC_PATHS = new Set(["/", "/login", "/register"])
+// Public pages: home, auth, and marketing/legal/docs. Everything else is
+// gated behind login (closed-beta access control).
+const PUBLIC_PATHS = new Set([
+  "/", "/login", "/register",
+  "/about", "/pricing", "/docs", "/privacy", "/terms", "/sla",
+])
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
