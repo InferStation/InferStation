@@ -212,28 +212,45 @@ async def freemius_webhook(request: Request):
 async def _handle_refund(event: dict) -> dict:
     """Process a Freemius payment.refund event.
 
-    The event references the original payment via objects.payment.id.
-    Strategy:
-      - Find topup row by (channel='freemius', channel_ref=payment_id).
-      - Determine refund amount: prefer payment.refund_amount fields if
-        present, else default to the topup's full gross.
-      - Atomically: mark topup.status='refunded' (or 'partially_refunded'),
-        debit user balance by refund amount.
-      - Idempotent: a topup already in 'refunded' state with the same
-        cumulative refund cents short-circuits.
+    Freemius emits one ``payment.refund`` event per refund record. The event's
+    ``objects.payment`` is the refund payment row itself (negative gross),
+    with ``parent_payment_id`` pointing to the original charge.
+
+    Strategy (supports cumulative partial refunds):
+      - Identify the refund record via ``payment.id`` (refund_ref).
+      - Resolve the original topup via ``payment.parent_payment_id`` (preferred)
+        or ``payment.id`` (fallback for legacy / simulated events that send the
+        original payment id directly).
+      - Idempotency: INSERT into ``refund_events`` keyed by (channel, refund_ref).
+        Duplicate webhook deliveries become no-ops.
+      - Cap this refund at the remaining unrefunded portion of the topup
+        (``gross - already_refunded``).
+      - Bump ``topups.refunded_cents`` by the new refund and set status to
+        'refunded' (fully refunded) or 'partially_refunded'.
+      - Debit user balance by the refunded amount (allowed to go negative).
     """
     objects = event.get("objects") or {}
     payment = objects.get("payment") or {}
+
+    refund_ref = str(payment.get("id") or "") or None
+    # In real Freemius payload, parent_payment_id is the original charge.
+    # Fallback to payment.id covers our simulated/legacy tests that pass the
+    # original id directly.
     parent_payment_id = (
-        str(payment.get("id") or "")
-        or str(payment.get("parent_payment_id") or "")
+        str(payment.get("parent_payment_id") or "")
+        or str(payment.get("id") or "")
         or ""
     )
     if not parent_payment_id:
         return {"ok": True, "ignored": "refund missing payment id"}
+    if not refund_ref:
+        # No refund record id → synthesize one so per-event idempotency still
+        # works (best effort; collisions on retry are possible).
+        refund_ref = f"{parent_payment_id}:auto"
 
-    # Refund amount: try payment.refund_amount, else payment.gross (a refund
-    # event echoes the original gross when full).
+    # Refund amount: prefer explicit refund_amount, then amount/gross (refund
+    # events may echo the original gross when fully refunding). Absolute value
+    # because refund rows are typically stored as negative gross.
     refund_raw = (
         payment.get("refund_amount")
         or payment.get("amount")
@@ -241,30 +258,72 @@ async def _handle_refund(event: dict) -> dict:
         or "0"
     )
     try:
-        refund_cents = int(round(float(refund_raw) * 100))
+        refund_cents = abs(int(round(float(refund_raw) * 100)))
     except (TypeError, ValueError):
         refund_cents = 0
 
     db = await get_db()
     try:
+        # Per-refund idempotency: if we've already recorded this refund_ref,
+        # short-circuit before touching balances.
         cur = await db.execute(
-            "SELECT id, user_id, gross_usd_cents, status FROM topups "
-            "WHERE channel = 'freemius' AND channel_ref = ?",
+            "SELECT id, topup_id, refund_cents FROM refund_events "
+            "WHERE channel = 'freemius' AND refund_ref = ?",
+            (refund_ref,),
+        )
+        existing = await cur.fetchone()
+        if existing:
+            return {
+                "ok": True,
+                "duplicate": True,
+                "refund_ref": refund_ref,
+                "topup_id": existing["topup_id"],
+                "refunded_usd": (existing["refund_cents"] or 0) / 100.0,
+            }
+
+        cur = await db.execute(
+            "SELECT id, user_id, gross_usd_cents, "
+            "       COALESCE(refunded_cents, 0) AS refunded_cents, status "
+            "FROM topups WHERE channel = 'freemius' AND channel_ref = ?",
             (parent_payment_id,),
         )
         topup = await cur.fetchone()
         if not topup:
             return {"ok": True, "ignored": "no matching topup", "payment_id": parent_payment_id}
-        if topup["status"] in ("refunded", "orphan"):
-            return {"ok": True, "duplicate": True, "topup_id": topup["id"], "status": topup["status"]}
+        if topup["status"] == "orphan":
+            return {"ok": True, "ignored": "topup is orphan", "topup_id": topup["id"]}
 
-        if refund_cents <= 0 or refund_cents > topup["gross_usd_cents"]:
-            refund_cents = topup["gross_usd_cents"]
-        new_status = "refunded" if refund_cents >= topup["gross_usd_cents"] else "partially_refunded"
+        gross = int(topup["gross_usd_cents"])
+        already = int(topup["refunded_cents"] or 0)
+        remaining = max(0, gross - already)
+        if remaining <= 0:
+            # Fully refunded already; record the event but apply zero.
+            await db.execute(
+                "INSERT INTO refund_events (channel, refund_ref, parent_payment_id, topup_id, refund_cents) "
+                "VALUES ('freemius', ?, ?, ?, 0)",
+                (refund_ref, parent_payment_id, topup["id"]),
+            )
+            await db.commit()
+            return {
+                "ok": True,
+                "ignored": "topup already fully refunded",
+                "topup_id": topup["id"],
+                "status": topup["status"],
+            }
+
+        if refund_cents <= 0 or refund_cents > remaining:
+            refund_cents = remaining
+        new_total = already + refund_cents
+        new_status = "refunded" if new_total >= gross else "partially_refunded"
 
         await db.execute(
-            "UPDATE topups SET status = ?, settled_at = datetime('now') WHERE id = ?",
-            (new_status, topup["id"]),
+            "UPDATE topups SET refunded_cents = ?, status = ?, settled_at = datetime('now') WHERE id = ?",
+            (new_total, new_status, topup["id"]),
+        )
+        await db.execute(
+            "INSERT INTO refund_events (channel, refund_ref, parent_payment_id, topup_id, refund_cents) "
+            "VALUES ('freemius', ?, ?, ?, ?)",
+            (refund_ref, parent_payment_id, topup["id"], refund_cents),
         )
         # Clawback balance (allowed to go negative; user can be put on hold).
         await db.execute(
@@ -278,8 +337,10 @@ async def _handle_refund(event: dict) -> dict:
     return {
         "ok": True,
         "refunded_usd": refund_cents / 100.0,
+        "cumulative_refunded_usd": new_total / 100.0,
         "user_id": topup["user_id"],
         "topup_id": topup["id"],
+        "refund_ref": refund_ref,
         "status": new_status,
     }
 

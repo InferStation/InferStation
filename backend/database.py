@@ -295,6 +295,16 @@ async def init_db():
         if "channel_fee_cents" not in icols2:
             await db.execute("ALTER TABLE invoices ADD COLUMN channel_fee_cents INTEGER NOT NULL DEFAULT 0")
 
+        # Add refunded_cents column to existing topups tables (idempotent).
+        cur = await db.execute("PRAGMA table_info(topups)")
+        tcols = {r[1] for r in await cur.fetchall()}
+        if tcols and "refunded_cents" not in tcols:
+            await db.execute("ALTER TABLE topups ADD COLUMN refunded_cents INTEGER NOT NULL DEFAULT 0")
+            # Backfill: rows already marked 'refunded' have full gross refunded.
+            await db.execute(
+                "UPDATE topups SET refunded_cents = gross_usd_cents WHERE status = 'refunded' AND refunded_cents = 0"
+            )
+
         await db.executescript("""
         CREATE TABLE IF NOT EXISTS topups (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -304,12 +314,26 @@ async def init_db():
             channel_fee_cents INTEGER NOT NULL,      -- gross - net (platform fronts; recouped via provider cut)
             channel TEXT NOT NULL DEFAULT 'freemius',
             channel_ref TEXT,                        -- freemius payment id
-            status TEXT NOT NULL DEFAULT 'pending',  -- pending/succeeded/refunded/failed
+            status TEXT NOT NULL DEFAULT 'pending',  -- pending/succeeded/refunded/partially_refunded/failed
+            refunded_cents INTEGER NOT NULL DEFAULT 0,  -- cumulative refunded (cents); status='refunded' when >= gross
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             settled_at TEXT
         );
         CREATE INDEX IF NOT EXISTS idx_topups_user ON topups(user_id, created_at);
         CREATE INDEX IF NOT EXISTS idx_topups_ref ON topups(channel, channel_ref);
+
+        -- One row per Freemius refund event (cumulative partial refund support + idempotency).
+        CREATE TABLE IF NOT EXISTS refund_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            channel TEXT NOT NULL DEFAULT 'freemius',
+            refund_ref TEXT NOT NULL,                -- Freemius refund payment id (unique per channel)
+            parent_payment_id TEXT NOT NULL,         -- original payment id (matches topups.channel_ref)
+            topup_id INTEGER REFERENCES topups(id),
+            refund_cents INTEGER NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            UNIQUE(channel, refund_ref)
+        );
+        CREATE INDEX IF NOT EXISTS idx_refund_events_parent ON refund_events(channel, parent_payment_id);
 
         CREATE TABLE IF NOT EXISTS pending_freemius_checkouts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
