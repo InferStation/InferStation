@@ -969,6 +969,8 @@ class CreateKeyRequest(BaseModel):
 
 @app.post("/api/keys")
 async def create_key(req: CreateKeyRequest, user=Depends(get_current_user)):
+    if user["role"] == "admin":
+        raise HTTPException(status_code=403, detail="Admin accounts cannot create API keys")
     raw, key_hash, prefix = generate_api_key()
     db = await get_db()
     try:
