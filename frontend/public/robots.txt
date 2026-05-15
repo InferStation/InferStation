@@ -1,13 +1,15 @@
 User-agent: *
 Allow: /login
 Allow: /register
-Allow: /about
-Allow: /docs
 Allow: /privacy
 Allow: /terms
 Allow: /sla
 Disallow: /
+Disallow: /about
+Disallow: /docs
 Disallow: /pricing
+Disallow: /providers
+Disallow: /models
 Disallow: /dashboard
 Disallow: /admin
 Disallow: /my-services

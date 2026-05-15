@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useAuth } from "@/context/AuthContext"
 import { useT } from "@/context/LocaleContext"
 
 const HIDE = ["/login", "/register"]
@@ -9,7 +10,26 @@ const HIDE = ["/login", "/register"]
 export default function Footer() {
   const pathname = usePathname()
   const t = useT()
+  const { user } = useAuth()
   if (HIDE.some((p) => pathname === p || pathname.startsWith(p + "/"))) return null
+  // Closed beta: for unauthenticated visitors (legal/payment-return pages),
+  // render a minimal footer with only policy links + contact, to avoid
+  // leaking product surface (/models, /docs, /about, /dashboard).
+  if (!user) {
+    return (
+      <footer className="bg-surface border-t border-line mt-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 text-[13px] text-fg-muted flex flex-wrap items-center justify-between gap-3">
+          <span className="text-fg-subtle text-xs">© {new Date().getFullYear()} Tianshu</span>
+          <div className="flex items-center gap-4">
+            <Link href="/terms" className="hover:text-fg">{t({ en: "Terms", zh: "服务条款" })}</Link>
+            <Link href="/privacy" className="hover:text-fg">{t({ en: "Privacy", zh: "隐私政策" })}</Link>
+            <Link href="/sla" className="hover:text-fg">{t({ en: "SLA", zh: "服务等级" })}</Link>
+            <a href="mailto:bleu_jours@outlook.com" className="hover:text-fg">{t({ en: "Contact", zh: "联系" })}</a>
+          </div>
+        </div>
+      </footer>
+    )
+  }
   return (
     <footer className="bg-surface border-t border-line mt-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
