@@ -285,6 +285,10 @@ async def init_db():
             await db.execute("ALTER TABLE users ADD COLUMN payout_method TEXT")
         if "payout_address" not in ucols2:
             await db.execute("ALTER TABLE users ADD COLUMN payout_address TEXT")
+        if "token_version" not in ucols2:
+            # Bumped on password change / self-delete / admin disable so that
+            # previously-issued JWTs become invalid even before they expire.
+            await db.execute("ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0")
 
         cur = await db.execute("PRAGMA table_info(invoices)")
         icols2 = {r[1] for r in await cur.fetchall()}

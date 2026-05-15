@@ -21,6 +21,8 @@ from pydantic import BaseModel
 
 from auth import (
     JWT_ALGORITHM,
+    bump_token_version,
+    check_api_key_rate_limit,
     create_access_token,
     generate_api_key,
     get_current_user,
@@ -528,7 +530,10 @@ async def send_code(req: SendCodeRequest):
     finally:
         await db.close()
     if purpose == "register" and existing:
-        raise HTTPException(400, "该邮箱已被注册")
+        # Don't leak account existence to anonymous callers. Pretend the code
+        # was sent so attackers can't enumerate registered emails. The real
+        # email is never dispatched in this branch.
+        return {"ok": True}
     if purpose == "change-email" and existing:
         raise HTTPException(400, "该邮箱已被其他账号使用")
     if purpose == "delete-account" and not existing:
@@ -563,7 +568,7 @@ async def register(req: RegisterRequest):
         user_id = cur.lastrowid
     finally:
         await db.close()
-    token = create_access_token(user_id, "consumer")
+    token = create_access_token(user_id, "consumer", token_version=0)
     return {"token": token, "user": {"id": user_id, "username": req.username, "role": "consumer"}}
 
 
@@ -584,7 +589,11 @@ async def login(req: LoginRequest):
     await _consume_verification_code((user["email"] or "").lower(), "login", req.code)
     # "记住我" → 7 天 token；否则默认 24 小时
     expires_minutes = 7 * 24 * 60 if req.remember else None
-    token = create_access_token(user["id"], user["role"], expires_minutes=expires_minutes)
+    token = create_access_token(
+        user["id"], user["role"],
+        token_version=int(user.get("token_version") or 0),
+        expires_minutes=expires_minutes,
+    )
     return {
         "token": token,
         "user": {"id": user["id"], "username": user["username"], "role": user["role"]},
@@ -763,7 +772,10 @@ async def change_password(req: ChangePasswordRequest, user=Depends(get_current_u
         if len(req.new_password) < 8:
             raise HTTPException(400, "新密码不能少于8位")
         new_hash = hash_password(req.new_password)
-        await db.execute("UPDATE users SET password_hash = ? WHERE id = ?", (new_hash, user["id"]))
+        await db.execute(
+            "UPDATE users SET password_hash = ?, token_version = COALESCE(token_version, 0) + 1 WHERE id = ?",
+            (new_hash, user["id"]),
+        )
         await db.commit()
     finally:
         await db.close()
@@ -899,7 +911,8 @@ async def delete_account(req: DeleteAccountRequest, user=Depends(get_current_use
         )
         await db.execute(
             "UPDATE users SET is_active = 0, username = ?, email = ?, "
-            "active_subscription_id = NULL WHERE id = ?",
+            "active_subscription_id = NULL, token_version = COALESCE(token_version, 0) + 1 "
+            "WHERE id = ?",
             (anon_username, anon_email, uid),
         )
         await db.commit()
@@ -2149,6 +2162,10 @@ async def authenticate_api_key(request: Request):
         raise HTTPException(401, "Missing API key")
     raw_key = auth_header[7:]
     key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
+    # Per-key sliding-window rate limit (default 60/min). Cheaper than a DB
+    # lookup, so we check it before hitting SQLite -- DoS-style brute force
+    # against a single key gets bounced immediately.
+    check_api_key_rate_limit(key_hash)
 
     db = await get_db()
     try:
@@ -3077,7 +3094,14 @@ async def admin_mark_invoice_paid(invoice_id: int, admin=Depends(require_admin))
 async def admin_toggle_user(user_id: int, admin=Depends(require_admin)):
     db = await get_db()
     try:
-        await db.execute("UPDATE users SET is_active = CASE WHEN is_active=1 THEN 0 ELSE 1 END WHERE id = ?", (user_id,))
+        # Bump token_version unconditionally so that disabling a user also
+        # invalidates any JWT they currently hold; re-enabling is harmless
+        # (they'll just need to sign in again).
+        await db.execute(
+            "UPDATE users SET is_active = CASE WHEN is_active=1 THEN 0 ELSE 1 END, "
+            "token_version = COALESCE(token_version, 0) + 1 WHERE id = ?",
+            (user_id,),
+        )
         await db.commit()
     finally:
         await db.close()
