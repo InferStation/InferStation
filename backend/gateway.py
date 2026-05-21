@@ -2207,8 +2207,25 @@ async def authenticate_api_key(request: Request):
     return row
 
 
+def _accept_lang(request) -> str:
+    """Return 'zh' if the client prefers Chinese, else 'en'.
+
+    Reads the standard ``Accept-Language`` header. Anything starting with
+    ``zh`` (zh, zh-CN, zh-Hans, zh-TW, ...) maps to Chinese; anything else
+    (including missing header, which is common for SDK clients) falls back
+    to English so third-party API consumers get an intelligible message.
+    """
+    try:
+        al = (request.headers.get("accept-language") or "").lower()
+    except Exception:
+        return "en"
+    # Pick the first language tag (highest q by header order is a good-enough heuristic).
+    first = al.split(",")[0].strip()
+    return "zh" if first.startswith("zh") else "en"
+
+
 async def get_active_subscription_backend(user_id: int, auto_fallback: bool = True,
-                                          requested_model: str | None = None):
+                                          requested_model: str | None = None, lang: str = "zh"):
     """Pick a backend from the user's activated subscriptions.
 
     - auto_fallback=True: prefer a sub whose model matches requested_model (if any);
@@ -2217,8 +2234,10 @@ async def get_active_subscription_backend(user_id: int, auto_fallback: bool = Tr
     - auto_fallback=False: require requested_model to exactly match one of the
       user's activated subs; use that one. 404 if not matched; 503 if offline.
 
-    Returns (backend_row, forced_model) or (None, None) if user has no activated subs
-    AND auto_fallback=True (caller may then fall back to public backends)."""
+    Returns (backend_row, forced_model). Always raises HTTP 404 if the user
+    has zero activated subscriptions — callers must NOT fall back to the
+    public backend pool. Users must subscribe and activate at least one model
+    before any request can be served."""
     db = await get_db()
     try:
         cur = await db.execute(
@@ -2233,9 +2252,10 @@ async def get_active_subscription_backend(user_id: int, auto_fallback: bool = Tr
         await db.close()
 
     if not rows:
-        if auto_fallback:
-            return None, None
-        raise HTTPException(404, "你还没有激活任何订阅模型服务")
+        msg = ("你还没有激活任何订阅模型服务，请先订阅并激活至少一个模型"
+               if lang == "zh"
+               else "You have no activated model subscriptions. Please subscribe and activate at least one model before sending requests.")
+        raise HTTPException(404, msg)
 
     if auto_fallback:
         # 1) Try exact match on requested_model first (respects what the user asked for)
@@ -2249,21 +2269,31 @@ async def get_active_subscription_backend(user_id: int, auto_fallback: bool = Tr
             if r.get("status") == "online":
                 forced_model = r.pop("model")
                 return r, forced_model
-        raise HTTPException(503, "所有已激活的订阅模型服务都当前离线")
+        msg = ("所有已激活的订阅模型服务都当前离线"
+               if lang == "zh"
+               else "All of your activated model subscriptions are currently offline.")
+        raise HTTPException(503, msg)
 
     # Manual mode: user must specify the model
     if not requested_model:
         available = sorted({r["model"] for r in rows})
-        raise HTTPException(400,
-            f"自动回退已关闭，请在请求中显式指定 model，可用：{available}")
+        msg = (f"自动回退已关闭，请在请求中显式指定 model，可用：{available}"
+               if lang == "zh"
+               else f"Automatic fallback is disabled; please specify the `model` field explicitly. Available: {available}")
+        raise HTTPException(400, msg)
     matches = [r for r in rows if r["model"] == requested_model]
     if not matches:
         available = sorted({r["model"] for r in rows})
-        raise HTTPException(404,
-            f"模型 '{requested_model}' 不在你已激活的订阅中。可用：{available}")
+        msg = (f"模型 '{requested_model}' 不在你已激活的订阅中。可用：{available}"
+               if lang == "zh"
+               else f"Model '{requested_model}' is not in your activated subscriptions. Available: {available}")
+        raise HTTPException(404, msg)
     r = matches[0]
     if r.get("status") != "online":
-        raise HTTPException(503, f"模型 '{requested_model}' 的订阅服务当前离线（自动回退已关闭）")
+        msg = (f"模型 '{requested_model}' 的订阅服务当前离线（自动回退已关闭）"
+               if lang == "zh"
+               else f"The subscription serving model '{requested_model}' is currently offline (automatic fallback is disabled).")
+        raise HTTPException(503, msg)
     forced_model = r.pop("model")
     return r, forced_model
 
@@ -2510,32 +2540,14 @@ def get_pricing(backend: dict) -> tuple[float, float, float]:
 @app.get("/v1/models")
 async def openai_models(request: Request):
     api_user = await authenticate_api_key(request)
-    # If user has activated subscriptions, only expose those models
+    # Only expose models the user has actively subscribed AND activated.
+    # Zero activated subscriptions => empty list (mirrors the chat/completions
+    # behaviour that requires at least one activated model before any request
+    # can be served).
     activated_models = await get_activated_models(api_user["user_id"])
-    if activated_models:
-        return {
-            "object": "list",
-            "data": [{"id": m, "object": "model", "owned_by": "llm-gateway"} for m in activated_models],
-        }
-
-    db = await get_db()
-    try:
-        cur = await db.execute(
-            "SELECT models FROM backends WHERE status = 'online' AND (is_public = 1 OR owner_id = ?)",
-            (api_user["user_id"],),
-        )
-        rows = await cur.fetchall()
-    finally:
-        await db.close()
-
-    model_set = set()
-    for r in rows:
-        for m in json.loads(r["models"] or "[]"):
-            model_set.add(m)
-
     return {
         "object": "list",
-        "data": [{"id": m, "object": "model", "owned_by": "llm-gateway"} for m in sorted(model_set)],
+        "data": [{"id": m, "object": "model", "owned_by": "llm-gateway"} for m in activated_models],
     }
 
 
@@ -2562,19 +2574,16 @@ async def _handle_openai_request(request: Request, path: str, usage_keys: tuple[
     body = await request.json()
     stream = body.get("stream", False)
 
-    # Prefer user's activated subscriptions (priority routing with optional failover)
+    # Require at least one activated subscription. get_active_subscription_backend
+    # raises 404 otherwise. No fallback to the public backend pool — users must
+    # subscribe and activate a model before any request will be routed.
     auto_fallback = bool(api_user.get("auto_fallback", 1))
     requested_model = body.get("model", "")
+    lang = _accept_lang(request)
     backend, forced_model = await get_active_subscription_backend(
-        api_user["user_id"], auto_fallback, requested_model)
-    if backend:
-        body["model"] = forced_model
-        model = forced_model
-    else:
-        model = body.get("model", "")
-        backend = await find_backend_for_model(model, api_user["user_id"])
-        if not backend:
-            raise HTTPException(404, f"Model '{model}' not available")
+        api_user["user_id"], auto_fallback, requested_model, lang=lang)
+    body["model"] = forced_model
+    model = forced_model
 
     # Remember the user-facing model name for usage logging (before rewrite)
     display_model = model

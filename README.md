@@ -72,7 +72,8 @@ llm-gateway/
 - **双模式后端接入**：
   - **直连**：后端有公网 IP，网关直接 HTTP 转发
   - **隧道**：后端在 NAT 后，运行 `tunnel_client.py` 建立 WebSocket 长连接
-- **路由三模式**（请求体 `model` 字段决定钉定粒度）：
+- **必须先激活订阅**：`/v1/*` 一律只在用户已激活的订阅集合内派发；零激活订阅 → HTTP 404 `你还没有激活任何订阅模型服务，请先订阅并激活至少一个模型`（或英文 `You have no activated model subscriptions...`，按 `Accept-Language` 切换）。`/v1/models` 同步只列已激活模型，零激活返回空列表。**不**回退到公开后端池。
+- **路由三模式**（请求体 `model` 字段决定钉定粒度，前提是用户至少激活了 1 条订阅）：
   - `Auto`（case-insensitive）：跨所有激活订阅 fallback；online 优先于 offline，同 tier 按订阅优先级
   - `<model>`（如 `Qwen/Qwen3.6-35B-A3B`）：仅在该模型组内的多个 provider 间 fallback（同模型可订阅多个后端）
   - `<model>/<backend_name>`：钉死单 backend，**不**做 fallback
