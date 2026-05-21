@@ -2312,23 +2312,6 @@ async def get_activated_models(user_id: int) -> list[str]:
         await db.close()
 
 
-async def find_backend_for_model(model: str, user_id: int):
-    db = await get_db()
-    try:
-        cur = await db.execute(
-            "SELECT * FROM backends WHERE status = 'online' AND (is_public = 1 OR owner_id = ?)", (user_id,)
-        )
-        rows = [dict(r) for r in await cur.fetchall()]
-    finally:
-        await db.close()
-
-    for r in rows:
-        models = json.loads(r["models"]) if r["models"] else []
-        if model in models:
-            return r
-    return None
-
-
 # Models that REQUIRE `max_completion_tokens` and reject `max_tokens` (HTTP 400).
 # OpenAI 2024-09 introduced this for reasoning models (o-series) and applied it
 # to GPT-5.x as well. Both OpenAI and Azure OpenAI enforce this on these models.
