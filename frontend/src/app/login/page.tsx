@@ -1,12 +1,14 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/context/AuthContext"
 import { apiFetch } from "@/lib/api"
 import PasswordInput from "@/components/PasswordInput"
 import Link from "next/link"
 import { useT } from "@/context/LocaleContext"
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || ""
 
 export default function LoginPage() {
   const t = useT()
@@ -19,11 +21,32 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [sending, setSending] = useState(false)
   const [cooldown, setCooldown] = useState(0)
+  const [googleEnabled, setGoogleEnabled] = useState(false)
   const cdRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const router = useRouter()
+  const search = useSearchParams()
   const auth = useAuth()
 
   useEffect(() => () => { if (cdRef.current) clearInterval(cdRef.current) }, [])
+
+  // Surface ?error=... from the OAuth callback redirect.
+  useEffect(() => {
+    const e = search.get("error")
+    if (e) setError(decodeURIComponent(e))
+  }, [search])
+
+  // Probe whether Google sign-in is configured on this gateway.
+  useEffect(() => {
+    let alive = true
+    apiFetch("/api/auth/google/config")
+      .then((d) => { if (alive) setGoogleEnabled(!!d?.enabled) })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [])
+
+  const handleGoogleLogin = () => {
+    window.location.href = `${API_URL}/api/auth/google/login?remember=${remember ? 1 : 0}`
+  }
 
   const handleSendCode = async () => {
     setError(""); setInfo("")
@@ -153,6 +176,28 @@ export default function LoginPage() {
               {loading ? t({ en: "Signing in…", zh: "登录中…" }) : t({ en: "Sign in", zh: "登录" })}
             </button>
           </form>
+          {googleEnabled && (
+            <>
+              <div className="my-5 flex items-center gap-3 text-[11px] uppercase tracking-wider text-fg-subtle">
+                <div className="flex-1 h-px bg-line" />
+                <span>{t({ en: "or", zh: "或" })}</span>
+                <div className="flex-1 h-px bg-line" />
+              </div>
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                className="w-full h-10 rounded-lg bg-surface border border-line text-fg text-sm font-medium hover:bg-accent-soft transition-colors flex items-center justify-center gap-2"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 48 48" aria-hidden="true">
+                  <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.6-6 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z" />
+                  <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 13 24 13c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" />
+                  <path fill="#4CAF50" d="M24 44c5.5 0 10.4-2.1 14.1-5.5l-6.5-5.5C29.5 34.8 26.9 36 24 36c-5.3 0-9.7-3.4-11.3-8l-6.6 5.1C9.6 39.6 16.3 44 24 44z" />
+                  <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4-4 5.2l6.5 5.5c-.5.4 7-5.1 7-14.7 0-1.3-.1-2.4-.4-3.5z" />
+                </svg>
+                {t({ en: "Sign in with Google", zh: "使用 Google 登录" })}
+              </button>
+            </>
+          )}
           <p className="text-center text-sm text-fg-muted mt-6">
             {t({ en: "No account?", zh: "没有账号？" })} <Link href="/register" className="text-fg font-medium hover:underline">{t({ en: "Sign up", zh: "注册" })}</Link>
           </p>

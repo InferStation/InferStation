@@ -7,6 +7,22 @@ jwt:
   algorithm: "HS256"
   access_token_expire_minutes: 1440  # 24h
 
+# Public URL of the Next.js frontend. Used as the OAuth post-login redirect
+# target. Override per-env via FRONTEND_URL.
+frontend_url: "http://localhost:3000"
+
+# Google one-click sign-in.
+#   1. Create OAuth 2.0 client at https://console.cloud.google.com/apis/credentials
+#      → Application type: Web application
+#      → Authorized redirect URI: <gateway>/api/auth/google/callback
+#   2. Fill the three fields below (or set GOOGLE_CLIENT_ID / _SECRET / _REDIRECT_URI env).
+#   3. Leave `enabled: false` to hide the Google button on the login page.
+google_oauth:
+  enabled: false
+  client_id: ""
+  client_secret: ""
+  redirect_uri: "http://localhost:8080/api/auth/google/callback"
+
 admin:
   username: "admin"
   password: "admin123"

@@ -289,6 +289,17 @@ async def init_db():
             # Bumped on password change / self-delete / admin disable so that
             # previously-issued JWTs become invalid even before they expire.
             await db.execute("ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0")
+        # OAuth identity columns (Google one-click sign-in, 2026-05-25). Local
+        # password users keep auth_provider='local'; OAuth users get a random
+        # bcrypt placeholder in password_hash so the local /login path can't
+        # accidentally validate them.
+        if "auth_provider" not in ucols2:
+            await db.execute("ALTER TABLE users ADD COLUMN auth_provider TEXT NOT NULL DEFAULT 'local'")
+        if "google_sub" not in ucols2:
+            await db.execute("ALTER TABLE users ADD COLUMN google_sub TEXT")
+            await db.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_sub ON users(google_sub) WHERE google_sub IS NOT NULL")
+        if "avatar_url" not in ucols2:
+            await db.execute("ALTER TABLE users ADD COLUMN avatar_url TEXT")
 
         cur = await db.execute("PRAGMA table_info(invoices)")
         icols2 = {r[1] for r in await cur.fetchall()}

@@ -16,7 +16,7 @@ import httpx
 import yaml
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import RedirectResponse, StreamingResponse
 from pydantic import BaseModel
 
 from auth import (
@@ -75,6 +75,19 @@ def load_config():
     auth.JWT_EXPIRE_MINUTES = jwt_cfg.get("access_token_expire_minutes", 1440)
     # Apply SMTP config
     email_service.configure(CONFIG.get("smtp"))
+    # Google OAuth: env vars override YAML, so prod can inject secrets without
+    # editing config.yaml. `enabled` is only true if a client_id is actually set.
+    g = dict(CONFIG.get("google_oauth") or {})
+    g["client_id"] = os.environ.get("GOOGLE_CLIENT_ID") or g.get("client_id") or ""
+    g["client_secret"] = os.environ.get("GOOGLE_CLIENT_SECRET") or g.get("client_secret") or ""
+    g["redirect_uri"] = os.environ.get("GOOGLE_REDIRECT_URI") or g.get("redirect_uri") or ""
+    g["enabled"] = bool(g.get("enabled") and g["client_id"] and g["client_secret"] and g["redirect_uri"])
+    CONFIG["google_oauth"] = g
+    CONFIG["frontend_url"] = (
+        os.environ.get("FRONTEND_URL")
+        or CONFIG.get("frontend_url")
+        or "http://localhost:3000"
+    )
 
 
 # ── Asia/Shanghai day/hour helpers ──────────────────────
@@ -600,6 +613,206 @@ async def login(req: LoginRequest):
         "token": token,
         "user": {"id": user["id"], "username": user["username"], "role": user["role"]},
     }
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Google OAuth 2.0 — one-click sign-in / sign-up.
+# Flow:
+#   1. Frontend → GET /api/auth/google/login?remember=0|1
+#        → server sets a short-lived signed state cookie, 302s to Google's
+#          OAuth consent page.
+#   2. Google → GET /api/auth/google/callback?code=...&state=...
+#        → server verifies the state cookie, exchanges code for tokens,
+#          fetches userinfo, looks up or creates the user, mints a JWT,
+#          then 302s to `<frontend_url>/auth/google/done#token=...&remember=...`
+#          so the SPA picks it up (fragment is never sent to the server).
+# ════════════════════════════════════════════════════════════════════════════
+_OAUTH_STATE_COOKIE = "tianshu_oauth_state"
+_GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+_GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+_GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo"
+
+
+def _google_oauth_cfg() -> dict | None:
+    g = CONFIG.get("google_oauth") or {}
+    return g if g.get("enabled") else None
+
+
+def _frontend_redirect(path: str) -> str:
+    base = (CONFIG.get("frontend_url") or "http://localhost:3000").rstrip("/")
+    return f"{base}{path}"
+
+
+@app.get("/api/auth/google/config")
+async def google_oauth_config():
+    """Lets the frontend know whether to show the Google button."""
+    return {"enabled": _google_oauth_cfg() is not None}
+
+
+@app.get("/api/auth/google/login")
+async def google_oauth_login(remember: int = 0):
+    g = _google_oauth_cfg()
+    if not g:
+        raise HTTPException(503, "Google OAuth not configured")
+    state = secrets.token_urlsafe(24)
+    # Pack remember-me into the state itself so the callback restores it
+    # without needing extra cookies.
+    state_payload = f"{state}.{1 if remember else 0}"
+    from urllib.parse import urlencode
+
+    params = {
+        "client_id": g["client_id"],
+        "redirect_uri": g["redirect_uri"],
+        "response_type": "code",
+        "scope": "openid email profile",
+        "state": state_payload,
+        "access_type": "online",
+        "prompt": "select_account",
+    }
+    resp = RedirectResponse(f"{_GOOGLE_AUTH_URL}?{urlencode(params)}", status_code=302)
+    # HttpOnly + SameSite=Lax so Google can POST back. 10-minute TTL.
+    resp.set_cookie(
+        _OAUTH_STATE_COOKIE,
+        state_payload,
+        max_age=600,
+        httponly=True,
+        samesite="lax",
+        path="/api/auth/google",
+    )
+    return resp
+
+
+async def _exchange_google_code(code: str, redirect_uri: str, client_id: str, client_secret: str) -> dict:
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        tok_resp = await client.post(
+            _GOOGLE_TOKEN_URL,
+            data={
+                "code": code,
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "redirect_uri": redirect_uri,
+                "grant_type": "authorization_code",
+            },
+        )
+        if tok_resp.status_code != 200:
+            raise HTTPException(400, f"Google token exchange failed: {tok_resp.text[:200]}")
+        tok = tok_resp.json()
+        access_token = tok.get("access_token")
+        if not access_token:
+            raise HTTPException(400, "Google did not return an access token")
+        ui_resp = await client.get(
+            _GOOGLE_USERINFO_URL,
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        if ui_resp.status_code != 200:
+            raise HTTPException(400, f"Failed to fetch Google userinfo: {ui_resp.text[:200]}")
+        return ui_resp.json()
+
+
+async def _find_or_create_google_user(userinfo: dict) -> dict:
+    sub = userinfo.get("sub")
+    email = (userinfo.get("email") or "").strip().lower()
+    if not sub or not email:
+        raise HTTPException(400, "Google account is missing sub/email")
+    if not userinfo.get("email_verified", False):
+        raise HTTPException(400, "Google email is not verified")
+    name = (userinfo.get("name") or "").strip()
+    picture = (userinfo.get("picture") or "").strip()
+
+    db = await get_db()
+    try:
+        # 1) Match by google_sub (the stable identifier).
+        cur = await db.execute("SELECT * FROM users WHERE google_sub = ? AND is_active = 1", (sub,))
+        row = await cur.fetchone()
+        if row:
+            return dict(row)
+        # 2) Match by verified email → link the Google identity to that account.
+        cur = await db.execute("SELECT * FROM users WHERE email = ? AND is_active = 1", (email,))
+        row = await cur.fetchone()
+        if row:
+            await db.execute(
+                "UPDATE users SET google_sub = ?, auth_provider = COALESCE(auth_provider, 'local'), "
+                "verified = 1, avatar_url = COALESCE(avatar_url, ?) WHERE id = ?",
+                (sub, picture or None, row["id"]),
+            )
+            await db.commit()
+            cur = await db.execute("SELECT * FROM users WHERE id = ?", (row["id"],))
+            return dict(await cur.fetchone())
+        # 3) New user: synthesize a unique username from the email local-part.
+        base = re.sub(r"[^a-z0-9_]", "", email.split("@", 1)[0].lower()) or "user"
+        username = base
+        for _ in range(5):
+            cur = await db.execute("SELECT 1 FROM users WHERE username = ?", (username,))
+            if not await cur.fetchone():
+                break
+            username = f"{base}_{secrets.token_hex(3)}"
+        # OAuth users get a random un-guessable password_hash so the local
+        # /api/auth/login path can never match them by password.
+        placeholder = hash_password(secrets.token_urlsafe(32))
+        cur = await db.execute(
+            "INSERT INTO users (username, email, password_hash, role, verified, "
+            "auth_provider, google_sub, avatar_url) "
+            "VALUES (?, ?, ?, 'consumer', 1, 'google', ?, ?)",
+            (username, email, placeholder, sub, picture or None),
+        )
+        await db.commit()
+        cur = await db.execute("SELECT * FROM users WHERE id = ?", (cur.lastrowid,))
+        return dict(await cur.fetchone())
+    finally:
+        await db.close()
+
+
+@app.get("/api/auth/google/callback")
+async def google_oauth_callback(request: Request, code: str | None = None, state: str | None = None, error: str | None = None):
+    g = _google_oauth_cfg()
+    if not g:
+        raise HTTPException(503, "Google OAuth not configured")
+
+    def _fail(msg: str) -> RedirectResponse:
+        from urllib.parse import quote
+
+        resp = RedirectResponse(_frontend_redirect(f"/login?error={quote(msg)}"), status_code=302)
+        resp.delete_cookie(_OAUTH_STATE_COOKIE, path="/api/auth/google")
+        return resp
+
+    if error:
+        return _fail(f"Google: {error}")
+    if not code or not state:
+        return _fail("missing_code_or_state")
+
+    cookie_state = request.cookies.get(_OAUTH_STATE_COOKIE)
+    if not cookie_state or not secrets.compare_digest(cookie_state, state):
+        return _fail("state_mismatch")
+    try:
+        remember = state.rsplit(".", 1)[1] == "1"
+    except (IndexError, ValueError):
+        remember = False
+
+    try:
+        userinfo = await _exchange_google_code(
+            code=code,
+            redirect_uri=g["redirect_uri"],
+            client_id=g["client_id"],
+            client_secret=g["client_secret"],
+        )
+        user = await _find_or_create_google_user(userinfo)
+    except HTTPException as e:
+        return _fail(str(e.detail))
+    except Exception as e:
+        logger.exception("google oauth callback failed")
+        return _fail(f"server_error: {e!s}"[:200])
+
+    expires_minutes = 7 * 24 * 60 if remember else None
+    token = create_access_token(
+        user["id"], user["role"],
+        token_version=int(user.get("token_version") or 0),
+        expires_minutes=expires_minutes,
+    )
+    # Token is placed in the URL fragment so it never hits the server logs.
+    target = _frontend_redirect(f"/auth/google/done#token={token}&remember={'1' if remember else '0'}")
+    resp = RedirectResponse(target, status_code=302)
+    resp.delete_cookie(_OAUTH_STATE_COOKIE, path="/api/auth/google")
+    return resp
 
 
 @app.get("/healthz")
