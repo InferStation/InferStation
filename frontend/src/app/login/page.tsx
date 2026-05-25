@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { useAuth } from "@/context/AuthContext"
 import { apiFetch } from "@/lib/api"
 import PasswordInput from "@/components/PasswordInput"
@@ -24,16 +24,18 @@ export default function LoginPage() {
   const [googleEnabled, setGoogleEnabled] = useState(false)
   const cdRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const router = useRouter()
-  const search = useSearchParams()
   const auth = useAuth()
 
   useEffect(() => () => { if (cdRef.current) clearInterval(cdRef.current) }, [])
 
-  // Surface ?error=... from the OAuth callback redirect.
+  // Surface ?error=... from the OAuth callback redirect. Read from
+  // window.location directly so we don't pull in useSearchParams() and force
+  // a Suspense boundary on static pre-rendering.
   useEffect(() => {
-    const e = search.get("error")
+    if (typeof window === "undefined") return
+    const e = new URLSearchParams(window.location.search).get("error")
     if (e) setError(decodeURIComponent(e))
-  }, [search])
+  }, [])
 
   // Probe whether Google sign-in is configured on this gateway.
   useEffect(() => {
