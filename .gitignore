@@ -10,3 +10,6 @@ node_modules/
 .venv/
 *.tsbuildinfo
 backend/config.yaml
+
+# Rust/Tauri client build artifacts
+client/target/

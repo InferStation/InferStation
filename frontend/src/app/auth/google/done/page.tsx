@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/context/AuthContext"
 import { useT } from "@/context/LocaleContext"
@@ -14,8 +14,17 @@ export default function GoogleOAuthDone() {
   const router = useRouter()
   const auth = useAuth()
   const [error, setError] = useState<string | null>(null)
+  // AuthProvider rebuilds its context value on every render and useT() returns
+  // a fresh closure each render, so the effect deps change as soon as
+  // `auth.login()` calls setToken/setUser — without this guard the effect
+  // re-fires, finds the hash already wiped, and bails out as "missing token"
+  // (or worse, bounces the user back to /login mid-login).
+  const ranRef = useRef(false)
 
   useEffect(() => {
+    if (ranRef.current) return
+    ranRef.current = true
+
     const hash = typeof window !== "undefined" ? window.location.hash.slice(1) : ""
     const params = new URLSearchParams(hash)
     const token = params.get("token")

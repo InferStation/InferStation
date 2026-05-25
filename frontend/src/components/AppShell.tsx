@@ -9,12 +9,13 @@ import SideNav from "@/components/SideNav"
 import TopBar from "@/components/TopBar"
 import { IconLayers } from "@/components/ui/Icon"
 
-const NO_SHELL = ["/login", "/register"]
+const NO_SHELL = ["/login", "/register", "/auth/google/done"]
 // Public pages: bare minimum required for entry, legal compliance,
 // and payment redirect. Everything else (including /about, /docs, /pricing,
 // /providers, /models, /) is gated behind login during closed beta.
 const PUBLIC_PATHS = new Set([
   "/login", "/register",
+  "/auth/google/done",
   "/privacy", "/terms", "/sla",
   "/payment/return",
 ])
