@@ -1,0 +1,51 @@
+{
+  "schema_version": 0,
+  "run_date": "2026-05-22",
+  "host": {
+    "slug": "ryzen-ai-max-395-03",
+    "name": "Ryzen AI Max+ 395",
+    "vendor": "AMD",
+    "chip": "Strix Halo (gfx1151)",
+    "vram_gb": 128,
+    "deployment_form": "apu_minipc"
+  },
+  "model": {
+    "slug": "qwen3.6-27b",
+    "name": "Qwen3.6-27B",
+    "params_b": 27,
+    "quantization": "BF16",
+    "source_url": "https://huggingface.co/unsloth/Qwen3.6-27B-GGUF"
+  },
+  "engine": {
+    "slug": "vllm",
+    "name": "vLLM",
+    "version": "0.19.2rc1.dev113+g6aa057c9d",
+    "commit": "0.19.2rc1.dev113+g6aa057c9d",
+    "backend": "vLLM",
+    "build_flags": ""
+  },
+  "command": "vllm bench throughput --model /model --dtype bfloat16 --max-model-len 2304 --max-num-seqs 1 --gpu-memory-utilization 0.85 --dataset-name random --input-len 512 --output-len 128 --num-prompts 32 --output-json /tmp/vllm-bench-qwen3.6-27b-BF16.json",
+  "pp_test": "in512",
+  "pp_toks_per_s": 16.56033400448723,
+  "tg_test": "out128",
+  "tg_toks_per_s": 4.140083501121808,
+  "combined_toks_per_s": 37.26075151009627,
+  "ttft_ms": null,
+  "ctx": 640,
+  "batch": null,
+  "concurrency": 1,
+  "n_gpu_layers": null,
+  "vram_used_gb": null,
+  "scenario": "vllm-bench-throughput-in512-out128-npl1",
+  "usability_tag": "ok",
+  "log_url": "",
+  "source_url": "",
+  "notes": "vllm bench throughput (ROCm gfx1151); pp_toks_per_s derived as num_prompts*input_len/elapsed",
+  "raw_vllm_bench": {
+    "elapsed_time": 989.3520260859805,
+    "num_requests": 32,
+    "total_num_tokens": 36864,
+    "requests_per_second": 0.03234440235251412,
+    "tokens_per_second": 37.26075151009627
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "schema_version": 0,
+  "run_date": "2026-05-22",
+  "host": {
+    "slug": "dgx-spark-01",
+    "name": "DGX Spark",
+    "vendor": "NVIDIA",
+    "chip": "GB10",
+    "vram_gb": 128,
+    "deployment_form": "apu_minipc"
+  },
+  "model": {
+    "slug": "gemma-4-26b-a4b-it",
+    "name": "Gemma-4-26B-A4B-it",
+    "params_b": 26,
+    "quantization": "BF16",
+    "source_url": "https://huggingface.co/unsloth/gemma-4-26B-A4B-it"
+  },
+  "engine": {
+    "slug": "vllm",
+    "name": "vLLM",
+    "version": "cu130-nightly-9dd5ee01",
+    "commit": "9dd5ee0117be1b891d1ddc4e5cd7d03071ec11ae",
+    "backend": "vLLM",
+    "build_flags": ""
+  },
+  "command": "vllm bench throughput (cu130-nightly, transformers main)",
+  "pp_test": "in512",
+  "pp_toks_per_s": 238.61231494304448,
+  "tg_test": "out128",
+  "tg_toks_per_s": 59.65307873576112,
+  "combined_toks_per_s": 536.87770862185,
+  "ttft_ms": null,
+  "ctx": 640,
+  "batch": 4,
+  "concurrency": 4,
+  "n_gpu_layers": null,
+  "vram_used_gb": null,
+  "scenario": "vllm-bench-throughput-in512-out128-npl4",
+  "usability_tag": "ok",
+  "log_url": "",
+  "source_url": "",
+  "notes": "vllm bench throughput; pp_toks_per_s derived as num_prompts*input_len/elapsed",
+  "raw_vllm_bench": {
+    "elapsed_time": 68.66368152000359,
+    "num_requests": 32,
+    "total_num_tokens": 36864,
+    "requests_per_second": 0.46603967762313375,
+    "tokens_per_second": 536.87770862185
+  }
+}

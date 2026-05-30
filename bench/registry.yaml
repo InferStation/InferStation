@@ -1,0 +1,647 @@
+# InferStation bench registry
+#
+# Edit this file to add/remove benchmark runs. Each entry under `runs:` is
+# one (host, model, quant) tuple. Comment out or delete an entry to skip it.
+#
+# To trigger a batch run on the dgx-spark-01 self-hosted runner:
+#   Actions → "bench-batch" → Run workflow
+#   (Optional `filter` input: comma-separated "<model>:<quant>" entries.)
+
+models:
+  qwen3.6-35b-a3b:
+    name: Qwen3.6-35B-A3B
+    params_b: 35
+    host_dir: Qwen3.6-35B-A3B
+    hf_repo: unsloth/Qwen3.6-35B-A3B-GGUF
+    source_url: https://huggingface.co/unsloth/Qwen3.6-35B-A3B-GGUF
+    quants:
+      Q8_0:         { filename: "Qwen3.6-35B-A3B-Q8_0.gguf" }
+      UD-Q4_K_M:    { filename: "Qwen3.6-35B-A3B-UD-Q4_K_M.gguf" }
+      UD-Q3_K_M:    { filename: "Qwen3.6-35B-A3B-UD-Q3_K_M.gguf" }
+      UD-IQ2_M:     { filename: "Qwen3.6-35B-A3B-UD-IQ2_M.gguf" }
+      MXFP4_MOE:    { filename: "Qwen3.6-35B-A3B-MXFP4_MOE.gguf" }
+      UD-IQ1_M:     { filename: "Qwen3.6-35B-A3B-UD-IQ1_M.gguf" }
+      UD-IQ2_XXS:   { filename: "Qwen3.6-35B-A3B-UD-IQ2_XXS.gguf" }
+      UD-IQ3_S:     { filename: "Qwen3.6-35B-A3B-UD-IQ3_S.gguf" }
+      UD-IQ3_XXS:   { filename: "Qwen3.6-35B-A3B-UD-IQ3_XXS.gguf" }
+      UD-IQ4_NL:    { filename: "Qwen3.6-35B-A3B-UD-IQ4_NL.gguf" }
+      UD-IQ4_NL_XL: { filename: "Qwen3.6-35B-A3B-UD-IQ4_NL_XL.gguf" }
+      UD-IQ4_XS:    { filename: "Qwen3.6-35B-A3B-UD-IQ4_XS.gguf" }
+      UD-Q2_K_XL:   { filename: "Qwen3.6-35B-A3B-UD-Q2_K_XL.gguf" }
+      UD-Q3_K_S:    { filename: "Qwen3.6-35B-A3B-UD-Q3_K_S.gguf" }
+      UD-Q3_K_XL:   { filename: "Qwen3.6-35B-A3B-UD-Q3_K_XL.gguf" }
+      UD-Q4_K_S:    { filename: "Qwen3.6-35B-A3B-UD-Q4_K_S.gguf" }
+      UD-Q4_K_XL:   { filename: "Qwen3.6-35B-A3B-UD-Q4_K_XL.gguf" }
+      UD-Q5_K_M:    { filename: "Qwen3.6-35B-A3B-UD-Q5_K_M.gguf" }
+      UD-Q5_K_S:    { filename: "Qwen3.6-35B-A3B-UD-Q5_K_S.gguf" }
+      UD-Q5_K_XL:   { filename: "Qwen3.6-35B-A3B-UD-Q5_K_XL.gguf" }
+      UD-Q6_K:      { filename: "Qwen3.6-35B-A3B-UD-Q6_K.gguf" }
+      UD-Q6_K_XL:   { filename: "Qwen3.6-35B-A3B-UD-Q6_K_XL.gguf" }
+      UD-Q8_K_XL:   { filename: "Qwen3.6-35B-A3B-UD-Q8_K_XL.gguf" }
+      # vLLM-compatible HF snapshot (BF16 safetensors, ~70GB). Downloaded
+      # on first use into <models_root>/<host_dir>-BF16/.
+      BF16:
+        format: hf-snapshot
+        hf_repo: unsloth/Qwen3.6-35B-A3B
+
+  gemma-4-26b-a4b-it:
+    name: Gemma-4-26B-A4B-it
+    params_b: 26
+    host_dir: Gemma-4-26B-A4B-it-smoke
+    hf_repo: unsloth/gemma-4-26B-A4B-it-GGUF
+    source_url: https://huggingface.co/unsloth/gemma-4-26B-A4B-it-GGUF
+    quants:
+      MXFP4_MOE:   { filename: "gemma-4-26B-A4B-it-MXFP4_MOE.gguf" }
+      Q8_0:        { filename: "gemma-4-26B-A4B-it-Q8_0.gguf" }
+      UD-IQ2_M:    { filename: "gemma-4-26B-A4B-it-UD-IQ2_M.gguf" }
+      UD-IQ2_XXS:  { filename: "gemma-4-26B-A4B-it-UD-IQ2_XXS.gguf" }
+      UD-IQ3_S:    { filename: "gemma-4-26B-A4B-it-UD-IQ3_S.gguf" }
+      UD-IQ3_XXS:  { filename: "gemma-4-26B-A4B-it-UD-IQ3_XXS.gguf" }
+      UD-IQ4_NL:   { filename: "gemma-4-26B-A4B-it-UD-IQ4_NL.gguf" }
+      UD-IQ4_XS:   { filename: "gemma-4-26B-A4B-it-UD-IQ4_XS.gguf" }
+      UD-Q2_K_XL:  { filename: "gemma-4-26B-A4B-it-UD-Q2_K_XL.gguf" }
+      UD-Q3_K_M:   { filename: "gemma-4-26B-A4B-it-UD-Q3_K_M.gguf" }
+      UD-Q3_K_XL:  { filename: "gemma-4-26B-A4B-it-UD-Q3_K_XL.gguf" }
+      UD-Q4_K_M:   { filename: "gemma-4-26B-A4B-it-UD-Q4_K_M.gguf" }
+      UD-Q4_K_S:   { filename: "gemma-4-26B-A4B-it-UD-Q4_K_S.gguf" }
+      UD-Q4_K_XL:  { filename: "gemma-4-26B-A4B-it-UD-Q4_K_XL.gguf" }
+      UD-Q5_K_M:   { filename: "gemma-4-26B-A4B-it-UD-Q5_K_M.gguf" }
+      UD-Q5_K_S:   { filename: "gemma-4-26B-A4B-it-UD-Q5_K_S.gguf" }
+      UD-Q5_K_XL:  { filename: "gemma-4-26B-A4B-it-UD-Q5_K_XL.gguf" }
+      UD-Q6_K:     { filename: "gemma-4-26B-A4B-it-UD-Q6_K.gguf" }
+      UD-Q6_K_XL:  { filename: "gemma-4-26B-A4B-it-UD-Q6_K_XL.gguf" }
+      UD-Q8_K_XL:  { filename: "gemma-4-26B-A4B-it-UD-Q8_K_XL.gguf" }
+      # vLLM-compatible HF snapshot (BF16 safetensors).
+      BF16:
+        format: hf-snapshot
+        hf_repo: unsloth/gemma-4-26B-A4B-it
+
+  qwen3.6-27b:
+    name: Qwen3.6-27B
+    params_b: 27
+    host_dir: Qwen3.6-27B
+    hf_repo: unsloth/Qwen3.6-27B-GGUF
+    source_url: https://huggingface.co/unsloth/Qwen3.6-27B-GGUF
+    quants:
+      IQ4_NL:      { filename: "Qwen3.6-27B-IQ4_NL.gguf" }
+      IQ4_XS:      { filename: "Qwen3.6-27B-IQ4_XS.gguf" }
+      Q3_K_M:      { filename: "Qwen3.6-27B-Q3_K_M.gguf" }
+      Q3_K_S:      { filename: "Qwen3.6-27B-Q3_K_S.gguf" }
+      Q4_0:        { filename: "Qwen3.6-27B-Q4_0.gguf" }
+      Q4_1:        { filename: "Qwen3.6-27B-Q4_1.gguf" }
+      Q4_K_M:      { filename: "Qwen3.6-27B-Q4_K_M.gguf" }
+      Q4_K_S:      { filename: "Qwen3.6-27B-Q4_K_S.gguf" }
+      Q5_K_M:      { filename: "Qwen3.6-27B-Q5_K_M.gguf" }
+      Q5_K_S:      { filename: "Qwen3.6-27B-Q5_K_S.gguf" }
+      Q6_K:        { filename: "Qwen3.6-27B-Q6_K.gguf" }
+      Q8_0:        { filename: "Qwen3.6-27B-Q8_0.gguf" }
+      UD-IQ2_M:    { filename: "Qwen3.6-27B-UD-IQ2_M.gguf" }
+      UD-IQ2_XXS:  { filename: "Qwen3.6-27B-UD-IQ2_XXS.gguf" }
+      UD-IQ3_XXS:  { filename: "Qwen3.6-27B-UD-IQ3_XXS.gguf" }
+      UD-Q2_K_XL:  { filename: "Qwen3.6-27B-UD-Q2_K_XL.gguf" }
+      UD-Q3_K_XL:  { filename: "Qwen3.6-27B-UD-Q3_K_XL.gguf" }
+      UD-Q4_K_XL:  { filename: "Qwen3.6-27B-UD-Q4_K_XL.gguf" }
+      UD-Q5_K_XL:  { filename: "Qwen3.6-27B-UD-Q5_K_XL.gguf" }
+      UD-Q6_K_XL:  { filename: "Qwen3.6-27B-UD-Q6_K_XL.gguf" }
+      UD-Q8_K_XL:  { filename: "Qwen3.6-27B-UD-Q8_K_XL.gguf" }
+      # vLLM-compatible HF snapshot (BF16 safetensors).
+      BF16:
+        format: hf-snapshot
+        hf_repo: unsloth/Qwen3.6-27B
+
+# `runs` is the queue.
+runs:
+
+  # ---- qwen3.6-35b-a3b (cuda) ----
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: Q8_0, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: Q8_0, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: Q8_0, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: Q8_0, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q4_K_M, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q4_K_M, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q4_K_M, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q4_K_M, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q3_K_M, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q3_K_M, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q3_K_M, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q3_K_M, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ2_M, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ2_M, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ2_M, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ2_M, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: MXFP4_MOE, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: MXFP4_MOE, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: MXFP4_MOE, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: MXFP4_MOE, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ1_M, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ1_M, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ1_M, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ1_M, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ2_XXS, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ2_XXS, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ2_XXS, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ2_XXS, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ3_S, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ3_S, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ3_S, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ3_S, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ3_XXS, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ3_XXS, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ3_XXS, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ3_XXS, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ4_NL, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ4_NL, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ4_NL, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ4_NL, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ4_NL_XL, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ4_NL_XL, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ4_NL_XL, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ4_NL_XL, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ4_XS, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ4_XS, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ4_XS, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ4_XS, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q2_K_XL, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q2_K_XL, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q2_K_XL, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q2_K_XL, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q3_K_S, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q3_K_S, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q3_K_S, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q3_K_S, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q3_K_XL, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q3_K_XL, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q3_K_XL, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q3_K_XL, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q4_K_S, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q4_K_S, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q4_K_S, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q4_K_S, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q4_K_XL, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q4_K_XL, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q4_K_XL, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q4_K_XL, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q5_K_M, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q5_K_M, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q5_K_M, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q5_K_M, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q5_K_S, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q5_K_S, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q5_K_S, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q5_K_S, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q5_K_XL, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q5_K_XL, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q5_K_XL, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q5_K_XL, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q6_K, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q6_K, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q6_K, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q6_K, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q6_K_XL, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q6_K_XL, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q6_K_XL, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q6_K_XL, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q8_K_XL, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q8_K_XL, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q8_K_XL, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q8_K_XL, npl: 32 }
+  # ---- qwen3.6-35b-a3b (vulkan) ----
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: Q8_0, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: Q8_0, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: Q8_0, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: Q8_0, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q4_K_M, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q4_K_M, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q4_K_M, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q4_K_M, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q3_K_M, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q3_K_M, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q3_K_M, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q3_K_M, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ2_M, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ2_M, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ2_M, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ2_M, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: MXFP4_MOE, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: MXFP4_MOE, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: MXFP4_MOE, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: MXFP4_MOE, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ1_M, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ1_M, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ1_M, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ1_M, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ2_XXS, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ2_XXS, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ2_XXS, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ2_XXS, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ3_S, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ3_S, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ3_S, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ3_S, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ3_XXS, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ3_XXS, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ3_XXS, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ3_XXS, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ4_NL, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ4_NL, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ4_NL, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ4_NL, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ4_NL_XL, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ4_NL_XL, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ4_NL_XL, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ4_NL_XL, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ4_XS, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ4_XS, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ4_XS, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-IQ4_XS, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q2_K_XL, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q2_K_XL, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q2_K_XL, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q2_K_XL, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q3_K_S, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q3_K_S, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q3_K_S, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q3_K_S, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q3_K_XL, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q3_K_XL, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q3_K_XL, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q3_K_XL, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q4_K_S, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q4_K_S, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q4_K_S, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q4_K_S, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q4_K_XL, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q4_K_XL, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q4_K_XL, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q4_K_XL, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q5_K_M, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q5_K_M, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q5_K_M, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q5_K_M, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q5_K_S, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q5_K_S, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q5_K_S, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q5_K_S, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q5_K_XL, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q5_K_XL, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q5_K_XL, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q5_K_XL, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q6_K, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q6_K, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q6_K, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q6_K, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q6_K_XL, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q6_K_XL, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q6_K_XL, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q6_K_XL, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q8_K_XL, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q8_K_XL, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q8_K_XL, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: UD-Q8_K_XL, backend: vulkan, npl: 32 }
+  # ---- qwen3.6-35b-a3b (vllm) ----
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: BF16, backend: vllm, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: BF16, backend: vllm, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: BF16, backend: vllm, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: BF16, backend: vllm, npl: 32 }
+  # ---- gemma-4-26b-a4b-it (cuda) ----
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: MXFP4_MOE, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: MXFP4_MOE, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: MXFP4_MOE, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: MXFP4_MOE, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: Q8_0, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: Q8_0, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: Q8_0, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: Q8_0, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ2_M, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ2_M, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ2_M, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ2_M, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ2_XXS, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ2_XXS, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ2_XXS, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ2_XXS, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ3_S, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ3_S, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ3_S, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ3_S, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ3_XXS, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ3_XXS, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ3_XXS, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ3_XXS, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ4_NL, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ4_NL, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ4_NL, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ4_NL, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ4_XS, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ4_XS, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ4_XS, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ4_XS, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q2_K_XL, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q2_K_XL, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q2_K_XL, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q2_K_XL, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q3_K_M, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q3_K_M, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q3_K_M, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q3_K_M, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q3_K_XL, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q3_K_XL, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q3_K_XL, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q3_K_XL, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q4_K_M, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q4_K_M, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q4_K_M, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q4_K_M, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q4_K_S, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q4_K_S, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q4_K_S, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q4_K_S, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q4_K_XL, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q4_K_XL, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q4_K_XL, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q4_K_XL, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q5_K_M, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q5_K_M, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q5_K_M, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q5_K_M, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q5_K_S, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q5_K_S, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q5_K_S, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q5_K_S, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q5_K_XL, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q5_K_XL, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q5_K_XL, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q5_K_XL, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q6_K, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q6_K, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q6_K, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q6_K, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q6_K_XL, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q6_K_XL, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q6_K_XL, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q6_K_XL, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q8_K_XL, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q8_K_XL, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q8_K_XL, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q8_K_XL, npl: 32 }
+  # ---- qwen3.6-27b (cuda) ----
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: IQ4_NL, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: IQ4_NL, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: IQ4_NL, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: IQ4_NL, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: IQ4_XS, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: IQ4_XS, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: IQ4_XS, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: IQ4_XS, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q3_K_M, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q3_K_M, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q3_K_M, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q3_K_M, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q3_K_S, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q3_K_S, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q3_K_S, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q3_K_S, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_0, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_0, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_0, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_0, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_1, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_1, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_1, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_1, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_K_M, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_K_M, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_K_M, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_K_M, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_K_S, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_K_S, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_K_S, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_K_S, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q5_K_M, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q5_K_M, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q5_K_M, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q5_K_M, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q5_K_S, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q5_K_S, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q5_K_S, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q5_K_S, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q6_K, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q6_K, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q6_K, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q6_K, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q8_0, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q8_0, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q8_0, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q8_0, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-IQ2_M, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-IQ2_M, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-IQ2_M, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-IQ2_M, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-IQ2_XXS, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-IQ2_XXS, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-IQ2_XXS, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-IQ2_XXS, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-IQ3_XXS, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-IQ3_XXS, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-IQ3_XXS, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-IQ3_XXS, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q2_K_XL, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q2_K_XL, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q2_K_XL, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q2_K_XL, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q3_K_XL, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q3_K_XL, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q3_K_XL, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q3_K_XL, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q4_K_XL, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q4_K_XL, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q4_K_XL, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q4_K_XL, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q5_K_XL, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q5_K_XL, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q5_K_XL, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q5_K_XL, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q6_K_XL, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q6_K_XL, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q6_K_XL, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q6_K_XL, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q8_K_XL, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q8_K_XL, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q8_K_XL, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q8_K_XL, npl: 32 }
+  # ---- gemma-4-26b-a4b-it (vulkan) ----
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: MXFP4_MOE, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: MXFP4_MOE, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: MXFP4_MOE, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: MXFP4_MOE, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: Q8_0, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: Q8_0, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: Q8_0, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: Q8_0, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ2_M, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ2_M, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ2_M, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ2_M, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ2_XXS, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ2_XXS, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ2_XXS, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ2_XXS, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ3_S, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ3_S, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ3_S, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ3_S, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ3_XXS, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ3_XXS, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ3_XXS, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ3_XXS, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ4_NL, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ4_NL, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ4_NL, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ4_NL, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ4_XS, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ4_XS, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ4_XS, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-IQ4_XS, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q2_K_XL, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q2_K_XL, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q2_K_XL, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q2_K_XL, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q3_K_M, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q3_K_M, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q3_K_M, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q3_K_M, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q3_K_XL, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q3_K_XL, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q3_K_XL, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q3_K_XL, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q4_K_M, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q4_K_M, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q4_K_M, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q4_K_M, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q4_K_S, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q4_K_S, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q4_K_S, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q4_K_S, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q4_K_XL, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q4_K_XL, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q4_K_XL, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q4_K_XL, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q5_K_M, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q5_K_M, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q5_K_M, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q5_K_M, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q5_K_S, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q5_K_S, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q5_K_S, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q5_K_S, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q5_K_XL, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q5_K_XL, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q5_K_XL, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q5_K_XL, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q6_K, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q6_K, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q6_K, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q6_K, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q6_K_XL, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q6_K_XL, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q6_K_XL, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q6_K_XL, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q8_K_XL, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q8_K_XL, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q8_K_XL, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: UD-Q8_K_XL, backend: vulkan, npl: 32 }
+  # ---- qwen3.6-27b (vulkan) ----
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: IQ4_NL, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: IQ4_NL, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: IQ4_NL, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: IQ4_NL, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: IQ4_XS, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: IQ4_XS, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: IQ4_XS, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: IQ4_XS, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q3_K_M, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q3_K_M, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q3_K_M, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q3_K_M, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q3_K_S, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q3_K_S, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q3_K_S, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q3_K_S, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_0, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_0, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_0, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_0, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_1, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_1, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_1, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_1, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_K_M, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_K_M, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_K_M, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_K_M, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_K_S, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_K_S, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_K_S, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q4_K_S, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q5_K_M, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q5_K_M, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q5_K_M, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q5_K_M, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q5_K_S, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q5_K_S, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q5_K_S, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q5_K_S, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q6_K, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q6_K, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q6_K, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q6_K, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q8_0, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q8_0, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q8_0, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: Q8_0, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-IQ2_M, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-IQ2_M, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-IQ2_M, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-IQ2_M, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-IQ2_XXS, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-IQ2_XXS, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-IQ2_XXS, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-IQ2_XXS, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-IQ3_XXS, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-IQ3_XXS, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-IQ3_XXS, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-IQ3_XXS, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q2_K_XL, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q2_K_XL, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q2_K_XL, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q2_K_XL, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q3_K_XL, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q3_K_XL, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q3_K_XL, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q3_K_XL, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q4_K_XL, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q4_K_XL, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q4_K_XL, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q4_K_XL, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q5_K_XL, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q5_K_XL, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q5_K_XL, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q5_K_XL, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q6_K_XL, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q6_K_XL, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q6_K_XL, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q6_K_XL, backend: vulkan, npl: 32 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q8_K_XL, backend: vulkan, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q8_K_XL, backend: vulkan, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q8_K_XL, backend: vulkan, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: UD-Q8_K_XL, backend: vulkan, npl: 32 }
+  # ---- gemma-4-26b-a4b-it (vllm) ----
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: BF16, backend: vllm, npl: 1 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: BF16, backend: vllm, npl: 4 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: BF16, backend: vllm, npl: 16 }
+  - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: BF16, backend: vllm, npl: 32 }
+  # ---- qwen3.6-27b (vllm) ----
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: BF16, backend: vllm, npl: 1 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: BF16, backend: vllm, npl: 4 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: BF16, backend: vllm, npl: 16 }
+  - { host: dgx-spark-01, model: qwen3.6-27b, quant: BF16, backend: vllm, npl: 32 }
