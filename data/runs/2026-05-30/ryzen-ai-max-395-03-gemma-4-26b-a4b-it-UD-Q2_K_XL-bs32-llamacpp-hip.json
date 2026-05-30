@@ -26,10 +26,10 @@
   },
   "command": "/work/llama.cpp/build-hip-fa/bin/llama-batched-bench -m /models/Gemma-4-26B-A4B-it-smoke/gemma-4-26B-A4B-it-UD-Q2_K_XL.gguf -ngl 999 -npp 512 -ntg 128 -npl 32 --output-format jsonl",
   "pp_test": "pp512",
-  "pp_toks_per_s": 1137.774658,
+  "pp_toks_per_s": 1142.372925,
   "tg_test": "tg128",
-  "tg_toks_per_s": 291.542389,
-  "combined_toks_per_s": 719.87323,
+  "tg_toks_per_s": 291.327393,
+  "combined_toks_per_s": 721.079529,
   "ttft_ms": null,
   "ctx": 20480,
   "batch": 2048,
@@ -55,12 +55,12 @@
       "tg": 128,
       "pl": 32,
       "n_kv": 20480,
-      "t_pp": 14.400039,
-      "speed_pp": 1137.774658,
-      "t_tg": 14.049415,
-      "speed_tg": 291.542389,
-      "t": 28.449453,
-      "speed": 719.87323
+      "t_pp": 14.342076,
+      "speed_pp": 1142.372925,
+      "t_tg": 14.059783,
+      "speed_tg": 291.327393,
+      "t": 28.401859,
+      "speed": 721.079529
     }
   ]
 }
