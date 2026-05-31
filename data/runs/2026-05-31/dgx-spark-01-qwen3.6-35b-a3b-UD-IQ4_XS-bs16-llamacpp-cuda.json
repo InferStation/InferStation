@@ -1,0 +1,66 @@
+{
+  "schema_version": 0,
+  "run_date": "2026-05-31",
+  "host": {
+    "slug": "dgx-spark-01",
+    "name": "DGX Spark",
+    "vendor": "NVIDIA",
+    "chip": "GB10",
+    "vram_gb": 128,
+    "deployment_form": "apu_minipc"
+  },
+  "model": {
+    "slug": "qwen3.6-35b-a3b",
+    "name": "Qwen3.6-35B-A3B",
+    "params_b": 35,
+    "quantization": "UD-IQ4_XS",
+    "source_url": "https://huggingface.co/unsloth/Qwen3.6-35B-A3B-GGUF"
+  },
+  "engine": {
+    "slug": "llamacpp-cuda",
+    "name": "llama.cpp",
+    "version": "master",
+    "commit": "4c1c3ac09d6c0cd1176f307a14267e86dcf59998",
+    "backend": "CUDA",
+    "build_flags": "-DGGML_CUDA=ON"
+  },
+  "command": "llama-batched-bench -m /models/Qwen3.6-35B-A3B-UD-IQ4_XS.gguf -ngl 999 -npp 512 -ntg 128 -npl 1,4,16,32 --output-format jsonl",
+  "pp_test": "pp512",
+  "pp_toks_per_s": 2163.896729,
+  "tg_test": "tg128",
+  "tg_toks_per_s": 193.960251,
+  "combined_toks_per_s": 713.85614,
+  "ttft_ms": null,
+  "ctx": 10240,
+  "batch": 2048,
+  "concurrency": 16,
+  "n_gpu_layers": 999,
+  "vram_used_gb": null,
+  "scenario": "llama-batched-bench-pp512-tg128-npl1x4x16x32",
+  "usability_tag": "ok",
+  "log_url": "",
+  "source_url": "",
+  "notes": "",
+  "raw_llamabench": [
+    {
+      "n_kv_max": 262144,
+      "n_batch": 2048,
+      "n_ubatch": 512,
+      "flash_attn": -1,
+      "is_pp_shared": 0,
+      "n_gpu_layers": 999,
+      "n_threads": 20,
+      "n_threads_batch": 20,
+      "pp": 512,
+      "tg": 128,
+      "pl": 16,
+      "n_kv": 10240,
+      "t_pp": 3.785763,
+      "speed_pp": 2163.896729,
+      "t_tg": 10.558865,
+      "speed_tg": 193.960251,
+      "t": 14.344627,
+      "speed": 713.85614
+    }
+  ]
+}
