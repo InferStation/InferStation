@@ -1,0 +1,66 @@
+{
+  "schema_version": 0,
+  "run_date": "2026-05-31",
+  "host": {
+    "slug": "dgx-spark-01",
+    "name": "DGX Spark",
+    "vendor": "NVIDIA",
+    "chip": "GB10",
+    "vram_gb": 128,
+    "deployment_form": "apu_minipc"
+  },
+  "model": {
+    "slug": "qwen3.6-27b",
+    "name": "Qwen3.6-27B",
+    "params_b": 27,
+    "quantization": "Q4_0",
+    "source_url": "https://huggingface.co/unsloth/Qwen3.6-27B-GGUF"
+  },
+  "engine": {
+    "slug": "llamacpp-vulkan",
+    "name": "llama.cpp",
+    "version": "master",
+    "commit": "5c0e9468378eba6bf3cc1989ff5d62fbbe4d9e3a",
+    "backend": "Vulkan",
+    "build_flags": "-DGGML_VULKAN=ON"
+  },
+  "command": "llama-batched-bench -m /models/Qwen3.6-27B-Q4_0.gguf -ngl 999 -npp 512 -ntg 128 -npl 1,4,16,32 --output-format jsonl",
+  "pp_test": "pp512",
+  "pp_toks_per_s": 886.07373,
+  "tg_test": "tg128",
+  "tg_toks_per_s": 13.357861,
+  "combined_toks_per_s": 62.990868,
+  "ttft_ms": null,
+  "ctx": 640,
+  "batch": 2048,
+  "concurrency": 1,
+  "n_gpu_layers": 999,
+  "vram_used_gb": null,
+  "scenario": "llama-batched-bench-pp512-tg128-npl1x4x16x32",
+  "usability_tag": "ok",
+  "log_url": "",
+  "source_url": "",
+  "notes": "",
+  "raw_llamabench": [
+    {
+      "n_kv_max": 262144,
+      "n_batch": 2048,
+      "n_ubatch": 512,
+      "flash_attn": -1,
+      "is_pp_shared": 0,
+      "n_gpu_layers": 999,
+      "n_threads": 20,
+      "n_threads_batch": 20,
+      "pp": 512,
+      "tg": 128,
+      "pl": 1,
+      "n_kv": 640,
+      "t_pp": 0.57783,
+      "speed_pp": 886.07373,
+      "t_tg": 9.582373,
+      "speed_tg": 13.357861,
+      "t": 10.160203,
+      "speed": 62.990868
+    }
+  ]
+}
