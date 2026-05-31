@@ -1,0 +1,66 @@
+{
+  "schema_version": 0,
+  "run_date": "2026-05-31",
+  "host": {
+    "slug": "ryzen-ai-max-395-03",
+    "name": "Ryzen AI Max+ 395",
+    "vendor": "AMD",
+    "chip": "Strix Halo (gfx1151)",
+    "vram_gb": 128,
+    "deployment_form": "apu_minipc"
+  },
+  "model": {
+    "slug": "llama-3.3-70b-instruct",
+    "name": "Llama-3.3-70B-Instruct",
+    "params_b": null,
+    "quantization": "Q4_K_M",
+    "source_url": "https://huggingface.co/unsloth/Llama-3.3-70B-Instruct-GGUF"
+  },
+  "engine": {
+    "slug": "llamacpp-hip",
+    "name": "llama.cpp",
+    "version": "bbeb89d",
+    "commit": "bbeb89d",
+    "backend": "HIP",
+    "build_flags": "-DGGML_HIP=ON"
+  },
+  "command": "/work/llama.cpp/build-hip-fa/bin/llama-batched-bench -m /models/Llama-3.3-70B-Instruct/Llama-3.3-70B-Instruct-Q4_K_M.gguf -ngl 999 -npp 512 -ntg 128 -npl 1,4,16,32 --output-format jsonl",
+  "pp_test": "pp512",
+  "pp_toks_per_s": 107.477051,
+  "tg_test": "tg128",
+  "tg_toks_per_s": 4.973526,
+  "combined_toks_per_s": 20.983555,
+  "ttft_ms": null,
+  "ctx": 640,
+  "batch": 2048,
+  "concurrency": 1,
+  "n_gpu_layers": 999,
+  "vram_used_gb": null,
+  "scenario": "llama-batched-bench-pp512-tg128-npl1x4x16x32",
+  "usability_tag": "ok",
+  "log_url": "",
+  "source_url": "",
+  "notes": "",
+  "raw_llamabench": [
+    {
+      "n_kv_max": 131072,
+      "n_batch": 2048,
+      "n_ubatch": 512,
+      "flash_attn": -1,
+      "is_pp_shared": 0,
+      "n_gpu_layers": 999,
+      "n_threads": 16,
+      "n_threads_batch": 16,
+      "pp": 512,
+      "tg": 128,
+      "pl": 1,
+      "n_kv": 640,
+      "t_pp": 4.763808,
+      "speed_pp": 107.477051,
+      "t_tg": 25.736267,
+      "speed_tg": 4.973526,
+      "t": 30.500074,
+      "speed": 20.983555
+    }
+  ]
+}
