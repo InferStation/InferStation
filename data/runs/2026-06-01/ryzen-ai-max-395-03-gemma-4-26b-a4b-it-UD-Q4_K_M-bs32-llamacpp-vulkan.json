@@ -1,0 +1,66 @@
+{
+  "schema_version": 0,
+  "run_date": "2026-06-01",
+  "host": {
+    "slug": "ryzen-ai-max-395-03",
+    "name": "Ryzen AI Max+ 395 (Strix Halo)",
+    "vendor": "AMD",
+    "chip": "Strix Halo / Radeon 8060S (gfx1151)",
+    "vram_gb": 128,
+    "deployment_form": "apu_minipc"
+  },
+  "model": {
+    "slug": "gemma-4-26b-a4b-it",
+    "name": "Gemma-4-26B-A4B-it",
+    "params_b": 26,
+    "quantization": "UD-Q4_K_M",
+    "source_url": "https://huggingface.co/unsloth/gemma-4-26B-A4B-it"
+  },
+  "engine": {
+    "slug": "llamacpp-vulkan",
+    "name": "llama.cpp",
+    "version": "master",
+    "commit": "bbeb89d76c41bc250f16e4a6fefcc9b530d6e3f3",
+    "backend": "Vulkan",
+    "build_flags": "-DGGML_VULKAN=ON"
+  },
+  "command": "HB_IMAGE=rocm/vllm:rocm7.12.0_gfx1151_vulkan HB_LLAMA_BIN_DIR=/work/llama.cpp/build-vk/bin llama-batched-bench -m /models/Gemma-4-26B-A4B-it-smoke/gemma-4-26B-A4B-it-UD-Q4_K_M.gguf -ngl 999 -npp 512 -ntg 128 -npl 1,4,16,32 --output-format jsonl",
+  "pp_test": "pp512",
+  "pp_toks_per_s": 1250.931519,
+  "tg_test": "tg128",
+  "tg_toks_per_s": 284.366608,
+  "combined_toks_per_s": 744.68988,
+  "ttft_ms": null,
+  "ctx": 20480,
+  "batch": 2048,
+  "concurrency": 32,
+  "n_gpu_layers": 999,
+  "vram_used_gb": null,
+  "scenario": "llama-batched-bench-pp512-tg128-npl1x4x16x32",
+  "usability_tag": "ok",
+  "log_url": "",
+  "source_url": "",
+  "notes": "",
+  "raw_llamabench": [
+    {
+      "n_kv_max": 262144,
+      "n_batch": 2048,
+      "n_ubatch": 512,
+      "flash_attn": -1,
+      "is_pp_shared": 0,
+      "n_gpu_layers": 999,
+      "n_threads": 16,
+      "n_threads_batch": 16,
+      "pp": 512,
+      "tg": 128,
+      "pl": 32,
+      "n_kv": 20480,
+      "t_pp": 13.09744,
+      "speed_pp": 1250.931519,
+      "t_tg": 14.403942,
+      "speed_tg": 284.366608,
+      "t": 27.501381,
+      "speed": 744.68988
+    }
+  ]
+}
