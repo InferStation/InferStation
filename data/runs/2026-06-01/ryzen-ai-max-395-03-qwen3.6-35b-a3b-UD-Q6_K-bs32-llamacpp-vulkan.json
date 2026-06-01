@@ -1,0 +1,66 @@
+{
+  "schema_version": 0,
+  "run_date": "2026-06-01",
+  "host": {
+    "slug": "ryzen-ai-max-395-03",
+    "name": "Ryzen AI Max+ 395 (Strix Halo)",
+    "vendor": "AMD",
+    "chip": "Strix Halo / Radeon 8060S (gfx1151)",
+    "vram_gb": 128,
+    "deployment_form": "apu_minipc"
+  },
+  "model": {
+    "slug": "qwen3.6-35b-a3b",
+    "name": "Qwen3.6-35B-A3B",
+    "params_b": 35,
+    "quantization": "UD-Q6_K",
+    "source_url": "https://huggingface.co/unsloth/Qwen3.6-35B-A3B-GGUF"
+  },
+  "engine": {
+    "slug": "llamacpp-vulkan",
+    "name": "llama.cpp",
+    "version": "master",
+    "commit": "bbeb89d76c41bc250f16e4a6fefcc9b530d6e3f3",
+    "backend": "Vulkan",
+    "build_flags": "-DGGML_VULKAN=ON"
+  },
+  "command": "HB_IMAGE=rocm/vllm:rocm7.12.0_gfx1151_vulkan HB_LLAMA_BIN_DIR=/work/llama.cpp/build-vk/bin llama-batched-bench -m /models/Qwen3.6-35B-A3B/Qwen3.6-35B-A3B-UD-Q6_K.gguf -ngl 999 -npp 512 -ntg 128 -npl 1,4,16,32 --output-format jsonl",
+  "pp_test": "pp512",
+  "pp_toks_per_s": 968.423584,
+  "tg_test": "tg128",
+  "tg_toks_per_s": 160.684586,
+  "combined_toks_per_s": 482.914673,
+  "ttft_ms": null,
+  "ctx": 20480,
+  "batch": 2048,
+  "concurrency": 32,
+  "n_gpu_layers": 999,
+  "vram_used_gb": null,
+  "scenario": "llama-batched-bench-pp512-tg128-npl1x4x16x32",
+  "usability_tag": "ok",
+  "log_url": "",
+  "source_url": "",
+  "notes": "",
+  "raw_llamabench": [
+    {
+      "n_kv_max": 262144,
+      "n_batch": 2048,
+      "n_ubatch": 512,
+      "flash_attn": -1,
+      "is_pp_shared": 0,
+      "n_gpu_layers": 999,
+      "n_threads": 16,
+      "n_threads_batch": 16,
+      "pp": 512,
+      "tg": 128,
+      "pl": 32,
+      "n_kv": 20480,
+      "t_pp": 16.918217,
+      "speed_pp": 968.423584,
+      "t_tg": 25.490932,
+      "speed_tg": 160.684586,
+      "t": 42.409149,
+      "speed": 482.914673
+    }
+  ]
+}
