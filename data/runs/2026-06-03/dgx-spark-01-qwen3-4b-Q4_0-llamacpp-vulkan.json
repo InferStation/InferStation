@@ -26,10 +26,10 @@
   },
   "command": "VK_DRIVER_FILES=/usr/share/vulkan/icd.d/nvidia_icd.json llama-batched-bench -m /models/Qwen3-4B/Qwen3-4B-Q4_0.gguf -ngl 999 -npp 512 -ntg 128 -npl 1,4,16,32 --output-format jsonl",
   "pp_test": "pp512",
-  "pp_toks_per_s": 563.261292,
+  "pp_toks_per_s": 82.007622,
   "tg_test": "tg128",
-  "tg_toks_per_s": 54.029255,
-  "combined_toks_per_s": 195.236298,
+  "tg_toks_per_s": 55.182781,
+  "combined_toks_per_s": 74.741158,
   "ttft_ms": null,
   "ctx": 640,
   "batch": 2048,
@@ -55,12 +55,12 @@
       "tg": 128,
       "pl": 1,
       "n_kv": 640,
-      "t_pp": 0.908992,
-      "speed_pp": 563.261292,
-      "t_tg": 2.369087,
-      "speed_tg": 54.029255,
-      "t": 3.278079,
-      "speed": 195.236298
+      "t_pp": 6.243322,
+      "speed_pp": 82.007622,
+      "t_tg": 2.319564,
+      "speed_tg": 55.182781,
+      "t": 8.562886,
+      "speed": 74.741158
     }
   ]
 }
