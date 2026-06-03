@@ -26,10 +26,10 @@
   },
   "command": "VK_DRIVER_FILES=/usr/share/vulkan/icd.d/nvidia_icd.json llama-batched-bench -m /models/gemma-4-26B-A4B-it-UD-Q2_K_XL.gguf -ngl 999 -npp 512 -ntg 128 -npl 1,4,16,32 --output-format jsonl",
   "pp_test": "pp512",
-  "pp_toks_per_s": 2641.271973,
+  "pp_toks_per_s": 2690.48877,
   "tg_test": "tg128",
-  "tg_toks_per_s": 260.800171,
-  "combined_toks_per_s": 934.793396,
+  "tg_toks_per_s": 263.807526,
+  "combined_toks_per_s": 947.443176,
   "ttft_ms": null,
   "ctx": 10240,
   "batch": 2048,
@@ -55,12 +55,12 @@
       "tg": 128,
       "pl": 16,
       "n_kv": 10240,
-      "t_pp": 3.101536,
-      "speed_pp": 2641.271973,
-      "t_tg": 7.852756,
-      "speed_tg": 260.800171,
-      "t": 10.954292,
-      "speed": 934.793396
+      "t_pp": 3.0448,
+      "speed_pp": 2690.48877,
+      "t_tg": 7.763236,
+      "speed_tg": 263.807526,
+      "t": 10.808036,
+      "speed": 947.443176
     }
   ]
 }
