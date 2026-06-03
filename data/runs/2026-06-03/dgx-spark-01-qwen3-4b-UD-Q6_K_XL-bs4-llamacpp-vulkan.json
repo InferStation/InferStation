@@ -26,10 +26,10 @@
   },
   "command": "VK_DRIVER_FILES=/usr/share/vulkan/icd.d/nvidia_icd.json llama-batched-bench -m /models/Qwen3-4B/Qwen3-4B-UD-Q6_K_XL.gguf -ngl 999 -npp 512 -ntg 128 -npl 1,4,16,32 --output-format jsonl",
   "pp_test": "pp512",
-  "pp_toks_per_s": 1667.012695,
+  "pp_toks_per_s": 3325.350098,
   "tg_test": "tg128",
-  "tg_toks_per_s": 98.303703,
-  "combined_toks_per_s": 397.707306,
+  "tg_toks_per_s": 141.599808,
+  "combined_toks_per_s": 604.957947,
   "ttft_ms": null,
   "ctx": 2560,
   "batch": 2048,
@@ -43,10 +43,10 @@
   "notes": "",
   "raw_llamabench": [
     {
-      "n_kv_max": 4096,
+      "n_kv_max": 40960,
       "n_batch": 2048,
       "n_ubatch": 512,
-      "flash_attn": 0,
+      "flash_attn": -1,
       "is_pp_shared": 0,
       "n_gpu_layers": 999,
       "n_threads": 20,
@@ -55,12 +55,12 @@
       "tg": 128,
       "pl": 4,
       "n_kv": 2560,
-      "t_pp": 1.228545,
-      "speed_pp": 1667.012695,
-      "t_tg": 5.208349,
-      "speed_tg": 98.303703,
-      "t": 6.436894,
-      "speed": 397.707306
+      "t_pp": 0.615875,
+      "speed_pp": 3325.350098,
+      "t_tg": 3.615824,
+      "speed_tg": 141.599808,
+      "t": 4.231699,
+      "speed": 604.957947
     }
   ]
 }
