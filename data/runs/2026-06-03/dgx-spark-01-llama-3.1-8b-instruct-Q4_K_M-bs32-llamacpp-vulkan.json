@@ -26,10 +26,10 @@
   },
   "command": "VK_DRIVER_FILES=/usr/share/vulkan/icd.d/nvidia_icd.json llama-batched-bench -m /models/Llama-3.1-8B-Instruct/Llama-3.1-8B-Instruct-Q4_K_M.gguf -ngl 999 -npp 512 -ntg 128 -npl 1,4,16,32 --output-format jsonl",
   "pp_test": "pp512",
-  "pp_toks_per_s": 1933.336182,
+  "pp_toks_per_s": 2700.897705,
   "tg_test": "tg128",
-  "tg_toks_per_s": 457.11557,
-  "combined_toks_per_s": 1174.648315,
+  "tg_toks_per_s": 542.105713,
+  "combined_toks_per_s": 1503.466553,
   "ttft_ms": null,
   "ctx": 20480,
   "batch": 2048,
@@ -55,12 +55,12 @@
       "tg": 128,
       "pl": 32,
       "n_kv": 20480,
-      "t_pp": 8.47447,
-      "speed_pp": 1933.336182,
-      "t_tg": 8.960535,
-      "speed_tg": 457.11557,
-      "t": 17.435005,
-      "speed": 1174.648315
+      "t_pp": 6.066131,
+      "speed_pp": 2700.897705,
+      "t_tg": 7.555722,
+      "speed_tg": 542.105713,
+      "t": 13.621853,
+      "speed": 1503.466553
     }
   ]
 }
