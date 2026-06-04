@@ -26,10 +26,10 @@
   },
   "command": "llama-batched-bench -m /models/Qwen3.6-35B-A3B/Qwen3.6-35B-A3B-UD-Q4_K_M.gguf -ngl 999 -npp 512 -ntg 128 -npl 1,4,16,32 --output-format jsonl",
   "pp_test": "pp512",
-  "pp_toks_per_s": 965.558167,
+  "pp_toks_per_s": 983.067505,
   "tg_test": "tg128",
-  "tg_toks_per_s": 185.816086,
-  "combined_toks_per_s": 524.970337,
+  "tg_toks_per_s": 185.573639,
+  "combined_toks_per_s": 528.67572,
   "ttft_ms": null,
   "ctx": 20480,
   "batch": 2048,
@@ -55,12 +55,12 @@
       "tg": 128,
       "pl": 32,
       "n_kv": 20480,
-      "t_pp": 16.968424,
-      "speed_pp": 965.558167,
-      "t_tg": 22.043301,
-      "speed_tg": 185.816086,
-      "t": 39.011726,
-      "speed": 524.970337
+      "t_pp": 16.666201,
+      "speed_pp": 983.067505,
+      "t_tg": 22.0721,
+      "speed_tg": 185.573639,
+      "t": 38.7383,
+      "speed": 528.67572
     }
   ]
 }
