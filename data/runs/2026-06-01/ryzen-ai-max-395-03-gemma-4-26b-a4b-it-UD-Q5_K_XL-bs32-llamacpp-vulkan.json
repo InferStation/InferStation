@@ -3,7 +3,7 @@
   "run_date": "2026-06-01",
   "host": {
     "slug": "ryzen-ai-max-395-03",
-    "name": "Ryzen AI Max+ 395 (Strix Halo)",
+    "name": "Strix Halo",
     "vendor": "AMD",
     "chip": "Strix Halo / Radeon 8060S (gfx1151)",
     "vram_gb": 128,
