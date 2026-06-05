@@ -26,10 +26,10 @@
   },
   "command": "VK_DRIVER_FILES=/usr/share/vulkan/icd.d/radeon_icd.x86_64.json llama-batched-bench -m /models/Qwen3.6-35B-A3B/Qwen3.6-35B-A3B-BF16.gguf -ngl 999 -npp 512 -ntg 128 -npl 1,4,16,32 --output-format jsonl",
   "pp_test": "pp512",
-  "pp_toks_per_s": 317.406006,
+  "pp_toks_per_s": 78.988274,
   "tg_test": "tg128",
-  "tg_toks_per_s": 35.933487,
-  "combined_toks_per_s": 123.666412,
+  "tg_toks_per_s": 26.94772,
+  "combined_toks_per_s": 56.980499,
   "ttft_ms": null,
   "ctx": 2560,
   "batch": 2048,
@@ -46,7 +46,7 @@
       "n_kv_max": 262144,
       "n_batch": 2048,
       "n_ubatch": 512,
-      "flash_attn": -1,
+      "flash_attn": 1,
       "is_pp_shared": 0,
       "n_gpu_layers": 999,
       "n_threads": 16,
@@ -55,12 +55,12 @@
       "tg": 128,
       "pl": 4,
       "n_kv": 2560,
-      "t_pp": 6.452304,
-      "speed_pp": 317.406006,
-      "t_tg": 14.248548,
-      "speed_tg": 35.933487,
-      "t": 20.700851,
-      "speed": 123.666412
+      "t_pp": 25.9279,
+      "speed_pp": 78.988274,
+      "t_tg": 18.999752,
+      "speed_tg": 26.94772,
+      "t": 44.92765,
+      "speed": 56.980499
     }
   ]
 }
