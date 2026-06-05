@@ -26,10 +26,10 @@
   },
   "command": "llama-batched-bench -m /models/gemma-4-26B-A4B-it-bf16.gguf -ngl 999 -npp 512 -ntg 128 -npl 1,4,16,32 --output-format jsonl",
   "pp_test": "pp512",
-  "pp_toks_per_s": 646.250854,
+  "pp_toks_per_s": 589.98407,
   "tg_test": "tg128",
-  "tg_toks_per_s": 28.883728,
-  "combined_toks_per_s": 122.515633,
+  "tg_toks_per_s": 28.528229,
+  "combined_toks_per_s": 119.523315,
   "ttft_ms": null,
   "ctx": 640,
   "batch": 2048,
@@ -46,7 +46,7 @@
       "n_kv_max": 262144,
       "n_batch": 2048,
       "n_ubatch": 512,
-      "flash_attn": -1,
+      "flash_attn": 1,
       "is_pp_shared": 0,
       "n_gpu_layers": 999,
       "n_threads": 20,
@@ -55,12 +55,12 @@
       "tg": 128,
       "pl": 1,
       "n_kv": 640,
-      "t_pp": 0.792262,
-      "speed_pp": 646.250854,
-      "t_tg": 4.431561,
-      "speed_tg": 28.883728,
-      "t": 5.223823,
-      "speed": 122.515633
+      "t_pp": 0.86782,
+      "speed_pp": 589.98407,
+      "t_tg": 4.486784,
+      "speed_tg": 28.528229,
+      "t": 5.354604,
+      "speed": 119.523315
     }
   ]
 }
