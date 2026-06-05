@@ -26,10 +26,10 @@
   },
   "command": "llama-batched-bench -m /models/Qwen3.6-35B-A3B-BF16.gguf -ngl 999 -npp 512 -ntg 128 -npl 1,4,16,32 --output-format jsonl",
   "pp_test": "pp512",
-  "pp_toks_per_s": 884.199951,
+  "pp_toks_per_s": 886.377625,
   "tg_test": "tg128",
-  "tg_toks_per_s": 132.468124,
-  "combined_toks_per_s": 414.152435,
+  "tg_toks_per_s": 131.620697,
+  "combined_toks_per_s": 412.870392,
   "ttft_ms": null,
   "ctx": 10240,
   "batch": 2048,
@@ -46,7 +46,7 @@
       "n_kv_max": 262144,
       "n_batch": 2048,
       "n_ubatch": 512,
-      "flash_attn": -1,
+      "flash_attn": 1,
       "is_pp_shared": 0,
       "n_gpu_layers": 999,
       "n_threads": 20,
@@ -55,12 +55,12 @@
       "tg": 128,
       "pl": 16,
       "n_kv": 10240,
-      "t_pp": 9.264873,
-      "speed_pp": 884.199951,
-      "t_tg": 15.460322,
-      "speed_tg": 132.468124,
-      "t": 24.725195,
-      "speed": 414.152435
+      "t_pp": 9.24211,
+      "speed_pp": 886.377625,
+      "t_tg": 15.559862,
+      "speed_tg": 131.620697,
+      "t": 24.801971,
+      "speed": 412.870392
     }
   ]
 }
