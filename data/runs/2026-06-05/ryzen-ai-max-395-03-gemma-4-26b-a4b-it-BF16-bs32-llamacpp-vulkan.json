@@ -26,10 +26,10 @@
   },
   "command": "VK_DRIVER_FILES=/usr/share/vulkan/icd.d/radeon_icd.x86_64.json llama-batched-bench -m /models/gemma-4-26B-A4B-it/gemma-4-26B-A4B-it-bf16.gguf -ngl 999 -npp 512 -ntg 128 -npl 1,4,16,32 --output-format jsonl",
   "pp_test": "pp512",
-  "pp_toks_per_s": 323.917938,
+  "pp_toks_per_s": 263.877197,
   "tg_test": "tg128",
-  "tg_toks_per_s": 107.508614,
-  "combined_toks_per_s": 230.942749,
+  "tg_toks_per_s": 97.451508,
+  "combined_toks_per_s": 196.694885,
   "ttft_ms": null,
   "ctx": 20480,
   "batch": 2048,
@@ -46,7 +46,7 @@
       "n_kv_max": 262144,
       "n_batch": 2048,
       "n_ubatch": 512,
-      "flash_attn": -1,
+      "flash_attn": 1,
       "is_pp_shared": 0,
       "n_gpu_layers": 999,
       "n_threads": 16,
@@ -55,12 +55,12 @@
       "tg": 128,
       "pl": 32,
       "n_kv": 20480,
-      "t_pp": 50.580711,
-      "speed_pp": 323.917938,
-      "t_tg": 38.099274,
-      "speed_tg": 107.508614,
-      "t": 88.679985,
-      "speed": 230.942749
+      "t_pp": 62.089485,
+      "speed_pp": 263.877197,
+      "t_tg": 42.031162,
+      "speed_tg": 97.451508,
+      "t": 104.120651,
+      "speed": 196.694885
     }
   ]
 }
