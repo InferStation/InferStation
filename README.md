@@ -25,6 +25,12 @@ Tower workstations and more engines come once v0 is stable.
 - Run data as plain JSON under `data/runs/<YYYY-MM-DD>/...`
 - Schema: see [`data/runs/SCHEMA.md`](data/runs/SCHEMA.md)
 
+## Benchmark internals
+
+- Methodology (user-facing): [`docs/methodology.md`](docs/methodology.md)
+- Serve-mode benchmark design (dispatcher, flow, unit schema, gaps):
+  [`docs/serve-bench-architecture.md`](docs/serve-bench-architecture.md)
+
 ## Develop locally
 
 ```bash

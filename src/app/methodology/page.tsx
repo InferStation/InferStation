@@ -20,23 +20,82 @@ export default function Methodology() {
         </li>
       </ul>
 
+      <h2>Benchmark mode: online serving</h2>
+      <p>
+        All numbers come from an <strong>online serving</strong> benchmark, not an offline batch
+        tool, so llama.cpp and vLLM are measured with the <em>same</em> method and the{" "}
+        <em>same</em> metric definitions. We start an OpenAI-compatible server (
+        <code>llama-server</code> or <code>vllm serve</code>) and drive it with a streaming client.
+      </p>
+      <p>A fresh container every run, so there is no cross-run state:</p>
+      <ol>
+        <li>
+          <strong>Check for stale containers</strong> — remove any leftover server container with
+          the same name.
+        </li>
+        <li>
+          <strong>Start a new container</strong> (detached) and{" "}
+          <strong>download the model in parallel</strong> — the HF download (single-file gguf with
+          sharded fallback, or a full repo snapshot for vLLM) runs alongside container startup; both
+          must finish before serving.
+        </li>
+        <li>
+          <strong>Start serving</strong> inside the container, then poll <code>/health</code> until
+          it returns 200.
+        </li>
+        <li>
+          <strong>Warm up</strong> — a few small requests so first-token latency excludes one-time
+          costs (e.g. Vulkan shader compilation).
+        </li>
+        <li>
+          <strong>Run the bench client</strong> — a streaming client on the host drives each
+          concurrency level. The server is started with enough slots (<code>-np</code> /{" "}
+          <code>--max-num-seqs</code>) to cover the largest level; the client caps concurrency per
+          level, so one server instance measures every batch size. Each request uses a{" "}
+          <strong>distinct prompt</strong> so the prefix cache cannot dedupe prefill and serialize
+          the batch.
+        </li>
+        <li>
+          <strong>Stop serving</strong> — the container is removed (and any downloaded model cleaned
+          up) on exit, regardless of success or failure.
+        </li>
+      </ol>
+      <p>
+        Decoupled config ↔ flow: a unit only <em>declares</em> what to run (model link, image, serve
+        start command, bench shape). One generic serve flow reads those fields and runs the steps
+        above; every serve unit shares it.
+      </p>
+
       <h2>Metrics</h2>
+      <p>Measured per concurrency level (batch size), client-side wall-clock:</p>
       <ul>
         <li>
-          <strong>pp (prefill throughput)</strong>: tokens/s during the prompt-processing phase
-          (single batch, fixed prompt length).
+          <strong>TTFT</strong> — time to first token (ms), mean. From request submit to the first
+          streamed token.
         </li>
         <li>
-          <strong>tg (decode throughput)</strong>: tokens/s during generation, averaged over a
-          fixed-length output.
+          <strong>TPOT</strong> — time per output token (ms), mean, excluding the first token:{" "}
+          <code>(latency − ttft) / (output_len − 1)</code>.
         </li>
         <li>
-          <strong>ttft</strong>: time from request submit to first generated token (ms).
+          <strong>Prefill throughput</strong> (tok/s) — per request,{" "}
+          <code>input_len / (ttft − one_tpot_step)</code>. Clean at concurrency 1; queue-inclusive
+          higher up.
         </li>
         <li>
-          <strong>VRAM peak</strong>: maximum device memory in GB during the run.
+          <strong>Decode throughput</strong> (tok/s) — aggregate output tokens / wall-clock.
+        </li>
+        <li>
+          <strong>Total throughput</strong> (tok/s) — aggregate (input + output) tokens /
+          wall-clock.
         </li>
       </ul>
+      <p>
+        ITL, end-to-end latency, and p50/p99 of each metric are kept in the raw record. Note: we do
+        not read llama.cpp&apos;s per-slot timing as a per-request latency — under continuous
+        batching it charges each slot the full shared batch-step duration, inflating per-token
+        times. We trust the client-side wall-clock.
+      </p>
 
       <h2>Reproducibility</h2>
       <p>Every run record carries:</p>
