@@ -14,7 +14,7 @@
     "name": "Gemma-4-26B-A4B-it",
     "params_b": null,
     "quantization": "BF16",
-    "source_url": "https://huggingface.co/ggml-org/gemma-4-26B-A4B-it-GGUF"
+    "source_url": "https://huggingface.co/unsloth/gemma-4-26B-A4B-it-GGUF"
   },
   "engine": {
     "slug": "llamacpp-cuda",
