@@ -1355,6 +1355,9 @@ async def get_model_catalog():
 
 @app.post("/api/backends")
 async def register_backend(req: RegisterBackendRequest, user=Depends(require_provider)):
+    req.name = (req.name or "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9._-]{1,64}", req.name):
+        raise HTTPException(400, "后端名只能含字母、数字、 . _ - （不能有 / 或空格），长度 1-64")
     if req.mode not in ("direct", "tunnel"):
         raise HTTPException(400, "mode must be 'direct' or 'tunnel'")
     if req.mode == "direct" and not req.url:
