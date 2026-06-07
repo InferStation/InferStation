@@ -10,6 +10,7 @@ import sys
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
+from typing import Optional
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -411,12 +412,8 @@ class RegisterRequest(BaseModel):
     email: str
     password: str
     code: str
+    # Legacy field kept for backwards-compat with older frontends; ignored.
     invite_code: str = ""
-
-
-# Hardcoded invite code for closed beta. Only required at registration; once
-# the account is created, login + all subsequent access have no extra gate.
-INVITE_CODE = "E9j4QZ8MpFcTLWtJvK3lc4WIfbFsfEThx8dRpcA9Ehf9G3YXsoaizj79LvakoFjEaE5nl8NwDKDH297rWYRVw1Q7uRpE2V0DpPdIFbHBTOvCAFbP33PPqN4CGArvCd2oqaYcVlD9wnrP73N8LSicjeoGb8VOVNLIn9F5CakTXGFaUueVllMbkfyGAgUpVmSxkm9cVlmtnsQHDq2O0WXHF0mm4gACwRU9E6udFUaovYOZMVR7hj4UU98cmBOO55bO"
 
 
 class LoginRequest(BaseModel):
@@ -476,7 +473,18 @@ async def _issue_verification_code(email: str, purpose: str) -> str:
         await db.commit()
     finally:
         await db.close()
-    await email_service.send_verification_code(email, code, purpose)
+    # Look up the recipient's configured locale (if any). Unknown email or
+    # NULL locale → English (default).
+    recipient_locale: Optional[str] = None
+    db = await get_db()
+    try:
+        cur = await db.execute("SELECT locale FROM users WHERE email = ?", (email,))
+        row = await cur.fetchone()
+        if row:
+            recipient_locale = row["locale"]
+    finally:
+        await db.close()
+    await email_service.send_verification_code(email, code, purpose, locale=recipient_locale)
     return code
 
 
@@ -560,8 +568,6 @@ async def send_code(req: SendCodeRequest):
 
 @app.post("/api/auth/register")
 async def register(req: RegisterRequest):
-    if (req.invite_code or "").strip() != INVITE_CODE:
-        raise HTTPException(400, "邀请码无效 / Invalid invite code")
     if len(req.password) < 6:
         raise HTTPException(400, "Password must be at least 6 characters")
     email = req.email.strip().lower()
@@ -837,6 +843,7 @@ async def me(user=Depends(get_current_user)):
         "verified": user["verified"],
         "active_subscription_id": user["active_subscription_id"] if "active_subscription_id" in keys else None,
         "auto_fallback": bool(user["auto_fallback"]) if "auto_fallback" in keys else True,
+        "locale": (user["locale"] if "locale" in keys else None) or None,
         "billing": {
             "current_month_cost": billing["current_month_cost"],
             "current_month_by_currency": billing["current_month_by_currency"],
@@ -955,6 +962,28 @@ async def settle_now(user=Depends(get_current_user)):
 
 class AutoFallbackRequest(BaseModel):
     enabled: bool
+
+
+class LocaleRequest(BaseModel):
+    locale: Optional[str] = None  # "en" | "zh" | None (clear preference)
+
+
+@app.post("/api/user/locale")
+async def set_user_locale(req: LocaleRequest, user=Depends(get_current_user)):
+    """Persist the user's preferred language for transactional emails.
+
+    NULL clears the preference; with no preference, emails default to English.
+    """
+    raw = (req.locale or "").strip().lower() or None
+    if raw is not None and raw not in ("en", "zh"):
+        raise HTTPException(400, "Unsupported locale (expected 'en' or 'zh')")
+    db = await get_db()
+    try:
+        await db.execute("UPDATE users SET locale = ? WHERE id = ?", (raw, user["id"]))
+        await db.commit()
+    finally:
+        await db.close()
+    return {"ok": True, "locale": raw}
 
 
 @app.post("/api/user/auto-fallback")
@@ -1284,6 +1313,7 @@ ALLOWED_MODELS_BY_FAMILY: dict[str, list[str]] = {
     ],
     "deepseek-ai": [
         "DeepSeek-R1",
+        "DeepSeek-R1-0528-Qwen3-8B",
         "DeepSeek-R1-Distill-Qwen-7B", "DeepSeek-R1-Distill-Qwen-14B",
         "DeepSeek-R1-Distill-Qwen-32B", "DeepSeek-R1-Distill-Llama-70B",
         "DeepSeek-V3", "DeepSeek-V3.2-Exp",
