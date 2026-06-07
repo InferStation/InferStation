@@ -1,0 +1,51 @@
+{
+  "schema_version": 0,
+  "run_date": "2026-05-21",
+  "host": {
+    "slug": "dgx-spark-01",
+    "name": "DGX Spark",
+    "vendor": "NVIDIA",
+    "chip": "GB10",
+    "vram_gb": 128,
+    "deployment_form": "apu_minipc"
+  },
+  "model": {
+    "slug": "qwen3.6-35b-a3b",
+    "name": "Qwen3.6-35B-A3B",
+    "params_b": 35,
+    "quantization": "BF16",
+    "source_url": "https://huggingface.co/unsloth/Qwen3.6-35B-A3B-GGUF"
+  },
+  "engine": {
+    "slug": "vllm",
+    "name": "vLLM",
+    "version": "a03ca76a.nv26.03.46967107",
+    "commit": "a03ca76a.nv26.03.46967107",
+    "backend": "vLLM",
+    "build_flags": ""
+  },
+  "command": "vllm bench throughput --model /model --dtype bfloat16 --max-model-len 2304 --max-num-seqs 32 --gpu-memory-utilization 0.85 --dataset-name random --input-len 512 --output-len 128 --num-prompts 256 --output-json /tmp/vllm-bench-qwen3.6-35b-a3b-BF16-bs32.json",
+  "pp_test": "in512",
+  "pp_toks_per_s": 559.6824888009879,
+  "tg_test": "out128",
+  "tg_toks_per_s": 139.92062220024698,
+  "combined_toks_per_s": 1259.2855998022228,
+  "ttft_ms": null,
+  "ctx": 640,
+  "batch": 32,
+  "concurrency": 32,
+  "n_gpu_layers": null,
+  "vram_used_gb": null,
+  "scenario": "vllm-bench-throughput-in512-out128-npl32",
+  "usability_tag": "ok",
+  "log_url": "",
+  "source_url": "",
+  "notes": "vllm bench throughput; pp_toks_per_s derived as num_prompts*input_len/elapsed",
+  "raw_vllm_bench": {
+    "elapsed_time": 234.1899248640002,
+    "num_requests": 256,
+    "total_num_tokens": 294912,
+    "requests_per_second": 1.0931298609394295,
+    "tokens_per_second": 1259.2855998022228
+  }
+}
