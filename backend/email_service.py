@@ -54,19 +54,43 @@ def _build_message(to_addr: str, subject: str, body: str):
     return msg
 
 
-async def send_verification_code(to_addr: str, code: str, purpose: str) -> None:
-    """Send the code email. In dev mode, just log it."""
-    purpose_text = {
-        "register": "注册",
-        "change-email": "修改邮箱",
-    }.get(purpose, purpose)
-    subject = f"[天枢网关] 您的{purpose_text}验证码"
-    body = (
-        f"您正在进行「{purpose_text}」操作。\n"
-        f"验证码：{code}\n"
-        f"10 分钟内有效，请勿向他人泄露。\n"
-        f"\n如非本人操作，请忽略此邮件。"
-    )
+async def send_verification_code(to_addr: str, code: str, purpose: str, locale: Optional[str] = None) -> None:
+    """Send the code email. In dev mode, just log it.
+
+    `locale` is the recipient's configured language. Currently we recognise
+    "zh" (Simplified Chinese); any other value — including None / "" — falls
+    back to English. This means: emails default to English unless the
+    recipient has explicitly chosen Chinese in their account settings.
+    """
+    use_zh = (locale or "").lower().startswith("zh")
+    if use_zh:
+        purpose_text = {
+            "register": "注册",
+            "change-email": "修改邮箱",
+            "delete-account": "注销账号",
+            "login": "登录",
+        }.get(purpose, purpose)
+        subject = f"[天枢网关] 您的{purpose_text}验证码"
+        body = (
+            f"您正在进行「{purpose_text}」操作。\n"
+            f"验证码：{code}\n"
+            f"10 分钟内有效，请勿向他人泄露。\n"
+            f"\n如非本人操作，请忽略此邮件。"
+        )
+    else:
+        purpose_text = {
+            "register": "sign-up",
+            "change-email": "email change",
+            "delete-account": "account deletion",
+            "login": "sign-in",
+        }.get(purpose, purpose)
+        subject = f"[Tianshu Gateway] Your {purpose_text} verification code"
+        body = (
+            f"You are completing a {purpose_text} on Tianshu Gateway.\n"
+            f"Verification code: {code}\n"
+            f"This code expires in 10 minutes. Do not share it with anyone.\n"
+            f"\nIf this wasn't you, please ignore this email."
+        )
 
     if is_dev_mode():
         logger.warning("[email-dev] to=%s purpose=%s code=%s (SMTP not configured)", to_addr, purpose, code)

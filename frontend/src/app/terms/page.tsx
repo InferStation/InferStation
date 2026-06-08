@@ -28,6 +28,7 @@ export default function TermsPage() {
         <h2 className="text-lg font-semibold text-gray-800">{t({ en: "3. Consumers (callers)", zh: "3. 消费者（调用方）" })}</h2>
         <ul className="list-disc list-inside space-y-1">
           <li>{t({ en: "Billed post-paid by actual tokens used and the unit price of the chosen backend.", zh: "按实际使用的 token 数量与对应后端单价后付费结算" })}</li>
+          <li>{t({ en: "All top ups are final and non-refundable once credited to your balance. Your balance does not expire. Disputed transactions or fraud will be handled case-by-case at the platform's discretion.", zh: "充值一经到账即为最终状态，不接受退款；余额永不过期。争议交易或欺诈情形由平台逐例根据实际情况处理" })}</li>
           <li>{t({ en: "Call content must comply with applicable laws and may not be used for illegal purposes — including, without limitation, generating illegal content, infringing content, malware, spam, or material inappropriate for minors.", zh: "调用内容须符合所在地法律法规，不得用于非法用途，包括但不限于：生成违法信息、侵权内容、恶意代码、垃圾信息、对未成年人不当内容等" })}</li>
           <li>{t({ en: "Consumers are solely responsible for their use, distribution, and downstream processing of the call results.", zh: "对调用结果的使用、分发、二次加工由消费者自行承担法律责任" })}</li>
           <li>{t({ en: "If invoices are not settled on time, the Platform may suspend API calls until invoices are paid.", zh: "未按时结清账单的，平台可暂停 API 调用，直至账单结清" })}</li>
@@ -36,10 +37,12 @@ export default function TermsPage() {
         <h2 className="text-lg font-semibold text-gray-800">{t({ en: "4. Providers (compute side)", zh: "4. 提供者（算力方）" })}</h2>
         <ul className="list-disc list-inside space-y-1">
           <li>{t({ en: "You must hold the legal rights to use the connected models and weights and to serve them externally.", zh: "须对所接入的模型与权重拥有合法使用和对外提供服务的权利" })}</li>
+          <li>{t({ en: "For BYOK / proxy backends, you warrant that any upstream API key you supply is obtained through lawful channels and used in compliance with the upstream provider's terms; the Platform may suspend or delist any backend found to be using resold, leaked, stolen, or jurisdictionally restricted keys.", zh: "如接入是 BYOK / 转发后端，你保证所提供的上游 API Key 均通过合法渠道获得，且使用方式符合上游服务商的条款；一经发现使用转售、泄露、盗取或管辖区受限的 Key，平台可随时暂停或下架该后端。" })}</li>
           <li>{t({ en: "Declared model names, pricing, context length, and other metadata must be accurate and match the real backend.", zh: "所申报的模型名称、定价、上下文长度等信息须真实、与实际后端一致" })}</li>
           <li>{t({ en: "Do not inject ads, sensitive content, hijack content, or malicious responses into the platform's routing.", zh: "不得在平台路由中注入广告、敏感内容、劫持内容或恶意返回" })}</li>
           <li>{t({ en: "Preserve the integrity of the inference results delivered to end users — do not tamper or intentionally degrade.", zh: "应保障最终发给用户的推理结果的完整性，不得篡改或故意降级" })}</li>
           <li>{t({ en: "When taking a service offline or pausing it, switch its listing status to offline in My Services in time to avoid impacting subscribers.", zh: "服务下架或停机时应及时在「我的服务」中切换为下架状态，避免影响订阅者" })}</li>
+          <li>{t({ en: "The Platform reserves the right to delist or suspend any model / backend at any time — with or without prior notice — if it violates these Terms, applicable law, upstream provider terms, or otherwise poses risk to users or the Platform. Provider has no claim against the Platform for revenue loss arising from such delisting.", zh: "平台保留在违反本条款、适用法律、上游服务商条款或对用户 / 平台构成风险时，随时对任意模型 / 后端予以下架或暂停的权利（可以提前通知，也可以不提前通知）；提供者不得就因此产生的收入损失向平台主张权利。" })}</li>
         </ul>
 
         <h2 className="text-lg font-semibold text-gray-800">{t({ en: "5. Prohibited conduct", zh: "5. 禁止行为" })}</h2>

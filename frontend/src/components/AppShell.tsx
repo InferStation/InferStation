@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext"
 import { useT } from "@/context/LocaleContext"
 import SideNav from "@/components/SideNav"
 import TopBar from "@/components/TopBar"
+import Footer from "@/components/Footer"
 import { IconLayers } from "@/components/ui/Icon"
 
 const NO_SHELL = ["/login", "/register", "/auth/google/done"]
@@ -65,20 +66,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </header>
         )}
         <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">{children}</main>
+        <Footer />
       </>
     )
   }
 
   return (
-    <main className="flex-1 w-full">
-      <div className="flex min-h-screen">
-        <SideNav />
-        <div className="flex-1 min-w-0 flex flex-col">
-          <TopBar />
-          <div className="flex-1 px-6 lg:px-8 py-6 bg-bg">
-            <div className="max-w-7xl mx-auto w-full">{children}</div>
-          </div>
+    <main className="flex-1 w-full flex">
+      <SideNav />
+      <div className="flex-1 min-w-0 flex flex-col">
+        <TopBar />
+        <div className="flex-1 px-8 lg:px-12 py-6 bg-bg">
+          <div className="max-w-7xl mx-auto w-full">{children}</div>
         </div>
+        <Footer />
       </div>
     </main>
   )

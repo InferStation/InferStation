@@ -32,7 +32,7 @@ export default function SideNav() {
 
   const modelItems: Item[] = [{ href: "/models", label: { en: "Models", zh: "模型广场" }, Icon: IconMarket }]
   if (user) modelItems.push({ href: "/my-subscriptions", label: { en: "My Subscriptions", zh: "我的订阅" }, Icon: IconCheck })
-  if (user && (user.role === "provider" || user.role === "both" || user.role === "admin")) {
+  if (user) {
     modelItems.push({ href: "/my-services", label: { en: "My Services", zh: "我的服务" }, Icon: IconServer })
   }
   groups.push({ title: { en: "Models", zh: "模型" }, items: modelItems })
@@ -72,8 +72,8 @@ export default function SideNav() {
   }
 
   return (
-    <aside className="w-60 shrink-0 hidden md:block border-r border-line bg-surface">
-      <div className="sticky top-0 flex flex-col h-screen">
+    <aside className="w-60 shrink-0 hidden md:flex flex-col border-r border-line bg-surface self-stretch">
+      <div className="sticky top-0 flex flex-col max-h-screen h-full">
         <Link href="/" className="flex items-center gap-2 px-5 h-14 border-b border-line">
           <div className="w-7 h-7 rounded-lg bg-fg text-accent-fg grid place-items-center">
             <IconLayers className="w-4 h-4" />

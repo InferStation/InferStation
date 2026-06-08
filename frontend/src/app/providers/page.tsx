@@ -2,14 +2,16 @@
 
 import Link from "next/link"
 import { useT } from "@/context/LocaleContext"
+import { useAuth } from "@/context/AuthContext"
 
 export default function ProvidersPage() {
   const t = useT()
+  const { user } = useAuth()
   return (
     <div className="space-y-20 pb-20">
       <section className="text-center pt-20">
         <div className="inline-flex items-center gap-2 px-3 h-7 rounded-full border border-line bg-surface text-xs text-fg-muted mb-6">
-          {t({ en: "82.4% revenue share · $50 minimum payout · monthly", zh: "82.4% 收入分成 · $50 起提 · 月结" })}
+          {t({ en: "60% revenue share · $50 minimum payout · monthly", zh: "60% 收入分成 · $50 起提 · 月结" })}
         </div>
         <h1 className="text-[44px] leading-[1.05] font-semibold tracking-tight mb-4">
           {t({ en: "Your GPU is asleep.", zh: "你的 GPU 在睡觉。" })}<br />
@@ -17,14 +19,20 @@ export default function ProvidersPage() {
         </h1>
         <p className="text-base text-fg-muted max-w-2xl mx-auto">
           {t({
-            en: "A 4090 idles 18 hours a day. A pair of MI300X spends weekends fanning hot air. Tianshu routes paying token traffic to whatever you have — consumer card, home server, leased rack — and pays you 82.4% of every dollar that flows through.",
-            zh: "一张 4090 平均每天闲 18 小时，两块 MI300X 周末几乎没事做。天枢把付费 token 流量调度到你已有的硬件上——消费卡、家用服务器、租用机柜都可以——把流过的每 1 美元的 82.4% 付给你。",
+            en: "A 4090 idles 18 hours a day. A pair of MI300X spends weekends fanning hot air. Tianshu routes paying token traffic to whatever you have — consumer card, home server, leased rack — and pays you 60% of every dollar that flows through.",
+            zh: "一张 4090 平均每天闲 18 小时，两块 MI300X 周末几乎没事做。天枢把付费 token 流量调度到你已有的硬件上——消费卡、家用服务器、租用机柜都可以——把流过的每 1 美元的 60% 付给你。",
           })}
         </p>
         <div className="flex justify-center gap-2 flex-wrap mt-8">
-          <Link href="/register" className="h-10 px-5 inline-flex items-center rounded-lg bg-fg text-accent-fg text-sm font-medium hover:bg-fg/90">
-            {t({ en: "Sign up & onboard", zh: "注册并上架" })}
-          </Link>
+          {user ? (
+            <Link href="/my-services" className="h-10 px-5 inline-flex items-center rounded-lg bg-fg text-accent-fg text-sm font-medium hover:bg-fg/90">
+              {t({ en: "Go to My Services", zh: "进入我的服务" })}
+            </Link>
+          ) : (
+            <Link href="/register" className="h-10 px-5 inline-flex items-center rounded-lg bg-fg text-accent-fg text-sm font-medium hover:bg-fg/90">
+              {t({ en: "Sign up & onboard", zh: "注册并上架" })}
+            </Link>
+          )}
           <Link href="/docs" className="h-10 px-5 inline-flex items-center rounded-lg bg-surface border border-line text-fg text-sm font-medium hover:bg-accent-soft">
             {t({ en: "Read the docs", zh: "阅读文档" })}
           </Link>
@@ -36,8 +44,8 @@ export default function ProvidersPage() {
         <div className="grid md:grid-cols-3 gap-3">
           <Step n="1" title={t({ en: "Sign up", zh: "注册" })}
                 desc={t({ en: "Create an account; in My Services, flip on provider mode. No invite codes, open self-signup.", zh: "注册账号，在「我的服务」启用服务商身份。无邀请码、自由注册。" })} />
-          <Step n="2" title={t({ en: "Run the tunnel", zh: "跑隧道客户端" })}
-                desc={t({ en: "docker run inferstation/tunnel-client with your provider token. Works behind NAT — no public IP required.", zh: "docker run inferstation/tunnel-client 启动隧道客户端；NAT 后即可对外服务，无需公网 IP。" })} />
+          <Step n="2" title={t({ en: "Install the client", zh: "装天枢 Provider 客户端" })}
+                desc={t({ en: "Download Tianshu Provider (Win / macOS / Linux), sign in with your account, and register your local model service. NAT-friendly — no public IP required.", zh: "下载天枢 Provider 桌面客户端（Win / macOS / Linux），登录账号后直接注册本地模型服务；NAT 后亦可，无需公网 IP。" })} />
           <Step n="3" title={t({ en: "Get listed", zh: "提交上架" })}
                 desc={t({ en: "Set your token price, submit for listing review. Once approved, your model card appears on the catalog.", zh: "设置 token 单价，提交「上架」审核。通过后服务自动出现在模型广场。" })} />
         </div>
@@ -53,9 +61,9 @@ export default function ProvidersPage() {
             })}
           </p>
           <ul className="space-y-2 text-sm font-mono">
-            <li><span className="text-green-600 font-semibold">82.4%</span> → {t({ en: "your provider cut", zh: "你的服务商分成" })}</li>
-            <li><span className="text-fg-muted">10.0%</span> → {t({ en: "platform fee (Tianshu)", zh: "平台费（天枢）" })}</li>
-            <li><span className="text-fg-muted">~7.6%</span> → {t({ en: "Freemius (card processing + sales tax)", zh: "Freemius（信用卡处理 + 销售税）" })}</li>
+            <li><span className="text-green-600 font-semibold">60%</span> → {t({ en: "your provider cut", zh: "你的服务商分成" })}</li>
+            <li><span className="text-fg-muted">25%</span> → {t({ en: "platform fee (Tianshu — ops + R&D)", zh: "平台费（天枢 — 运维 + 研发）" })}</li>
+            <li><span className="text-fg-muted">15%</span> → {t({ en: "payment channel (card processing + sales tax)", zh: "支付渠道（信用卡处理 + 销售税）" })}</li>
           </ul>
           <p className="text-xs text-fg-muted mt-4 leading-relaxed">
             {t({
@@ -82,7 +90,7 @@ export default function ProvidersPage() {
         <div className="bg-surface border border-line rounded-xl p-8 text-center">
           <h2 className="text-xl font-semibold mb-2">{t({ en: "Ready?", zh: "开始？" })}</h2>
           <p className="text-sm text-fg-muted mb-5">
-            {t({ en: "Onboarding takes under 10 minutes. The tunnel client is a single docker run command.", zh: "上架在 10 分钟内完成。隧道客户端只需一行 docker run。" })}
+            {t({ en: "Onboarding takes under 10 minutes. The Tianshu Provider client is a single download \u2014 install, sign in, register.", zh: "上架在 10 分钟内完成。天枢 Provider 客户端一键安装，登录后直接注册。" })}
           </p>
           <Link href="/register" className="inline-flex items-center h-10 px-5 rounded-lg bg-fg text-accent-fg text-sm font-medium hover:bg-fg/90">
             {t({ en: "Create my account", zh: "注册账号" })}

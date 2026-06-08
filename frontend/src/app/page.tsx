@@ -12,13 +12,14 @@ const FEATURES: { title: Bilingual; desc: Bilingual }[] = [
     },
   },
   {
-    title: { en: "NAT traversal", zh: "NAT 穿透" },
+    title: { en: "Free BYOK aggregation", zh: "免费 BYOK 聚合" },
     desc: {
-      en: "Expose private-network GPUs over a WebSocket tunnel — no public IP required.",
-      zh: "内网 GPU 通过 WebSocket 隧道即可对外提供服务，无需公网 IP。",
+      en: "Bring your own OpenAI / Anthropic / DeepSeek / vendor keys — Tianshu routes, retries and fails over across them for free, no markup.",
+      zh: "自带 OpenAI / Anthropic / DeepSeek 等厂商 Key，天枢免费提供统一路由、重试与故障转移，不加价、不抽成。",
     },
   },
   {
+
     title: { en: "Priority & failover", zh: "优先级 & 失败转移" },
     desc: {
       en: "Subscribe to multiple backends for the same model and switch by priority — no single point of failure.",
@@ -28,8 +29,8 @@ const FEATURES: { title: Bilingual; desc: Bilingual }[] = [
   {
     title: { en: "Pay-as-you-go", zh: "按量计费" },
     desc: {
-      en: "Billed on real upstream tokens with no markup, settled monthly post-paid.",
-      zh: "按上游返回的真实 token 计费，平台不加价，后付费月结。",
+      en: "For community-GPU backends: billed on real upstream tokens with no markup, settled monthly post-paid.",
+      zh: "接入社区 GPU 后端时，按上游返回的真实 token 计费，平台不加价，后付费月结。",
     },
   },
   {
@@ -58,24 +59,21 @@ export default function Home() {
           {t({ en: "OpenAI compatible · Prepaid balance · No content retention", zh: "OpenAI 兼容 · 预付余额 · 内容不留存" })}
         </div>
         <h1 className="text-[44px] leading-[1.05] font-semibold tracking-tight text-fg mb-4">
-          {t({ en: "Earn from your idle GPU.", zh: "把闲置 GPU 变成现金。" })}<br />
-          <span className="text-fg-muted">{t({ en: "Pay less for LLMs.", zh: "用更低成本调用大模型。" })}</span>
+          {t({ en: "Tianshu — the aggregated LLM API cloud.", zh: "天枢 · 聚合大模型 API 云。" })}<br />
+          <span className="text-fg-muted">{t({ en: "One endpoint - ALL backends", zh: "一个入口 — 聚合所有后端" })}</span>
         </h1>
-        <p className="text-base text-fg-muted max-w-xl mx-auto mb-8">
+        <p className="text-base text-fg-muted max-w-2xl mx-auto mb-8">
           {t({
-            en: "Tianshu turns spare consumer-grade GPUs into a single OpenAI-compatible endpoint. Providers earn 82.4% of every token billed; consumers pay below hyperscaler rates with priority routing and automatic failover.",
-            zh: "天枢把闲置的消费级 / 工作站 GPU 聚合成统一的 OpenAI 兼容接口：提供者拿走每个 token 的 82.4%；调用者以低于云厂商的价格享受多备份、自动故障转移。",
+            en: "Tianshu is an aggregated LLM API cloud with two ways to use it: bring your own vendor keys (OpenAI, Anthropic, DeepSeek, …) and let us route, retry and fail over across them for free; or subscribe to community-provided GPU backends and pay below hyperscaler rates per token. One OpenAI-compatible endpoint, priority routing, automatic failover.",
+            zh: "天枢是一个聚合大模型 API 云：你既可以自带各厂商的 API Key（OpenAI / Anthropic / DeepSeek 等），让我们免费提供统一路由、重试与故障转移；也可以订阅社区贡献的 GPU 后端，以低于云厂商的 token 价格使用。一个 OpenAI 兼容入口，优先级路由 + 自动故障转移。",
           })}
         </p>
         <div className="flex justify-center gap-2 flex-wrap">
-          <Link href="/providers" className="h-10 px-5 inline-flex items-center rounded-lg bg-fg text-accent-fg text-sm font-medium hover:bg-fg/90">
-            {t({ en: "Become a provider", zh: "成为服务商" })}
-          </Link>
-          <Link href="/models" className="h-10 px-5 inline-flex items-center rounded-lg bg-surface border border-line text-fg text-sm font-medium hover:bg-accent-soft">
+          <Link href="/models" className="h-10 px-5 inline-flex items-center rounded-lg bg-fg text-accent-fg text-sm font-medium hover:bg-fg/90">
             {t({ en: "Browse Models", zh: "浏览模型广场" })}
           </Link>
-          <Link href="/pricing" className="h-10 px-5 inline-flex items-center rounded-lg bg-surface border border-line text-fg text-sm font-medium hover:bg-accent-soft">
-            {t({ en: "Pricing", zh: "定价" })}
+          <Link href="/providers" className="h-10 px-5 inline-flex items-center rounded-lg bg-surface border border-line text-fg text-sm font-medium hover:bg-accent-soft">
+            {t({ en: "Become a provider", zh: "成为服务商" })}
           </Link>
         </div>
       </section>
@@ -109,8 +107,8 @@ export default function Home() {
             <h3 className="font-semibold text-fg mb-3">{t({ en: "Monetize idle compute", zh: "把闲置算力变现" })}</h3>
             <ol className="list-decimal list-inside text-[13px] text-fg-muted space-y-1.5 marker:text-fg-subtle">
               <li>{t({ en: "Sign up and enable provider mode in My Services", zh: "注册账号，在「我的服务」激活提供者身份" })}</li>
-              <li>{t({ en: "Register a backend: direct or tunnel mode, with model and unit price", zh: "注册后端服务：直连或隧道，填写模型与单价" })}</li>
-              <li>{t({ en: "For tunnel mode, run ", zh: "如果是隧道模式，本地运行 " })}<code className="px-1 py-0.5 rounded bg-accent-soft text-fg font-mono text-[12px]">tunnel_client.py</code>{t({ en: " locally", zh: "" })}</li>
+              <li>{t({ en: "Download the ", zh: "下载【" })}<strong>{t({ en: "Tianshu Provider", zh: "天枢 Provider" })}</strong>{t({ en: " desktop client (Windows / macOS / Linux) and sign in with your account", zh: "】桌面客户端（Windows / macOS / Linux），用账号登录" })}</li>
+              <li>{t({ en: "In the client, register your local model service (NAT-friendly, no public IP required) with model whitelist and unit price", zh: "在客户端里注册本地模型服务（NAT 后亦可，无需公网 IP），填模型白名单与单价" })}</li>
               <li>{t({ en: "Submit for listing review — once approved, your service appears in the catalog", zh: "提交「上架」审核，通过后即可出现在广场" })}</li>
             </ol>
           </div>

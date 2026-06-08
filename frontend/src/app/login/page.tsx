@@ -85,7 +85,7 @@ export default function LoginPage() {
         body: JSON.stringify({ login, password, code: code.trim(), remember }),
       })
       await auth.login(data.token, remember)
-      router.push("/models")
+      router.push("/")
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t({ en: "Login failed", zh: "登录失败" }))
     } finally {

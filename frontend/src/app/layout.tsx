@@ -4,7 +4,6 @@ import "./globals.css"
 import { AuthProvider } from "@/context/AuthContext"
 import { ThemeProvider } from "@/context/ThemeContext"
 import { LocaleProvider } from "@/context/LocaleContext"
-import Footer from "@/components/Footer"
 import AppShell from "@/components/AppShell"
 
 const inter = Inter({ subsets: ["latin"], display: "swap", variable: "--font-inter" })
@@ -32,12 +31,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="bg-bg text-fg min-h-screen flex flex-col font-sans antialiased">
         <ThemeProvider>
-          <LocaleProvider>
-            <AuthProvider>
+          <AuthProvider>
+            <LocaleProvider>
               <AppShell>{children}</AppShell>
-              <Footer />
-            </AuthProvider>
-          </LocaleProvider>
+            </LocaleProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

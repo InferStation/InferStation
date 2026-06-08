@@ -52,8 +52,8 @@ export default function EarningsPage() {
       <h1 className="text-2xl font-bold mb-1">{t({ en: "Earnings", zh: "我的收益" })}</h1>
       <p className="text-sm text-gray-500 mb-6">
         {t({
-          en: "Consumer spend on your backends, split into channel fee (Freemius), platform fee (10%), and your cut.",
-          zh: "消费者在你的后端上的支出，拆分为渠道费（Freemius）、平台费（10%）以及你的实际收益。",
+          en: "Consumer spend on your backends, split into payment channel fee (15%), platform fee (Tianshu, 25%), and your cut (60%).",
+          zh: "消费者在你的后端上的支出，拆分为支付渠道费（15%）、平台费（天枢，25%）以及你的实际收益（60%）。",
         })}
       </p>
 

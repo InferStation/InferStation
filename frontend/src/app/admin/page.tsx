@@ -193,8 +193,8 @@ export default function AdminPage() {
   const approveRefund = async (req: RefundRequest) => {
     const refundUsd = (req.requested_cents / 100).toFixed(2)
     const msg = t({
-      en: `Issue Freemius partial refund of $${refundUsd} to user ${req.username} for payment ${req.payment_id}?\n\nThis calls the Freemius REST API immediately. The webhook will then auto-deduct user balance.`,
-      zh: `通过 Freemius 给用户 ${req.username} 退款 $${refundUsd}（支付号 ${req.payment_id}）？\n\n此操作将立即调用 Freemius 接口，余额扣减由 webhook 自动完成。`,
+      en: `Issue partial refund of $${refundUsd} to user ${req.username} for payment ${req.payment_id}?\n\nThis calls the payment-channel REST API immediately. The webhook will then auto-deduct user balance.`,
+      zh: `给用户 ${req.username} 退款 $${refundUsd}（支付号 ${req.payment_id}）？\n\n此操作将立即调用支付渠道接口，余额扣减由 webhook 自动完成。`,
     })
     if (!confirm(msg)) return
     const note = prompt(t({ en: "Internal note (optional):", zh: "管理员备注（可选）：" })) || ""
@@ -204,8 +204,8 @@ export default function AdminPage() {
         body: JSON.stringify({ note }),
       })
       alert(t({
-        en: `Refund issued. Freemius refund id: ${r.channel_refund_ref || "(pending)"}.`,
-        zh: `退款已发起。Freemius 退款编号：${r.channel_refund_ref || "（待回填）"}。`,
+        en: `Refund issued. Channel refund id: ${r.channel_refund_ref || "(pending)"}.`,
+        zh: `退款已发起。渠道退款编号：${r.channel_refund_ref || "（待回填）"}。`,
       }))
     } catch (e: unknown) {
       alert(t({ en: `Refund failed: ${e instanceof Error ? e.message : e}`, zh: `退款失败：${e instanceof Error ? e.message : e}` }))

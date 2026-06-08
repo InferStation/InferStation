@@ -105,7 +105,7 @@ export default function DocsPage() {
             <li>{t({ en: "Replace ", zh: "把下面这条 curl 里的 " })}<code>sk-your-api-key</code>{t({ en: " and ", zh: " 和 " })}<code>MODEL_NAME</code>{t({ en: " in the curl below with your own:", zh: " 换成自己的：" })}</li>
           </ol>
           <div className="bg-gray-900 text-gray-100 rounded-lg p-4 text-xs overflow-x-auto mt-3">
-            <pre>{`curl https://your-gateway/v1/chat/completions \\
+            <pre>{`curl https://tianshu-gateway.cloud/v1/chat/completions \\
   -H "Authorization: Bearer sk-your-api-key" \\
   -H "Content-Type: application/json" \\
   -d '{"model":"MODEL_NAME","messages":[{"role":"user","content":"hello"}]}'`}</pre>
@@ -129,8 +129,8 @@ export default function DocsPage() {
             <h3 className="font-semibold text-base text-gray-800 mb-2">{t({ en: "Provider flow", zh: "提供者完整路径" })}</h3>
             <ol className="list-decimal list-inside space-y-1.5 ml-2">
               <li>{t({ en: "Switch your role to provider or both on the Account page.", zh: "账号页将身份切换为 provider 或 both" })}</li>
-              <li>{t({ en: "Register a backend in My Services: pick direct or tunnel mode and fill model whitelist and unit price (see Provider guide below).", zh: "「我的服务」注册后端：选直连或隧道、填模型白名单与单价（详见下文「提供者接入指南」）" })}</li>
-              <li>{t({ en: "For tunnel mode, run ", zh: "隧道模式在本地跑 " })}<code>tunnel_client.py</code>{t({ en: " locally (systemd recommended — see below).", zh: "（建议 systemd 托管，见下）" })}</li>
+              <li>{t({ en: "Register a backend in My Services. For backends behind NAT use the Tianshu Provider desktop client (see Provider guide below); for backends with a public URL you can register directly in the web form.", zh: "「我的服务」注册后端。NAT/内网后端请使用天枢 Provider 桌面客户端接入（详见下文「提供者接入指南」）；有公网 URL 的后端可直接在网页填写。" })}</li>
+              <li>{t({ en: "Install the Tianshu Provider client when registering from NAT / a private network \u2014 it handles the tunnel and stays connected in the background.", zh: "NAT / 内网接入请装天枢 Provider 客户端，它会自动维护隧道并保持连接。" })}</li>
               <li>{t({ en: "Click \"Submit for listing\" to enter review; once approved your service appears in the catalog. If rejected, read the review_note, fix, and resubmit.", zh: "点「申请上架」进入审核；通过后自动出现在广场，被驳回可看 review_note 修改后重新提交" })}</li>
             </ol>
           </div>
@@ -147,7 +147,7 @@ export default function DocsPage() {
               {t({ en: "Create a key on the API Keys page and call ", zh: "在「API Key」页面创建 key，通过标准 OpenAI 格式调用 " })}<code>/v1</code>{t({ en: " using the standard OpenAI format. The platform picks a backend by ", zh: "。平台会按你" })}<strong>{t({ en: "the priority of your activated subscriptions", zh: "激活的订阅的优先级" })}</strong>{t({ en: " (see Routing below).", zh: "选择后端（详见下方「路由与失败转移」）" })}
             </p>
             <div className="bg-gray-900 text-gray-100 rounded-lg p-4 text-sm overflow-x-auto">
-              <pre>{`curl https://your-gateway/v1/chat/completions \\
+              <pre>{`curl https://tianshu-gateway.cloud/v1/chat/completions \\
   -H "Content-Type: application/json" \\
   -H "Authorization: Bearer sk-your-api-key" \\
   -d '{
@@ -167,7 +167,7 @@ export default function DocsPage() {
               <pre>{`from openai import OpenAI
 
 client = OpenAI(
-    base_url="https://your-gateway/v1",
+    base_url="https://tianshu-gateway.cloud/v1",
     api_key="sk-your-api-key",
 )
 
@@ -248,7 +248,7 @@ for chunk in resp:
                 <tr><td className="px-3 py-2 border font-mono">403</td><td className="px-3 py-2 border">{t({ en: "User disabled by admin / account deleted", zh: "用户被管理员停用 / 账号已注销" })}</td><td className="px-3 py-2 border">{t({ en: "Contact a platform admin.", zh: "联系平台管理员" })}</td></tr>
                 <tr><td className="px-3 py-2 border font-mono">404</td><td className="px-3 py-2 border">{t({ en: "Model matches no active subscription / model does not exist", zh: "model 未匹配任何已激活订阅 / 模型不存在" })}</td><td className="px-3 py-2 border">{t({ en: "Activate it on My Subscriptions; or change the model; or re-subscribe in the catalog.", zh: "在「我的订阅」激活；或换 model；或在广场重新订阅" })}</td></tr>
                 <tr><td className="px-3 py-2 border font-mono">429</td><td className="px-3 py-2 border">{t({ en: "Rate limit on email-code endpoints (login/register/change-email/delete-account)", zh: "邮件验证码相关接口的限流（登录/注册/改邮箱/注销）" })}</td><td className="px-3 py-2 border">{t({ en: "Retry in 60 seconds, or in the next hour.", zh: "60 秒后或下一小时再试" })}</td></tr>
-                <tr><td className="px-3 py-2 border font-mono">503</td><td className="px-3 py-2 border">{t({ en: "All candidate backends offline / tunnel disconnected", zh: "候选后端全部 offline / 隧道未连接" })}</td><td className="px-3 py-2 border">{t({ en: "Retry later; providers should check whether tunnel_client is running.", zh: "稍后重试；提供者请检查 tunnel_client 是否在跑" })}</td></tr>
+                <tr><td className="px-3 py-2 border font-mono">503</td><td className="px-3 py-2 border">{t({ en: "All candidate backends offline / tunnel disconnected", zh: "候选后端全部 offline / 隧道未连接" })}</td><td className="px-3 py-2 border">{t({ en: "Retry later; providers should check whether the Tianshu Provider client is running and signed in.", zh: "稍后重试；提供者请检查天枢 Provider 客户端是否在运行并保持登录。" })}</td></tr>
                 <tr><td className="px-3 py-2 border font-mono">5xx</td><td className="px-3 py-2 border">{t({ en: "Upstream backend or SSE error mid-flight", zh: "上游 backend 或 SSE 中途异常" })}</td><td className="px-3 py-2 border">{t({ en: "Implement a small backoff retry on the client.", zh: "建议客户端实现一次小退避重试" })}</td></tr>
               </tbody>
             </table>
@@ -308,13 +308,13 @@ for chunk in resp:
           </ul>
           <div className="bg-gray-900 text-gray-100 rounded-lg p-4 text-sm overflow-x-auto">
             <pre>{`# 1. Request a code before sign-in
-curl -X POST https://your-gateway/api/auth/send-code \
+curl -X POST https://tianshu-gateway.cloud/api/auth/send-code \
   -H "Content-Type: application/json" \
   -d '{"email": "you@example.com", "purpose": "login"}'
 # => {"ok": true}
 
 # 2. Sign in with the code
-curl -X POST https://your-gateway/api/auth/login \
+curl -X POST https://tianshu-gateway.cloud/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"login": "you@example.com", "password": "xxxxx", "code": "123456"}'`}</pre>
           </div>
@@ -412,14 +412,14 @@ curl -X POST https://your-gateway/api/auth/login \
           <h3 className="font-semibold text-base text-gray-800">{t({ en: "1. Pick a mode: direct / tunnel", zh: "1. 选模式：直连 / 隧道" })}</h3>
           <ul className="list-disc list-inside space-y-1 ml-2">
             <li><strong>{t({ en: "Direct", zh: "直连（direct）" })}</strong>{t({ en: ": your backend has a publicly reachable address (including loopback addresses exposed via reverse SSH or similar). Fill in ", zh: "：你的后端有公网可达地址（含通过反向 SSH 等手段暴露到本机 loopback 的）。注册时填 " })}<code>url</code>{t({ en: " when registering; the platform forwards directly via httpx.", zh: "，平台直接 httpx 转发。" })}</li>
-            <li><strong>{t({ en: "Tunnel", zh: "隧道（tunnel）" })}</strong>{t({ en: ": your backend is behind NAT or a private network with no public IP. After registering, run ", zh: "：后端在 NAT/内网，没有公网 IP。注册后在本地跑 " })}<code>tunnel_client.py</code>{t({ en: " locally; the client opens a WebSocket to the gateway, and the gateway uses that connection to reach your backend in reverse.", zh: "，由 client 主动 WebSocket 连到平台，平台借这条连接反向请求后端。" })}</li>
+            <li><strong>{t({ en: "Tunnel", zh: "隧道（tunnel）" })}</strong>{t({ en: ": your backend is behind NAT or a private network with no public IP. Install the ", zh: "：后端在 NAT/内网，没有公网 IP。安装《" })}<strong>{t({ en: "Tianshu Provider", zh: "天枢 Provider" })}</strong>{t({ en: " desktop client and register the backend from there \u2014 the client opens a WebSocket to the gateway, and the gateway uses that connection to reach your backend in reverse.", zh: "》桌面客户端并在其中注册后端，客户端会自动 WebSocket 连到平台，平台借这条连接反向请求后端。" })}</li>
           </ul>
         </div>
 
         <div className="bg-white rounded-lg border p-6 space-y-3 text-sm text-gray-700 mt-4">
           <h3 className="font-semibold text-base text-gray-800">{t({ en: "2. Key fields in the registration form", zh: "2. 注册表单关键字段" })}</h3>
           <ul className="list-disc list-inside space-y-1.5 ml-2">
-            <li><code>name</code>: {t({ en: "backend name (globally unique). In tunnel mode, ", zh: "后端名（全局唯一）。隧道模式下，" })}<code>tunnel_client.py</code>{t({ en: "'s ", zh: " 的 " })}<code>--backend-name</code>{t({ en: " must match.", zh: " 必须与之一致。" })}</li>
+            <li><code>name</code>: {t({ en: "backend name (globally unique). In tunnel mode the Tianshu Provider client uses this as the registration handle.", zh: "后端名（全局唯一）。隧道模式下天枢 Provider 客户端以此作为注册句柄。" })}</li>
             <li><code>models</code>: {t({ en: "OpenAI-compatible model IDs you expose (the ", zh: "你对外暴露的 OpenAI 兼容模型 ID 列表（用户请求里的 " })}<code>model</code>{t({ en: " field that consumers send). Separate multiple with newlines.", zh: " 字段）。多模型用换行分隔。" })}</li>
             <li><code>client_info.model_map</code>{t({ en: " (optional): translate the public ID to the upstream's real ID. e.g. public ", zh: "（可选）：把对外 ID 翻译成上游真实 ID。例：对外 " })}<code>Qwen/Qwen3.6-35B-A3B</code>{t({ en: " → upstream ", zh: " → 上游 " })}<code>qwen36-awq</code>{t({ en: ". Leave empty to pass through.", zh: "。不填即透传。" })}</li>
             <li><code>client_info.api_key</code>{t({ en: " (optional, direct only): adds an ", zh: "（可选，仅 direct）：转发时附加的 " })}<code>Authorization: Bearer &lt;key&gt;</code>{t({ en: " when forwarding. Visible to owner / admin only.", zh: "。仅 owner / admin 可见。" })}</li>
@@ -428,57 +428,14 @@ curl -X POST https://your-gateway/api/auth/login \
         </div>
 
         <div className="bg-white rounded-lg border p-6 space-y-3 text-sm text-gray-700 mt-4">
-          <h3 className="font-semibold text-base text-gray-800">{t({ en: "3. Tunnel client", zh: "3. 隧道客户端" })}</h3>
-          <p>{t({ en: "Source at ", zh: "仓库 " })}<code>backend/tunnel_client.py</code>{t({ en: ", depends on ", zh: "，依赖 " })}<code>websockets</code> + <code>httpx</code>:</p>
-          <div className="bg-gray-900 text-gray-100 rounded-lg p-4 text-xs overflow-x-auto">
-            <pre>{`python tunnel_client.py \\
-  --gateway   wss://your-gateway/ws/tunnel \\
-  --token     sk-your-provider-API-Key \\
-  --backend-name your-registered-backend-name \\
-  --local-url http://127.0.0.1:8000`}</pre>
-          </div>
+          <h3 className="font-semibold text-base text-gray-800">{t({ en: "3. Tianshu Provider client", zh: "3. 天枢 Provider 客户端" })}</h3>
+          <p>{t({ en: "For tunnel-mode backends, use the official ", zh: "隧道模式接入请使用官方 " })}<strong>{t({ en: "Tianshu Provider", zh: "天枢 Provider" })}</strong>{t({ en: " desktop client (Windows / macOS / Linux). It signs in with your account, registers the backend, and maintains the tunnel + heartbeat in the background. No CLI flags, no systemd unit files — install and sign in.", zh: " 桌面客户端（Windows / macOS / Linux）。客户端用你的账号登录、注册后端、后台维护隧道与心跳，不需要 CLI 参数、不需要 systemd unit — 安装后登录即可。" })}</p>
           <ul className="list-disc list-inside space-y-1 ml-2">
-            <li><code>--token</code>{t({ en: " is any API key under your account (", zh: " 用你账号下任一 API Key（" })}<code>sk-xxxx</code>{t({ en: "), not your login password.", zh: "），不是登录密码。" })}</li>
-            <li>{t({ en: "Once connected the backend is auto-marked online; on disconnect, auto offline. The client has built-in reconnect and heartbeat — no extra daemon beyond systemd is needed.", zh: "连接建立后后端自动标记 online，断开自动 offline。客户端内置自动重连与心跳，无需 systemd 之外的额外守护。" })}</li>
-            <li>{t({ en: "SSE is forwarded line-by-line in real time; streaming generation has no aggregate timeout, only an idle guard.", zh: "SSE 按行实时转发；流式生成无总超时，仅做空闲保护。" })}</li>
+            <li>{t({ en: "Sign in once with your Tianshu account; the client picks up your API keys automatically.", zh: "用天枢账号登录一次,客户端自动接管你的 API Key。" })}</li>
+            <li>{t({ en: "Once connected the backend is auto-marked online; on disconnect, auto offline. The client has built-in reconnect, heartbeat and start-at-login.", zh: "连接建立后后端自动标记 online,断开自动 offline。内置自动重连、心跳、开机启动。" })}</li>
+            <li>{t({ en: "SSE is forwarded line-by-line in real time; streaming generation has no aggregate timeout, only an idle guard.", zh: "SSE 按行实时转发；流式生成无总超时,仅做空闲保护。" })}</li>
+            <li>{t({ en: "Direct-mode backends (with a public URL) can also be registered from the client, or directly from the web form on My Services.", zh: "直连模式（有公网 URL）的后端也可以在客户端里注册,或在「我的服务」网页表单里注册。" })}</li>
           </ul>
-
-          <p className="text-gray-800 font-medium mt-2">{t({ en: "Recommended: run under systemd (24×7):", zh: "推荐用 systemd 托管（24×7）：" })}</p>
-          <div className="bg-gray-900 text-gray-100 rounded-lg p-4 text-xs overflow-x-auto">
-            <pre>{`# /etc/systemd/system/tianshu-tunnel@.service
-[Unit]
-Description=Tianshu tunnel client (%i)
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-Type=simple
-User=lkang
-WorkingDirectory=/home/lkang/llm-gateway/backend
-EnvironmentFile=/etc/tianshu/%i.env
-ExecStart=/home/lkang/llm-gateway/backend/.venv/bin/python tunnel_client.py \\
-  --gateway   \${GATEWAY} \\
-  --token     \${TOKEN} \\
-  --backend-name \${BACKEND_NAME} \\
-  --local-url \${LOCAL_URL}
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target`}</pre>
-          </div>
-          <div className="bg-gray-900 text-gray-100 rounded-lg p-4 text-xs overflow-x-auto">
-            <pre>{`# /etc/tianshu/qwen36.env
-GATEWAY=wss://your-gateway/ws/tunnel
-TOKEN=sk-xxxxxxxx
-BACKEND_NAME=vllm-qwen36-awq
-LOCAL_URL=http://127.0.0.1:8002
-
-# Enable
-sudo systemctl daemon-reload
-sudo systemctl enable --now tianshu-tunnel@qwen36
-sudo journalctl -u tianshu-tunnel@qwen36 -f`}</pre>
-          </div>
         </div>
 
         <div className="bg-white rounded-lg border p-6 space-y-3 text-sm text-gray-700 mt-4">

@@ -60,6 +60,7 @@ export default function ServicesPage() {
   const [statsMap, setStatsMap] = useState<Record<number, ModelStat[]>>({})
   const [showForm, setShowForm] = useState(false)
   const [upgrading, setUpgrading] = useState(false)
+  const [agreed, setAgreed] = useState(false)
   const [form, setForm] = useState({
     name: "",
     url: "",
@@ -110,7 +111,7 @@ export default function ServicesPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (form.mode !== "direct") {
-      alert(t({ en: "Tunnel mode requires the client tool; the web form only supports direct mode.", zh: "隧道模式请使用客户端注册，网页仅支持直连模式。" }))
+      alert(t({ en: "Tunnel mode requires the Tianshu Provider desktop client; the web form only supports direct mode.", zh: "隧道模式请使用天枢 Provider 桌面客户端注册，网页仅支持直连模式。" }))
       return
     }
     if (!form.family) {
@@ -211,17 +212,74 @@ export default function ServicesPage() {
 
   if (!isProvider) {
     return (
-      <div>
-        <div className="bg-white rounded-lg border p-6">
-          <h2 className="font-semibold mb-2">{t({ en: "Become a model service provider", zh: "成为模型服务提供者" })}</h2>
-          <p className="text-sm text-gray-600 mb-4">{t({ en: "Once you activate the provider role you can register your own model backends and share them with other users.", zh: "激活提供者身份后，你可以注册自己的模型后端，将模型服务分享给其他用户。" })}</p>
-          <button
-            onClick={handleUpgrade}
-            disabled={upgrading}
-            className="bg-fg text-white px-6 py-2 rounded-lg hover:bg-fg/90 disabled:opacity-50"
-          >
-            {upgrading ? t({ en: "Activating...", zh: "激活中..." }) : t({ en: "Activate", zh: "激活" })}
-          </button>
+      <div className="max-w-3xl">
+        <div className="bg-white rounded-lg border p-6 md:p-8 space-y-6">
+          <div>
+            <h2 className="text-xl font-semibold mb-2">{t({ en: "Activate Provider", zh: "激活提供者" })}</h2>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              {t({
+                en: "My Services is where you list model backends — your own GPU machines or a BYOK upstream — for other users to call. Activating the Provider role is free and reversible; activate it only when you actually want to list a service.",
+                zh: "「我的服务」是你上架模型后端的地方 — 可是自己的 GPU 机器，也可是 BYOK 上游渠道，让其他用户调用。激活提供者身份免费且可退出，请在你确实要上架服务时再点击激活。"
+              })}
+            </p>
+          </div>
+
+          <div className="rounded-lg bg-gray-50 border p-4 text-sm">
+            <div className="font-medium text-gray-800 mb-2">{t({ en: "What you get", zh: "可以获得" })}</div>
+            <ul className="list-disc list-inside space-y-1 text-gray-700">
+              <li>{t({ en: "60% revenue share on paid traffic; payouts monthly with a $50 minimum.", zh: "付费流量 60% 收入分成，每月结算，$50 起付。" })}</li>
+              <li>{t({ en: "Direct mode for backends with a public URL; tunnel mode via the Tianshu Provider desktop client for NAT / home networks.", zh: "公网后端可直连接入；NAT / 家庭内网可用「天枢 Provider」桌面客户端走隐染接入。" })}</li>
+              <li>{t({ en: "List, pause, repricing and de-listing controls anytime in My Services. No exclusivity, no lock-in.", zh: "随时在「我的服务」中上架 / 暂停 / 调价 / 下架，不独家、不锁定。" })}</li>
+            </ul>
+          </div>
+
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm">
+            <div className="font-medium text-gray-800 mb-2">{t({ en: "Provider Agreement — by activating you confirm:", zh: "提供者协议 — 激活即表示你确认：" })}</div>
+            <ul className="list-disc list-inside space-y-1.5 text-gray-700">
+              <li>{t({ en: "You hold the legal rights to use the connected models and weights, and to serve them externally.", zh: "你对所接入的模型与权重拥有合法使用和对外提供服务的权利。" })}</li>
+              <li>{t({ en: "For BYOK / proxy backends: any upstream API key you provide is obtained through lawful channels and used in compliance with the upstream provider's terms (no resold, leaked, stolen, or jurisdictionally restricted keys).", zh: "如接入是 BYOK / 转发后端：你提供的上游 API Key 均通过合法渠道获得，且使用方式符合上游服务商的条款（不得使用转售、泄露、盗取或管辖区受限的 Key）。" })}</li>
+              <li>{t({ en: "Declared model name, pricing, context length, and other metadata are accurate and match the real backend.", zh: "所申报的模型名称、定价、上下文长度等元数据与实际后端一致。" })}</li>
+              <li>{t({ en: "You will not inject ads, sensitive content, hijack content, or malicious responses into the platform's routing.", zh: "不会在平台路由中注入广告、敏感内容、劫持内容或恶意返回。" })}</li>
+              <li>{t({ en: "You will preserve the integrity of inference results — no tampering, no intentional degradation.", zh: "保障推理结果的完整性，不篡改、不故意降级。" })}</li>
+              <li>{t({ en: "When pausing or taking a service offline you will switch its listing status promptly in My Services to avoid impacting subscribers.", zh: "下架或停机时会及时在「我的服务」中切换状态，避免影响订阅者。" })}</li>
+              <li>{t({ en: "Generated content is the joint responsibility of the provider and the end user; the platform is a neutral technical channel.", zh: "生成内容由提供者与最终使用者共同承担责任；平台仅为中立技术通道。" })}</li>
+              <li>{t({ en: "The platform reserves the right to delist or suspend any model / backend at any time — with or without prior notice — if it violates these terms, law, upstream terms, or otherwise poses risk to users or the platform.", zh: "平台保留在违反本协议、法律、上游条款或对用户 / 平台构成风险时，随时对任意模型 / 后端予以下架或暂停的权利（可以提前通知，也可以不提前通知）。" })}</li>
+            </ul>
+            <p className="text-xs text-gray-600 mt-3">
+              {t({ en: "Full text: ", zh: "完整条款见 " })}
+              <Link href="/terms" className="underline hover:text-fg" target="_blank">{t({ en: "Terms of Service §4", zh: "《服务条款》§4" })}</Link>
+              {" · "}
+              <Link href="/sla" className="underline hover:text-fg" target="_blank">{t({ en: "SLA", zh: "《SLA》" })}</Link>
+              {" · "}
+              <Link href="/privacy" className="underline hover:text-fg" target="_blank">{t({ en: "Privacy", zh: "《隐私政策》" })}</Link>
+            </p>
+          </div>
+
+          <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={(e) => setAgreed(e.target.checked)}
+              className="mt-0.5 w-4 h-4 accent-fg"
+            />
+            <span>
+              {t({
+                en: "I have read and agree to the Provider Agreement, Terms of Service, SLA, and Privacy Policy.",
+                zh: "我已阅读并同意上述《提供者协议》、《服务条款》、《SLA》与《隐私政策》。"
+              })}
+            </span>
+          </label>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleUpgrade}
+              disabled={upgrading || !agreed}
+              className="bg-fg text-white px-6 py-2 rounded-lg hover:bg-fg/90 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {upgrading ? t({ en: "Activating...", zh: "激活中..." }) : t({ en: "Activate Provider", zh: "激活提供者" })}
+            </button>
+            <span className="text-xs text-gray-500">{t({ en: "Free · reversible from the Account page", zh: "免费 · 可在账号页退出" })}</span>
+          </div>
         </div>
       </div>
     )
@@ -258,11 +316,11 @@ export default function ServicesPage() {
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-fg/40 focus:outline-none"
                 >
                   <option value="direct">{t({ en: "Direct (publicly reachable)", zh: "直连（公网可达）" })}</option>
-                  <option value="tunnel">{t({ en: "Tunnel (NAT, requires client registration)", zh: "隧道（NAT 内网，需客户端注册）" })}</option>
+                  <option value="tunnel">{t({ en: "Tunnel (NAT, requires the Tianshu Provider client)", zh: "隧道（NAT 内网，需天枢 Provider 客户端）" })}</option>
                 </select>
                 {form.mode === "tunnel" && (
                   <p className="mt-1 text-xs text-red-600">
-                    {t({ en: "Tunnel mode is not yet supported in the web form, ", zh: "隧道模式暂不支持网页注册，" })}
+                    {t({ en: "Tunnel mode is not yet supported in the web form, ", zh: "隧道模式暂不支持网页注册，请使用天枢 Provider 客户端。" })}
                     <button type="button" onClick={() => setTunnelNoticeOpen(true)} className="underline hover:text-red-700">{t({ en: "see onboarding instructions", zh: "查看接入说明" })}</button>
                   </p>
                 )}
@@ -567,19 +625,20 @@ export default function ServicesPage() {
             <div className="flex items-start justify-between gap-4 mb-3">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">{t({ en: "Tunnel mode is not supported in the web form", zh: "隧道模式暂不支持网页注册" })}</h3>
-                <p className="text-sm text-gray-500 mt-1">{t({ en: "Please register from the provider machine using the client CLI.", zh: "请在提供方机器上通过客户端命令行注册。" })}</p>
+                <p className="text-sm text-gray-500 mt-1">{t({ en: "Please install the Tianshu Provider desktop client on the provider machine and register from there.", zh: "请在提供方机器上安装天枢 Provider 桌面客户端，在客户端里注册后端。" })}</p>
               </div>
               <button onClick={() => setTunnelNoticeOpen(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
             </div>
-            <div className="rounded-lg bg-gray-900 text-gray-100 text-xs font-mono p-4 overflow-x-auto mb-3">
-              <pre className="whitespace-pre">{`python tunnel_client.py \\
-  --gateway wss://llm.jours.art/ws/tunnel \\
-  --token sk-${t({ en: "YOUR-API-KEY", zh: "你的API-Key" })} \\
-  --backend-name ${t({ en: "backend-name", zh: "后端名称" })} \\
-  --local-url http://localhost:8000`}</pre>
+            <div className="rounded-lg bg-accent-soft border border-line text-sm text-fg p-4 mb-3">
+              <div className="font-medium mb-1">{t({ en: "Tianshu Provider (desktop client)", zh: "天枢 Provider（桌面客户端）" })}</div>
+              <ul className="list-disc list-inside space-y-1 text-fg-muted text-[13px]">
+                <li>{t({ en: "Windows / macOS / Linux", zh: "支持 Windows / macOS / Linux" })}</li>
+                <li>{t({ en: "Sign in with your Tianshu account; the client registers the backend and maintains the tunnel automatically.", zh: "用天枢账号登录，客户端自动完成后端注册与隧道维护。" })}</li>
+                <li>{t({ en: "Auto-reconnect, heartbeat, start-at-login.", zh: "自动重连、心跳、开机启动。" })}</li>
+              </ul>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <Link href="/docs#tunnel" target="_blank" className="text-sm text-fg hover:text-fg font-medium">
+              <Link href="/docs#provider" target="_blank" className="text-sm text-fg hover:text-fg font-medium">
                 {t({ en: "View full onboarding docs →", zh: "查看完整接入文档 →" })}
               </Link>
               <button

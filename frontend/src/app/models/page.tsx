@@ -197,7 +197,7 @@ export default function ModelsPage() {
         </div>
         <div className="flex items-center gap-2">
           <Link
-            href="/docs/api"
+            href="/docs"
             className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-line bg-surface text-sm font-medium text-fg hover:bg-bg/60"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 3h7v7m0-7L10 14M5 5h6m-6 4h6m-6 4h6m-6 4h6" /></svg>

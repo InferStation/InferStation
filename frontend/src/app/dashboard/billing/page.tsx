@@ -135,18 +135,11 @@ export default function BillingPage() {
     }
   }
 
-  const isRefundable = (r: Topup) => {
-    if (!["succeeded", "partially_refunded"].includes(r.status)) return false
-    if (r.refund_request && (r.refund_request.status === "pending" || r.refund_request.status === "approved")) return false
-    if (r.gross_usd_cents - r.refunded_cents <= 0) return false
-    try {
-      const created = new Date(r.created_at.replace(" ", "T") + "Z")
-      const days = (Date.now() - created.getTime()) / 86400000
-      if (days > refundWindow) return false
-    } catch {
-      return false
-    }
-    return true
+  const isRefundable = (_r: Topup) => {
+    // Top ups are non-refundable. Admins may still issue out-of-band refunds for
+    // chargebacks or fraud cases via the admin console, but users cannot request
+    // refunds from the UI.
+    return false
   }
 
   const openRefund = (r: Topup) => {
@@ -244,8 +237,8 @@ export default function BillingPage() {
           </div>
           <p className="text-xs text-gray-500 mt-3">
             {t({
-              en: "Top ups credit your balance at face value. Refunds available within 14 days minus a 10% processing fee (covers non-recoverable Freemius / card-network fees).",
-              zh: "充值按面值进入余额。14 天内可申请退款，扣除 10% 手续费（用于抵消 Freemius / 卡组织已收取的通道费）。",
+              en: "Top ups credit your balance at face value. All top ups are final and non-refundable. Your balance never expires.",
+              zh: "充值按面值进入余额。所有充值一经到账概不退款，余额永不过期。",
             })}
           </p>
         </>
@@ -355,8 +348,8 @@ export default function BillingPage() {
               />
               <p className="text-xs text-gray-500 mb-4">
                 {t({
-                  en: `The refund will be reviewed by an admin and processed via Freemius (original payment method). Refund window: ${refundWindow} days from top up.`,
-                  zh: `退款将由管理员审核后通过 Freemius 原路退回。可退款时限：充值后 ${refundWindow} 天。`,
+                  en: `The refund will be reviewed by an admin and returned to your original payment method. Refund window: ${refundWindow} days from top up.`,
+                  zh: `退款将由管理员审核后原路退回。可退款时限：充值后 ${refundWindow} 天。`,
                 })}
               </p>
               <div className="flex justify-end gap-2">

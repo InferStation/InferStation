@@ -27,6 +27,7 @@ interface User {
   username: string
   role: string
   verified: number
+  locale?: string | null
   billing?: BillingSummary
 }
 

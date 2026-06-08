@@ -69,7 +69,7 @@ export default function Footer() {
         </div>
         <div className="border-t border-line mt-6 pt-4 text-xs text-fg-subtle flex flex-wrap justify-between gap-2">
           <span>© {new Date().getFullYear()} {t({ en: "Tianshu Gateway", zh: "天枢 · Tianshu Gateway" })}</span>
-          <span>OpenAI-compatible LLM aggregation platform</span>
+          <span>{t({ en: "OpenAI-compatible LLM aggregation platform", zh: "兼容 OpenAI 协议的大模型聚合平台" })}</span>
         </div>
       </div>
     </footer>
