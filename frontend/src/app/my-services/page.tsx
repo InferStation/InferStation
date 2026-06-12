@@ -6,6 +6,7 @@ import Link from "next/link"
 import { useAuth } from "@/context/AuthContext"
 import { apiFetch } from "@/lib/api"
 import { useT } from "@/context/LocaleContext"
+import { useToast } from "@/context/ToastContext"
 import { tagLabel } from "@/lib/labels"
 
 interface Backend {
@@ -56,6 +57,7 @@ interface BackendStats {
 
 export default function ServicesPage() {
   const t = useT()
+  const toast = useToast()
   const { user, refreshUser } = useAuth()
   const [backends, setBackends] = useState<Backend[]>([])
   const [statsMap, setStatsMap] = useState<Record<number, ModelStat[]>>({})
@@ -112,15 +114,15 @@ export default function ServicesPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (form.mode !== "direct") {
-      alert(t({ en: "Tunnel mode requires the Tianshu Provider desktop client; the web form only supports direct mode.", zh: "隧道模式请使用天枢 Provider 桌面客户端注册，网页仅支持直连模式。" }))
+      toast.info(t({ en: "Tunnel mode requires the Tianshu Provider desktop client; the web form only supports direct mode.", zh: "隧道模式请使用天枢 Provider 桌面客户端注册，网页仅支持直连模式。" }))
       return
     }
     if (!form.family) {
-      alert(t({ en: "Please select a model family", zh: "请选择模型系列" }))
+      toast.info(t({ en: "Please select a model family", zh: "请选择模型系列" }))
       return
     }
     if (!form.model) {
-      alert(t({ en: "Please select a model", zh: "请选择一个模型" }))
+      toast.info(t({ en: "Please select a model", zh: "请选择一个模型" }))
       return
     }
     try {
@@ -157,7 +159,7 @@ export default function ServicesPage() {
       setForm({ name: "", url: "", api_key: "", mode: "direct", family: "", model: "", served_as: "", tag_hardware: "", tag_framework: "", tag_quantization: "", input_price: "", output_price: "", cache_price: "", currency: "USD" })
       loadBackends()
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : t({ en: "Operation failed", zh: "操作失败" }))
+      toast.error(err instanceof Error ? err.message : t({ en: "Operation failed", zh: "操作失败" }))
     }
   }
 
@@ -172,7 +174,7 @@ export default function ServicesPage() {
       await apiFetch(`/api/backends/${name}/toggle`, { method: "PUT" })
       loadBackends()
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : t({ en: "Operation failed", zh: "操作失败" }))
+      toast.error(err instanceof Error ? err.message : t({ en: "Operation failed", zh: "操作失败" }))
     }
   }
 
@@ -182,13 +184,13 @@ export default function ServicesPage() {
     try {
       const r = await apiFetch(`/api/backends/${name}/check`, { method: "POST" })
       if (r?.status === "online") {
-        alert(t({ en: `Health check passed: ${name} is online`, zh: `检查通过：${name} 当前在线` }))
+        toast.success(t({ en: `Health check passed: ${name} is online`, zh: `检查通过：${name} 当前在线` }))
       } else {
-        alert(t({ en: `Health check failed: ${name} offline\n${r?.error ?? ""}`, zh: `检查未通过：${name} 离线\n${r?.error ?? ""}` }))
+        toast.error(t({ en: `Health check failed: ${name} offline\n${r?.error ?? ""}`, zh: `检查未通过：${name} 离线\n${r?.error ?? ""}` }))
       }
       loadBackends()
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : t({ en: "Operation failed", zh: "操作失败" }))
+      toast.error(err instanceof Error ? err.message : t({ en: "Operation failed", zh: "操作失败" }))
     } finally {
       setChecking((m) => ({ ...m, [name]: false }))
     }
@@ -205,7 +207,7 @@ export default function ServicesPage() {
       })
       await refreshUser()
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : t({ en: "Operation failed", zh: "操作失败" }))
+      toast.error(err instanceof Error ? err.message : t({ en: "Operation failed", zh: "操作失败" }))
     } finally {
       setUpgrading(false)
     }

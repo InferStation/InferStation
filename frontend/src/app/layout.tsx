@@ -4,6 +4,7 @@ import "./globals.css"
 import { AuthProvider } from "@/context/AuthContext"
 import { ThemeProvider } from "@/context/ThemeContext"
 import { LocaleProvider } from "@/context/LocaleContext"
+import { ToastProvider } from "@/context/ToastContext"
 import AppShell from "@/components/AppShell"
 
 const inter = Inter({ subsets: ["latin"], display: "swap", variable: "--font-inter" })
@@ -33,7 +34,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider>
           <AuthProvider>
             <LocaleProvider>
-              <AppShell>{children}</AppShell>
+              <ToastProvider>
+                <AppShell>{children}</AppShell>
+              </ToastProvider>
             </LocaleProvider>
           </AuthProvider>
         </ThemeProvider>
