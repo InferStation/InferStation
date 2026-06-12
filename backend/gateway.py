@@ -295,7 +295,12 @@ async def health_check_loop():
         try:
             db = await get_db()
             try:
-                cur = await db.execute("SELECT id, name, url, mode, client_info, status FROM backends")
+                # Only auto-probe backends that are publicly listed; unlisted/offline rows
+                # are probed on demand via POST /api/backends/{name}/check.
+                cur = await db.execute(
+                    "SELECT id, name, url, mode, client_info, status FROM backends "
+                    "WHERE listing_status = 'listed'"
+                )
                 backends = [dict(r) for r in await cur.fetchall()]
             finally:
                 await db.close()
@@ -2195,7 +2200,7 @@ async def list_subscriptions(user=Depends(get_current_user)):
         # exists for billing-history references.
         cur = await db.execute(
             "SELECT s.id, s.backend_id, s.model, s.sub_key, s.is_active, s.is_activated, s.created_at, s.sort_order, "
-            "b.name as backend, b.status as backend_status, b.input_price, b.output_price, b.cache_price, "
+            "b.name as backend, b.status as backend_status, b.listing_status, b.input_price, b.output_price, b.cache_price, "
             "u.username as provider, "
             "CASE WHEN b.owner_id = ? THEN 1 ELSE 0 END as is_owned "
             "FROM subscriptions s JOIN backends b ON s.backend_id = b.id "
@@ -2486,12 +2491,16 @@ async def get_active_subscription_backend(user_id: int, auto_fallback: bool = Tr
     before any request can be served."""
     db = await get_db()
     try:
+        # Non-owners can only route to backends that are currently listed.
+        # Owners can always reach their own backends regardless of listing_status
+        # (so they can self-test pending / offline backends via their subscription).
         cur = await db.execute(
             "SELECT s.model, b.* "
             "FROM subscriptions s JOIN backends b ON b.id = s.backend_id "
             "WHERE s.user_id = ? AND s.is_active = 1 AND s.is_activated = 1 "
+            "  AND (b.owner_id = ? OR b.listing_status = 'listed') "
             "ORDER BY s.sort_order ASC, s.id ASC",
-            (user_id,),
+            (user_id, user_id),
         )
         rows = [dict(r) for r in await cur.fetchall()]
     finally:
@@ -2549,9 +2558,11 @@ async def get_activated_models(user_id: int) -> list[str]:
     try:
         cur = await db.execute(
             "SELECT DISTINCT s.model FROM subscriptions s "
+            "JOIN backends b ON b.id = s.backend_id "
             "WHERE s.user_id = ? AND s.is_active = 1 AND s.is_activated = 1 "
+            "  AND (b.owner_id = ? OR b.listing_status = 'listed') "
             "ORDER BY s.sort_order ASC",
-            (user_id,),
+            (user_id, user_id),
         )
         return [r[0] for r in await cur.fetchall()]
     finally:
@@ -2563,7 +2574,7 @@ async def get_activated_models(user_id: int) -> list[str]:
 # to GPT-5.x as well. Both OpenAI and Azure OpenAI enforce this on these models.
 # Other backends (DeepSeek/Qwen/Llama/vLLM/SGLang/Claude/Gemini) keep using
 # `max_tokens`, so we normalize bidirectionally based on the upstream model name.
-_REASONING_MODEL_RE = re.compile(r"^(o[1-9]|gpt-5|gpt5)", re.IGNORECASE)
+_REASONING_MODEL_RE = re.compile(r"^(o[1-9]|gpt-5|gpt5|gpt-4o)", re.IGNORECASE)
 
 
 def _normalize_max_tokens(body: dict, upstream_model: str) -> None:
@@ -2766,6 +2777,277 @@ def get_pricing(backend: dict) -> tuple[float, float, float]:
     return inp, out, cache
 
 
+
+# ---------------------------------------------------------------------------
+# Azure GPT-5.x compatibility shim: tools + reasoning_effort must use
+# /v1/responses on the upstream. We rewrite transparently and convert the
+# response back to chat.completion shape.
+# ---------------------------------------------------------------------------
+
+def _responses_path_for_backend(backend: dict, upstream_model: str) -> str:
+    """Resolve the upstream path for /v1/responses-style calls.
+
+    Per-backend override via client_info.responses_path (str). Supports
+    `{model}` placeholder for providers that route by deployment in the path
+    (e.g. AMD internal proxy uses /openai/{deployment}/responses).
+    """
+    try:
+        ci = json.loads(backend["client_info"]) if backend.get("client_info") else {}
+    except Exception:
+        ci = {}
+    tmpl = ci.get("responses_path") or "/v1/responses"
+    try:
+        return tmpl.format(model=upstream_model or "")
+    except Exception:
+        return tmpl
+
+def _should_use_responses_fallback(body: dict, backend: dict, upstream_model: str, path: str) -> bool:
+    if path != "/v1/chat/completions":
+        return False
+    if not isinstance(body, dict):
+        return False
+    try:
+        ci = json.loads(backend["client_info"]) if backend.get("client_info") else {}
+    except Exception:
+        ci = {}
+    # Per-backend opt-in: upstream only exposes the Responses API for this
+    # deployment (e.g. AMD /openai/{model}/responses for codex variants).
+    if ci.get("force_responses_path") is True:
+        return True
+    if not _REASONING_MODEL_RE.match(upstream_model or ""):
+        return False
+    tools = body.get("tools")
+    if not (isinstance(tools, list) and tools):
+        return False
+    if body.get("reasoning_effort") is None:
+        return False
+    if ci.get("responses_fallback") is False:
+        return False
+    return True
+
+
+
+def _chat_messages_to_responses_input(messages: list) -> list:
+    """Convert chat.completions messages into Responses API input items."""
+    out: list = []
+    for m in messages or []:
+        if not isinstance(m, dict):
+            continue
+        role = m.get("role")
+        content = m.get("content")
+
+        # Assistant tool_calls -> one function_call item each.
+        if role == "assistant" and isinstance(m.get("tool_calls"), list) and m["tool_calls"]:
+            # Emit any assistant text content first (as output_text).
+            if content:
+                msg = {"role": "assistant", "content": _normalize_content(content, "assistant")}
+                out.append(msg)
+            for tc in m["tool_calls"]:
+                if not isinstance(tc, dict):
+                    continue
+                fn = tc.get("function") or {}
+                out.append({
+                    "type": "function_call",
+                    "call_id": tc.get("id") or "",
+                    "name": fn.get("name") or "",
+                    "arguments": fn.get("arguments") or "",
+                })
+            continue
+
+        # tool role -> function_call_output item.
+        if role == "tool":
+            text = content if isinstance(content, str) else _content_to_text(content)
+            out.append({
+                "type": "function_call_output",
+                "call_id": m.get("tool_call_id") or "",
+                "output": text,
+            })
+            continue
+
+        # Regular system/user/assistant message.
+        if role in ("system", "user", "assistant", "developer"):
+            normalized = _normalize_content(content, role)
+            entry = {"role": role, "content": normalized}
+            out.append(entry)
+            continue
+
+        # Unknown role: pass through.
+        out.append(m)
+
+    return out
+
+
+def _normalize_content(content, role: str):
+    """Map chat-style content parts to Responses-API part types.
+
+    - string -> string (Responses accepts plain strings too).
+    - list of parts -> list of parts with renamed `type`.
+      user/system/developer: text -> input_text, image_url -> input_image, input_file pass.
+      assistant: text -> output_text, refusal pass.
+    """
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    if not isinstance(content, list):
+        return str(content)
+    new_parts = []
+    is_assistant = (role == "assistant")
+    for p in content:
+        if not isinstance(p, dict):
+            new_parts.append(p)
+            continue
+        t = p.get("type")
+        if t == "text":
+            new_t = "output_text" if is_assistant else "input_text"
+            new_parts.append({"type": new_t, "text": p.get("text", "")})
+        elif t == "image_url":
+            iu = p.get("image_url") or {}
+            url = iu.get("url") if isinstance(iu, dict) else iu
+            np = {"type": "input_image"}
+            if url:
+                np["image_url"] = url
+            if isinstance(iu, dict) and iu.get("detail"):
+                np["detail"] = iu["detail"]
+            new_parts.append(np)
+        elif t in ("input_text", "input_image", "output_text", "refusal", "input_file"):
+            new_parts.append(p)  # already in Responses shape
+        elif t == "file" or t == "input_file":
+            new_parts.append({"type": "input_file", **{k: v for k, v in p.items() if k != "type"}})
+        else:
+            # Unknown part: best-effort fallback to text.
+            txt = p.get("text") or ""
+            new_t = "output_text" if is_assistant else "input_text"
+            new_parts.append({"type": new_t, "text": str(txt)})
+    return new_parts
+
+
+def _content_to_text(content) -> str:
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for p in content:
+            if isinstance(p, dict):
+                parts.append(p.get("text") or "")
+            else:
+                parts.append(str(p))
+        return "".join(parts)
+    return str(content)
+
+
+def _chat_to_responses_body(body: dict) -> dict:
+    out: dict = {}
+    if "model" in body:
+        out["model"] = body["model"]
+    if "messages" in body:
+        out["input"] = _chat_messages_to_responses_input(body["messages"] or [])
+    tools = body.get("tools")
+    if isinstance(tools, list):
+        new_tools = []
+        for t in tools:
+            if isinstance(t, dict) and t.get("type") == "function" and isinstance(t.get("function"), dict):
+                fn = t["function"]
+                nt = {"type": "function", "name": fn.get("name")}
+                if "description" in fn:
+                    nt["description"] = fn.get("description")
+                if "parameters" in fn:
+                    nt["parameters"] = fn.get("parameters")
+                if "strict" in fn:
+                    nt["strict"] = fn.get("strict")
+                new_tools.append(nt)
+            else:
+                new_tools.append(t)
+        out["tools"] = new_tools
+    if "tool_choice" in body:
+        out["tool_choice"] = body["tool_choice"]
+    if "parallel_tool_calls" in body:
+        out["parallel_tool_calls"] = body["parallel_tool_calls"]
+    if "reasoning_effort" in body:
+        out["reasoning"] = {"effort": body["reasoning_effort"]}
+    if body.get("max_completion_tokens") is not None:
+        out["max_output_tokens"] = body["max_completion_tokens"]
+    elif body.get("max_tokens") is not None:
+        out["max_output_tokens"] = body["max_tokens"]
+    rf = body.get("response_format")
+    if isinstance(rf, dict):
+        out["text"] = {"format": rf}
+    for k in ("temperature", "top_p", "metadata", "user", "store", "stream"):
+        if k in body:
+            out[k] = body[k]
+    return out
+
+
+def _responses_to_chat_completion(data: dict) -> dict:
+    out_items = data.get("output") or []
+    text_parts = []
+    tool_calls = []
+    refusal = None
+    finish_reason = "stop"
+    tc_index = 0
+    for item in out_items:
+        if not isinstance(item, dict):
+            continue
+        t = item.get("type")
+        if t == "message":
+            for c in item.get("content") or []:
+                if not isinstance(c, dict):
+                    continue
+                ct = c.get("type")
+                if ct in ("output_text", "text"):
+                    text_parts.append(c.get("text") or "")
+                elif ct == "refusal":
+                    refusal = c.get("refusal") or c.get("text")
+        elif t == "function_call":
+            tool_calls.append({
+                "index": tc_index,
+                "id": item.get("call_id") or item.get("id") or f"call_{tc_index}",
+                "type": "function",
+                "function": {
+                    "name": item.get("name") or "",
+                    "arguments": item.get("arguments") or "",
+                },
+            })
+            tc_index += 1
+            finish_reason = "tool_calls"
+    content_text = "".join(text_parts)
+    message = {"role": "assistant", "content": content_text if content_text else None}
+    if tool_calls:
+        message["tool_calls"] = tool_calls
+    if refusal:
+        message["refusal"] = refusal
+    status = data.get("status")
+    incomplete = (data.get("incomplete_details") or {}).get("reason")
+    if incomplete == "max_output_tokens":
+        finish_reason = "length"
+    elif incomplete == "content_filter":
+        finish_reason = "content_filter"
+    elif status == "incomplete" and not tool_calls:
+        finish_reason = "length"
+    usage_in = data.get("usage") or {}
+    usage = {
+        "prompt_tokens": usage_in.get("input_tokens", 0),
+        "completion_tokens": usage_in.get("output_tokens", 0),
+        "total_tokens": usage_in.get("total_tokens", 0),
+    }
+    ind = usage_in.get("input_tokens_details") or {}
+    outd = usage_in.get("output_tokens_details") or {}
+    if "cached_tokens" in ind:
+        usage["prompt_tokens_details"] = {"cached_tokens": ind["cached_tokens"]}
+    if "reasoning_tokens" in outd:
+        usage["completion_tokens_details"] = {"reasoning_tokens": outd["reasoning_tokens"]}
+    return {
+        "id": data.get("id") or "chatcmpl-resp",
+        "object": "chat.completion",
+        "created": int(data.get("created_at") or time.time()),
+        "model": data.get("model") or "",
+        "choices": [{"index": 0, "message": message, "finish_reason": finish_reason, "logprobs": None}],
+        "usage": usage,
+    }
+
+
 @app.get("/v1/models")
 async def openai_models(request: Request):
     api_user = await authenticate_api_key(request)
@@ -2808,6 +3090,9 @@ async def _handle_openai_request(request: Request, path: str, usage_keys: tuple[
     # subscribe and activate a model before any request will be routed.
     auto_fallback = bool(api_user.get("auto_fallback", 1))
     requested_model = body.get("model", "")
+    if isinstance(requested_model, str) and requested_model.strip().lower() == "auto":
+        requested_model = ""
+        auto_fallback = True
     lang = _accept_lang(request)
     backend, forced_model = await get_active_subscription_backend(
         api_user["user_id"], auto_fallback, requested_model, lang=lang)
@@ -2860,25 +3145,45 @@ def _upstream_headers(backend) -> dict:
 async def _proxy_direct(api_user, backend, body, stream, input_price, output_price,
                          path="/v1/chat/completions", usage_keys=("prompt_tokens", "completion_tokens"),
                          display_model=None, cache_price=None):
-    url = f"{backend['url'].rstrip('/')}{path}"
+    use_responses_fallback = _should_use_responses_fallback(body, backend, body.get("model", ""), path)
+    if use_responses_fallback:
+        upstream_path = _responses_path_for_backend(backend, body.get("model", ""))
+        upstream_body = _chat_to_responses_body(body)
+    else:
+        upstream_path = path
+        upstream_body = body
+    url = f"{backend['url'].rstrip('/')}{upstream_path}"
     headers = _upstream_headers(backend)
     log_model = display_model or body.get("model", "")
 
-    if stream:
+    if stream and not use_responses_fallback:
         return StreamingResponse(
             _stream_direct(api_user, backend, body, url, input_price, output_price, headers, usage_keys, log_model,
                            cache_price=cache_price),
             media_type="text/event-stream",
         )
+    if stream and use_responses_fallback:
+        nonstream_body = dict(upstream_body); nonstream_body.pop("stream", None)
+        return StreamingResponse(
+            _stream_responses_as_chat(api_user, backend, url, nonstream_body, headers,
+                                     input_price, output_price, log_model, cache_price),
+            media_type="text/event-stream",
+        )
 
     async with httpx.AsyncClient(timeout=UPSTREAM_TIMEOUT) as client:
-        resp = await client.post(url, json=body, headers=headers)
+        resp = await client.post(url, json=upstream_body, headers=headers)
         try:
             data = resp.json()
         except Exception:
             raise HTTPException(502, f"上游返回非 JSON ({resp.status_code}): {(resp.text or '')[:200]}")
     if not (200 <= resp.status_code < 300):
         raise HTTPException(resp.status_code, data if isinstance(data, dict) else {"error": str(data)[:500]})
+    if use_responses_fallback and isinstance(data, dict) and data.get("object") == "response":
+        _resp_usage = _extract_usage(data, ("input_tokens", "output_tokens"))
+        data = _responses_to_chat_completion(data)
+        await _record_usage(api_user, backend, log_model, _resp_usage, input_price, output_price,
+                            cache_price=cache_price)
+        return data
     # Some upstreams (e.g. SiliconFlow) return HTTP 200 with `{"code":<nonzero>,
     # "message":...,"data":null}` instead of a real chat completion. Treat as
     # error so callers don't get a silent empty body.
@@ -2942,6 +3247,63 @@ async def _stream_direct(api_user, backend, body, url, input_price, output_price
          "cached_tokens": total_cached},
         input_price, output_price, cache_price=cache_price,
     )
+
+
+
+async def _stream_responses_as_chat(api_user, backend, url, body, headers,
+                                    input_price, output_price, log_model, cache_price):
+    """Call /v1/responses non-stream and emit one chat.completion.chunk + [DONE]."""
+    try:
+        async with httpx.AsyncClient(timeout=UPSTREAM_TIMEOUT) as client:
+            resp = await client.post(url, json=body, headers=headers)
+        ctype = (resp.headers.get("content-type") or "").lower()
+        if not (200 <= resp.status_code < 300) or "application/json" not in ctype:
+            excerpt = (resp.text or "")[:500]
+            payload = {"error": {"message": f"upstream {resp.status_code} {ctype or 'unknown'}: {excerpt}",
+                                  "type": "upstream_error", "code": resp.status_code,
+                                  "backend": backend.get("name")}}
+            yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+            return
+        data = resp.json()
+    except Exception as e:
+        payload = {"error": {"message": f"upstream error: {e}", "type": "upstream_error",
+                              "backend": backend.get("name")}}
+        yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+        yield "data: [DONE]\n\n"
+        return
+
+    resp_usage = _extract_usage(data, ("input_tokens", "output_tokens"))
+    chat = _responses_to_chat_completion(data)
+    msg = chat["choices"][0]["message"]
+    finish = chat["choices"][0]["finish_reason"]
+    delta = {"role": "assistant"}
+    if msg.get("content"):
+        delta["content"] = msg["content"]
+    if msg.get("tool_calls"):
+        delta["tool_calls"] = msg["tool_calls"]
+    if msg.get("refusal"):
+        delta["refusal"] = msg["refusal"]
+    chunk = {
+        "id": chat["id"],
+        "object": "chat.completion.chunk",
+        "created": chat["created"],
+        "model": chat["model"],
+        "choices": [{"index": 0, "delta": delta, "finish_reason": None, "logprobs": None}],
+    }
+    yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
+    final = {
+        "id": chat["id"],
+        "object": "chat.completion.chunk",
+        "created": chat["created"],
+        "model": chat["model"],
+        "choices": [{"index": 0, "delta": {}, "finish_reason": finish, "logprobs": None}],
+        "usage": chat.get("usage"),
+    }
+    yield f"data: {json.dumps(final, ensure_ascii=False)}\n\n"
+    yield "data: [DONE]\n\n"
+    await _record_usage(api_user, backend, log_model, resp_usage, input_price, output_price,
+                        cache_price=cache_price)
 
 
 async def _proxy_tunnel(api_user, backend, body, stream, input_price, output_price,
