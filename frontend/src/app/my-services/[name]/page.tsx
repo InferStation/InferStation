@@ -6,6 +6,7 @@ import Link from "next/link"
 import { useAuth } from "@/context/AuthContext"
 import { apiFetch } from "@/lib/api"
 import { useT } from "@/context/LocaleContext"
+import { tagLabel } from "@/lib/labels"
 
 interface Backend {
   id: number
@@ -562,7 +563,7 @@ export default function ServiceDetailPage() {
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(backend.tags).map(([k, v]) => (
                     <span key={k} className="inline-flex items-center px-2.5 py-1 rounded text-xs font-medium bg-accent-soft text-fg border border-line">
-                      {v}
+                      {t(tagLabel(v))}
                     </span>
                   ))}
                 </div>

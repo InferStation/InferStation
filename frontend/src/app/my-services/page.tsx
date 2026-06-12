@@ -6,6 +6,7 @@ import Link from "next/link"
 import { useAuth } from "@/context/AuthContext"
 import { apiFetch } from "@/lib/api"
 import { useT } from "@/context/LocaleContext"
+import { tagLabel } from "@/lib/labels"
 
 interface Backend {
   id: number
@@ -477,7 +478,7 @@ export default function ServicesPage() {
                       <span className="text-gray-500">{b.mode === "tunnel" ? t({ en: "Tunnel", zh: "隧道" }) : t({ en: "Direct", zh: "直连" })}</span>
                       {Object.entries(b.tags || {}).map(([k, v]) => (
                         <span key={k} className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-accent-soft text-fg border border-line">
-                          {v}
+                          {t(tagLabel(v))}
                         </span>
                       ))}
                     </div>

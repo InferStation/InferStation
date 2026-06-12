@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { apiFetch } from "@/lib/api"
 import { useAuth } from "@/context/AuthContext"
 import { useT } from "@/context/LocaleContext"
+import { tagLabel, capabilityLabel } from "@/lib/labels"
 
 interface Model {
   id: string
@@ -59,7 +60,7 @@ export default function ModelsPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | "online" | "offline">("online")
   const [subs, setSubs] = useState<SubInfo[]>([])
   const [subLoading, setSubLoading] = useState<string | null>(null)
-  const [showFilters, setShowFilters] = useState(false)
+  const [showFilters, setShowFilters] = useState(true)
   const [view, setView] = useState<"table" | "grid">("table")
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [sortKey, setSortKey] = useState<"provider" | "id" | "input" | "output" | "cache">("id")
@@ -453,10 +454,10 @@ function TableView({ rows, isSubscribed, isOwned, subLoading, onSubscribe, onUns
                   <td className="px-4 py-3 align-middle">
                     <div className="flex items-center gap-1 flex-wrap">
                       {Object.values(m.tags || {}).map((v) => (
-                        <span key={v} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-accent-soft text-fg-muted">{v}</span>
+                        <span key={v} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-accent-soft text-fg-muted">{t(tagLabel(v))}</span>
                       ))}
                       {(m.capabilities || []).slice(0, 3).map((c) => (
-                        <span key={c} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200">{c}</span>
+                        <span key={c} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200">{t(capabilityLabel(c))}</span>
                       ))}
                     </div>
                   </td>
@@ -537,7 +538,7 @@ function GridView({ rows, isSubscribed, isOwned, subLoading, onSubscribe, onUnsu
             <div className="flex items-center justify-between mt-1">
               <div className="flex items-center gap-1 flex-wrap">
                 {Object.values(m.tags || {}).map((v) => (
-                  <span key={v} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-accent-soft text-fg-muted">{v}</span>
+                  <span key={v} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-accent-soft text-fg-muted">{t(tagLabel(v))}</span>
                 ))}
               </div>
               {subscribed ? (

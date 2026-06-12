@@ -8,7 +8,7 @@ import { useT } from "@/context/LocaleContext"
 // Lands after a successful Google OAuth callback. The gateway redirects here
 // with `#token=<jwt>&remember=0|1` in the URL fragment, so the token never
 // reaches the server logs. We pull it out, hand it to AuthContext.login(),
-// then bounce to the home page.
+// then bounce to /models.
 export default function GoogleOAuthDone() {
   const t = useT()
   const router = useRouter()
@@ -37,7 +37,7 @@ export default function GoogleOAuthDone() {
     window.history.replaceState({}, "", "/auth/google/done")
     auth
       .login(token, remember)
-      .then(() => router.replace("/"))
+      .then(() => router.replace("/models"))
       .catch((e: unknown) => {
         setError(e instanceof Error ? e.message : String(e))
       })

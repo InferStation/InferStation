@@ -6,6 +6,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { apiFetch } from "@/lib/api"
 import { useAuth } from "@/context/AuthContext"
 import { useT } from "@/context/LocaleContext"
+import { capabilityLabel } from "@/lib/labels"
 
 // ── Types ─────────────────────────────────────────────────────────────
 
@@ -68,13 +69,6 @@ interface Subscription {
   model: string
   is_active: number | boolean
   is_owned?: boolean
-}
-
-const CAPABILITY_LABEL: Record<string, { en: string; zh: string }> = {
-  streaming: { en: "Streaming", zh: "流式" },
-  tools: { en: "Tools", zh: "工具调用" },
-  reasoning: { en: "Reasoning", zh: "推理" },
-  json_output: { en: "JSON Output", zh: "JSON 输出" },
 }
 
 const symbolFor = (currency: string | null | undefined) =>
@@ -403,8 +397,7 @@ print(resp.choices[0].message.content)`
         {model.capabilities && model.capabilities.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-4">
             {model.capabilities.map((c) => {
-              const lab = CAPABILITY_LABEL[c]
-              if (!lab) return null
+              const lab = capabilityLabel(c)
               return (
                 <span
                   key={c}

@@ -14,6 +14,7 @@ interface Sub {
   created_at: string
   backend: string
   backend_status: string
+  listing_status?: string
   input_price: number | null
   output_price: number | null
   cache_price?: number | null
@@ -368,10 +369,17 @@ export default function MyModelsPage() {
                               </td>
                               {/* Status */}
                               <td className="px-3 py-2.5 align-middle text-center">
-                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] font-medium ${s.backend_status === "online" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
-                                  <span className={`w-1 h-1 rounded-full ${s.backend_status === "online" ? "bg-emerald-500" : "bg-red-400"}`} />
-                                  {s.backend_status === "online" ? t({ en: "Online", zh: "在线" }) : t({ en: "Offline", zh: "离线" })}
-                                </span>
+                                {(!s.is_owned && s.listing_status && s.listing_status !== "listed") ? (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-600" title={t({ en: "This backend has been delisted by its provider. The subscription is preserved for history but cannot be used.", zh: "服务商已下架该后端，订阅记录保留但无法使用" })}>
+                                    <span className="w-1 h-1 rounded-full bg-gray-400" />
+                                    {t({ en: "Delisted", zh: "已下架" })}
+                                  </span>
+                                ) : (
+                                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] font-medium ${s.backend_status === "online" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
+                                    <span className={`w-1 h-1 rounded-full ${s.backend_status === "online" ? "bg-emerald-500" : "bg-red-400"}`} />
+                                    {s.backend_status === "online" ? t({ en: "Online", zh: "在线" }) : t({ en: "Offline", zh: "离线" })}
+                                  </span>
+                                )}
                               </td>
                               {/* Action */}
                               <td className="px-3 py-2.5 align-middle">
