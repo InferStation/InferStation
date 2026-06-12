@@ -67,7 +67,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {children}
       {mounted &&
         createPortal(
-          <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
+          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center gap-2 pointer-events-none">
             {toasts.map((tst) => (
               <ToastCard key={tst.id} toast={tst} onClose={remove} />
             ))}
@@ -138,7 +138,7 @@ function ToastCard({ toast, onClose }: { toast: ToastItem; onClose: (id: number)
       role="status"
       className={cn(
         "pointer-events-auto flex items-start gap-3 min-w-[260px] max-w-sm rounded-xl border border-line bg-surface px-4 py-3 shadow-lg transition-all duration-200",
-        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2",
+        visible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2",
       )}
     >
       <span className={cn("mt-0.5 shrink-0", ICON_COLOR[toast.type])}>{ICONS[toast.type]}</span>
