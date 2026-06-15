@@ -2686,17 +2686,19 @@ def _backend_family(backend: dict, upstream_model: str) -> str:
         return "siliconflow"
     if (backend or {}).get("mode") == "tunnel":
         return "vllm"
-    # AMD bridge :17590 currently fronts vLLM-compat (Qwen3.6) and OpenAI/GPT-oss.
-    # GPT-oss isn't a thinking model, so vllm-style enable_thinking is harmless
-    # for it (most servers ignore unknown chat_template_kwargs); but we play it
-    # safe and default unknown OpenAI-style upstreams to "other".
-    if "127.0.0.1:17590" in url or "amd" in url.lower():
-        # Heuristic: if upstream model looks like a Qwen/GLM thinking variant,
-        # treat as vllm; else "other".
-        m = (upstream_model or "").lower()
+    # Local self-hosted OpenAI-compatible endpoints (Qwen3.6 AWQ, reverse
+    # tunnels, AMD bridge) are vLLM-compatible. They need
+    # chat_template_kwargs.enable_thinking=false when callers pass
+    # reasoning_effort=off; otherwise Qwen thinking models may return the answer
+    # in a separate `reasoning` channel or reject the unsupported field.
+    local_vllm_ports = (":17590", ":18210", ":18211")
+    m = (upstream_model or "").lower()
+    if any(port in url for port in local_vllm_ports) or "amd" in url.lower():
         if "qwen" in m or "glm" in m or "thinking" in m:
             return "vllm"
         return "other"
+    if ("127.0.0.1" in url or "localhost" in url) and ("qwen" in m or "glm" in m):
+        return "vllm"
     return "other"
 
 
