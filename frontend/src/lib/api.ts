@@ -13,6 +13,10 @@ export async function apiFetch(
   const token = getToken()
   const headers: Record<string, string> = { "Content-Type": "application/json" }
   if (token) headers["Authorization"] = `Bearer ${token}`
+  if (typeof window !== "undefined") {
+    const lang = localStorage.getItem("lang")
+    headers["Accept-Language"] = lang === "zh" ? "zh-CN" : "en"
+  }
 
   const res = await fetch(`${API_URL}${path}`, {
     ...init,

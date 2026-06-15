@@ -196,10 +196,12 @@ async def run_daily_rollover():
 
 
 # ── Health Check Background Task ───────────────────────
-async def probe_backend_status(b: dict) -> tuple[str, str | None]:
+async def probe_backend_status(b: dict) -> tuple[str, dict | None]:
     """Probe a single backend (tunnel or direct) and return (status, error).
 
     `b` must contain id / mode / url / client_info. Does not touch DB.
+    The error, when present, is a bilingual ``{"en": ..., "zh": ...}`` dict so
+    callers can localize it via ``Accept-Language``.
 
     Direct probe levels:
       1. If `client_info.model_map` is set: send a 1-token chat dry-run with the
@@ -211,9 +213,9 @@ async def probe_backend_status(b: dict) -> tuple[str, str | None]:
     if b["mode"] == "tunnel":
         if await tunnel_manager.health_probe(b["id"]):
             return "online", None
-        return "offline", "隧道未连接或心跳失败"
+        return "offline", {"en": "Tunnel not connected or heartbeat failed", "zh": "隧道未连接或心跳失败"}
     if not b.get("url"):
-        return "offline", "未配置 URL"
+        return "offline", {"en": "No URL configured", "zh": "未配置 URL"}
     try:
         headers = {}
         ci = json.loads(b["client_info"]) if b.get("client_info") else {}
@@ -237,28 +239,46 @@ async def probe_backend_status(b: dict) -> tuple[str, str | None]:
                                          json=payload, headers=headers)
                 body_excerpt = (resp.text or "")[:200].replace("\n", " ")
                 if not (200 <= resp.status_code < 300):
-                    return "offline", f"chat dry-run 返回 {resp.status_code}: {body_excerpt}"
+                    return "offline", {
+                        "en": f"chat dry-run returned {resp.status_code}: {body_excerpt}",
+                        "zh": f"chat dry-run 返回 {resp.status_code}: {body_excerpt}",
+                    }
                 # Some providers (e.g. SiliconFlow) return HTTP 200 with an
                 # error envelope `{"code":30003,"message":"Model disabled"}`
                 # for delisted models. Require a real `choices` array.
                 try:
                     j = resp.json()
                 except Exception:
-                    return "offline", f"chat dry-run 返回非 JSON: {body_excerpt}"
+                    return "offline", {
+                        "en": f"chat dry-run returned non-JSON: {body_excerpt}",
+                        "zh": f"chat dry-run 返回非 JSON: {body_excerpt}",
+                    }
                 if isinstance(j, dict) and j.get("choices"):
                     return "online", None
                 # Extract upstream error code/message if present.
                 code = j.get("code") if isinstance(j, dict) else None
                 msg = j.get("message") if isinstance(j, dict) else None
                 if code is not None or msg:
-                    return "offline", f"chat dry-run 上游错误 code={code} message={msg}"
-                return "offline", f"chat dry-run 响应缺少 choices: {body_excerpt}"
+                    return "offline", {
+                        "en": f"chat dry-run upstream error code={code} message={msg}",
+                        "zh": f"chat dry-run 上游错误 code={code} message={msg}",
+                    }
+                return "offline", {
+                    "en": f"chat dry-run response missing choices: {body_excerpt}",
+                    "zh": f"chat dry-run 响应缺少 choices: {body_excerpt}",
+                }
             resp = await client.get(f"{base}/v1/models", headers=headers)
             if resp.status_code == 200:
                 return "online", None
-            return "offline", f"上游 /v1/models 返回 {resp.status_code}"
+            return "offline", {
+                "en": f"upstream /v1/models returned {resp.status_code}",
+                "zh": f"上游 /v1/models 返回 {resp.status_code}",
+            }
     except Exception as e:
-        return "offline", f"探测失败: {e.__class__.__name__}: {e}"
+        return "offline", {
+            "en": f"probe failed: {e.__class__.__name__}: {e}",
+            "zh": f"探测失败: {e.__class__.__name__}: {e}",
+        }
 
 
 async def update_backend_status(backend_id: int, status: str) -> None:
@@ -1837,7 +1857,7 @@ async def toggle_backend(name: str, user=Depends(require_provider)):
 
 
 @app.post("/api/backends/{name}/check")
-async def check_backend(name: str, user=Depends(require_provider)):
+async def check_backend(name: str, request: Request, user=Depends(require_provider)):
     """Manually trigger an online probe for a single backend.
 
     Owner (or admin) only. Updates `backends.status` and returns the result.
@@ -1865,7 +1885,9 @@ async def check_backend(name: str, user=Depends(require_provider)):
         raise HTTPException(409, "Backend has been deleted; probes are not allowed.")
     status, error = await probe_backend_status(b)
     await update_backend_status(b["id"], status)
-    return {"ok": True, "status": status, "error": error}
+    lang = _accept_lang(request)
+    error_msg = error.get(lang) if isinstance(error, dict) else error
+    return {"ok": True, "status": status, "error": error_msg}
 
 
 @app.get("/api/admin/backends/pending")
