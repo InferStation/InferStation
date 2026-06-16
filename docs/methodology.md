@@ -63,6 +63,20 @@ log, host hardware + OS/driver versions, and a usability tag (✅ / ⚠️ / ❌
 If a published number cannot be reproduced from the recorded command on the
 recorded hardware, the run is flagged and re-tested.
 
+## Inference engine images
+
+All numbers are produced on InferStation's own nightly-built engine images
+(Harbor `10.161.176.9:8443/inferstation/*`, public mirror `ghcr.io/inferstation/*`).
+
+**Strix Halo vLLM uses the gfx1151-optimized build** (`vllm-rocm-halo`, tracking
+AMD's [ROCm/vllm](https://github.com/ROCm/vllm) `gfx11` branch). This branch ships
+AMD's Strix-Halo-specific tuned kernels (W4A16 prefill block sizing, GDN prefill
+shape-keyed config, unquantized-weight stride padding off the gfx11x 4096-byte
+cliff) and retains `FusedMoE.tp_size` so AWQ MoE loads cleanly. **The published
+Strix Halo vLLM daily-test numbers are therefore the AMD-optimized-kernel
+numbers, not vanilla upstream vLLM.** DGX Spark vLLM uses the CUDA build
+(`vllm-cuda-spark`). llama.cpp uses the HIP / Vulkan / CUDA builds per host.
+
 ## Usability tag
 
 Each row carries a usability hint: ✅ usable, ⚠️ runs but slow / fragile,

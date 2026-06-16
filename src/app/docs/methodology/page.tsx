@@ -111,6 +111,25 @@ export default function Methodology() {
         hardware, the run is flagged and re-tested.
       </p>
 
+      <h2>Inference engine images</h2>
+      <p>
+        All numbers are produced on InferStation&apos;s own nightly-built engine images
+        (public mirror <code>ghcr.io/inferstation/*</code>).
+      </p>
+      <p>
+        <strong>Strix Halo vLLM uses the gfx1151-optimized build</strong> (
+        <code>vllm-rocm-halo</code>, tracking AMD&apos;s{" "}
+        <a href="https://github.com/ROCm/vllm" target="_blank" rel="noreferrer">
+          ROCm/vllm
+        </a>{" "}
+        <code>gfx11</code> branch). It ships AMD&apos;s Strix-Halo-specific tuned kernels
+        (W4A16 prefill block sizing, GDN prefill shape-keyed config, unquantized-weight stride
+        padding off the gfx11x 4096-byte cliff) and keeps <code>FusedMoE.tp_size</code> so AWQ
+        MoE loads cleanly. <strong>The published Strix Halo vLLM numbers are therefore the
+        AMD-optimized-kernel numbers, not vanilla upstream vLLM.</strong> DGX Spark vLLM uses
+        the CUDA build; llama.cpp uses the HIP / Vulkan / CUDA builds per host.
+      </p>
+
       <h2>Usability tag</h2>
       <p>
         Each row carries a usability hint: <strong>✅ usable</strong>,{" "}
