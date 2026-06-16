@@ -28,13 +28,13 @@
   "pp_test": "in512",
   "pp_toks_per_s": 0.0,
   "tg_test": "out128",
-  "tg_toks_per_s": 0.1677827755867183,
-  "combined_toks_per_s": 86.07256387598649,
+  "tg_toks_per_s": 21.476195275099943,
+  "combined_toks_per_s": 107.38097637549971,
   "ttft_ms": 23839.086499996483,
   "tpot_ms": 0.0,
   "prefill_toks_per_s": 0.0,
-  "decode_toks_per_s": 0.1677827755867183,
-  "total_toks_per_s": 86.07256387598649,
+  "decode_toks_per_s": 21.476195275099943,
+  "total_toks_per_s": 107.38097637549971,
   "ctx": null,
   "batch": 4,
   "concurrency": 4,
@@ -46,7 +46,7 @@
   "usability_tag": "ok",
   "log_url": "",
   "source_url": "",
-  "notes": "serve stream: completed=8/8, ttft=23839ms tpot=0.0ms; prefill=0 decode=0.2 total=86.1 tok/s; req_tput=0.168/s",
+  "notes": "serve stream (block-diffusion): completed=8/8, ttft=23839ms (=e2e; whole block emitted at once); decode=21.5 total=107.4 tok/s; output tokens derived as completed*output_len (128) because the stream client counts SSE chunks and diffusion returns one block/chunk.",
   "raw_llamabench": [
     {
       "completed": 8,
@@ -57,11 +57,11 @@
       "output_len": 128,
       "duration_s": 47.68069887999445,
       "request_throughput": 0.1677827755867183,
-      "output_throughput": 0.1677827755867183,
-      "total_output_tokens": 8,
+      "output_throughput": 21.476195275099943,
+      "total_output_tokens": 1024,
       "total_input_tokens": 4096,
-      "total_throughput": 86.07256387598649,
-      "decode_throughput": 0.1677827755867183,
+      "total_throughput": 107.38097637549971,
+      "decode_throughput": 21.476195275099943,
       "prefill_throughput": 0.0,
       "median_prefill_throughput": 0.0,
       "mean_ttft_ms": 23839.086499996483,
@@ -77,7 +77,8 @@
       "std_itl_ms": 0.0,
       "p99_itl_ms": 0.0,
       "mean_e2el_ms": 23839.20410599967,
-      "median_e2el_ms": 23839.36427201843
+      "median_e2el_ms": 23839.36427201843,
+      "output_tokens_source": "derived: completed*output_len (ignore_eos fixed-length); stream client chunk-count undercounts block-diffusion"
     }
   ]
 }
