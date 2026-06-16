@@ -26,13 +26,13 @@
   },
   "command": "",
   "pp_test": "in512",
-  "pp_toks_per_s": 0.0,
+  "pp_toks_per_s": null,
   "tg_test": "out128",
   "tg_toks_per_s": 13.03088209811494,
   "combined_toks_per_s": 65.1544104905747,
   "ttft_ms": 39289.65252573835,
   "tpot_ms": 0.0,
-  "prefill_toks_per_s": 0.0,
+  "prefill_toks_per_s": null,
   "decode_toks_per_s": 13.03088209811494,
   "total_toks_per_s": 65.1544104905747,
   "ctx": null,
@@ -62,8 +62,8 @@
       "total_input_tokens": 4096,
       "total_throughput": 65.1544104905747,
       "decode_throughput": 13.03088209811494,
-      "prefill_throughput": 0.0,
-      "median_prefill_throughput": 0.0,
+      "prefill_throughput": null,
+      "median_prefill_throughput": null,
       "mean_ttft_ms": 39289.65252573835,
       "median_ttft_ms": 39289.7141885187,
       "std_ttft_ms": 190.2653254359954,
@@ -78,7 +78,8 @@
       "p99_itl_ms": 0.0,
       "mean_e2el_ms": 39290.20240448153,
       "median_e2el_ms": 39290.54551900481,
-      "output_tokens_source": "derived: completed*output_len (ignore_eos fixed-length); stream client chunk-count undercounts block-diffusion"
+      "output_tokens_source": "derived: completed*output_len (ignore_eos fixed-length); stream client chunk-count undercounts block-diffusion",
+      "prefill_note": "not separable for block-diffusion: whole block emitted in one chunk, ttft==e2e, no prefill/decode boundary"
     }
   ]
 }
