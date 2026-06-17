@@ -55,7 +55,7 @@
       "max_concurrency": 8,
       "input_len": 512,
       "output_len": 128,
-      "duration_s": 0.25029555600121967,
+      "duration_s": 0.2633264590003819,
       "request_throughput": 0.0,
       "output_throughput": 0.0,
       "total_output_tokens": 0,
