@@ -38,8 +38,23 @@ export default function RootLayout({
             </Link>
             <ul className="flex items-center gap-6 text-sm text-zinc-600 dark:text-zinc-400">
               <li>
+                <Link href="/summary" className="hover:text-zinc-900 dark:hover:text-zinc-100">
+                  Summary
+                </Link>
+              </li>
+              <li>
                 <Link href="/charts" className="hover:text-zinc-900 dark:hover:text-zinc-100">
                   Charts
+                </Link>
+              </li>
+              <li>
+                <Link href="/history" className="hover:text-zinc-900 dark:hover:text-zinc-100">
+                  History
+                </Link>
+              </li>
+              <li>
+                <Link href="/compare" className="hover:text-zinc-900 dark:hover:text-zinc-100">
+                  Compare
                 </Link>
               </li>
               <li>

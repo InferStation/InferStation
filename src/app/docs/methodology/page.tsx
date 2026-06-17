@@ -80,10 +80,14 @@ export default function Methodology() {
         <li>
           <strong>Prefill throughput</strong> (tok/s) — per request,{" "}
           <code>input_len / (ttft − one_tpot_step)</code>. Clean at concurrency 1; queue-inclusive
-          higher up.
+          higher up. Reported as N/A for single-chunk block-diffusion models (no separable prefill
+          phase).
         </li>
         <li>
-          <strong>Decode throughput</strong> (tok/s) — aggregate output tokens / wall-clock.
+          <strong>Decode throughput</strong> (tok/s) — aggregate output tokens / wall-clock. Output
+          tokens come from the server&apos;s <code>usage.completion_tokens</code> (requested via{" "}
+          <code>stream_options.include_usage</code>), not from counting streamed chunks — so
+          block-diffusion models, which emit a whole block in one chunk, are counted correctly.
         </li>
         <li>
           <strong>Total throughput</strong> (tok/s) — aggregate (input + output) tokens /

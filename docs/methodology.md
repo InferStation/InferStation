@@ -43,8 +43,13 @@ Measured per concurrency level (batch size), client-side wall-clock:
 - **TPOT** — time per output token (ms), mean, excluding the first token:
   `(latency - ttft) / (output_len - 1)`.
 - **Prefill throughput** (tok/s) — per request, `input_len / (ttft - one_tpot_step)`.
-  Clean at concurrency 1; queue-inclusive at higher concurrency.
-- **Decode throughput** (tok/s) — aggregate output tokens / wall-clock.
+  Clean at concurrency 1; queue-inclusive at higher concurrency. Reported as N/A
+  for single-chunk block-diffusion models (no separable prefill phase).
+- **Decode throughput** (tok/s) — aggregate output tokens / wall-clock. Output
+  tokens come from the server's `usage.completion_tokens` (requested via
+  `stream_options.include_usage`), not from counting streamed chunks — so
+  block-diffusion models, which emit a whole block in one chunk, are counted
+  correctly.
 - **Total throughput** (tok/s) — aggregate (input + output) tokens / wall-clock.
 
 ITL, end-to-end latency, and p50/p99 of each metric are recorded in the raw record.

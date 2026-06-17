@@ -62,11 +62,21 @@ Built by `_build_serve_script(u)` in `main.py`; dispatched when
 `_build_launch_script` sees a `serve` block (`if u.get("serve"): return
 _build_serve_script(u)`). The generated host bash does:
 
-1. **Remove stale container** — `docker rm -f <cname>`.
-2. **Download model in parallel** — *(NOT IMPLEMENTED — see gaps)*. Intended to
-   reuse the offline path's HF download (`_parse_model_spec` + the `hf download`
-   block in `_build_launch_script`, single-file gguf with sharded fallback, or
-   repo snapshot for vLLM), running alongside container start.
+0. **Seize the host** — `_STOP_ALL_CONTAINERS`: `docker stop` + `docker rm -f`
+   **every** running container. A bench unit runs on a clean, exclusively-owned
+   machine. Killing other people's containers is intentional — a bench host is
+   for benchmarking; everything yields when a unit starts. (Skipping this is how
+   a leftover container eats VRAM and makes vLLM OOM at startup or hang in
+   graph-capture, then the perfectly-good model gets scored as a failure.) All
+   bench load runs in containers, so `docker stop`+`rm -f` reclaims everything
+   including the GPU VRAM it held — no `pkill` needed (and `pkill -f 'vllm serve'`
+   would match the bash running this very script → SIGKILL self → ssh exit 255).
+1. **Remove stale container** — `docker rm -f <cname>` (belt-and-suspenders after
+   step 0).
+2. **Download model in parallel** — `_serve_download_lines` reuses the offline
+   HF download (`_parse_model_spec` + `hf download`: single-file gguf with
+   sharded fallback, or repo snapshot for vLLM), backgrounded so it overlaps the
+   image pull, then `wait`. Freshly downloaded weights are removed on exit.
 3. **Start container** detached: `docker run -d --net host --entrypoint /bin/bash
    <image> -lc 'export PATH=/app:$PATH; <start_cmd>'`. Image resolved by
    `_resolve_default_docker` when `docker.image` is empty.
@@ -83,6 +93,16 @@ _build_serve_script(u)`). The generated host bash does:
 
 ### Why each design choice (hard-won)
 
+- **Exclusive host per unit** — step 0 stops *all* containers before starting. A
+  bench number is only meaningful on an otherwise-idle accelerator; a co-tenant
+  container stealing VRAM turns a healthy model into a fake "fail" (vLLM OOMs at
+  `determine_available_memory`, or a hybrid-mamba model deadlocks CPU-side during
+  graph capture with the GPU idle). Collateral damage to other containers is by
+  design — these are dedicated bench hosts. All bench load runs in containers, so
+  `docker stop`+`docker rm -f` reclaims everything (including the VRAM a wedged
+  engine held) — no `pkill` needed, and `pkill -f 'vllm serve'` would match the
+  bash running this script itself (→ SIGKILL → ssh exit 255), which is exactly
+  the trap that broke the first cut of this feature.
 - **Fresh container per run** — no cross-run state; a crashed prior run can't
   poison the next.
 - **Client on the host, not in the container** — pure stdlib (urllib + threading),
@@ -122,6 +142,26 @@ with `mean_ttft_ms`), and a final catch-all after the process exits. Both call
 `ingest_stdout` then `rebuild_manifest()` (which wipes and rewrites `runs.json` +
 `raw/` from the `runs-src/` tree).
 
+### Output-token counting (authoritative usage, not chunk count)
+
+The streaming client requests `stream_options.include_usage:true` and reads the
+server's `usage.completion_tokens` from the final SSE chunk as the **authoritative**
+output-token count. It still counts streamed chunks separately (`n_chunks`) and
+falls back to that count only when a server omits usage (older builds). Token
+count resolves as `n_out = usage.completion_tokens or n_chunks`.
+
+Why this matters — **block-diffusion models** (e.g. DiffusionGemma) emit the whole
+output block in **one** SSE chunk, so chunk-counting recorded 1 token/request and
+reported `decode ≈ 0.15 tok/s` garbage. With `include_usage` the decode throughput
+is correct (`completion_tokens × completed / wall`). For autoregressive models
+usage == chunk count, so their numbers are unchanged.
+
+Because a single-chunk response has no inter-token gaps, TPOT and the per-request
+**prefill estimate are not separable** for block-diffusion (`ttft == e2e`). The
+client/ingest emit `prefill = null` (N/A) for that case — the chart draws nothing
+rather than a misleading `0.0` bar — gated on `n_chunks > 1 && n_out > 1`.
+
+
 ### Reading metrics correctly
 
 Do **not** treat llama.cpp's per-slot `print_timing` as a per-request latency.
@@ -147,21 +187,31 @@ cd /home/amd/inferstation/admin_api && nohup /usr/bin/python3 -m uvicorn main:ap
 
 ## Known gaps / TODO
 
-1. **Download not integrated** (`_build_serve_script` has `_ = spec` placeholder).
-   Serve units assume the model is pre-staged under `/opt/inferstation/models`.
-   Consequence: only spark2 (which has `Qwen3.6-35B-A3B-BF16.gguf`) can run today;
-   halo6's model dir is empty → server won't start there. **This is step 2 of the
-   flow and the reason the benchmark only ran on spark.** Fix: splice the offline
-   download block into the serve script (ideally backgrounded so it overlaps
-   container start, then `wait`).
-2. **vLLM units unverified** — vLLM needs safetensors (not gguf), and the CPU-only
-   vLLM container had a torch import issue. The 4 vLLM serve units have never run.
-3. **Dispatcher not in git** — `main.py` / `ingest_runs.py` / `gen_serve_units.py`
+1. **Dispatcher not in git** — `main.py` / `ingest_runs.py` / `gen_serve_units.py`
    live only on the 4090. They should be vendored into this repo (e.g. under
    `bench/`) so changes are version-controlled and reviewable.
-4. **`served-model-name` for vLLM** — `gen_serve_units.py` pins
-   `--served-model-name <basename>` so the client's `--model` matches; verify when
-   vLLM units first run.
+2. **Per-host alias coverage** — `ingest_runs.HOST_SLUG_ALIAS` must map every
+   `<host>-shanghai` ssh alias to the canonical dashboard slug (`dgx-spark-01` /
+   `ryzen-ai-max-395-03`). A missing alias makes `_resolve_he_model` return
+   `(None, None)` and the run is **silently dropped** (bench succeeds, no record).
+   Both spark1/spark2 and halo5/halo6 are now mapped.
+
+### Resolved (kept for history)
+
+- **Download integrated** — `_serve_download_lines` splices the offline HF
+  download (single-file gguf + sharded fallback, or repo snapshot for vLLM)
+  into the serve script, backgrounded so it overlaps the image pull. Models that
+  are freshly downloaded are removed on exit (`_RM_MODEL`).
+- **vLLM units verified** — vLLM serve runs on both DGX Spark (CUDA) and Strix
+  Halo (gfx1151 ROCm), including quantized variants (FP8, AWQ-4bit / W4A16,
+  Quark-W8A8-INT8). `--served-model-name` is matched to the client `--model`.
+- **DiffusionGemma (block-diffusion) support** — runs via vLLM with
+  `--generation-config vllm` + diffusion flags; throughput counted from
+  `usage.completion_tokens` (see "Output-token counting" above). Sampler is
+  memory-bound (`[num_seqs, canvas_length, vocab]` fp32 transients), so its units
+  pin `--max-num-seqs 8` + `--gpu-memory-utilization 0.6`; manual-only, not in
+  the daily suite.
+
 
 ## Files at a glance
 
