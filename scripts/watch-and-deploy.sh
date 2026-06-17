@@ -19,6 +19,7 @@ LOCK="/tmp/inferstation-watch.lock"
 # Bench hosts -> remote path to data/runs/
 declare -A HOSTS=(
   [spark1-shanghai]='InferStation/data/runs/'
+  [halo3-shanghai]='InferStation/data/runs/'
 )
 
 exec 9>"$LOCK"

@@ -43,17 +43,19 @@ except ImportError as e:  # pragma: no cover
 
 REPO = Path(__file__).resolve().parent.parent
 REGISTRY = REPO / "bench" / "registry.yaml"
-LLAMA_REF = "master"
 
-# Backend registry. Each entry describes how to build + run llama.cpp for a
-# given GPU backend. `docker_extra` is shell-quoted and inserted after
-# `docker run`. The CUDA backend uses `--gpus all`; the Vulkan backend needs
-# the NVIDIA Container Toolkit to mount the Vulkan ICD on NVIDIA hardware
-# (gated by `NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics`).
+# Private container registry serving InferStation's official engine images.
+# Configured as insecure-registry on every bench host; `docker login` must
+# already be cached (see /memories/api-keys.md for credentials).
+INFER_REGISTRY = os.environ.get("INFER_REGISTRY", "10.161.176.9:8443")
+
+# Backend metadata. Image is NO LONGER stored here — it is resolved from
+# (host, backend) via HOSTS[<slug>]["backends"][<backend>]["image"], and may
+# be overridden per-run by a `runs[].image: "<ref>"` field, or globally with
+# `--image=<ref>` on the CLI. `docker_extra` describes runtime args common
+# to all hosts using that backend.
 BACKENDS = {
     "cuda": {
-        "image": "inferstation/llamacpp-cuda:master",
-        "context": REPO / ".github" / "bench" / "llamacpp-cuda",
         "engine_slug": "llamacpp-cuda",
         "engine_backend": "CUDA",
         "build_flags": "-DGGML_CUDA=ON",
@@ -61,33 +63,38 @@ BACKENDS = {
         "file_suffix": "llamacpp-cuda",
     },
     "vulkan": {
-        "image": "inferstation/llamacpp-vulkan:master",
-        "context": REPO / ".github" / "bench" / "llamacpp-vulkan",
         "engine_slug": "llamacpp-vulkan",
         "engine_backend": "Vulkan",
         "build_flags": "-DGGML_VULKAN=ON",
-        # Use CDI mode (`--device nvidia.com/gpu=all`) instead of `--gpus all`.
         # On DGX Spark / GB10 (arm64), `--gpus all` does NOT bind-mount
         # /proc/driver/nvidia into the container, and the NVIDIA Vulkan ICD's
         # `vk_icdNegotiateLoaderICDInterfaceVersion` fails with -3 because it
         # reads /proc/driver/nvidia/params during init. CDI mode invokes the
         # full nvidia-container-runtime hook which correctly injects procfs.
         # Prereq on host: `sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml`.
+        # NB: AMD hosts (Halo) ignore the nvidia.* CDI args and use the host
+        # mesa-RADV ICD baked into the Vulkan image instead.
         "docker_extra": (
             "--device nvidia.com/gpu=all "
             "-e NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics"
         ),
         "file_suffix": "llamacpp-vulkan",
     },
-    # vLLM via NVIDIA's NGC image (multi-arch, includes arm64 for GB10).
-    # Engine subcommand: `vllm bench throughput` — one-shot offline batch.
-    # Model format: HF safetensors snapshot (not GGUF). The corresponding
-    # quant entry in registry.yaml must set `format: hf-snapshot` + `hf_repo`.
-    "vllm": {
-        "image": os.environ.get(
-            "VLLM_IMAGE", "nvcr.io/nvidia/vllm:26.03-py3"
+    "rocm": {
+        "engine_slug": "llamacpp-rocm",
+        "engine_backend": "ROCm",
+        "build_flags": "-DGGML_HIP=ON",
+        # Standard ROCm container access pattern.
+        "docker_extra": (
+            "--device=/dev/kfd --device=/dev/dri "
+            "--group-add video --security-opt seccomp=unconfined"
         ),
-        "context": None,  # pulled, not built
+        "file_suffix": "llamacpp-rocm",
+    },
+    # vLLM (one-shot `vllm bench throughput`). Model format: HF safetensors
+    # snapshot (not GGUF); quant entry in registry.yaml must set
+    # `format: hf-snapshot` + `hf_repo`.
+    "vllm": {
         "engine_slug": "vllm",
         "engine_backend": "vLLM",
         "build_flags": "",
@@ -97,6 +104,17 @@ BACKENDS = {
             "--ipc=host"
         ),
         "file_suffix": "vllm",
+    },
+    "vllm-rocm": {
+        "engine_slug": "vllm-rocm",
+        "engine_backend": "vLLM-ROCm",
+        "build_flags": "",
+        "docker_extra": (
+            "--device=/dev/kfd --device=/dev/dri "
+            "--group-add video --security-opt seccomp=unconfined "
+            "--shm-size 16g --ipc=host"
+        ),
+        "file_suffix": "vllm-rocm",
     },
 }
 
@@ -112,6 +130,10 @@ HF_TOKEN = os.environ.get("HF_TOKEN", "")
 # are public. Do NOT use internal hostnames, datacenter/site identifiers,
 # or runner labels (e.g. "spark1-shanghai", "halo2-shanghai"). Use neutral
 # product-style identifiers — e.g. "dgx-spark-01", "strix-halo-01".
+#
+# `backends` maps backend slug -> default container image (resolved against
+# INFER_REGISTRY). Per-run override: set `image: "<full-ref>"` on the run
+# entry. Global override: pass `--image=<full-ref>`.
 HOSTS = {
     "dgx-spark-01": {
         "name": "DGX Spark",
@@ -120,6 +142,24 @@ HOSTS = {
         "vram_gb": 128,
         "form": "apu_minipc",
         "models_root": "/home/bench/models",
+        "backends": {
+            "cuda":   f"{INFER_REGISTRY}/inferstation/llama-cuda-spark:b5350-sm121",
+            "vulkan": f"{INFER_REGISTRY}/inferstation/llama-vulkan-spark:b5350",
+            "vllm":   f"{INFER_REGISTRY}/inferstation/vllm-cuda-spark:v0.22.0-sm121",
+        },
+    },
+    "strix-halo-01": {
+        "name": "Strix Halo",
+        "vendor": "AMD",
+        "chip": "Strix Halo (gfx1151)",
+        "vram_gb": 128,
+        "form": "apu_minipc",
+        "models_root": "/home/bench/models",
+        "backends": {
+            "rocm":      f"{INFER_REGISTRY}/inferstation/llama-rocm-halo:b6652-gfx1151",
+            "vulkan":    f"{INFER_REGISTRY}/inferstation/llama-vulkan-halo:b5350",
+            "vllm-rocm": f"{INFER_REGISTRY}/inferstation/vllm-rocm-halo:v0.19.1-gfx1151",
+        },
     },
 }
 
@@ -150,37 +190,60 @@ def host_readlink(path: str) -> str:
     return out.removeprefix("/hostfs")
 
 
-def ensure_image(backend: str) -> str:
-    """Build (or pull) the engine image for `backend`; return engine commit sha."""
-    bcfg = BACKENDS[backend]
-    tag = bcfg["image"]
-    ctx = bcfg["context"]
-    have = sh(f"docker images -q {tag}", capture=True).strip()
+def resolve_image(entry: dict, host_cfg: dict, backend: str, override: str | None) -> str:
+    """Pick the container image for one run.
+
+    Precedence (highest first):
+      1. CLI/env --image override
+      2. Per-run `image:` field in registry.yaml
+      3. Host's `backends[<backend>]` default (private InferStation registry)
+    """
+    if override:
+        return override
+    if entry.get("image"):
+        return str(entry["image"])
+    host_backends = host_cfg.get("backends") or {}
+    if backend not in host_backends:
+        raise SystemExit(
+            f"host {entry['host']!r} has no default image for backend {backend!r}; "
+            f"set runs[].image or extend HOSTS[host].backends."
+        )
+    return host_backends[backend]
+
+
+def ensure_image(image_ref: str, *, backend: str) -> str:
+    """Make sure `image_ref` is present locally; return engine version/commit.
+
+    Always pulls if missing (no fallback to local build). If already cached,
+    skips pull. Engine version is extracted with a backend-specific probe:
+      - llama.cpp: `cat /opt/llama.cpp/commit.txt` if present, else
+        `llama-cli --version` last word.
+      - vllm:     `python3 -c 'import vllm; print(vllm.__version__)'`
+    """
+    have = sh(f"docker images -q {image_ref}", capture=True).strip()
     if not have:
-        if ctx is None:
-            # vLLM (and other pre-built images): just pull.
-            sh(f"docker pull {tag}")
-        else:
-            sh(
-                f"docker build --network host --build-arg LLAMA_CPP_REF={LLAMA_REF} "
-                f"-t {tag} {ctx}"
-            )
-    if backend == "vllm":
-        # NGC vllm image: `vllm --version` requires GPU init; use pkg metadata
-        # instead. Example output: "0.17.1+a03ca76a.nv26.03.46967107".
+        sh(f"docker pull {image_ref}")
+
+    if backend in ("vllm", "vllm-rocm"):
         ver = sh(
-            f"docker run --rm {tag} python3 -c "
-            f"'import vllm; print(vllm.__version__)'",
+            f"docker run --rm --entrypoint python3 {image_ref} "
+            f"-c 'import vllm; print(vllm.__version__)'",
             capture=True,
         ).strip().splitlines()[-1]
-        # Use the short git sha after "+" if present; else the full version.
-        commit = ver.split("+", 1)[-1] if "+" in ver else ver
-        return commit
-    commit = sh(
-        f"docker run --rm --entrypoint cat {tag} /opt/llama.cpp/commit.txt",
+        return ver.split("+", 1)[-1] if "+" in ver else ver
+
+    # llama.cpp images: try a few common probe paths.
+    probes = [
+        "cat /opt/llama.cpp/commit.txt 2>/dev/null",
+        "cat /usr/local/share/llama.cpp/commit.txt 2>/dev/null",
+        "llama-cli --version 2>&1 | head -n 1",
+    ]
+    cmd = " || ".join(probes)
+    out = sh(
+        f"docker run --rm --entrypoint sh {image_ref} -c {shlex.quote(cmd)}",
         capture=True,
     ).strip()
-    return commit
+    return out or "unknown"
 
 
 def ensure_model(host_cfg: dict, model_slug: str, model_def: dict, quant: str) -> str:
@@ -293,7 +356,7 @@ def cleanup_model(host_cfg: dict, model_slug: str, model_def: dict, quant: str) 
     )
 
 
-def run_one_vllm(entry: dict, models: dict, engine_commits: dict[str, str]) -> Path:
+def run_one_vllm(entry: dict, models: dict, image_override: str | None) -> Path:
     """Run `vllm bench throughput` for one (host, model, quant) tuple.
 
     `npl` maps to vLLM's `--max-num-seqs` (server-side concurrency cap) and
@@ -304,8 +367,10 @@ def run_one_vllm(entry: dict, models: dict, engine_commits: dict[str, str]) -> P
     host_cfg = HOSTS[host_slug]
     model_slug = entry["model"]
     quant = entry["quant"]
-    bcfg = BACKENDS["vllm"]
-    engine_commit = engine_commits["vllm"]
+    backend = entry.get("backend", "vllm")
+    bcfg = BACKENDS[backend]
+    image_ref = resolve_image(entry, host_cfg, backend, image_override)
+    engine_commit = ensure_image(image_ref, backend=backend)
     model_def = models[model_slug]
     npl = int(entry.get("npl", 1))
     pp = int(entry.get("pp", 512))
@@ -339,13 +404,16 @@ def run_one_vllm(entry: dict, models: dict, engine_commits: dict[str, str]) -> P
     artifacts.mkdir(exist_ok=True)
     raw_host = artifacts / f"{host_slug}-{model_slug}-{quant}{b_slug}-vllm.json"
     # Mount snapshot read-only as /model; capture vllm bench output JSON into
-    # an artifacts dir mounted at /out.
+    # an artifacts dir mounted at /out. Force --entrypoint sh because some
+    # registry images (incl. our private vllm-cuda-spark) bake an OpenAI
+    # server entrypoint by default.
     sh(
         f"docker run --rm {bcfg['docker_extra']} --network host "
+        f"--entrypoint sh "
         f"-v {shlex.quote(real_dir)}:/model:ro "
         f"-v {shlex.quote(str(artifacts))}:/out "
-        f"{bcfg['image']} "
-        f"sh -c {shlex.quote(inner_cmd + f' && cp {out_json} /out/' + raw_host.name)}"
+        f"{image_ref} "
+        f"-c {shlex.quote(inner_cmd + f' && cp {out_json} /out/' + raw_host.name)}"
     )
 
     parsed = json.loads(raw_host.read_text())
@@ -427,9 +495,9 @@ def run_one_vllm(entry: dict, models: dict, engine_commits: dict[str, str]) -> P
     return out_abs
 
 
-def run_one(entry: dict, models: dict, engine_commits: dict[str, str]) -> list[Path]:
+def run_one(entry: dict, models: dict, image_override: str | None) -> list[Path]:
     backend = entry.get("backend", "cuda")
-    if backend == "vllm":
+    if backend in ("vllm", "vllm-rocm"):
         # vllm runner takes a single npl per docker invocation; iterate the
         # npls list at this layer so registry stays uniform.
         if "npls" in entry:
@@ -439,14 +507,15 @@ def run_one(entry: dict, models: dict, engine_commits: dict[str, str]) -> list[P
         out_paths: list[Path] = []
         for npl in vllm_npls:
             sub = dict(entry); sub.pop("npls", None); sub["npl"] = npl
-            out_paths.append(run_one_vllm(sub, models, engine_commits))
+            out_paths.append(run_one_vllm(sub, models, image_override))
         return out_paths
     host_slug = entry["host"]
     host_cfg = HOSTS[host_slug]
     model_slug = entry["model"]
     quant = entry["quant"]
     bcfg = BACKENDS[backend]
-    engine_commit = engine_commits[backend]
+    image_ref = resolve_image(entry, host_cfg, backend, image_override)
+    engine_commit = ensure_image(image_ref, backend=backend)
     model_def = models[model_slug]
     # Batch-size list. The minimum test unit is (model, quant, framework,
     # backend) — one docker invocation produces all bs results in a single
@@ -476,7 +545,7 @@ def run_one(entry: dict, models: dict, engine_commits: dict[str, str]) -> list[P
     raw = artifacts / f"{host_slug}-{model_slug}-{quant}{raw_suffix}-{bcfg['file_suffix']}.jsonl"
     sh(
         f"docker run --rm {bcfg['docker_extra']} --network host --entrypoint bash "
-        f"-v {shlex.quote(real_dir)}:/models:ro {bcfg['image']} "
+        f"-v {shlex.quote(real_dir)}:/models:ro {image_ref} "
         f"-lc {shlex.quote(cmd)} 2>/dev/null > {shlex.quote(str(raw))}"
     )
 
@@ -526,7 +595,7 @@ def run_one(entry: dict, models: dict, engine_commits: dict[str, str]) -> list[P
             "engine": {
                 "slug": bcfg["engine_slug"],
                 "name": "llama.cpp",
-                "version": LLAMA_REF,
+                "version": engine_commit,
                 "commit": engine_commit,
                 "backend": bcfg["engine_backend"],
                 "build_flags": bcfg["build_flags"],
@@ -654,7 +723,13 @@ def main() -> int:
     ap.add_argument("--skip-push", action="store_true")
     ap.add_argument("--skip-push-site", action="store_true", help="Do not rsync each completed run to the site host.")
     ap.add_argument("--keep-models", action="store_true", help="Do not delete model files after the last benchmark referencing them.")
+    ap.add_argument(
+        "--image", default=os.environ.get("BENCH_IMAGE", ""),
+        help="Override container image for ALL selected runs (e.g. 10.161.176.9:8443/inferstation/llama-cuda-spark:dev). "
+             "Beats both registry.yaml `image:` and the host's default backend image.",
+    )
     args = ap.parse_args()
+    image_override = args.image or None
     push_site_script = REPO / "scripts" / "push-to-site.sh"
 
     reg = yaml.safe_load(REGISTRY.read_text())
@@ -665,13 +740,8 @@ def main() -> int:
     print(f"[plan] {len(runs)} run(s):")
     for r in runs:
         bs_disp = r.get("npl") if "npl" in r else (",".join(str(x) for x in r.get("npls", [1])))
-        print(f"  - {r['host']} :: {r['model']} :: {r['quant']} ({r.get('backend','cuda')}) bs={bs_disp}")
-
-    engine_commits: dict[str, str] = {}
-    needed_backends = {r.get("backend", "cuda") for r in runs}
-    for be in needed_backends:
-        engine_commits[be] = ensure_image(be)
-        print(f"[engine] {be} llama.cpp commit = {engine_commits[be]}")
+        eff_image = image_override or r.get("image") or HOSTS.get(r["host"], {}).get("backends", {}).get(r.get("backend", "cuda"), "<unset>")
+        print(f"  - {r['host']} :: {r['model']} :: {r['quant']} ({r.get('backend','cuda')}) bs={bs_disp} image={eff_image}")
 
     # Per-(host, model, quant) reference counter. When a key hits zero (after
     # all runs that use that artifact have completed), free the disk.
@@ -684,7 +754,7 @@ def main() -> int:
     for r in runs:
         print(f"\n=== {r['model']} :: {r['quant']} on {r['host']} ({r.get('backend','cuda')}) ===")
         try:
-            out_abs_list = run_one(r, reg["models"], engine_commits)
+            out_abs_list = run_one(r, reg["models"], image_override)
             for out_abs in out_abs_list:
                 if not args.skip_push:
                     git_commit_push(out_abs, r)

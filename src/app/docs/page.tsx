@@ -12,6 +12,10 @@ interface ModelDoc {
   quantCount: number;
 }
 
+const BOTH_HOSTS = ["dgx-spark-01 (NVIDIA GB10, 128 GB)", "ryzen-ai-max-395-03 (AMD Strix Halo, 128 GB)"];
+const ENG_LLAMA4 = ["llama.cpp CUDA", "llama.cpp Vulkan", "llama.cpp HIP/ROCm"];
+const ENG_FULL   = [...ENG_LLAMA4, "vLLM"];
+
 const MODELS: ModelDoc[] = [
   {
     slug: "qwen3-6-35b-a3b",
@@ -26,9 +30,124 @@ const MODELS: ModelDoc[] = [
       { label: "BF16 native", tone: "emerald" },
       { label: "vision · MTP=1", tone: "amber" },
     ],
-    hosts: ["dgx-spark-01 (GB10, 128 GB unified)"],
-    engines: ["llama.cpp CUDA", "llama.cpp Vulkan", "vLLM"],
+    hosts: BOTH_HOSTS,
+    engines: ENG_FULL,
     quantCount: 24,
+  },
+  {
+    slug: "qwen3-6-27b",
+    name: "Qwen3.6-27B",
+    vendor: "Alibaba Qwen",
+    arch: "Dense 27B · next-gen Qwen3.6 architecture",
+    tagline: "27B dense Qwen3.6 with 22 GGUF quant tiers plus BF16 safetensors; covered on all four engines.",
+    badges: [
+      { label: "Dense 27B", tone: "violet" },
+      { label: "256K ctx" },
+      { label: "BF16 native", tone: "emerald" },
+    ],
+    hosts: BOTH_HOSTS,
+    engines: ENG_FULL,
+    quantCount: 22,
+  },
+  {
+    slug: "qwen3-30b-a3b",
+    name: "Qwen3-30B-A3B",
+    vendor: "Alibaba Qwen",
+    arch: "MoE · 30B total / ~3B active",
+    tagline: "Qwen3 MoE, Q4_K_M sweep across CUDA / Vulkan / HIP on both Spark and Halo.",
+    badges: [
+      { label: "MoE 30B / 3B", tone: "violet" },
+      { label: "128K ctx" },
+    ],
+    hosts: BOTH_HOSTS,
+    engines: ENG_LLAMA4,
+    quantCount: 1,
+  },
+  {
+    slug: "qwen3-32b",
+    name: "Qwen3-32B",
+    vendor: "Alibaba Qwen",
+    arch: "Dense 32B · GQA",
+    tagline: "Largest dense Qwen3, Q4_K_M sweep on all four llama.cpp backends across both hosts.",
+    badges: [
+      { label: "Dense 32B", tone: "violet" },
+      { label: "128K ctx" },
+    ],
+    hosts: BOTH_HOSTS,
+    engines: ENG_LLAMA4,
+    quantCount: 1,
+  },
+  {
+    slug: "qwen3-14b",
+    name: "Qwen3-14B",
+    vendor: "Alibaba Qwen",
+    arch: "Dense 14B · GQA",
+    tagline: "Mid-size dense Qwen3, Q4_K_M sweep on all four llama.cpp backends.",
+    badges: [
+      { label: "Dense 14B", tone: "violet" },
+      { label: "128K ctx" },
+    ],
+    hosts: BOTH_HOSTS,
+    engines: ENG_LLAMA4,
+    quantCount: 1,
+  },
+  {
+    slug: "qwen3-8b",
+    name: "Qwen3-8B",
+    vendor: "Alibaba Qwen",
+    arch: "Dense 8B · GQA",
+    tagline: "Compact dense Qwen3, Q4_K_M sweep on CUDA / Vulkan / HIP across both hosts.",
+    badges: [
+      { label: "Dense 8B", tone: "violet" },
+      { label: "128K ctx" },
+    ],
+    hosts: BOTH_HOSTS,
+    engines: ENG_LLAMA4,
+    quantCount: 1,
+  },
+  {
+    slug: "qwen3-4b",
+    name: "Qwen3-4B",
+    vendor: "Alibaba Qwen",
+    arch: "Dense 4B · GQA",
+    tagline: "Wide-coverage sweep target: 26 GGUF quant tiers from UD-IQ1_S up to BF16 on both Spark and Halo.",
+    badges: [
+      { label: "Dense 4B", tone: "violet" },
+      { label: "26 quants" },
+    ],
+    hosts: BOTH_HOSTS,
+    engines: ENG_LLAMA4,
+    quantCount: 26,
+  },
+  {
+    slug: "gemma-4-26b-a4b-it",
+    name: "Gemma-4-26B-A4B-it",
+    vendor: "Google Gemma",
+    arch: "MoE · 26B total / ~4B active · instruct",
+    tagline: "Gemma-4 MoE instruction-tuned. 21 GGUF quants plus BF16 vLLM on both hosts.",
+    badges: [
+      { label: "MoE 26B / 4B", tone: "violet" },
+      { label: "Instruct" },
+      { label: "BF16 native", tone: "emerald" },
+    ],
+    hosts: BOTH_HOSTS,
+    engines: ENG_FULL,
+    quantCount: 21,
+  },
+  {
+    slug: "llama-3-3-70b-instruct",
+    name: "Llama-3.3-70B-Instruct",
+    vendor: "Meta Llama",
+    arch: "Dense 70B · GQA · instruct",
+    tagline: "Meta Llama 3.3 70B Instruct at Q4_K_M and Q8_0 on all four llama.cpp backends across both hosts.",
+    badges: [
+      { label: "Dense 70B", tone: "violet" },
+      { label: "Instruct" },
+      { label: "128K ctx" },
+    ],
+    hosts: BOTH_HOSTS,
+    engines: ENG_LLAMA4,
+    quantCount: 2,
   },
 ];
 
@@ -51,13 +170,21 @@ export default function DocsIndex() {
     <div className="py-12 sm:py-16">
       <header className="flex flex-col gap-4 border-b border-zinc-200 pb-10 dark:border-zinc-800">
         <p className="text-[11px] uppercase tracking-widest text-zinc-500">Docs</p>
-        <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">Model docs</h1>
+        <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">Model Docs</h1>
         <p className="max-w-3xl text-base text-zinc-600 dark:text-zinc-400">
           For each model under test: exact weight repo and file list, host hardware and driver
           stack, engine images with pinned commits, the verbatim benchmark command lines, and a
           link to the raw run records. Every chart bar on{" "}
           <Link className="underline underline-offset-2" href="/charts">/charts</Link> is reproducible from one of these recipes.
         </p>
+        <div className="flex flex-wrap gap-3 text-sm">
+          <Link
+            href="/docs/methodology"
+            className="rounded-md border border-zinc-300 px-3 py-1.5 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
+          >
+            Methodology
+          </Link>
+        </div>
       </header>
 
       <section className="mt-10">
@@ -109,7 +236,7 @@ export default function DocsIndex() {
               </dl>
 
               <div className="mt-1 inline-flex items-center text-xs font-medium text-zinc-500 group-hover:text-zinc-900 dark:group-hover:text-zinc-100">
-                Read the doc →
+                Read the Doc
               </div>
             </Link>
           ))}

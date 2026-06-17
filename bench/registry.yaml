@@ -6,6 +6,21 @@
 # To trigger a batch run on the dgx-spark-01 self-hosted runner:
 #   Actions → "bench-batch" → Run workflow
 #   (Optional `filter` input: comma-separated "<model>:<quant>" entries.)
+#
+# === IMAGE RESOLUTION ===
+# Container images are pulled (NOT built locally) from the InferStation
+# private registry at 10.161.176.9:8443. Per-host/per-backend defaults live
+# in scripts/bench-batch.py HOSTS[<slug>].backends. Per-run override:
+#
+#   - { host: dgx-spark-01, model: ..., quant: ..., backend: cuda,
+#       image: "10.161.176.9:8443/inferstation/llama-cuda-spark:b5350-dev" }
+#
+# Or any external image (must be docker-pullable on the bench host):
+#
+#   - { host: dgx-spark-01, ..., image: "ghcr.io/ggml-org/llama.cpp:full-cuda-b5350" }
+#
+# Global override at the CLI:
+#   python3 scripts/bench-batch.py --image=<full-ref> --filter=...
 
 models:
   qwen3.6-35b-a3b:

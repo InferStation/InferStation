@@ -77,7 +77,6 @@ function RunDetailInner() {
         </Card>
         <Card title="Model">
           <Row k="slug" v={record.model.slug} mono />
-          <Row k="params" v={`${record.model.params_b}B`} />
           <Row k="quant" v={record.model.quantization} mono />
           {record.model.source_url ? (
             <Row

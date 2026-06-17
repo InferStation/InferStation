@@ -5,18 +5,25 @@ const NAV_SECTIONS: {
   items: { href: string; label: string; meta?: string }[];
 }[] = [
   {
-    label: "Getting started",
+    label: "Models",
     items: [
-      { href: "/docs", label: "Overview" },
-      { href: "/methodology", label: "Methodology" },
-      { href: "/runs", label: "Raw runs" },
-      { href: "/charts", label: "Charts" },
+      { href: "/docs/qwen3-6-35b-a3b",        label: "Qwen3.6-35B-A3B",        meta: "MoE · 35B/3B · 24 quants" },
+      { href: "/docs/qwen3-6-27b",            label: "Qwen3.6-27B",            meta: "Dense · 27B · 22 quants" },
+      { href: "/docs/qwen3-30b-a3b",          label: "Qwen3-30B-A3B",          meta: "MoE · 30B/3B · Q4_K_M" },
+      { href: "/docs/qwen3-32b",              label: "Qwen3-32B",              meta: "Dense · 32B · Q4_K_M" },
+      { href: "/docs/qwen3-14b",              label: "Qwen3-14B",              meta: "Dense · 14B · Q4_K_M" },
+      { href: "/docs/qwen3-8b",               label: "Qwen3-8B",               meta: "Dense · 8B · Q4_K_M" },
+      { href: "/docs/qwen3-4b",               label: "Qwen3-4B",               meta: "Dense · 4B · 26 quants" },
+      { href: "/docs/gemma-4-26b-a4b-it",     label: "Gemma-4-26B-A4B-it",     meta: "MoE · 26B/4B · 21 quants" },
+      { href: "/docs/llama-3-3-70b-instruct", label: "Llama-3.3-70B-Instruct", meta: "Dense · 70B · Q4/Q8" },
     ],
   },
   {
-    label: "Models",
+    label: "Devices",
     items: [
-      { href: "/docs/qwen3-6-35b-a3b", label: "Qwen3.6-35B-A3B", meta: "MoE · 35B/3B" },
+      { href: "/docs/devices",    label: "Overview",   meta: "Price · performance comparison" },
+      { href: "/docs/dgx-spark",  label: "DGX Spark",  meta: "NVIDIA GB10 · sm_121 · 128 GB" },
+      { href: "/docs/strix-halo", label: "Strix Halo", meta: "AMD Ryzen AI Max+ 395 · gfx1151 · 128 GB" },
     ],
   },
 ];

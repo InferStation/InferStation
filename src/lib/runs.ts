@@ -36,12 +36,18 @@ export interface RunRecord {
   tg_toks_per_s: number | null;
   combined_toks_per_s?: number | null;
   ttft_ms: number | null;
+  tpot_ms?: number | null;
+  prefill_toks_per_s?: number | null;
+  decode_toks_per_s?: number | null;
+  total_toks_per_s?: number | null;
   ctx: number | null;
   batch: number | null;
   concurrency: number | null;
   n_gpu_layers: number | null;
   vram_used_gb: number | null;
   scenario: string;
+  image?: string;
+  image_tag?: string;
   usability_tag: UsabilityTag;
   log_url: string;
   source_url: string;

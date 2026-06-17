@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { fetchAllRuns } from "@/lib/runsClient";
 import { type RunSummary } from "@/lib/runs";
+import { modelReleaseRank } from "@/lib/modelOrder";
 
 function fmt(n: number | null | undefined, digits = 0): string {
   if (n == null) return "—";
@@ -221,6 +222,55 @@ function StatBar({ value, max, color }: { value: number; max: number; color: str
   );
 }
 
+function perfDevice(name: string): "Spark" | "Halo" | null {
+  if (/spark|dgx/i.test(name)) return "Spark";
+  if (/halo|ryzen|strix/i.test(name)) return "Halo";
+  return null;
+}
+
+interface PerfCell {
+  tps: number;
+  engine: string;
+  quant: string;
+}
+
+interface PerfRow {
+  model: string;
+  slug: string;
+  spark: PerfCell | null;
+  halo: PerfCell | null;
+}
+
+/** Peak combined throughput (concurrency=32) per model on each device, with the
+ *  engine/quant that achieved it. A direct "fastest config" lookup, no narrative. */
+function buildPerfTable(runs: RunSummary[]): PerfRow[] {
+  const map = new Map<string, PerfRow>();
+  for (const r of runs) {
+    if (r.concurrency !== 32) continue;
+    const total = r.total_toks_per_s ?? r.combined_toks_per_s;
+    if (total == null || total <= 0) continue;
+    const dev = perfDevice(r.host.name);
+    if (!dev) continue;
+    const row = map.get(r.model.slug) ?? {
+      model: r.model.name,
+      slug: r.model.slug,
+      spark: null,
+      halo: null,
+    };
+    const fw = /vllm/i.test(r.engine.name) ? "vLLM" : "llama.cpp";
+    const cell: PerfCell = { tps: total, engine: fw, quant: r.model.quantization };
+    if (dev === "Spark" && (!row.spark || total > row.spark.tps)) row.spark = cell;
+    if (dev === "Halo" && (!row.halo || total > row.halo.tps)) row.halo = cell;
+    map.set(r.model.slug, row);
+  }
+  return [...map.values()].sort((a, b) => {
+    const ra = modelReleaseRank(a.slug);
+    const rb = modelReleaseRank(b.slug);
+    if (ra !== rb) return ra - rb;
+    return a.model.localeCompare(b.model);
+  });
+}
+
 export default function Home() {
   const [runs, setRuns] = useState<RunSummary[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -240,12 +290,10 @@ export default function Home() {
       </div>
     );
   const hosts = aggregateHosts(runs);
-  const compare = pickBackendComparison(runs);
-  const batching = pickBatchingShowcase(runs);
-  const quantShow = pickQuantShowcase(runs);
+  const perfTable = buildPerfTable(runs);
 
   const totalRuns = runs.length;
-  const totalHosts = hosts.length;
+  const totalModels = new Set(runs.map((r) => r.model.slug)).size;
   const totalQuants = new Set(runs.map((r) => r.model.quantization)).size;
   const totalBackends = new Set(runs.map((r) => r.engine.backend.toLowerCase())).size;
   const latestDate = runs[0]?.run_date ?? "";
@@ -262,16 +310,14 @@ export default function Home() {
           <span className="text-emerald-700 dark:text-emerald-400">you can actually buy</span>.
         </h1>
         <p className="max-w-2xl text-base text-zinc-600 dark:text-zinc-400">
-          Every number on this site comes from a real{" "}
-          <a
-            href="https://github.com/JoursBleu/InferStation/actions"
-            target="_blank"
-            rel="noreferrer"
+          Every number on this site comes from an automated benchmark{" "}
+          <Link
+            href="/runs"
             className="underline decoration-zinc-400 underline-offset-2 hover:decoration-zinc-900 dark:hover:decoration-zinc-100"
           >
-            GitHub Actions run
-          </a>{" "}
-          on a self-hosted machine — exact command, engine commit, and raw output are linked
+            run
+          </Link>{" "}
+          on self-hosted hardware — exact command, engine commit, and raw output are linked
           from every entry. No vendor edits. No cherry-picked configs.
         </p>
         <div className="flex flex-wrap gap-3 pt-2 text-sm">
@@ -279,10 +325,10 @@ export default function Home() {
             href="/charts"
             className="rounded-md bg-zinc-900 px-3 py-1.5 font-medium text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
-            Explore charts →
+            Explore charts
           </Link>
           <Link
-            href="/methodology"
+            href="/docs/methodology"
             className="rounded-md border border-zinc-300 px-3 py-1.5 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
           >
             Methodology
@@ -300,7 +346,7 @@ export default function Home() {
       <section className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           { label: "Runs published", value: totalRuns.toString() },
-          { label: "Hosts in the lab", value: totalHosts.toString() },
+          { label: "Models benchmarked", value: totalModels.toString() },
           { label: "Quantizations covered", value: totalQuants.toString() },
           { label: "Backends compared", value: totalBackends.toString() },
         ].map((s) => (
@@ -317,160 +363,88 @@ export default function Home() {
         <p className="mt-3 text-xs text-zinc-500">Last updated {latestDate}.</p>
       ) : null}
 
-      {/* Key findings */}
-      <section className="mt-12">
-        <h2 className="text-xs uppercase tracking-widest text-zinc-500">Key findings</h2>
-        <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-3">
-          {compare ? (
-            <article className="flex flex-col gap-3 rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
-              <div className="flex items-baseline justify-between">
-                <h3 className="text-sm font-semibold">CUDA vs Vulkan on {compare.hostName}</h3>
-                <span className="font-mono text-xs text-zinc-500">bs={compare.concurrency}</span>
-              </div>
-              <p className="text-xs text-zinc-500">
-                Same model ({compare.quant}), same hardware — the backend gap on prefill is
-                large, the gap on decode is smaller.
-              </p>
-              <div className="mt-1 flex flex-col gap-3 text-sm">
-                <div>
-                  <div className="mb-1 flex items-baseline justify-between">
-                    <span className="text-xs uppercase tracking-wide text-zinc-500">
-                      Prefill tok/s
-                    </span>
-                    <span className="font-mono text-xs text-zinc-600 dark:text-zinc-400">
-                      CUDA {ratio(compare.cuda.pp, compare.vulkan.pp)} faster
-                    </span>
-                  </div>
-                  <StatBar value={compare.cuda.pp} max={compare.cuda.pp} color="bg-[#76B900]" />
-                  <div className="mt-1 flex justify-between text-xs font-mono">
-                    <span>CUDA {fmt(compare.cuda.pp)}</span>
-                  </div>
-                  <StatBar value={compare.vulkan.pp} max={compare.cuda.pp} color="bg-rose-500" />
-                  <div className="mt-1 flex justify-between text-xs font-mono">
-                    <span>Vulkan {fmt(compare.vulkan.pp)}</span>
-                  </div>
-                </div>
-                <div>
-                  <div className="mb-1 flex items-baseline justify-between">
-                    <span className="text-xs uppercase tracking-wide text-zinc-500">
-                      Decode tok/s
-                    </span>
-                    <span className="font-mono text-xs text-zinc-600 dark:text-zinc-400">
-                      CUDA {ratio(compare.cuda.tg, compare.vulkan.tg)} faster
-                    </span>
-                  </div>
-                  <StatBar value={compare.cuda.tg} max={compare.cuda.tg} color="bg-[#76B900]" />
-                  <div className="mt-1 flex justify-between text-xs font-mono">
-                    <span>CUDA {fmt(compare.cuda.tg, 1)}</span>
-                  </div>
-                  <StatBar value={compare.vulkan.tg} max={compare.cuda.tg} color="bg-rose-500" />
-                  <div className="mt-1 flex justify-between text-xs font-mono">
-                    <span>Vulkan {fmt(compare.vulkan.tg, 1)}</span>
-                  </div>
-                </div>
-              </div>
-            </article>
-          ) : null}
-
-          {batching ? (
-            <article className="flex flex-col gap-3 rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
-              <h3 className="text-sm font-semibold">Batching: bs=1 → bs={batching.bsN.n}</h3>
-              <p className="text-xs text-zinc-500">
-                {batching.hostName} · {batching.quant} · {batching.backend} — single-stream
-                interactive vs concurrent server use.
-              </p>
-              <dl className="grid grid-cols-3 gap-2 text-center font-mono text-sm">
-                <div className="rounded-md bg-zinc-50 p-3 dark:bg-zinc-900">
-                  <dt className="text-[10px] uppercase tracking-wide text-zinc-500">Decode</dt>
-                  <dd className="mt-1 text-base font-semibold tabular-nums">
-                    {ratio(batching.bsN.tg, batching.bs1.tg)}
-                  </dd>
-                  <dd className="text-[10px] text-zinc-500">
-                    {fmt(batching.bs1.tg, 1)} → {fmt(batching.bsN.tg, 1)}
-                  </dd>
-                </div>
-                <div className="rounded-md bg-zinc-50 p-3 dark:bg-zinc-900">
-                  <dt className="text-[10px] uppercase tracking-wide text-zinc-500">Prefill</dt>
-                  <dd className="mt-1 text-base font-semibold tabular-nums">
-                    {ratio(batching.bsN.pp, batching.bs1.pp)}
-                  </dd>
-                  <dd className="text-[10px] text-zinc-500">
-                    {fmt(batching.bs1.pp)} → {fmt(batching.bsN.pp)}
-                  </dd>
-                </div>
-                <div className="rounded-md bg-zinc-50 p-3 dark:bg-zinc-900">
-                  <dt className="text-[10px] uppercase tracking-wide text-zinc-500">Combined</dt>
-                  <dd className="mt-1 text-base font-semibold tabular-nums">
-                    {batching.bs1.combined && batching.bsN.combined
-                      ? ratio(batching.bsN.combined, batching.bs1.combined)
-                      : "—"}
-                  </dd>
-                  <dd className="text-[10px] text-zinc-500">
-                    {fmt(batching.bs1.combined)} → {fmt(batching.bsN.combined)}
-                  </dd>
-                </div>
-              </dl>
-              <p className="text-xs text-zinc-500">
-                Decode tok/s scales near-linearly until memory bandwidth saturates; combined
-                throughput is the right metric for a serving workload.
-              </p>
-            </article>
-          ) : null}
-
-          {quantShow ? (
-            <article className="flex flex-col gap-3 rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
-              <h3 className="text-sm font-semibold">Quant size vs speed</h3>
-              <p className="text-xs text-zinc-500">
-                {quantShow.hostName} · {quantShow.backend} · bs={quantShow.concurrency} —
-                smaller quants trade quality for tokens/sec.
-              </p>
-              <div className="flex flex-col gap-3 font-mono text-sm">
-                <div>
-                  <div className="mb-1 flex items-baseline justify-between">
-                    <span className="text-xs uppercase tracking-wide text-zinc-500">
-                      {quantShow.high.quant}
-                    </span>
-                    <span className="tabular-nums">{fmt(quantShow.high.tg, 1)} tok/s</span>
-                  </div>
-                  <StatBar
-                    value={quantShow.high.tg}
-                    max={quantShow.high.tg}
-                    color="bg-[#76B900]"
-                  />
-                </div>
-                <div>
-                  <div className="mb-1 flex items-baseline justify-between">
-                    <span className="text-xs uppercase tracking-wide text-zinc-500">
-                      {quantShow.low.quant}
-                    </span>
-                    <span className="tabular-nums">{fmt(quantShow.low.tg, 1)} tok/s</span>
-                  </div>
-                  <StatBar
-                    value={quantShow.low.tg}
-                    max={quantShow.high.tg}
-                    color="bg-zinc-400 dark:bg-zinc-600"
-                  />
-                </div>
-              </div>
-              <p className="text-xs text-zinc-500">
-                {pct(quantShow.high.tg, quantShow.low.tg)} on decode going from{" "}
-                {quantShow.low.quant} → {quantShow.high.quant}. Pick the largest quant your
-                quality budget allows.
-              </p>
-            </article>
-          ) : null}
-        </div>
-      </section>
-
-      {/* Hardware in the lab */}
+      {/* Peak throughput by model */}
       <section className="mt-12">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-xs uppercase tracking-widest text-zinc-500">Hardware in the lab</h2>
+          <h2 className="text-xs uppercase tracking-widest text-zinc-500">Peak throughput by model</h2>
           <Link
             href="/charts"
             className="text-xs text-zinc-500 underline underline-offset-2 hover:text-zinc-900 dark:hover:text-zinc-100"
           >
-            Compare on charts →
+            Full charts
+          </Link>
+        </div>
+        <p className="mt-2 max-w-3xl text-xs text-zinc-500">
+          Best combined (prefill + decode) throughput at 32 concurrent requests, with the fastest
+          engine and quantization measured on each device.
+        </p>
+        <div className="mt-3 overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-zinc-200 text-left text-[11px] uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
+                <th className="px-4 py-2 font-medium">Model</th>
+                <th className="px-4 py-2 text-right font-medium">DGX Spark</th>
+                <th className="px-4 py-2 text-right font-medium">Strix Halo</th>
+                <th className="px-4 py-2 text-right font-medium">Spark / Halo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {perfTable.map((row) => (
+                <tr
+                  key={row.model}
+                  className="border-b border-zinc-100 last:border-0 dark:border-zinc-900"
+                >
+                  <td className="px-4 py-2 font-medium">{row.model}</td>
+                  <td className="px-4 py-2 text-right">
+                    {row.spark ? (
+                      <div>
+                        <div className="font-mono font-semibold tabular-nums">
+                          {fmt(row.spark.tps)}
+                        </div>
+                        <div className="text-[10px] text-zinc-500">
+                          {row.spark.engine} · {row.spark.quant}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-zinc-400">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-2 text-right">
+                    {row.halo ? (
+                      <div>
+                        <div className="font-mono font-semibold tabular-nums">
+                          {fmt(row.halo.tps)}
+                        </div>
+                        <div className="text-[10px] text-zinc-500">
+                          {row.halo.engine} · {row.halo.quant}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-zinc-400">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-2 text-right font-mono tabular-nums text-zinc-600 dark:text-zinc-400">
+                    {row.spark && row.halo ? ratio(row.spark.tps, row.halo.tps) : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-2 text-[11px] text-zinc-500">
+          Combined tok/s at concurrency 32. “—” = not benchmarked on that device.
+        </p>
+      </section>
+
+      {/* Hardware specs */}
+      <section className="mt-12">
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-xs uppercase tracking-widest text-zinc-500">Hardware specs</h2>
+          <Link
+            href="/charts"
+            className="text-xs text-zinc-500 underline underline-offset-2 hover:text-zinc-900 dark:hover:text-zinc-100"
+          >
+            Compare on charts
           </Link>
         </div>
         <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -576,16 +550,16 @@ export default function Home() {
         </div>
         <div className="mt-5 flex flex-wrap gap-3 text-sm">
           <Link
-            href="/methodology"
+            href="/docs/methodology"
             className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-950 dark:hover:bg-zinc-900"
           >
-            How we run them →
+            How we run them
           </Link>
           <Link
             href="/about"
             className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-950 dark:hover:bg-zinc-900"
           >
-            Why this site →
+            Why this site
           </Link>
         </div>
       </section>
