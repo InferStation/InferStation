@@ -250,16 +250,32 @@ function ModelHistory({
       const concs = Array.from(
         new Set(g.runs.filter((r) => r.concurrency != null).map((r) => r.concurrency as number)),
       ).sort((a, b) => a - b);
-      // value at each date per concurrency (avg if multiple runs that day)
+      // value at each date per concurrency (avg if multiple runs that day).
+      // A failed run is recorded as 0 tok/s; treat 0 (and missing) as "no data"
+      // so the line leaves a gap instead of dipping down to the baseline.
       const rawSeries = concs.map((c) =>
         allDates.map((d) => {
           const vals = g.runs
             .filter((r) => r.run_date === d && r.concurrency === c)
             .map((r) => r[metric])
-            .filter((v): v is number => v != null);
+            .filter((v): v is number => v != null && v > 0);
           return vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : null;
         }),
       );
+      // A dying/thrashing server can still report a tiny but >0 rate (e.g. one
+      // stream limping at 0.8 tok/s when the normal rate is ~30) which would
+      // plunge the line to the baseline just like a 0 does. For each series with
+      // enough history, drop points below 15% of that series' median — a >85%
+      // single-day collapse is a broken run, not a real datapoint.
+      for (const pts of rawSeries) {
+        const valid = pts.filter((v): v is number => v != null);
+        if (valid.length < 3) continue;
+        const sorted = [...valid].sort((a, b) => a - b);
+        const floor = sorted[Math.floor(sorted.length / 2)] * 0.15;
+        for (let i = 0; i < pts.length; i++) {
+          if (pts[i] != null && (pts[i] as number) < floor) pts[i] = null;
+        }
+      }
       // Drop dates where every series is null or 0 (a failed/zero day) so the
       // line doesn't dip to 0 and back up.
       const keep = allDates
