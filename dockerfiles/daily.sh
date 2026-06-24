@@ -360,6 +360,32 @@ build_pkg_gfx11() {
   fi
 }
 
+# build_r9700_vllm: r9700 vLLM is compiled FROM SOURCE (no wheel profile) on the
+# TheRock gfx1201 base, pinned to the meta's tag (currently v0.22.0-gfx1201).
+# Heavy (~45GB image, compiles vLLM). Produces nightly-<date> + <reltag> + latest.
+build_r9700_vllm() {
+  local profile="vllm-rocm-r9700-main"
+  local reltag; reltag=$(jq -r '.tag' "${SCRIPT_DIR}/${profile}/meta.json")
+  if [[ "$MANUAL" == "1" ]]; then
+    if harbor_has_tag "$profile" "$reltag"; then
+      echo ">>> ${profile}: MANUAL — ${reltag} already built; nothing to do"; return
+    fi
+    echo ">>> ${profile}: MANUAL — build ${reltag} (no nightly/latest)"
+    "${SCRIPT_DIR}/build.sh" "$profile" --tag="$reltag" --no-latest
+    return
+  fi
+  if harbor_has_tag "$profile" "$reltag"; then
+    echo ">>> ${profile}: ${reltag} already built -> retag ${NIGHTLY}+latest (no recompile)"
+    harbor_set_tag "$profile" "$reltag" "$NIGHTLY" || { echo ">>> ${profile}: retag FAILED"; return 1; }
+    harbor_set_tag "$profile" "$reltag" "latest"  || echo ">>> ${profile}: WARN: could not move :latest"
+    return
+  fi
+  echo ">>> ${profile}: nightly build (from source, pinned ${reltag}) as ${NIGHTLY} (+${reltag},latest)"
+  if ! "${SCRIPT_DIR}/build.sh" "$profile" --tag="$NIGHTLY" --also-tag="$reltag"; then
+    local rc=$?; echo ">>> ${profile}: build FAILED (rc=$rc)"; return $rc
+  fi
+}
+
 echo "=========================================="
 echo "InferStation daily build  track=${TRACK}  $(date -u +%FT%TZ)"
 echo "trigger: ${TRIGGER}  (manual=${MANUAL})"
@@ -397,8 +423,9 @@ case "$TRACK" in
     wait
     ;;
   r9700)
-    run_one llama-rocm-r9700      build_pkg       llama-rocm-r9700   llama gfx1201 &
-    run_one llama-vulkan-r9700    mirror_pkg      llama-vulkan-r9700 &
+    run_one llama-rocm-r9700      build_pkg          llama-rocm-r9700   llama gfx1201 &
+    run_one vllm-rocm-r9700-main  build_r9700_vllm &
+    run_one llama-vulkan-r9700    mirror_pkg         llama-vulkan-r9700 &
     wait
     ;;
   *)
