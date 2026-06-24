@@ -71,7 +71,7 @@ recorded hardware, the run is flagged and re-tested.
 ## Inference engine images
 
 All numbers are produced on InferStation's own nightly-built engine images
-(Harbor `10.161.176.9:8443/inferstation/*`, public mirror `ghcr.io/inferstation/*`).
+(`ghcr.io/inferstation/*`, GitHub Packages; built nightly by GitHub Actions).
 
 **Strix Halo vLLM uses the gfx1151-optimized build** (`vllm-rocm-halo`, tracking
 AMD's [ROCm/vllm](https://github.com/ROCm/vllm) `gfx11` branch). This branch ships

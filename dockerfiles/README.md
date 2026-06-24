@@ -15,21 +15,19 @@ InferStation 推理镜像的统一构建 / 镜像 (mirror) 配方。
 
 > **halo 默认 vLLM = gfx1151 优化版**：`vllm-rocm-halo` 现在追 AMD 官方 [ROCm/vllm](https://github.com/ROCm/vllm) 的 `gfx11` 分支，内含针对 Strix Halo gfx1151 的专属调优内核（W4A16 prefill BLOCK_N、GDN prefill shape-keyed config、unquantized 权重 stride 对齐避开 gfx11x 4096B cliff），且保留 `FusedMoE.tp_size`（AWQ MoE 干净加载）。**这是 daily test 和 GHCR 发布的默认 halo vLLM 镜像。** 代价是落后 upstream main（无 DiffusionGemma）。追 upstream main 的线降级为内部仓库 `vllm-rocm-halo-main`（保留 DiffusionGemma，仅手动/特殊单元用，不发 GHCR）。
 
-每个镜像在 Harbor 内部 (`10.161.176.38:8443/inferstation/<name>:<tag>`) 与 GHCR 公开 (`ghcr.io/inferstation/<name>:<tag>`) 双地址同步；`:latest` 始终指向最新成功 build；`:nightly-YYYYMMDD` 每天自动生成（见下文 [Daily build](#daily-build) 章节）。`vllm-wheel-halo*` 是只在 Harbor 内部使用的 wheel pkg，不发 GHCR；`vllm-rocm-halo-main`（upstream main 线）也仅内部保留。
+> **2026-06-24 迁移**：Harbor（`10.161.176.38:8443`）已退役删除，镜像仓库现在**只用 GHCR**（`ghcr.io/inferstation/<name>:<tag>`）。CI 从 Gitea Actions 切到 **GitHub Actions**（`.github/workflows/nightly-build.yml`，14:00 UTC，cicd self-hosted runner），`build.sh` 直接 push GHCR（`INFERSTATION_REGISTRY=ghcr.io/inferstation`），不再需要 `sync-ghcr.sh` 二次镜像。
+
+每个镜像发布到 GHCR (`ghcr.io/inferstation/<name>:<tag>`)；`:latest` 始终指向最新成功 build；`:nightly-YYYYMMDD` 每天自动生成（见下文 [Daily build](#daily-build) 章节）。`vllm-wheel-halo*` 是 wheel pkg 中间产物、`vllm-rocm-halo-main`（upstream main 线）默认仅内部用，按需手动 push GHCR（org 默认 internal 可见性）。
 
 ## Registries
 
-### 内部 Harbor（CI / dispatcher 默认）
-- URL: `http://10.161.176.38:8443` (Harbor v2.13 on R9700-Workstation-SH，data at `/dc2/lkang/harbor/data`)
-- HTTP only (LAN insecure-registry on 4 bench hosts: 9700/4090/spark2/halo6)
-- Web UI + self-signup: open the URL in browser
-- 凭据：见 `/memories/api-keys.md`（admin 默认密码）；CI 用 robot account
-
-### 公开 GHCR（外部分发）
+### GHCR（唯一仓库，2026-06-24 起）
 - 命名空间：`ghcr.io/inferstation/<name>:<tag>`（GitHub org [InferStation](https://github.com/InferStation)）
-- 公开匿名 `docker pull` 即可（首次发布后需在 package settings 把 visibility 切到 Public）
-- Push 凭据：classic PAT（`write:packages`），保存在 9700 `/root/.docker/config.json`
-- 同步流程：见 [`sync-ghcr.sh`](sync-ghcr.sh)（从 Harbor pull → retag → push GHCR）
+- Public 包匿名 `docker pull` 即可；org 默认新包是 **internal**（拉取需 `docker login ghcr.io`）——bench 节点 9700x8/4090/halo5/halo6 的 root docker 已登录，spark 系列包是 public 免登录。GitHub REST 不支持改 package visibility，需在 package settings 手动切 Public。
+- Push 凭据：classic PAT（`write:packages` + `delete:packages`，用户 AlisaLi0），保存在 4090/cicd 的 `~/.docker/config.json`
+- CI（GitHub Actions）用 repo secret `GHCR_PAT` 登录 push
+
+> **Harbor 已退役**：旧内部 Harbor（`10.161.176.38:8443`，曾在 9700→cicd）于 2026-06-24 删除，150G 数据清空。`sync-ghcr.sh`（Harbor→GHCR 镜像脚本）随之作废——`build.sh` 现在直接 push GHCR。
 
 ## 用法
 
@@ -64,7 +62,7 @@ rocm/vllm base ──► vllm-rocm-halo-wheel ──► vllm-wheel-halo:<tag>   
 - **`vllm-rocm-halo-wheel`** — 在 rocm/vllm base 上 `pip wheel .` 产出 arch-locked wheel。
   ccache 走 **BuildKit cache mount**（`--mount=type=cache,id=vllm-halo-ccache`），跨 build
   持久 → 只重编改动的 translation unit。产物（`vllm-*.whl` + 解析出的 rocm requirements）
-  打包成 **`FROM scratch`** pkg 镜像 `vllm-wheel-halo:<tag>`（~120 MB，无 OS），推 Harbor。
+  打包成 **`FROM scratch`** pkg 镜像 `vllm-wheel-halo:<tag>`（~120 MB，无 OS），推 GHCR（internal）。
 - **`vllm-rocm-halo`** — assembler。`COPY --from=<wheel pkg>` 拉 wheel，`pip install vllm-*.whl`
   （`--no-deps`，torch/triton 来自 base）+ 还原运行时依赖 + 升级 `transformers==5.10.2`，
   **无 git / 无源码 / 无编译器**，~2 min。老的一次性编译版留作 [`Dockerfile.legacy`](vllm-rocm-halo/Dockerfile.legacy) fallback。
@@ -117,18 +115,10 @@ rocm/vllm base ──► vllm-rocm-halo-wheel ──► vllm-wheel-halo:<tag>   
 - `<version>-<arch>` tag（如 `v0.22.0-sm121` / `b9509-gfx1151`）永久保留；`nightly-YYYYMMDD` 保留 7 天滚动窗口（[`prune.sh`](prune.sh) 只清过期 nightly，不动 release / `:latest`）。
 - 公开镜像同步到 GHCR（见下文）。
 
-## GHCR 同步
+## GHCR 同步（已作废 — Harbor 退役后不再需要）
 
-从 Harbor 推到 GHCR 公开仓库。repo 与 tag **每次运行都从 Harbor REST API 自动发现**，无硬编码清单：
-
-```bash
-# 在 9700 上跑（已 docker login ghcr.io 为 AlisaLi0）
-DRY_RUN=1 bash dockerfiles/sync-ghcr.sh   # 先看会镜像哪些 repo:tag
-bash dockerfiles/sync-ghcr.sh             # 实际推送
-```
-
-默认镜像策略：`latest` + `weekly-YYYYMMDD` + release tag（`vX.Y.Z-arch` / `bNNNN-arch`）+ 最新一个 `nightly-YYYYMMDD`；排除 `commit-<sha>`。env 可覆盖：`MIRROR_ALL_NIGHTLIES=1` / `MIRROR_COMMITS=1` / `TAG_REGEX=...` / `REPOS="..."`。
+> ~~`sync-ghcr.sh` 从 Harbor REST API 发现 repo:tag 并镜像到 GHCR~~。**2026-06-24 Harbor 退役后此步作废**：`build.sh` 直接把镜像 push 到 GHCR（`INFERSTATION_REGISTRY=ghcr.io/inferstation`），无需二次同步。`sync-ghcr.sh` 脚本保留作历史参考。
 
 ## TODO（未来）
 - admin_api `/api/builds` endpoint + `/builds` UI
-- buildkite/github-actions CI
+- ~~buildkite/github-actions CI~~ ✅ 已迁到 GitHub Actions（`.github/workflows/nightly-build.yml`，2026-06-24）
