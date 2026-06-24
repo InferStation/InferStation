@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
+# ⚠️ OBSOLETE (2026-06-24): Harbor 已退役,镜像迁到 ghcr.io/inferstation。本脚本
+# 清的是 Harbor nightly-* tag,已不适用。ghcr 的 nightly 保留策略是 TODO
+# (GitHub Packages API)。脚本保留仅作历史参考。
 # Prune nightly-* tags on Harbor: keep latest 7 per repository, delete the rest.
 # Other tags (release tags, :latest, dev branches) are NEVER touched.
 
 set -euo pipefail
-HARBOR="${HARBOR:-http://10.161.176.38:8443}"   # Harbor here is HTTP-on-8443
+HARBOR="${HARBOR:-http://10.161.176.38:8443}"   # Harbor here is HTTP-on-8443 (RETIRED)
 PROJECT="inferstation"
 USER="admin"
 PASS="${HARBOR_PASS:-}"

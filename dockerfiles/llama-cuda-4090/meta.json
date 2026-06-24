@@ -7,7 +7,7 @@
   "source_image": "ghcr.io/ggml-org/llama.cpp:server-cuda",
   "mirror_host": "local",
   "build_host": "4090",
-  "registry": "10.161.176.38:8443/inferstation/llama-cuda-4090",
+  "registry": "ghcr.io/inferstation/llama-cuda-4090",
   "tag": "master-sm89",
   "dockerfile": "Dockerfile",
   "upstream": "https://github.com/ggml-org/llama.cpp",

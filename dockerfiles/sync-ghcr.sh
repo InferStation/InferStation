@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# ⚠️ OBSOLETE (2026-06-24): Harbor 已退役。build.sh 现在直接 push 到
+# ghcr.io/inferstation（INFERSTATION_REGISTRY），无需 Harbor→GHCR 二次镜像。
+# 仅作历史参考。
 # Mirror selected tags from the internal Harbor registry to public GHCR
 # (ghcr.io/inferstation/<name>:<tag>).
 #

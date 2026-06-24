@@ -4,7 +4,7 @@
   "backend": "llama.cpp",
   "platform": "linux/amd64",
   "gpu_arch": "vulkan-generic",
-  "registry": "10.161.176.38:8443/inferstation/llama-vulkan-halo",
+  "registry": "ghcr.io/inferstation/llama-vulkan-halo",
   "tag": "b5350",
   "source_image": "ghcr.io/ggml-org/llama.cpp:full-vulkan-b5350",
   "mirror_host": "halo5",

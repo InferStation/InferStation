@@ -4,7 +4,7 @@
   "backend": "vllm",
   "platform": "linux/amd64",
   "gpu_arch": "gfx1151",
-  "registry": "10.161.176.38:8443/inferstation/vllm-wheel-halo",
+  "registry": "ghcr.io/inferstation/vllm-wheel-halo",
   "tag": "v0.22.0-gfx1151",
   "build_host": "halo6",
   "dockerfile": "Dockerfile",

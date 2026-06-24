@@ -23,7 +23,9 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REGISTRY="10.161.176.38:8443"
+# Legacy/unused: the real push target comes from each meta.json `.registry`
+# (rewritten to ghcr via INFERSTATION_REGISTRY in CI). Harbor retired 2026-06-24.
+REGISTRY="ghcr.io/inferstation"
 
 SSH_LOCAL="ssh -F /home/lkang/.ssh/config -i /home/lkang/.ssh/id_rsa"
 

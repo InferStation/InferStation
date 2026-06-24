@@ -36,11 +36,12 @@ MANUAL=0
 DATE=$(date -u +%Y%m%d)
 NIGHTLY="nightly-${DATE}"
 
+# Harbor RETIRED 2026-06-24 — 镜像已全迁 ghcr.io/inferstation。下面 HARBOR_* 变量
+# 仅在 INFERSTATION_GHCR_MODE!=1 时才会被 harbor_has_tag 用到；CI(GHCR_MODE=1)里
+# harbor_has_tag 直接 return 1 短路,永不访问已死的 Harbor。
 HARBOR="${HARBOR:-http://10.161.176.38:8443}"
 HARBOR_USER="admin"
-# NOTE: the inferstation project allows anonymous PULL/read, but tag writes
-# (POST/DELETE artifacts/*/tags) require a real admin credential. Provided via
-# the HARBOR_PASS env (no default; Harbor path is unused in ghcr mode).
+# NOTE: HARBOR_PASS env (no default; Harbor path is unused in ghcr mode).
 HARBOR_PASS="${HARBOR_PASS:-}"
 PROJECT="inferstation"
 LLAMA_REPO="https://github.com/ggml-org/llama.cpp"

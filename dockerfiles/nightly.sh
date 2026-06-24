@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# ⚠️ OBSOLETE (2026-06-24): 被 daily.sh 取代（由 .github/workflows/nightly-build.yml
+# 调用）。Harbor 已退役 — 本草稿里的 Harbor WHEEL_IMAGE/REGISTRY 引用均已死。
+# 仅作历史参考。
 # Nightly rebuild of all 6 InferStation images from upstream master/main.
 # - build profiles: --ref=master|main (LLAMA_TAG / VLLM_TAG override)
 # - mirror profiles: override source_image to upstream "moving" tag

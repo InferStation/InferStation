@@ -7,7 +7,7 @@
   "source_image": "ghcr.io/ggml-org/llama.cpp:server-cuda",
   "mirror_host": "local",
   "build_host": "spark1",
-  "registry": "10.161.176.38:8443/inferstation/llama-cuda-spark",
+  "registry": "ghcr.io/inferstation/llama-cuda-spark",
   "tag": "b5350-sm121",
   "dockerfile": "Dockerfile",
   "upstream": "https://github.com/ggml-org/llama.cpp",

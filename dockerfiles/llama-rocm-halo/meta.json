@@ -4,7 +4,7 @@
   "backend": "llama.cpp",
   "platform": "linux/amd64",
   "gpu_arch": "gfx1151",
-  "registry": "10.161.176.38:8443/inferstation/llama-rocm-halo",
+  "registry": "ghcr.io/inferstation/llama-rocm-halo",
   "tag": "master-gfx1151",
   "build_host": "halo5",
   "dockerfile": "Dockerfile",

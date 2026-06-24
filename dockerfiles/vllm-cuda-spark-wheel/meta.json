@@ -4,7 +4,7 @@
   "backend": "vllm",
   "platform": "linux/arm64",
   "gpu_arch": "sm_121",
-  "registry": "10.161.176.38:8443/inferstation/vllm-wheel-spark",
+  "registry": "ghcr.io/inferstation/vllm-wheel-spark",
   "tag": "v0.22.0-sm121",
   "build_host": "spark1",
   "dockerfile": "Dockerfile",

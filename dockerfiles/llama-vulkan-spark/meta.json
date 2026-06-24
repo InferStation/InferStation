@@ -4,7 +4,7 @@
   "backend": "llama.cpp",
   "platform": "linux/arm64",
   "gpu_arch": "vulkan-generic",
-  "registry": "10.161.176.38:8443/inferstation/llama-vulkan-spark",
+  "registry": "ghcr.io/inferstation/llama-vulkan-spark",
   "tag": "upstream-rolling",
   "source_image": "ghcr.io/ggml-org/llama.cpp:full-vulkan",
   "mirror_host": "spark1",

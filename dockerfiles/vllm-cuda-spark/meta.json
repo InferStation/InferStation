@@ -7,7 +7,7 @@
   "source_image": "vllm/vllm-openai:latest",
   "mirror_host": "local",
   "build_host": "spark1",
-  "registry": "10.161.176.38:8443/inferstation/vllm-cuda-spark",
+  "registry": "ghcr.io/inferstation/vllm-cuda-spark",
   "tag": "v0.22.0-sm121",
   "dockerfile": "Dockerfile",
   "upstream": "https://github.com/vllm-project/vllm",
@@ -15,7 +15,7 @@
   "build_args": {
     "VLLM_TAG": "v0.22.0",
     "TORCH_CUDA_ARCH_LIST": "12.1",
-    "WHEEL_IMAGE": "10.161.176.38:8443/inferstation/vllm-wheel-spark:v0.22.0-sm121"
+    "WHEEL_IMAGE": "ghcr.io/inferstation/vllm-wheel-spark:v0.22.0-sm121"
   },
   "expected_size_mb": 11000,
   "expected_build_minutes": 5,

@@ -4,7 +4,7 @@
   "backend": "vllm",
   "platform": "linux/amd64",
   "gpu_arch": "gfx1151",
-  "registry": "10.161.176.38:8443/inferstation/vllm-rocm-halo-main",
+  "registry": "ghcr.io/inferstation/vllm-rocm-halo-main",
   "tag": "v0.22.0-gfx1151",
   "build_host": "halo6",
   "dockerfile": "Dockerfile",
@@ -14,7 +14,7 @@
     "VLLM_TAG": "v0.22.0",
     "PYTORCH_ROCM_ARCH": "gfx1151",
     "VLLM_BASE": "rocm/vllm:rocm7.13.0_gfx1151_ubuntu24.04_py3.13_pytorch_2.10.0_vllm_0.19.1",
-    "WHEEL_IMAGE": "10.161.176.38:8443/inferstation/vllm-wheel-halo:v0.22.0-gfx1151"
+    "WHEEL_IMAGE": "ghcr.io/inferstation/vllm-wheel-halo:v0.22.0-gfx1151"
   },
   "expected_size_mb": 50000,
   "description": "vLLM v0.22.0 runtime for AMD Strix Halo (gfx1151), ASSEMBLED from the prebuilt wheel pkg (vllm-wheel-halo) onto the rocm/vllm 7.13 base + transformers 5.10.2 (full multimodal). No source compile (~2 min). Rebuild the wheel pkg (vllm-rocm-halo-wheel) first when bumping vLLM or the base image. Legacy one-shot compile-in-place Dockerfile kept at Dockerfile.legacy."

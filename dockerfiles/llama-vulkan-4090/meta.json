@@ -4,7 +4,7 @@
   "backend": "llama.cpp",
   "platform": "linux/amd64",
   "gpu_arch": "vulkan-generic",
-  "registry": "10.161.176.38:8443/inferstation/llama-vulkan-4090",
+  "registry": "ghcr.io/inferstation/llama-vulkan-4090",
   "tag": "upstream-rolling",
   "source_image": "ghcr.io/ggml-org/llama.cpp:full-vulkan",
   "mirror_host": "4090",
