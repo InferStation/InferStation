@@ -40,7 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 
 # nested repo (built/pushed to its own gitea remote, not part of this repo)
-/dockerfiles/
 
 # generated per-run assets (rebuilt by scripts/build-manifest.mjs from data/runs)
 /public/data/raw/

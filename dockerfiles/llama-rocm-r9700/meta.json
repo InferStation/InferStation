@@ -1,0 +1,20 @@
+{
+  "name": "llama-rocm-r9700",
+  "kind": "build",
+  "backend": "llama.cpp",
+  "platform": "linux/amd64",
+  "gpu_arch": "gfx1201",
+  "registry": "10.161.176.38:8443/inferstation/llama-rocm-r9700",
+  "tag": "master-gfx1201",
+  "build_host": "9700x8",
+  "dockerfile": "Dockerfile",
+  "upstream": "https://github.com/ggml-org/llama.cpp",
+  "upstream_ref": "master",
+  "build_args": {
+    "LLAMA_TAG": "master",
+    "ROCM_DOCKER_ARCH": "gfx1201",
+    "ROCM_VERSION": "7.2"
+  },
+  "expected_size_mb": 8000,
+  "description": "llama.cpp HIP/ROCm built from upstream master for AMD Radeon AI PRO R9700 (gfx1201, x86_64). Builds + runs on the 9700x8 box. ROCm 7.2-complete base (rocm 7.2.0) matches 9700x8 driver 7.2.3."
+}

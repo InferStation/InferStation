@@ -1,0 +1,13 @@
+{
+  "name": "llama-vulkan-4090",
+  "kind": "mirror",
+  "backend": "llama.cpp",
+  "platform": "linux/amd64",
+  "gpu_arch": "vulkan-generic",
+  "registry": "10.161.176.38:8443/inferstation/llama-vulkan-4090",
+  "tag": "upstream-rolling",
+  "source_image": "ghcr.io/ggml-org/llama.cpp:full-vulkan",
+  "mirror_host": "4090",
+  "expected_size_mb": 1100,
+  "description": "Upstream ggml-org official Vulkan llama.cpp build, mirrored on the 4090 box (x86_64). Runs on NVIDIA RTX 4090 via the NVIDIA Vulkan ICD (the dispatcher injects --gpus all + NVIDIA_DRIVER_CAPABILITIES=all; units pass VK_DRIVER_FILES=/usr/share/vulkan/icd.d/nvidia_icd.json). Same upstream image as llama-vulkan-halo/spark; Vulkan is vendor-agnostic."
+}

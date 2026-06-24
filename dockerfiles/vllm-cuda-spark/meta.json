@@ -1,0 +1,23 @@
+{
+  "name": "vllm-cuda-spark",
+  "kind": "mirror",
+  "backend": "vllm",
+  "platform": "linux/arm64",
+  "gpu_arch": "sm_121",
+  "source_image": "vllm/vllm-openai:latest",
+  "mirror_host": "local",
+  "build_host": "spark1",
+  "registry": "10.161.176.38:8443/inferstation/vllm-cuda-spark",
+  "tag": "v0.22.0-sm121",
+  "dockerfile": "Dockerfile",
+  "upstream": "https://github.com/vllm-project/vllm",
+  "upstream_ref": "v0.22.0",
+  "build_args": {
+    "VLLM_TAG": "v0.22.0",
+    "TORCH_CUDA_ARCH_LIST": "12.1",
+    "WHEEL_IMAGE": "10.161.176.38:8443/inferstation/vllm-wheel-spark:v0.22.0-sm121"
+  },
+  "expected_size_mb": 11000,
+  "expected_build_minutes": 5,
+  "description": "vLLM v0.22.0 for NVIDIA DGX Spark (sm_121), assembled from a prebuilt wheel. Thin assembler: installs the vllm-cuda-spark-wheel pkg (vllm-*.whl built with the CUDA-13.0 toolkit -> PTX 9.0, native sm_121 SASS, which fixes cudaErrorUnsupportedPtxVersion on Marlin/AWQ) into the vllm-openai aarch64 base with --no-deps, ~2-5 min, no compiler. flash-attn stays as the base ships it (production path uses TRITON_ATTN + TORCH_SDPA). To bump vLLM, rebuild vllm-cuda-spark-wheel first. Legacy compile-in-place Dockerfile kept at Dockerfile.legacy. build_host spark1 (spark2 intermittent 2026-06)."
+}

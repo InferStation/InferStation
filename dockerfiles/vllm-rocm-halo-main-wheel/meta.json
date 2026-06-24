@@ -1,0 +1,18 @@
+{
+  "name": "vllm-rocm-halo-main-wheel",
+  "kind": "build",
+  "backend": "vllm",
+  "platform": "linux/amd64",
+  "gpu_arch": "gfx1151",
+  "registry": "10.161.176.38:8443/inferstation/vllm-wheel-halo",
+  "tag": "v0.22.0-gfx1151",
+  "build_host": "halo6",
+  "dockerfile": "Dockerfile",
+  "build_args": {
+    "VLLM_TAG": "v0.22.0",
+    "PYTORCH_ROCM_ARCH": "gfx1151",
+    "VLLM_BASE": "rocm/vllm:rocm7.13.0_gfx1151_ubuntu24.04_py3.13_pytorch_2.10.0_vllm_0.19.1"
+  },
+  "expected_size_mb": 120,
+  "description": "vLLM wheel built from source on the ROCm 7.13 / gfx1151 base, packaged as a FROM-scratch image (the .whl + resolved rocm requirements only). Compiled incrementally via a persistent ccache BuildKit cache mount. Consumed by the vllm-rocm-halo assembler to produce clean nightly/release images in ~2 min without recompiling. ABI-locked to (VLLM_TAG, VLLM_BASE, gfx1151, py3.13); rebuild only when bumping vLLM or the base image."
+}

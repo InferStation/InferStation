@@ -1,0 +1,139 @@
+# vllm-rocm-halo: vLLM on ROCm for AMD Strix Halo (gfx1151)
+#
+# Strategy: start from AMD's official rocm/vllm image (which already contains
+# ROCm 7.13, PyTorch 2.10, Triton, hip*BLAS/FFT/SOLVER/SPARSE/RAND, amdsmi,
+# numba, etc.), uninstall the bundled vLLM, then build the requested vLLM
+# tag from source following:
+#   https://docs.vllm.ai/en/v0.6.5/getting_started/amd-installation.html
+#
+# Default ref is the latest stable vLLM release; override with --build-arg.
+
+ARG VLLM_BASE=rocm/vllm:rocm7.13.0_gfx1151_ubuntu24.04_py3.13_pytorch_2.10.0_vllm_0.19.1
+ARG VLLM_REPO=https://github.com/vllm-project/vllm.git
+ARG VLLM_TAG=v0.22.0
+ARG PYTORCH_ROCM_ARCH=gfx1151
+
+FROM ${VLLM_BASE} AS builder
+ARG VLLM_REPO
+ARG VLLM_TAG
+ARG PYTORCH_ROCM_ARCH
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTORCH_ROCM_ARCH=${PYTORCH_ROCM_ARCH}
+ENV MAX_JOBS=8
+ENV CMAKE_BUILD_PARALLEL_LEVEL=8
+
+# Build deps (most are already present from rocm/vllm base, listed for clarity)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        git ca-certificates build-essential cmake ninja-build ccache \
+        python3-dev python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Drop the vLLM that ships with the base image so we cleanly install ours.
+# (purge any extras AMD added too -- e.g. flash-attn rebuilt for ROCm)
+RUN pip install --upgrade pip \
+ && pip uninstall -y vllm vllm-flash-attn flashinfer flashinfer-python 2>/dev/null || true
+
+WORKDIR /opt/vllm-src
+RUN git clone --depth=1 --branch "${VLLM_TAG}" "${VLLM_REPO}" . 2>/dev/null \
+ || (git clone "${VLLM_REPO}" . && git fetch --depth=1 origin "${VLLM_TAG}" && git checkout FETCH_HEAD)
+
+# Per AMD install doc:
+#   pip install --upgrade numba scipy huggingface-hub[cli,hf_transfer] setuptools_scm
+#   pip install "numpy<2"
+#   pip install -r requirements/rocm.txt
+#   PYTORCH_ROCM_ARCH=... python setup.py develop
+#
+# We use `pip install . --no-build-isolation` instead of `setup.py develop`
+# so the resulting site-packages is self-contained and can be COPY'd into the
+# runtime stage. --no-build-isolation keeps the base image's torch (don't let
+# pip pull a CUDA torch wheel during the build).
+RUN pip install --upgrade \
+        numba scipy 'huggingface-hub[cli,hf_transfer]' setuptools_scm \
+        setuptools wheel cmake ninja \
+ && pip install 'numpy<2'
+
+# requirements/rocm.txt path moved between vllm versions; try common locations.
+RUN if   [ -f requirements/rocm.txt ];     then REQ=requirements/rocm.txt; \
+       elif [ -f requirements-rocm.txt ];     then REQ=requirements-rocm.txt; \
+       elif [ -f requirements/rocm-build.txt ];then REQ=requirements/rocm-build.txt; \
+       else REQ=""; fi \
+ && if [ -n "$REQ" ]; then echo "using $REQ" && pip install -r "$REQ"; \
+       else echo "no rocm requirements file in this tag, skipping"; fi
+
+# Tell the build to target Strix Halo (gfx1151) only -- much faster + smaller.
+# Pin the version via setuptools_scm so the built dist-info is
+# `vllm-<tag>.dist-info` (not the `0.1.dev1+g...` fallback) and
+# importlib.metadata.version("vllm") works at runtime (the CLI calls it).
+#
+# IMPORTANT: only pin PRETEND_VERSION for a real release tag (vX.Y.Z). When we
+# build a branch/commit (VLLM_TAG=main on a normal nightly), "${VLLM_TAG#v}"
+# would be "main", which is NOT a valid PEP 440 version and makes setuptools_scm
+# abort with `InvalidVersion: Invalid version: 'main'`. For non-release refs we
+# leave PRETEND_VERSION unset and let setuptools_scm derive a valid dev version
+# from git (the same path vllm-cuda-spark uses to build main successfully).
+RUN VER="${VLLM_TAG#v}"; \
+    case "$VER" in \
+      [0-9]*) PIN="SETUPTOOLS_SCM_PRETEND_VERSION=$VER"; \
+              echo ">>> pinning vllm version to $VER (release tag ${VLLM_TAG})" ;; \
+      *)      PIN=""; \
+              echo ">>> VLLM_TAG='${VLLM_TAG}' is not a release tag; letting setuptools_scm derive version from git" ;; \
+    esac; \
+    env VLLM_TARGET_DEVICE=rocm \
+        PYTORCH_ROCM_ARCH=${PYTORCH_ROCM_ARCH} \
+        $PIN \
+        pip install . \
+            --no-build-isolation \
+            --no-deps \
+            --verbose
+
+# Upgrade transformers to >=5.10.2. The rocm/vllm base ships transformers 5.8.1,
+# which has a bug loading the Qwen3-VL / Qwen3.5-MoE multimodal processor stack:
+# vLLM calls `Qwen3VLProcessor.from_pretrained(...)` directly (not via
+# AutoProcessor), and 5.8.1 mishandles the now-deprecated `Qwen2VLImageProcessorFast`
+# ("Fast" suffix) sub-image-processor name -> `OSError: Can't load image processor`
+# -> the server exits before ready. transformers 5.10.2 fixes this
+# (image_processing_auto.py legacy-Fast handling), matching the working
+# vllm-cuda-spark image. Keep full multimodal support (do NOT use
+# --language-model-only). Done after the vLLM build so vLLM's --no-deps install
+# can't pin transformers back.
+RUN pip install --upgrade 'transformers==5.10.2' \
+ && python3 -c "import transformers; print('transformers', transformers.__version__)"
+
+# Sanity check: vllm imports & reports the right version
+RUN python3 -c "import vllm, torch; print('vllm', vllm.__version__, 'torch', torch.__version__, 'hip', torch.version.hip)"
+
+# Drop build dirs so we don't ship them in the final image.
+RUN rm -rf /opt/vllm-src /root/.cache/pip /root/.cache/ccache
+
+# ---------------- runtime stage ----------------
+# Same base image is fine -- it is already a runtime image; we just want a
+# clean layer without the build artefacts.  If we wanted slimmer we'd FROM a
+# rocm/dev-runtime base, but AMD only ships the all-in-one rocm/vllm image
+# so we stick with it.
+FROM ${VLLM_BASE}
+ARG VLLM_TAG
+ARG PYTORCH_ROCM_ARCH
+
+LABEL org.opencontainers.image.source="https://github.com/vllm-project/vllm" \
+      org.opencontainers.image.version="${VLLM_TAG}" \
+      org.opencontainers.image.description="vLLM ${VLLM_TAG} for AMD Strix Halo (${PYTORCH_ROCM_ARCH})" \
+      org.opencontainers.image.licenses="Apache-2.0" \
+      io.amd.rocm.arch="${PYTORCH_ROCM_ARCH}"
+
+ENV PYTORCH_ROCM_ARCH=${PYTORCH_ROCM_ARCH}
+ENV HSA_OVERRIDE_GFX_VERSION=11.5.1
+ENV PYTHONUNBUFFERED=1
+
+# Replace the entire python prefix with the builder's. AMD's rocm/vllm base
+# ships a self-contained python at /opt/python (py3.13); copying it wholesale
+# guarantees we get (a) the freshly built vllm package, (b) its dist-info as a
+# real directory (a selective `COPY vllm-*.dist-info dest/` glob silently
+# FLATTENS the dir contents into site-packages root, breaking
+# importlib.metadata and `vllm` version lookup), and (c) the `vllm` console
+# script in /opt/python/bin (missing before -> `vllm: not found`, exit 127).
+COPY --from=builder /opt/python /opt/python
+
+EXPOSE 8000
+ENTRYPOINT ["python3", "-m", "vllm.entrypoints.openai.api_server"]
+CMD ["--host", "0.0.0.0", "--port", "8000"]

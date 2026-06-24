@@ -1,0 +1,21 @@
+{
+  "name": "llama-cuda-spark",
+  "kind": "mirror",
+  "backend": "llama.cpp",
+  "platform": "linux/arm64",
+  "gpu_arch": "sm_121",
+  "source_image": "ghcr.io/ggml-org/llama.cpp:server-cuda",
+  "mirror_host": "local",
+  "build_host": "spark1",
+  "registry": "10.161.176.38:8443/inferstation/llama-cuda-spark",
+  "tag": "b5350-sm121",
+  "dockerfile": "Dockerfile",
+  "upstream": "https://github.com/ggml-org/llama.cpp",
+  "upstream_ref": "b5350",
+  "build_args": {
+    "LLAMA_TAG": "b5350",
+    "CUDA_ARCH": "121"
+  },
+  "expected_size_mb": 2500,
+  "description": "llama.cpp built natively for NVIDIA DGX Spark (GB10, sm_121) on aarch64."
+}

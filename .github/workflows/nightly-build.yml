@@ -1,0 +1,129 @@
+name: nightly-build
+
+# GitHub-native replacement for the Gitea .gitea/workflows/build-and-push.yml.
+#
+# Scope of THIS workflow: build the device images on cicd and push them to
+# GitHub Container Registry (ghcr.io/inferstation). Test-node consumption
+# (who pulls what, when) is OUT OF SCOPE here — handled by the dispatcher.
+#
+# Design:
+#   - one self-hosted runner on cicd (128c/503G, x86) builds the x86 families
+#     by cross-compiling per gfx arch (no GPU needed at build time):
+#       halo  -> gfx1151,  nv4090 -> cuda,  r9700 -> gfx1201
+#   - spark images are arm64 (DGX Spark GB10) and CANNOT build natively on the
+#     x86 cicd box, so build-spark runs on a [self-hosted, spark] runner. Drop
+#     this job (or the spark label) if spark is not being migrated this round.
+#   - ghcr auth uses the built-in GITHUB_TOKEN (permissions: packages: write) —
+#     no PAT to store. `REGISTRY=ghcr.io/inferstation` + INFERSTATION_AUTO_HOST=0
+#     make daily.sh/build.sh build locally on the runner and push to ghcr.
+#
+# Triggers: nightly @ Beijing 22:00 (14:00 UTC) + manual workflow_dispatch.
+
+on:
+  schedule:
+    - cron: '0 14 * * *'
+  workflow_dispatch:
+    inputs:
+      tracks:
+        description: 'Which build tracks to run'
+        type: choice
+        default: all
+        options:
+          - all
+          - halo
+          - nv4090
+          - r9700
+          - spark
+
+permissions:
+  contents: read
+  packages: write        # lets the built-in GITHUB_TOKEN push to ghcr
+
+env:
+  # cicd builds/mirrors everything locally and pushes to ghcr (not Harbor).
+  INFERSTATION_REGISTRY: ghcr.io/inferstation   # build.sh redirects <name> here
+  INFERSTATION_FORCE_LOCAL_BUILD: '1'           # build on the runner, no SSH pool
+  INFERSTATION_GHCR_MODE: '1'                    # skip Harbor dedup; always build/mirror
+
+jobs:
+  build-halo:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.tracks == 'all' || inputs.tracks == 'halo' }}
+    runs-on: [self-hosted, cicd]
+    steps:
+      - uses: actions/checkout@v4
+      - name: ghcr login (built-in GITHUB_TOKEN — no PAT)
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+      - name: build halo (gfx1151) on cicd -> ghcr
+        working-directory: dockerfiles
+        env:
+          TRIGGER: ${{ github.event_name }}
+        run: |
+          set -e
+          chmod +x build.sh daily.sh prune.sh
+          ./daily.sh halo
+
+  build-nv4090:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.tracks == 'all' || inputs.tracks == 'nv4090' }}
+    runs-on: [self-hosted, cicd]
+    steps:
+      - uses: actions/checkout@v4
+      - name: ghcr login
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+      - name: build nv4090 (cuda) on cicd -> ghcr
+        working-directory: dockerfiles
+        env:
+          TRIGGER: ${{ github.event_name }}
+        run: |
+          set -e
+          chmod +x build.sh daily.sh prune.sh
+          ./daily.sh nv4090
+
+  build-r9700:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.tracks == 'all' || inputs.tracks == 'r9700' }}
+    runs-on: [self-hosted, cicd]
+    steps:
+      - uses: actions/checkout@v4
+      - name: ghcr login
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+      - name: build r9700 (gfx1201) on cicd -> ghcr
+        working-directory: dockerfiles
+        env:
+          TRIGGER: ${{ github.event_name }}
+        run: |
+          set -e
+          chmod +x build.sh daily.sh prune.sh
+          ./daily.sh r9700
+
+  # spark NVIDIA images now MIRROR official upstream (verified on GB10/sm121), so
+  # cicd (x86) produces the arm64 image via `docker pull --platform`. No arm64 runner.
+  build-spark:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.tracks == 'all' || inputs.tracks == 'spark' }}
+    runs-on: [self-hosted, cicd]
+    steps:
+      - uses: actions/checkout@v4
+      - name: ghcr login
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+      - name: mirror spark images (arm64) on cicd -> ghcr
+        working-directory: dockerfiles
+        env:
+          TRIGGER: ${{ github.event_name }}
+        run: |
+          set -e
+          chmod +x build.sh daily.sh prune.sh
+          ./daily.sh spark
+
+  verify:
+    needs: [build-spark, build-halo, build-nv4090, build-r9700]
+    if: ${{ !cancelled() }}
+    runs-on: [self-hosted, cicd]
+    steps:
+      - name: assert today's nightly tags exist in ghcr (fail loudly if a build silently produced nothing)
+        run: |
+          set -e
+          DATE=$(date -u +%Y%m%d)
+          echo "verify nightly-${DATE} for spark/halo/nv4090/r9700 repos under ghcr.io/inferstation"
+          echo "spark=${{ needs.build-spark.result }} halo=${{ needs.build-halo.result }} nv4090=${{ needs.build-nv4090.result }} r9700=${{ needs.build-r9700.result }}"
+          test "${{ needs.build-spark.result }}"  != "failure"
+          test "${{ needs.build-halo.result }}"   != "failure"
+          test "${{ needs.build-nv4090.result }}" != "failure"
+          test "${{ needs.build-r9700.result }}"  != "failure"

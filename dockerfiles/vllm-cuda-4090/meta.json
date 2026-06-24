@@ -1,0 +1,13 @@
+{
+  "name": "vllm-cuda-4090",
+  "kind": "mirror",
+  "backend": "vllm",
+  "platform": "linux/amd64",
+  "gpu_arch": "sm_89",
+  "registry": "10.161.176.38:8443/inferstation/vllm-cuda-4090",
+  "tag": "upstream-rolling",
+  "source_image": "vllm/vllm-openai:latest",
+  "mirror_host": "4090",
+  "expected_size_mb": 11000,
+  "description": "Upstream official vllm/vllm-openai image, mirrored on the 4090 box (x86_64). NVIDIA RTX 4090 (sm_89 / Ada) is a standard consumer GPU fully supported by the stock vllm-openai CUDA build (no special PTX/wheel needed, unlike DGX Spark sm_121). The dispatcher runs it with --entrypoint /bin/bash so the unit's own `vllm serve ...` command takes over. daily.sh nv4090 mirrors this via mirror_pkg with an explicit vllm/vllm-openai source."
+}

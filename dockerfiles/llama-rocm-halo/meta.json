@@ -1,0 +1,20 @@
+{
+  "name": "llama-rocm-halo",
+  "kind": "build",
+  "backend": "llama.cpp",
+  "platform": "linux/amd64",
+  "gpu_arch": "gfx1151",
+  "registry": "10.161.176.38:8443/inferstation/llama-rocm-halo",
+  "tag": "master-gfx1151",
+  "build_host": "halo5",
+  "dockerfile": "Dockerfile",
+  "upstream": "https://github.com/ggml-org/llama.cpp",
+  "upstream_ref": "master",
+  "build_args": {
+    "LLAMA_TAG": "master",
+    "ROCM_DOCKER_ARCH": "gfx1151",
+    "ROCM_VERSION": "7.2.1"
+  },
+  "expected_size_mb": 8000,
+  "description": "llama.cpp HIP/ROCm built from upstream master. Strix Halo (gfx1151) only -> small + fast build. Replaces previous mirror of rocm/llama.cpp:b6652 which was stuck at 2025-11-04 and lacked qwen35 support."
+}

@@ -1,0 +1,18 @@
+{
+  "name": "vllm-cuda-spark-wheel",
+  "kind": "build",
+  "backend": "vllm",
+  "platform": "linux/arm64",
+  "gpu_arch": "sm_121",
+  "registry": "10.161.176.38:8443/inferstation/vllm-wheel-spark",
+  "tag": "v0.22.0-sm121",
+  "build_host": "spark1",
+  "dockerfile": "Dockerfile",
+  "build_args": {
+    "VLLM_TAG": "v0.22.0",
+    "TORCH_CUDA_ARCH_LIST": "12.1",
+    "VLLM_BASE": "vllm/vllm-openai:nightly-aarch64"
+  },
+  "expected_size_mb": 120,
+  "description": "vLLM wheel built from source on the vllm-openai aarch64 base for NVIDIA DGX Spark (GB10, sm_121), packaged as a FROM-scratch image (the .whl + commit.txt only). Compiled with the CUDA-13.0 toolkit so the emitted PTX is 9.0 (JIT-able by the 580 host driver) and TORCH_CUDA_ARCH_LIST=12.1 yields native sm_121 SASS -- this is the toolkit pin that fixes cudaErrorUnsupportedPtxVersion on Marlin/AWQ + flash-attn. Compiled incrementally via a persistent ccache BuildKit cache mount. Consumed by the vllm-cuda-spark assembler to produce clean nightly/release images in ~2 min without recompiling. ABI-locked to (VLLM_TAG, VLLM_BASE, sm_121, py3.12, CUDA 13.0); rebuild only when bumping vLLM or the base image."
+}

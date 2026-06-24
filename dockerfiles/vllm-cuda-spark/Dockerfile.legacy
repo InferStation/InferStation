@@ -1,0 +1,118 @@
+# syntax=docker/dockerfile:1.7
+# vLLM rebuilt natively for sm_121 (NVIDIA DGX Spark GB10) on aarch64.
+#
+# Strategy: take vllm-openai's official aarch64 image as base (already has
+# pinned PyTorch / CUDA / xformers / etc), then recompile for sm_121:
+#   1. vllm's own C/CUDA extensions (ops, attention, moe)
+#   2. vllm-flash-attn (the _vllm_fa2_C / _vllm_fa3_C package)  <-- see below
+# PyTorch will JIT-compile its own kernels at first run from PTX 12.0.
+#
+# Why rebuild flash-attn: the base image ships a prebuilt _vllm_fa2_C whose
+# PTX is newer than the Spark host driver (580 / CUDA 13.0) can JIT, so vLLM
+# crashes with cudaErrorUnsupportedPtxVersion at determine_available_memory.
+# Recompiling it natively for sm_121 (arch 12.1, no +PTX) ships SASS cubin the
+# driver loads directly, so no PTX JIT ever happens. flash-attn lives in its
+# own top-level package, so the base build's source recompile does not cover
+# it unless we rebuild + COPY it explicitly.
+#
+# Build:
+#   docker build --build-arg VLLM_TAG=v0.22.0 \
+#     --build-arg TORCH_CUDA_ARCH_LIST=12.1 \
+#     -t 10.161.176.38:8443/inferstation/vllm-cuda-spark:v0.22.0-sm121 .
+#
+# Expected build time: 30-60 min on Spark.
+
+ARG VLLM_BASE=vllm/vllm-openai:nightly-aarch64
+ARG VLLM_REPO=https://github.com/vllm-project/vllm.git
+ARG VLLM_TAG=v0.22.0
+ARG TORCH_CUDA_ARCH_LIST=12.1
+
+# ---------- builder: keep cuda-devel for nvcc ----------
+FROM ${VLLM_BASE} AS builder
+ARG VLLM_REPO
+ARG VLLM_TAG
+ARG TORCH_CUDA_ARCH_LIST
+
+# vllm-openai base ships only cuda-runtime; install nvcc + cmake.
+# IMPORTANT: toolkit must match the host driver's CUDA version (Spark host driver
+# 580.x = CUDA 13.0, base torch is cu130). Using cuda-nvcc-13-2 here makes nvcc
+# emit PTX ISA 9.2, which the CUDA-13.0 driver cannot JIT -> every kernel that
+# lacks a native sm_121 cubin (Marlin/AWQ repack, flash-attn) dies at runtime
+# with cudaErrorUnsupportedPtxVersion ("PTX compiled with an unsupported
+# toolchain"). Pin to 13-0 so PTX is 9.0 (JIT-able) and arch=12.1 yields native
+# sm_121 SASS.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        cuda-nvcc-13-0 cuda-cudart-dev-13-0 cuda-nvtx-13-0 \
+        cuda-libraries-dev-13-0 \
+        build-essential ninja-build git ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# vLLM v0.22 needs cmake>=3.26; jammy apt only ships 3.22 → use pip wheel.
+RUN pip install --no-cache-dir "cmake>=3.26"
+
+ENV CUDA_HOME=/usr/local/cuda \
+    PATH=/usr/local/cuda/bin:${PATH} \
+    TORCH_CUDA_ARCH_LIST=${TORCH_CUDA_ARCH_LIST} \
+    VLLM_TARGET_DEVICE=cuda \
+    MAX_JOBS=8
+
+WORKDIR /src
+RUN git clone --depth=1 --branch "${VLLM_TAG}" "${VLLM_REPO}" . 2>/dev/null \
+ || (git clone "${VLLM_REPO}" . && git checkout "${VLLM_TAG}") \
+ && git rev-parse HEAD > /commit.txt
+
+# vLLM's setup.py imports setuptools_rust unconditionally; make sure it's
+# available before pip starts the metadata phase (we use --no-build-isolation
+# so the build env == this layer's site-packages).
+RUN pip install --no-cache-dir setuptools_rust setuptools wheel
+
+# Recompile vllm extensions in-place. --no-deps keeps base PyTorch/triton/etc.
+# --force-reinstall replaces the installed wheel's compiled .so with sm_121-native ones.
+RUN pip install --no-deps --no-build-isolation --force-reinstall . \
+ && python3 -c "import vllm; print('vllm', vllm.__version__)" \
+ && rm -rf /root/.cache/pip /root/.cache/ccache
+
+# Rebuild vllm-flash-attn natively for sm_121 from the exact ref vLLM pins
+# (read out of vLLM's own cmake) so the .so carries native sm_121 cubin and the
+# host driver never JIT-compiles too-new PTX. If the pin can't be resolved we
+# keep whatever vLLM's source build already produced for sm_121 (also COPYed
+# into runtime below), so this layer is safe either way. Honors the
+# TORCH_CUDA_ARCH_LIST=12.1 set above.
+RUN set -eu; \
+    fa_cmake="$(find /src -name 'vllm_flash_attn.cmake' 2>/dev/null | head -n1 || true)"; \
+    if [ -z "$fa_cmake" ]; then \
+        echo "WARN: vllm_flash_attn.cmake not found; keeping vLLM-built sm_121 flash-attn"; \
+    else \
+        fa_repo="$(sed -nE 's#.*GIT_REPOSITORY[[:space:]]+([^[:space:]]+).*#\1#p' "$fa_cmake" | head -n1)"; \
+        fa_tag="$(sed -nE 's#.*GIT_TAG[[:space:]]+([0-9a-fA-F]{7,40}).*#\1#p' "$fa_cmake" | head -n1)"; \
+        : "${fa_repo:=https://github.com/vllm-project/flash-attention.git}"; \
+        echo ">>> rebuilding flash-attn ${fa_repo} @ ${fa_tag:-<default-branch>} for sm_121"; \
+        git clone "$fa_repo" /src/flash-attention; \
+        cd /src/flash-attention; \
+        if [ -n "$fa_tag" ]; then git checkout "$fa_tag"; fi; \
+        git submodule update --init --recursive; \
+        pip install --no-deps --no-build-isolation --force-reinstall .; \
+        python3 -c "import vllm_flash_attn; print('vllm_flash_attn rebuilt:', vllm_flash_attn.__file__)"; \
+        rm -rf /root/.cache/pip /root/.cache/ccache; \
+    fi
+
+# ---------- runtime ----------
+FROM ${VLLM_BASE}
+ARG VLLM_TAG
+ARG TORCH_CUDA_ARCH_LIST
+LABEL org.inferstation.profile="vllm-cuda-spark" \
+      org.inferstation.vllm_tag="${VLLM_TAG}" \
+      org.inferstation.cuda_arch="${TORCH_CUDA_ARCH_LIST}"
+
+# Copy the rebuilt vllm package over the base image's wheel.
+# nightly-aarch64 base installs into site-packages (/usr/local/lib/python3.12/dist-packages).
+COPY --from=builder /usr/local/lib/python3.12/dist-packages/vllm /usr/local/lib/python3.12/dist-packages/vllm
+# flash-attn is a separate top-level package; bring the sm_121-native rebuild.
+COPY --from=builder /usr/local/lib/python3.12/dist-packages/vllm_flash_attn /usr/local/lib/python3.12/dist-packages/vllm_flash_attn
+COPY --from=builder /commit.txt /opt/vllm/commit.txt
+
+ENV NVIDIA_VISIBLE_DEVICES=all \
+    NVIDIA_DRIVER_CAPABILITIES=compute,utility \
+    TORCH_CUDA_ARCH_LIST=${TORCH_CUDA_ARCH_LIST}
+
+ENTRYPOINT ["python3", "-m", "vllm.entrypoints.openai.api_server"]

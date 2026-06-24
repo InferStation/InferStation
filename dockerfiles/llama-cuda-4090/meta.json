@@ -1,0 +1,21 @@
+{
+  "name": "llama-cuda-4090",
+  "kind": "mirror",
+  "backend": "llama.cpp",
+  "platform": "linux/amd64",
+  "gpu_arch": "sm_89",
+  "source_image": "ghcr.io/ggml-org/llama.cpp:server-cuda",
+  "mirror_host": "local",
+  "build_host": "4090",
+  "registry": "10.161.176.38:8443/inferstation/llama-cuda-4090",
+  "tag": "master-sm89",
+  "dockerfile": "Dockerfile",
+  "upstream": "https://github.com/ggml-org/llama.cpp",
+  "upstream_ref": "master",
+  "build_args": {
+    "LLAMA_TAG": "master",
+    "CUDA_ARCH": "89"
+  },
+  "expected_size_mb": 3500,
+  "description": "llama.cpp CUDA built from upstream master for NVIDIA RTX 4090 (sm_89, x86_64). Builds on the 4090 box itself. CUDA 13.0.1 base (host driver 590.48 = CUDA 13.1; the 13.2 base refuses to run until the driver is >= 13.2)."
+}

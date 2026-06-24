@@ -1,0 +1,2315 @@
+==========================================
+InferStation nightly build 2026-06-02T16:00:02Z
+tag: nightly-20260602
+==========================================
+
+=== [build] llama-cuda-spark -> 10.161.176.9:8443/inferstation/llama-cuda-spark:nightly-20260602 ===
+→ rsync context to spark2:/tmp/inferstation-build/llama-cuda-spark
+→ docker build on spark2 (args: --build-arg LLAMA_TAG=b5350 --build-arg CUDA_ARCH=121 --build-arg LLAMA_TAG=master)
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 2.42kB done
+#1 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1.7
+#2 DONE 1.9s
+
+#3 docker-image://docker.io/docker/dockerfile:1.7@sha256:a57df69d0ea827fb7266491f2813635de6f17269be881f696fbfdf2d83dda33e
+#3 CACHED
+
+#4 [internal] load metadata for nvcr.io/nvidia/cuda:13.2.0-cudnn-devel-ubuntu24.04
+#4 DONE 0.0s
+
+#5 [internal] load metadata for nvcr.io/nvidia/cuda:13.2.0-runtime-ubuntu24.04
+#5 DONE 2.2s
+
+#6 [internal] load .dockerignore
+#6 transferring context: 2B done
+#6 DONE 0.0s
+
+#7 [stage-1 1/5] FROM nvcr.io/nvidia/cuda:13.2.0-runtime-ubuntu24.04@sha256:7fada70c5ed1b85cb3c15b53f51300fdacff1c31466a20e4f2b29ad952fd63a2
+#7 DONE 0.0s
+
+#8 [builder 1/5] FROM nvcr.io/nvidia/cuda:13.2.0-cudnn-devel-ubuntu24.04
+#8 DONE 0.0s
+
+#9 [stage-1 2/5] RUN apt-get update && apt-get install -y --no-install-recommends         libcurl4 libgomp1 ca-certificates     && rm -rf /var/lib/apt/lists/*
+#9 CACHED
+
+#10 [builder 5/5] RUN cmake -B build -G Ninja       -DCMAKE_BUILD_TYPE=Release       -DCMAKE_INSTALL_PREFIX=/out       -DGGML_CUDA=ON       -DGGML_CUDA_FA=ON       -DCMAKE_CUDA_ARCHITECTURES=121       -DLLAMA_CURL=ON       -DLLAMA_BUILD_TESTS=OFF       -DLLAMA_BUILD_EXAMPLES=ON       -DBUILD_SHARED_LIBS=OFF       -DCMAKE_EXE_LINKER_FLAGS="-Wl,--allow-shlib-undefined"       -DCMAKE_SHARED_LINKER_FLAGS="-Wl,--allow-shlib-undefined"  && cmake --build build -j --target install  && find /out -name '*.a' -delete  && strip --strip-unneeded /out/bin/* 2>/dev/null || true  && (find /out -name '*.so*' -exec strip --strip-unneeded {} ; 2>/dev/null || true)
+#10 CACHED
+
+#11 [stage-1 4/5] COPY --from=builder /commit.txt /usr/local/share/llama.cpp/commit.txt
+#11 CACHED
+
+#12 [builder 4/5] RUN git clone --depth=1 --branch "master" "https://github.com/ggml-org/llama.cpp" . 2>/dev/null  || (git clone "https://github.com/ggml-org/llama.cpp" . && git checkout "master")  && git rev-parse HEAD > /commit.txt
+#12 CACHED
+
+#13 [stage-1 3/5] COPY --from=builder /out /usr/local
+#13 CACHED
+
+#14 [builder 2/5] RUN apt-get update && apt-get install -y --no-install-recommends         git ca-certificates cmake ninja-build pkg-config build-essential         libcurl4-openssl-dev     && rm -rf /var/lib/apt/lists/*
+#14 CACHED
+
+#15 [builder 3/5] WORKDIR /src
+#15 CACHED
+
+#16 [stage-1 5/5] WORKDIR /work
+#16 CACHED
+
+#17 exporting to image
+#17 exporting layers done
+#17 writing image sha256:ada14ce8f9b960df59975623cabb54d7b527d6bbfa2817746a9d058806b382e6 done
+#17 naming to 10.161.176.9:8443/inferstation/llama-cuda-spark:nightly-20260602 done
+#17 DONE 0.0s
+→ docker push from spark2
+The push refers to repository [10.161.176.9:8443/inferstation/llama-cuda-spark]
+96ce99c098dc: Preparing
+ef107042a34d: Preparing
+2c637484097f: Preparing
+5b824e9b660b: Preparing
+59a0bbf0604b: Preparing
+4cf29c1b5908: Preparing
+e67c3dff55b1: Preparing
+53f586ec0996: Preparing
+ed65183a4b40: Preparing
+26c4202e143a: Preparing
+eb9ffcd8102a: Preparing
+539926fe12da: Preparing
+a0aed9a26128: Preparing
+e5dae71ade43: Preparing
+4cf29c1b5908: Waiting
+e67c3dff55b1: Waiting
+53f586ec0996: Waiting
+ed65183a4b40: Waiting
+26c4202e143a: Waiting
+eb9ffcd8102a: Waiting
+539926fe12da: Waiting
+a0aed9a26128: Waiting
+e5dae71ade43: Waiting
+5b824e9b660b: Layer already exists
+ef107042a34d: Layer already exists
+59a0bbf0604b: Layer already exists
+2c637484097f: Layer already exists
+96ce99c098dc: Layer already exists
+4cf29c1b5908: Layer already exists
+e67c3dff55b1: Layer already exists
+26c4202e143a: Layer already exists
+53f586ec0996: Layer already exists
+ed65183a4b40: Layer already exists
+eb9ffcd8102a: Layer already exists
+539926fe12da: Layer already exists
+e5dae71ade43: Layer already exists
+a0aed9a26128: Layer already exists
+nightly-20260602: digest: sha256:34f155dba545d2f136544fd67152e8d7fcdf8689e9c4b9eb6b7b30edd8b0b520 size: 3259
+→ also tag + push :latest -> 10.161.176.9:8443/inferstation/llama-cuda-spark:latest
+The push refers to repository [10.161.176.9:8443/inferstation/llama-cuda-spark]
+96ce99c098dc: Preparing
+ef107042a34d: Preparing
+2c637484097f: Preparing
+5b824e9b660b: Preparing
+59a0bbf0604b: Preparing
+4cf29c1b5908: Preparing
+e67c3dff55b1: Preparing
+53f586ec0996: Preparing
+ed65183a4b40: Preparing
+26c4202e143a: Preparing
+eb9ffcd8102a: Preparing
+539926fe12da: Preparing
+a0aed9a26128: Preparing
+e5dae71ade43: Preparing
+53f586ec0996: Waiting
+ed65183a4b40: Waiting
+26c4202e143a: Waiting
+eb9ffcd8102a: Waiting
+539926fe12da: Waiting
+a0aed9a26128: Waiting
+e5dae71ade43: Waiting
+4cf29c1b5908: Waiting
+e67c3dff55b1: Waiting
+ef107042a34d: Layer already exists
+96ce99c098dc: Layer already exists
+59a0bbf0604b: Layer already exists
+5b824e9b660b: Layer already exists
+2c637484097f: Layer already exists
+4cf29c1b5908: Layer already exists
+e67c3dff55b1: Layer already exists
+53f586ec0996: Layer already exists
+ed65183a4b40: Layer already exists
+26c4202e143a: Layer already exists
+eb9ffcd8102a: Layer already exists
+539926fe12da: Layer already exists
+e5dae71ade43: Layer already exists
+a0aed9a26128: Layer already exists
+latest: digest: sha256:34f155dba545d2f136544fd67152e8d7fcdf8689e9c4b9eb6b7b30edd8b0b520 size: 3259
+✓ llama-cuda-spark done -> 10.161.176.9:8443/inferstation/llama-cuda-spark:nightly-20260602
+
+=== [build] llama-vulkan-spark -> 10.161.176.9:8443/inferstation/llama-vulkan-spark:nightly-20260602 ===
+→ rsync context to spark2:/tmp/inferstation-build/llama-vulkan-spark
+→ docker build on spark2 (args: --build-arg LLAMA_TAG=b5350 --build-arg LLAMA_TAG=master)
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 1.91kB done
+#1 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1.7
+#2 DONE 1.2s
+
+#3 docker-image://docker.io/docker/dockerfile:1.7@sha256:a57df69d0ea827fb7266491f2813635de6f17269be881f696fbfdf2d83dda33e
+#3 CACHED
+
+#4 [internal] load metadata for docker.io/library/ubuntu:24.04
+#4 DONE 2.4s
+
+#5 [internal] load .dockerignore
+#5 transferring context: 2B done
+#5 DONE 0.0s
+
+#6 [builder 1/5] FROM docker.io/library/ubuntu:24.04@sha256:db6914f1ac0c566f57857641e2214e3f3e453cb340cc2c890ed6c2b7b81b8a00
+#6 DONE 0.0s
+
+#7 [stage-1 4/5] COPY --from=builder /commit.txt /usr/local/share/llama.cpp/commit.txt
+#7 CACHED
+
+#8 [builder 2/5] RUN apt-get update && apt-get install -y --no-install-recommends         git ca-certificates cmake ninja-build pkg-config build-essential         libcurl4-openssl-dev         libvulkan-dev vulkan-tools glslang-tools glslc spirv-headers     && rm -rf /var/lib/apt/lists/*
+#8 CACHED
+
+#9 [stage-1 2/5] RUN apt-get update && apt-get install -y --no-install-recommends         libvulkan1 mesa-vulkan-drivers vulkan-tools         libcurl4 libgomp1 ca-certificates     && rm -rf /var/lib/apt/lists/*
+#9 CACHED
+
+#10 [builder 4/5] RUN git clone --depth=1 --branch "master" "https://github.com/ggml-org/llama.cpp" . 2>/dev/null  || (git clone "https://github.com/ggml-org/llama.cpp" . && git checkout "master")  && git rev-parse HEAD > /commit.txt
+#10 CACHED
+
+#11 [stage-1 3/5] COPY --from=builder /out /usr/local
+#11 CACHED
+
+#12 [builder 5/5] RUN cmake -B build -G Ninja       -DCMAKE_BUILD_TYPE=Release       -DCMAKE_INSTALL_PREFIX=/out       -DGGML_VULKAN=ON       -DLLAMA_CURL=ON       -DLLAMA_BUILD_TESTS=OFF       -DLLAMA_BUILD_EXAMPLES=ON       -DBUILD_SHARED_LIBS=OFF  && cmake --build build -j --target install  && find /out -name '*.a' -delete  && strip --strip-unneeded /out/bin/* 2>/dev/null || true  && (find /out -name '*.so*' -exec strip --strip-unneeded {} ; 2>/dev/null || true)
+#12 CACHED
+
+#13 [builder 3/5] WORKDIR /src
+#13 CACHED
+
+#14 [stage-1 5/5] WORKDIR /work
+#14 CACHED
+
+#15 exporting to image
+#15 exporting layers done
+#15 writing image sha256:1d6ffb3baea1bca079cf990bac42673cb9a33ec17fbe3534e2ca2eb7ca74cc8b done
+#15 naming to 10.161.176.9:8443/inferstation/llama-vulkan-spark:nightly-20260602 done
+#15 DONE 0.0s
+→ docker push from spark2
+The push refers to repository [10.161.176.9:8443/inferstation/llama-vulkan-spark]
+3689c3b84cfd: Preparing
+de23ea11b484: Preparing
+a7c8a5305411: Preparing
+538b9c1a66fc: Preparing
+2d8834226313: Preparing
+538b9c1a66fc: Layer already exists
+de23ea11b484: Layer already exists
+3689c3b84cfd: Layer already exists
+2d8834226313: Layer already exists
+a7c8a5305411: Layer already exists
+nightly-20260602: digest: sha256:1d25d7277efb08b2db23bcade7b01aa9882f9487f3fbbd4282c91e72a457d695 size: 1367
+→ also tag + push :latest -> 10.161.176.9:8443/inferstation/llama-vulkan-spark:latest
+The push refers to repository [10.161.176.9:8443/inferstation/llama-vulkan-spark]
+3689c3b84cfd: Preparing
+de23ea11b484: Preparing
+a7c8a5305411: Preparing
+538b9c1a66fc: Preparing
+2d8834226313: Preparing
+de23ea11b484: Layer already exists
+3689c3b84cfd: Layer already exists
+538b9c1a66fc: Layer already exists
+a7c8a5305411: Layer already exists
+2d8834226313: Layer already exists
+latest: digest: sha256:1d25d7277efb08b2db23bcade7b01aa9882f9487f3fbbd4282c91e72a457d695 size: 1367
+✓ llama-vulkan-spark done -> 10.161.176.9:8443/inferstation/llama-vulkan-spark:nightly-20260602
+
+=== [build] vllm-cuda-spark -> 10.161.176.9:8443/inferstation/vllm-cuda-spark:nightly-20260602 ===
+→ rsync context to spark2:/tmp/inferstation-build/vllm-cuda-spark
+→ docker build on spark2 (args: --build-arg VLLM_TAG=v0.22.0 --build-arg TORCH_CUDA_ARCH_LIST=12.1 --build-arg VLLM_TAG=main)
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 3.14kB done
+#1 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1.7
+#2 DONE 0.5s
+
+#3 docker-image://docker.io/docker/dockerfile:1.7@sha256:a57df69d0ea827fb7266491f2813635de6f17269be881f696fbfdf2d83dda33e
+#3 CACHED
+
+#4 [internal] load metadata for docker.io/vllm/vllm-openai:nightly-aarch64
+#4 DONE 1.7s
+
+#5 [internal] load .dockerignore
+#5 transferring context: 2B done
+#5 DONE 0.0s
+
+#6 [builder 1/7] FROM docker.io/vllm/vllm-openai:nightly-aarch64@sha256:4e7634ac5c89b9319e2a4360e49bf63b2db1645b8a4bdca7a695d20feb9f0f26
+#6 DONE 0.0s
+
+#7 [builder 2/7] RUN apt-get update && apt-get install -y --no-install-recommends         cuda-nvcc-13-2 cuda-cudart-dev-13-2 cuda-nvtx-13-2         cuda-libraries-dev-13-2         build-essential ninja-build git ca-certificates     && rm -rf /var/lib/apt/lists/*
+#7 CACHED
+
+#8 [builder 3/7] RUN pip install --no-cache-dir "cmake>=3.26"
+#8 CACHED
+
+#9 [stage-1 2/3] COPY --from=builder /usr/local/lib/python3.12/dist-packages/vllm /usr/local/lib/python3.12/dist-packages/vllm
+#9 CACHED
+
+#10 [builder 4/7] WORKDIR /src
+#10 CACHED
+
+#11 [builder 5/7] RUN git clone --depth=1 --branch "main" "https://github.com/vllm-project/vllm.git" . 2>/dev/null  || (git clone "https://github.com/vllm-project/vllm.git" . && git checkout "main")  && git rev-parse HEAD > /commit.txt
+#11 CACHED
+
+#12 [builder 6/7] RUN pip install --no-cache-dir setuptools_rust setuptools wheel
+#12 CACHED
+
+#13 [builder 7/7] RUN pip install --no-deps --no-build-isolation --force-reinstall .  && python3 -c "import vllm; print('vllm', vllm.__version__)"  && rm -rf /root/.cache/pip /root/.cache/ccache
+#13 CACHED
+
+#14 [stage-1 3/3] COPY --from=builder /commit.txt /opt/vllm/commit.txt
+#14 CACHED
+
+#15 exporting to image
+#15 exporting layers done
+#15 writing image sha256:a035474df6b13ff05668e75814c1304e1d818cefce1680d73f1fb27126123a0a done
+#15 naming to 10.161.176.9:8443/inferstation/vllm-cuda-spark:nightly-20260602 done
+#15 DONE 0.0s
+→ docker push from spark2
+The push refers to repository [10.161.176.9:8443/inferstation/vllm-cuda-spark]
+bf005282ef8f: Preparing
+520b84f7662f: Preparing
+f0f9240dc313: Preparing
+0a649647f929: Preparing
+0c2c9f41919c: Preparing
+bff45bd63b96: Preparing
+0feedd85e509: Preparing
+2ccedaf629a1: Preparing
+ea167907ffc7: Preparing
+5f70bf18a086: Preparing
+112fbb689b56: Preparing
+437c04c10203: Preparing
+0990ae076c66: Preparing
+07fac66bb5f4: Preparing
+095bc0ae7fb2: Preparing
+0feedd85e509: Waiting
+e35e412dcdcb: Preparing
+2ccedaf629a1: Waiting
+ea167907ffc7: Waiting
+5f70bf18a086: Waiting
+fb65f39655ee: Preparing
+112fbb689b56: Waiting
+437c04c10203: Waiting
+0990ae076c66: Waiting
+20f69b3f3d57: Preparing
+07fac66bb5f4: Waiting
+5c33f9d56d8e: Preparing
+095bc0ae7fb2: Waiting
+afbd7dd595c8: Preparing
+afbd7dd595c8: Preparing
+5d3ed0efe5c9: Preparing
+128735f68da7: Preparing
+07541c2aa6f0: Preparing
+d6a07ac0a5e7: Preparing
+b26cbd0b9e2b: Preparing
+2139933c5970: Preparing
+c0e46b4841b7: Preparing
+b7ec8fd7c485: Preparing
+baa1952ab39e: Preparing
+e4e9bbb9e44e: Preparing
+544242a509ad: Preparing
+0d1a800648d7: Preparing
+b26cbd0b9e2b: Waiting
+e35e412dcdcb: Waiting
+fb65f39655ee: Waiting
+2139933c5970: Waiting
+c0e46b4841b7: Waiting
+b7ec8fd7c485: Waiting
+baa1952ab39e: Waiting
+bff45bd63b96: Waiting
+20f69b3f3d57: Waiting
+5c33f9d56d8e: Waiting
+5d3ed0efe5c9: Waiting
+0d1a800648d7: Waiting
+e4e9bbb9e44e: Waiting
+128735f68da7: Waiting
+afbd7dd595c8: Waiting
+544242a509ad: Waiting
+07541c2aa6f0: Waiting
+d6a07ac0a5e7: Waiting
+bf005282ef8f: Layer already exists
+520b84f7662f: Layer already exists
+f0f9240dc313: Layer already exists
+0c2c9f41919c: Layer already exists
+0a649647f929: Layer already exists
+0feedd85e509: Layer already exists
+5f70bf18a086: Layer already exists
+bff45bd63b96: Layer already exists
+2ccedaf629a1: Layer already exists
+ea167907ffc7: Layer already exists
+112fbb689b56: Layer already exists
+0990ae076c66: Layer already exists
+437c04c10203: Layer already exists
+095bc0ae7fb2: Layer already exists
+07fac66bb5f4: Layer already exists
+e35e412dcdcb: Layer already exists
+fb65f39655ee: Layer already exists
+20f69b3f3d57: Layer already exists
+afbd7dd595c8: Layer already exists
+5c33f9d56d8e: Layer already exists
+5d3ed0efe5c9: Layer already exists
+128735f68da7: Layer already exists
+07541c2aa6f0: Layer already exists
+d6a07ac0a5e7: Layer already exists
+2139933c5970: Layer already exists
+b26cbd0b9e2b: Layer already exists
+c0e46b4841b7: Layer already exists
+b7ec8fd7c485: Layer already exists
+baa1952ab39e: Layer already exists
+e4e9bbb9e44e: Layer already exists
+0d1a800648d7: Layer already exists
+544242a509ad: Layer already exists
+nightly-20260602: digest: sha256:b9769aae97e5e1942b6def3bd90dbd9ec190a5d5e536b2e2692e23eac773699f size: 7250
+→ also tag + push :latest -> 10.161.176.9:8443/inferstation/vllm-cuda-spark:latest
+The push refers to repository [10.161.176.9:8443/inferstation/vllm-cuda-spark]
+bf005282ef8f: Preparing
+520b84f7662f: Preparing
+f0f9240dc313: Preparing
+0a649647f929: Preparing
+0c2c9f41919c: Preparing
+bff45bd63b96: Preparing
+0feedd85e509: Preparing
+2ccedaf629a1: Preparing
+ea167907ffc7: Preparing
+5f70bf18a086: Preparing
+112fbb689b56: Preparing
+437c04c10203: Preparing
+0990ae076c66: Preparing
+07fac66bb5f4: Preparing
+095bc0ae7fb2: Preparing
+e35e412dcdcb: Preparing
+fb65f39655ee: Preparing
+20f69b3f3d57: Preparing
+5c33f9d56d8e: Preparing
+afbd7dd595c8: Preparing
+afbd7dd595c8: Preparing
+5d3ed0efe5c9: Preparing
+128735f68da7: Preparing
+07541c2aa6f0: Preparing
+d6a07ac0a5e7: Preparing
+b26cbd0b9e2b: Preparing
+bff45bd63b96: Waiting
+2139933c5970: Preparing
+112fbb689b56: Waiting
+c0e46b4841b7: Preparing
+0feedd85e509: Waiting
+437c04c10203: Waiting
+2ccedaf629a1: Waiting
+b7ec8fd7c485: Preparing
+baa1952ab39e: Preparing
+ea167907ffc7: Waiting
+e35e412dcdcb: Waiting
+fb65f39655ee: Waiting
+e4e9bbb9e44e: Preparing
+5f70bf18a086: Waiting
+0990ae076c66: Waiting
+07fac66bb5f4: Waiting
+095bc0ae7fb2: Waiting
+544242a509ad: Preparing
+5d3ed0efe5c9: Waiting
+20f69b3f3d57: Waiting
+afbd7dd595c8: Waiting
+5c33f9d56d8e: Waiting
+0d1a800648d7: Preparing
+128735f68da7: Waiting
+07541c2aa6f0: Waiting
+d6a07ac0a5e7: Waiting
+b26cbd0b9e2b: Waiting
+2139933c5970: Waiting
+c0e46b4841b7: Waiting
+b7ec8fd7c485: Waiting
+baa1952ab39e: Waiting
+e4e9bbb9e44e: Waiting
+544242a509ad: Waiting
+0d1a800648d7: Waiting
+520b84f7662f: Layer already exists
+0a649647f929: Layer already exists
+bf005282ef8f: Layer already exists
+f0f9240dc313: Layer already exists
+0c2c9f41919c: Layer already exists
+bff45bd63b96: Layer already exists
+5f70bf18a086: Layer already exists
+ea167907ffc7: Layer already exists
+2ccedaf629a1: Layer already exists
+0feedd85e509: Layer already exists
+112fbb689b56: Layer already exists
+095bc0ae7fb2: Layer already exists
+07fac66bb5f4: Layer already exists
+0990ae076c66: Layer already exists
+437c04c10203: Layer already exists
+e35e412dcdcb: Layer already exists
+5c33f9d56d8e: Layer already exists
+fb65f39655ee: Layer already exists
+afbd7dd595c8: Layer already exists
+20f69b3f3d57: Layer already exists
+5d3ed0efe5c9: Layer already exists
+07541c2aa6f0: Layer already exists
+128735f68da7: Layer already exists
+b26cbd0b9e2b: Layer already exists
+d6a07ac0a5e7: Layer already exists
+c0e46b4841b7: Layer already exists
+2139933c5970: Layer already exists
+baa1952ab39e: Layer already exists
+b7ec8fd7c485: Layer already exists
+e4e9bbb9e44e: Layer already exists
+544242a509ad: Layer already exists
+0d1a800648d7: Layer already exists
+latest: digest: sha256:b9769aae97e5e1942b6def3bd90dbd9ec190a5d5e536b2e2692e23eac773699f size: 7250
+✓ vllm-cuda-spark done -> 10.161.176.9:8443/inferstation/vllm-cuda-spark:nightly-20260602
+
+=== [build] vllm-rocm-halo -> 10.161.176.9:8443/inferstation/vllm-rocm-halo:nightly-20260602 ===
+→ rsync context to halo6:/tmp/inferstation-build/vllm-rocm-halo
+→ docker build on halo6 (args: --build-arg VLLM_TAG=v0.22.0 --build-arg PYTORCH_ROCM_ARCH=gfx1151 --build-arg VLLM_BASE=rocm/vllm:rocm7.13.0_gfx1151_ubuntu24.04_py3.13_pytorch_2.10.0_vllm_0.19.1 --build-arg VLLM_TAG=main)
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 4.74kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/rocm/vllm:rocm7.13.0_gfx1151_ubuntu24.04_py3.13_pytorch_2.10.0_vllm_0.19.1
+#2 DONE 0.1s
+
+#3 [internal] load .dockerignore
+#3 transferring context:
+#3 transferring context: 2B done
+#3 DONE 0.0s
+
+#4 [builder  1/10] FROM docker.io/rocm/vllm:rocm7.13.0_gfx1151_ubuntu24.04_py3.13_pytorch_2.10.0_vllm_0.19.1@sha256:394194d36edcf9b36bcb563e143b21b80e64e7d04f33a447b448c0c0c00c04a8
+#4 resolve docker.io/rocm/vllm:rocm7.13.0_gfx1151_ubuntu24.04_py3.13_pytorch_2.10.0_vllm_0.19.1@sha256:394194d36edcf9b36bcb563e143b21b80e64e7d04f33a447b448c0c0c00c04a8 0.0s done
+#4 DONE 0.0s
+
+#5 [stage-1 2/4] RUN pip uninstall -y vllm 2>/dev/null || true
+#5 CACHED
+
+#6 [builder  7/10] RUN if   [ -f requirements/rocm.txt ];     then REQ=requirements/rocm.txt;        elif [ -f requirements-rocm.txt ];     then REQ=requirements-rocm.txt;        elif [ -f requirements/rocm-build.txt ];then REQ=requirements/rocm-build.txt;        else REQ=""; fi  && if [ -n "$REQ" ]; then echo "using $REQ" && pip install -r "$REQ";        else echo "no rocm requirements file in this tag, skipping"; fi
+#6 CACHED
+
+#7 [builder 10/10] RUN rm -rf /opt/vllm-src /root/.cache/pip /root/.cache/ccache
+#7 CACHED
+
+#8 [builder  3/10] RUN pip install --upgrade pip  && pip uninstall -y vllm vllm-flash-attn flashinfer flashinfer-python 2>/dev/null || true
+#8 CACHED
+
+#9 [builder  5/10] RUN git clone --depth=1 --branch "main" "https://github.com/vllm-project/vllm.git" . 2>/dev/null  || (git clone "https://github.com/vllm-project/vllm.git" . && git fetch --depth=1 origin "main" && git checkout FETCH_HEAD)
+#9 CACHED
+
+#10 [builder  9/10] RUN python3 -c "import vllm, torch; print('vllm', vllm.__version__, 'torch', torch.__version__, 'hip', torch.version.hip)"
+#10 CACHED
+
+#11 [builder  6/10] RUN pip install --upgrade         numba scipy 'huggingface-hub[cli,hf_transfer]' setuptools_scm         setuptools wheel cmake ninja  && pip install 'numpy<2'
+#11 CACHED
+
+#12 [stage-1 3/4] COPY --from=builder /opt/python/lib/python3.13/site-packages/vllm /opt/python/lib/python3.13/site-packages/vllm
+#12 CACHED
+
+#13 [builder  4/10] WORKDIR /opt/vllm-src
+#13 CACHED
+
+#14 [builder  8/10] RUN VLLM_TARGET_DEVICE=rocm     PYTORCH_ROCM_ARCH=gfx1151     pip install .         --no-build-isolation         --no-deps         --verbose
+#14 CACHED
+
+#15 [builder  2/10] RUN apt-get update && apt-get install -y --no-install-recommends         git ca-certificates build-essential cmake ninja-build ccache         python3-dev python3-pip     && rm -rf /var/lib/apt/lists/*
+#15 CACHED
+
+#16 [stage-1 4/4] COPY --from=builder /opt/python/lib/python3.13/site-packages/vllm-*.dist-info /opt/python/lib/python3.13/site-packages/
+#16 CACHED
+
+#17 exporting to image
+#17 exporting layers done
+#17 exporting manifest sha256:3efe83859dd56bd657267d2ed0a3f923ae8db20a3939b9a3067be4b67a8c8857 done
+#17 exporting config sha256:0315e340c1784117fb9ee497bf263f003e2d7eaed426535e66173b21b9f01ef4 done
+#17 exporting attestation manifest sha256:1b27709498ec7fb7acf8768576b5f36622dcf5337984ce77df198d5efb9c98cc 0.0s done
+#17 exporting manifest list sha256:28c2cf9e7e6460232d30edea1c38485e1e254cac48f265a07db29ce792337824 0.0s done
+#17 naming to 10.161.176.9:8443/inferstation/vllm-rocm-halo:nightly-20260602 done
+#17 unpacking to 10.161.176.9:8443/inferstation/vllm-rocm-halo:nightly-20260602 0.0s done
+#17 DONE 0.1s
+→ docker push from halo6
+The push refers to repository [10.161.176.9:8443/inferstation/vllm-rocm-halo]
+e73b75bc50be: Layer already exists
+deaa3b3d4524: Layer already exists
+191c74e483c4: Layer already exists
+21c41e452679: Layer already exists
+2563fe42d9a9: Layer already exists
+7ec55728fa73: Layer already exists
+ccddc4571078: Layer already exists
+f184b06eb2f7: Layer already exists
+b1f3976ddeb2: Layer already exists
+ac5b14c6f8e7: Layer already exists
+aebdcc356425: Layer already exists
+196b77d4d3f8: Layer already exists
+36c40e2bb533: Layer already exists
+17b96410c253: Layer already exists
+31513e0a4b50: Layer already exists
+af5423d362b8: Layer already exists
+d1a71ff21e24: Layer already exists
+2bac9bab9bc4: Layer already exists
+55cabb9c8b67: Layer already exists
+33e0c3514368: Layer already exists
+c7bc5cd72084: Layer already exists
+e27c5c100445: Layer already exists
+ebb33317f88c: Layer already exists
+6bceceb297be: Layer already exists
+08cf6b2ea362: Pushed
+4f4fb700ef54: Layer already exists
+b40150c1c271: Layer already exists
+nightly-20260602: digest: sha256:28c2cf9e7e6460232d30edea1c38485e1e254cac48f265a07db29ce792337824 size: 856
+→ also tag + push :latest -> 10.161.176.9:8443/inferstation/vllm-rocm-halo:latest
+The push refers to repository [10.161.176.9:8443/inferstation/vllm-rocm-halo]
+33e0c3514368: Layer already exists
+b1f3976ddeb2: Layer already exists
+aebdcc356425: Layer already exists
+c7bc5cd72084: Layer already exists
+e27c5c100445: Layer already exists
+e73b75bc50be: Layer already exists
+21c41e452679: Layer already exists
+6bceceb297be: Layer already exists
+deaa3b3d4524: Layer already exists
+d1a71ff21e24: Layer already exists
+31513e0a4b50: Layer already exists
+7ec55728fa73: Layer already exists
+4f4fb700ef54: Layer already exists
+17b96410c253: Layer already exists
+196b77d4d3f8: Layer already exists
+191c74e483c4: Layer already exists
+08cf6b2ea362: Already exists
+ebb33317f88c: Layer already exists
+2bac9bab9bc4: Layer already exists
+2563fe42d9a9: Layer already exists
+36c40e2bb533: Layer already exists
+ccddc4571078: Layer already exists
+af5423d362b8: Layer already exists
+b40150c1c271: Layer already exists
+55cabb9c8b67: Layer already exists
+f184b06eb2f7: Layer already exists
+ac5b14c6f8e7: Layer already exists
+latest: digest: sha256:28c2cf9e7e6460232d30edea1c38485e1e254cac48f265a07db29ce792337824 size: 856
+✓ vllm-rocm-halo done -> 10.161.176.9:8443/inferstation/vllm-rocm-halo:nightly-20260602
+
+=== [mirror] llama-vulkan-halo -> 10.161.176.9:8443/inferstation/llama-vulkan-halo:nightly-20260602 ===
+→ source_image=ghcr.io/ggml-org/llama.cpp:full-vulkan
+→ docker pull on halo6
+full-vulkan: Pulling from ggml-org/llama.cpp
+Digest: sha256:c7c8db94da4476f2829e1f3fea62092cfa1c5e43fe0f47165f419aeaaffb48dc
+Status: Image is up to date for ghcr.io/ggml-org/llama.cpp:full-vulkan
+ghcr.io/ggml-org/llama.cpp:full-vulkan
+→ docker tag + push to 10.161.176.9:8443/inferstation/llama-vulkan-halo:nightly-20260602 (and :latest)
+The push refers to repository [10.161.176.9:8443/inferstation/llama-vulkan-halo]
+4aac526acb82: Layer already exists
+334e8871a798: Layer already exists
+4f4fb700ef54: Layer already exists
+1c24335ddd46: Layer already exists
+33a0d36e561b: Layer already exists
+6f5c5aa4e145: Layer already exists
+a048871a2f3f: Layer already exists
+nightly-20260602: digest: sha256:7482c8cabb671273835dd5d9f8fd3c757c4641589fe01aec1b0a2cfc3d3e8669 size: 2129
+
+ Info -> Not all multiplatform-content is present and only the available single-platform image was pushed
+         [31msha256:c7c8db94da4476f2829e1f3fea62092cfa1c5e43fe0f47165f419aeaaffb48dc[0m -> [32msha256:7482c8cabb671273835dd5d9f8fd3c757c4641589fe01aec1b0a2cfc3d3e8669[0m
+The push refers to repository [10.161.176.9:8443/inferstation/llama-vulkan-halo]
+1c24335ddd46: Layer already exists
+4aac526acb82: Layer already exists
+33a0d36e561b: Layer already exists
+334e8871a798: Layer already exists
+4f4fb700ef54: Layer already exists
+a048871a2f3f: Layer already exists
+6f5c5aa4e145: Layer already exists
+latest: digest: sha256:7482c8cabb671273835dd5d9f8fd3c757c4641589fe01aec1b0a2cfc3d3e8669 size: 2129
+
+ Info -> Not all multiplatform-content is present and only the available single-platform image was pushed
+         [31msha256:c7c8db94da4476f2829e1f3fea62092cfa1c5e43fe0f47165f419aeaaffb48dc[0m -> [32msha256:7482c8cabb671273835dd5d9f8fd3c757c4641589fe01aec1b0a2cfc3d3e8669[0m
+✓ llama-vulkan-halo done -> 10.161.176.9:8443/inferstation/llama-vulkan-halo:nightly-20260602
+
+=== [mirror] llama-rocm-halo -> 10.161.176.9:8443/inferstation/llama-rocm-halo:nightly-20260602 ===
+→ source_image=rocm/llama.cpp:llama.cpp-b6652.amd0_rocm7.0.0_ubuntu24.04_full
+→ docker pull on halo6
+llama.cpp-b6652.amd0_rocm7.0.0_ubuntu24.04_full: Pulling from rocm/llama.cpp
+Digest: sha256:a94f0c7a598cc6504ff9e8371c016d7a2f93e69bf54a36c870f9522567201f10
+Status: Image is up to date for rocm/llama.cpp:llama.cpp-b6652.amd0_rocm7.0.0_ubuntu24.04_full
+docker.io/rocm/llama.cpp:llama.cpp-b6652.amd0_rocm7.0.0_ubuntu24.04_full
+→ docker tag + push to 10.161.176.9:8443/inferstation/llama-rocm-halo:nightly-20260602 (and :latest)
+The push refers to repository [10.161.176.9:8443/inferstation/llama-rocm-halo]
+cff9a66cb7fa: Layer already exists
+95ae20e1adf9: Layer already exists
+63d2894beb97: Layer already exists
+1dc30e9629ee: Layer already exists
+4ff3385b2d97: Layer already exists
+f5fd9b6356f2: Layer already exists
+be418ab39fd0: Layer already exists
+323b40e41d30: Layer already exists
+nightly-20260602: digest: sha256:a94f0c7a598cc6504ff9e8371c016d7a2f93e69bf54a36c870f9522567201f10 size: 2004
+The push refers to repository [10.161.176.9:8443/inferstation/llama-rocm-halo]
+1dc30e9629ee: Layer already exists
+be418ab39fd0: Layer already exists
+4ff3385b2d97: Layer already exists
+95ae20e1adf9: Layer already exists
+f5fd9b6356f2: Layer already exists
+63d2894beb97: Layer already exists
+323b40e41d30: Layer already exists
+cff9a66cb7fa: Layer already exists
+latest: digest: sha256:a94f0c7a598cc6504ff9e8371c016d7a2f93e69bf54a36c870f9522567201f10 size: 2004
+✓ llama-rocm-halo done -> 10.161.176.9:8443/inferstation/llama-rocm-halo:nightly-20260602
+--- repo: llama-cuda-spark ---
+  kept: 1 nightly tag(s); nothing to delete
+--- repo: llama-vulkan-spark ---
+  kept: 1 nightly tag(s); nothing to delete
+--- repo: llama-vulkan-halo ---
+  kept: 1 nightly tag(s); nothing to delete
+--- repo: llama-rocm-halo ---
+  kept: 1 nightly tag(s); nothing to delete
+--- repo: vllm-cuda-spark ---
+  kept: 1 nightly tag(s); nothing to delete
+--- repo: vllm-rocm-halo ---
+  kept: 1 nightly tag(s); nothing to delete
+
+==========================================
+summary  (2026-06-02T16:00:40Z)
+==========================================
+  OK   7s  llama-cuda-spark
+  OK   7s  llama-vulkan-spark
+  OK   5s  vllm-cuda-spark
+  OK   3s  vllm-rocm-halo
+  OK   12s  llama-vulkan-halo
+  OK   4s  llama-rocm-halo
+  OK   0s  prune
+==========================================
+InferStation nightly build 2026-06-03T16:00:01Z
+tag: nightly-20260603
+==========================================
+
+=== [build] llama-cuda-spark -> 10.161.176.9:8443/inferstation/llama-cuda-spark:nightly-20260603 ===
+→ rsync context to spark2:/tmp/inferstation-build/llama-cuda-spark
+→ docker build on spark2 (args: --build-arg LLAMA_TAG=b5350 --build-arg CUDA_ARCH=121 --build-arg LLAMA_TAG=master)
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 2.42kB done
+#1 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1.7
+#2 DONE 2.3s
+
+#3 docker-image://docker.io/docker/dockerfile:1.7@sha256:a57df69d0ea827fb7266491f2813635de6f17269be881f696fbfdf2d83dda33e
+#3 CACHED
+
+#4 [internal] load metadata for nvcr.io/nvidia/cuda:13.2.0-cudnn-devel-ubuntu24.04
+#4 DONE 0.0s
+
+#5 [internal] load metadata for nvcr.io/nvidia/cuda:13.2.0-runtime-ubuntu24.04
+#5 DONE 4.8s
+
+#6 [internal] load .dockerignore
+#6 transferring context: 2B done
+#6 DONE 0.0s
+
+#7 [stage-1 1/5] FROM nvcr.io/nvidia/cuda:13.2.0-runtime-ubuntu24.04@sha256:7fada70c5ed1b85cb3c15b53f51300fdacff1c31466a20e4f2b29ad952fd63a2
+#7 DONE 0.0s
+
+#8 [builder 1/5] FROM nvcr.io/nvidia/cuda:13.2.0-cudnn-devel-ubuntu24.04
+#8 DONE 0.0s
+
+#9 [stage-1 2/5] RUN apt-get update && apt-get install -y --no-install-recommends         libcurl4 libgomp1 ca-certificates     && rm -rf /var/lib/apt/lists/*
+#9 CACHED
+
+#10 [builder 3/5] WORKDIR /src
+#10 CACHED
+
+#11 [builder 2/5] RUN apt-get update && apt-get install -y --no-install-recommends         git ca-certificates cmake ninja-build pkg-config build-essential         libcurl4-openssl-dev     && rm -rf /var/lib/apt/lists/*
+#11 CACHED
+
+#12 [stage-1 3/5] COPY --from=builder /out /usr/local
+#12 CACHED
+
+#13 [stage-1 4/5] COPY --from=builder /commit.txt /usr/local/share/llama.cpp/commit.txt
+#13 CACHED
+
+#14 [builder 4/5] RUN git clone --depth=1 --branch "master" "https://github.com/ggml-org/llama.cpp" . 2>/dev/null  || (git clone "https://github.com/ggml-org/llama.cpp" . && git checkout "master")  && git rev-parse HEAD > /commit.txt
+#14 CACHED
+
+#15 [builder 5/5] RUN cmake -B build -G Ninja       -DCMAKE_BUILD_TYPE=Release       -DCMAKE_INSTALL_PREFIX=/out       -DGGML_CUDA=ON       -DGGML_CUDA_FA=ON       -DCMAKE_CUDA_ARCHITECTURES=121       -DLLAMA_CURL=ON       -DLLAMA_BUILD_TESTS=OFF       -DLLAMA_BUILD_EXAMPLES=ON       -DBUILD_SHARED_LIBS=OFF       -DCMAKE_EXE_LINKER_FLAGS="-Wl,--allow-shlib-undefined"       -DCMAKE_SHARED_LINKER_FLAGS="-Wl,--allow-shlib-undefined"  && cmake --build build -j --target install  && find /out -name '*.a' -delete  && strip --strip-unneeded /out/bin/* 2>/dev/null || true  && (find /out -name '*.so*' -exec strip --strip-unneeded {} ; 2>/dev/null || true)
+#15 CACHED
+
+#16 [stage-1 5/5] WORKDIR /work
+#16 CACHED
+
+#17 exporting to image
+#17 exporting layers done
+#17 writing image sha256:ada14ce8f9b960df59975623cabb54d7b527d6bbfa2817746a9d058806b382e6 done
+#17 naming to 10.161.176.9:8443/inferstation/llama-cuda-spark:nightly-20260603 done
+#17 DONE 0.0s
+→ docker push from spark2
+The push refers to repository [10.161.176.9:8443/inferstation/llama-cuda-spark]
+96ce99c098dc: Preparing
+ef107042a34d: Preparing
+2c637484097f: Preparing
+5b824e9b660b: Preparing
+59a0bbf0604b: Preparing
+4cf29c1b5908: Preparing
+e67c3dff55b1: Preparing
+53f586ec0996: Preparing
+ed65183a4b40: Preparing
+26c4202e143a: Preparing
+eb9ffcd8102a: Preparing
+539926fe12da: Preparing
+a0aed9a26128: Preparing
+e5dae71ade43: Preparing
+539926fe12da: Waiting
+53f586ec0996: Waiting
+ed65183a4b40: Waiting
+26c4202e143a: Waiting
+eb9ffcd8102a: Waiting
+a0aed9a26128: Waiting
+e5dae71ade43: Waiting
+4cf29c1b5908: Waiting
+e67c3dff55b1: Waiting
+ef107042a34d: Layer already exists
+2c637484097f: Layer already exists
+5b824e9b660b: Layer already exists
+96ce99c098dc: Layer already exists
+59a0bbf0604b: Layer already exists
+4cf29c1b5908: Layer already exists
+53f586ec0996: Layer already exists
+ed65183a4b40: Layer already exists
+26c4202e143a: Layer already exists
+e67c3dff55b1: Layer already exists
+539926fe12da: Layer already exists
+eb9ffcd8102a: Layer already exists
+a0aed9a26128: Layer already exists
+e5dae71ade43: Layer already exists
+nightly-20260603: digest: sha256:34f155dba545d2f136544fd67152e8d7fcdf8689e9c4b9eb6b7b30edd8b0b520 size: 3259
+→ also tag + push :latest -> 10.161.176.9:8443/inferstation/llama-cuda-spark:latest
+The push refers to repository [10.161.176.9:8443/inferstation/llama-cuda-spark]
+96ce99c098dc: Preparing
+ef107042a34d: Preparing
+2c637484097f: Preparing
+5b824e9b660b: Preparing
+59a0bbf0604b: Preparing
+4cf29c1b5908: Preparing
+e67c3dff55b1: Preparing
+53f586ec0996: Preparing
+ed65183a4b40: Preparing
+26c4202e143a: Preparing
+eb9ffcd8102a: Preparing
+539926fe12da: Preparing
+4cf29c1b5908: Waiting
+a0aed9a26128: Preparing
+e67c3dff55b1: Waiting
+e5dae71ade43: Preparing
+53f586ec0996: Waiting
+ed65183a4b40: Waiting
+26c4202e143a: Waiting
+eb9ffcd8102a: Waiting
+539926fe12da: Waiting
+a0aed9a26128: Waiting
+e5dae71ade43: Waiting
+2c637484097f: Layer already exists
+59a0bbf0604b: Layer already exists
+96ce99c098dc: Layer already exists
+5b824e9b660b: Layer already exists
+ef107042a34d: Layer already exists
+4cf29c1b5908: Layer already exists
+e67c3dff55b1: Layer already exists
+53f586ec0996: Layer already exists
+26c4202e143a: Layer already exists
+ed65183a4b40: Layer already exists
+eb9ffcd8102a: Layer already exists
+539926fe12da: Layer already exists
+e5dae71ade43: Layer already exists
+a0aed9a26128: Layer already exists
+latest: digest: sha256:34f155dba545d2f136544fd67152e8d7fcdf8689e9c4b9eb6b7b30edd8b0b520 size: 3259
+✓ llama-cuda-spark done -> 10.161.176.9:8443/inferstation/llama-cuda-spark:nightly-20260603
+
+=== [build] llama-rocm-halo -> 10.161.176.9:8443/inferstation/llama-rocm-halo:nightly-20260603 ===
+→ rsync context to halo6:/tmp/inferstation-build/llama-rocm-halo
+→ docker build on halo6 (args: --build-arg LLAMA_TAG=master --build-arg ROCM_DOCKER_ARCH=gfx1151 --build-arg ROCM_VERSION=7.2.1 --build-arg LLAMA_TAG=master)
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 3.32kB done
+#1 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1.7
+#2 DONE 2.5s
+
+#3 docker-image://docker.io/docker/dockerfile:1.7@sha256:a57df69d0ea827fb7266491f2813635de6f17269be881f696fbfdf2d83dda33e
+#3 resolve docker.io/docker/dockerfile:1.7@sha256:a57df69d0ea827fb7266491f2813635de6f17269be881f696fbfdf2d83dda33e 0.0s done
+#3 CACHED
+
+#4 [internal] load metadata for docker.io/rocm/dev-ubuntu-24.04:7.2.1-complete
+#4 DONE 2.3s
+
+#5 [internal] load .dockerignore
+#5 transferring context: 2B done
+#5 DONE 0.0s
+
+#6 [builder 1/5] FROM docker.io/rocm/dev-ubuntu-24.04:7.2.1-complete@sha256:3db551c4e1229aac1857ac44fcb6141bb749f41348eb572452f11279153c13c3
+#6 resolve docker.io/rocm/dev-ubuntu-24.04:7.2.1-complete@sha256:3db551c4e1229aac1857ac44fcb6141bb749f41348eb572452f11279153c13c3 0.0s done
+#6 DONE 0.0s
+
+#7 [builder 4/5] RUN git clone --depth=1 --branch "master" "https://github.com/ggml-org/llama.cpp" . 2>/dev/null  || (git clone "https://github.com/ggml-org/llama.cpp" . && git checkout "master")  && git rev-parse HEAD > /commit.txt
+#7 CACHED
+
+#8 [builder 5/5] RUN HIPCXX="$(hipconfig -l)/clang" HIP_PATH="$(hipconfig -R)"     cmake -B build -G Ninja         -DCMAKE_BUILD_TYPE=Release         -DCMAKE_INSTALL_PREFIX=/out         -DGGML_HIP=ON         -DGGML_HIP_ROCWMMA_FATTN=ON         -DAMDGPU_TARGETS="gfx1151"         -DGGML_BACKEND_DL=ON -DGGML_CPU_ALL_VARIANTS=ON         -DLLAMA_CURL=ON         -DLLAMA_BUILD_TESTS=OFF         -DLLAMA_BUILD_EXAMPLES=ON  && cmake --build build -j --target install  && find /out -name '*.a' -delete  && (find /out -name '*.so*' -exec strip --strip-unneeded {} ; 2>/dev/null || true)  && (strip --strip-unneeded /out/bin/* 2>/dev/null || true)
+#8 CACHED
+
+#9 [builder 2/5] RUN apt-get update && apt-get install -y --no-install-recommends         git ca-certificates cmake ninja-build pkg-config build-essential         libcurl4-openssl-dev libgomp1     && rm -rf /var/lib/apt/lists/*
+#9 CACHED
+
+#10 [stage-1 2/6] RUN apt-get update && apt-get install -y --no-install-recommends         libcurl4 libgomp1 ca-certificates     && rm -rf /var/lib/apt/lists/*
+#10 CACHED
+
+#11 [builder 3/5] WORKDIR /src
+#11 CACHED
+
+#12 [stage-1 5/6] COPY --from=builder /commit.txt /app/commit.txt
+#12 CACHED
+
+#13 [stage-1 3/6] COPY --from=builder /out/bin /app
+#13 CACHED
+
+#14 [stage-1 4/6] COPY --from=builder /out/lib /app
+#14 CACHED
+
+#15 [stage-1 6/6] WORKDIR /work
+#15 CACHED
+
+#16 exporting to image
+#16 exporting layers done
+#16 exporting manifest sha256:8dd0612999bbc26e8c45e58cf3f576783646d7e861fade4c7309be2b75bed9fc done
+#16 exporting config sha256:1899df30f8ba744d03fa7d9f8af4ea06b00bcb866ea658cfcd545b875eb93b6f done
+#16 exporting attestation manifest sha256:2db625e6574633fec8e70eca8d76b733a0a3aa59f00c2fd4755eddbd1e93e99e 0.0s done
+#16 exporting manifest list sha256:888710e5c331d051b49dda3396ad779692073042d430ac5f670911427fdc4613 0.0s done
+#16 naming to 10.161.176.9:8443/inferstation/llama-rocm-halo:nightly-20260603
+#16 naming to 10.161.176.9:8443/inferstation/llama-rocm-halo:nightly-20260603 done
+#16 unpacking to 10.161.176.9:8443/inferstation/llama-rocm-halo:nightly-20260603 done
+#16 DONE 0.1s
+→ docker push from halo6
+The push refers to repository [10.161.176.9:8443/inferstation/llama-rocm-halo]
+d926879fa7c4: Layer already exists
+817807f3c64e: Layer already exists
+4094e9c4b10f: Layer already exists
+b1b5ff2aa68c: Layer already exists
+2e39258f6a24: Layer already exists
+7e3b2c089a46: Layer already exists
+283146878553: Pushed
+4e902ab28f66: Layer already exists
+4527218fc502: Layer already exists
+30e059394583: Layer already exists
+nightly-20260603: digest: sha256:888710e5c331d051b49dda3396ad779692073042d430ac5f670911427fdc4613 size: 856
+→ also tag + push :latest -> 10.161.176.9:8443/inferstation/llama-rocm-halo:latest
+The push refers to repository [10.161.176.9:8443/inferstation/llama-rocm-halo]
+2e39258f6a24: Layer already exists
+817807f3c64e: Layer already exists
+283146878553: Already exists
+4e902ab28f66: Layer already exists
+b1b5ff2aa68c: Layer already exists
+7e3b2c089a46: Layer already exists
+4527218fc502: Layer already exists
+30e059394583: Layer already exists
+4094e9c4b10f: Layer already exists
+d926879fa7c4: Layer already exists
+latest: digest: sha256:888710e5c331d051b49dda3396ad779692073042d430ac5f670911427fdc4613 size: 856
+✓ llama-rocm-halo done -> 10.161.176.9:8443/inferstation/llama-rocm-halo:nightly-20260603
+
+=== [build] vllm-cuda-spark -> 10.161.176.9:8443/inferstation/vllm-cuda-spark:nightly-20260603 ===
+→ rsync context to spark2:/tmp/inferstation-build/vllm-cuda-spark
+→ docker build on spark2 (args: --build-arg VLLM_TAG=v0.22.0 --build-arg TORCH_CUDA_ARCH_LIST=12.1 --build-arg VLLM_TAG=main)
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 3.14kB done
+#1 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1.7
+#2 DONE 0.4s
+
+#3 docker-image://docker.io/docker/dockerfile:1.7@sha256:a57df69d0ea827fb7266491f2813635de6f17269be881f696fbfdf2d83dda33e
+#3 CACHED
+
+#4 [internal] load metadata for docker.io/vllm/vllm-openai:nightly-aarch64
+#4 DONE 3.6s
+
+#5 [internal] load .dockerignore
+#5 transferring context: 2B done
+#5 DONE 0.0s
+
+#6 [builder 1/7] FROM docker.io/vllm/vllm-openai:nightly-aarch64@sha256:99a29bac0cec8a3dd8006f0e2aba346857d1811acdc41371a5fee5f18f0c5a0f
+#6 resolve docker.io/vllm/vllm-openai:nightly-aarch64@sha256:99a29bac0cec8a3dd8006f0e2aba346857d1811acdc41371a5fee5f18f0c5a0f 0.0s done
+#6 sha256:99a29bac0cec8a3dd8006f0e2aba346857d1811acdc41371a5fee5f18f0c5a0f 6.83kB / 6.83kB done
+#6 sha256:27d6ce9b59942056b9de31e8fb6642f01accfef3fe3d979102755c87ab0f90ff 0B / 231B 0.1s
+#6 sha256:03c7ff4b9b9b8f6d60e1888b803c036e2febf48c617f59e4520354b8fc902438 37.78kB / 37.78kB done
+#6 sha256:a7297278397c504945a10fa5011696175dbb82aeb57b9e9cf89144ec462438f4 0B / 104B 0.1s
+#6 sha256:63136717c5aab33166cfc9f0e4e2d272eb266c1d9edf34095f30e472b604d335 0B / 208.72MB 0.3s
+#6 extracting sha256:a7297278397c504945a10fa5011696175dbb82aeb57b9e9cf89144ec462438f4
+#6 sha256:a7297278397c504945a10fa5011696175dbb82aeb57b9e9cf89144ec462438f4 104B / 104B 0.7s done
+#6 extracting sha256:a7297278397c504945a10fa5011696175dbb82aeb57b9e9cf89144ec462438f4 0.0s done
+#6 sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 0B / 1.92GB 0.9s
+#6 extracting sha256:27d6ce9b59942056b9de31e8fb6642f01accfef3fe3d979102755c87ab0f90ff
+#6 sha256:27d6ce9b59942056b9de31e8fb6642f01accfef3fe3d979102755c87ab0f90ff 231B / 231B 1.3s done
+#6 extracting sha256:27d6ce9b59942056b9de31e8fb6642f01accfef3fe3d979102755c87ab0f90ff 0.0s done
+#6 sha256:26eaaf0513e9eb8a145ec9d413076a347eaae47c3e6db002daa6483f3ad417b9 0B / 47.81MB 1.5s
+#6 sha256:63136717c5aab33166cfc9f0e4e2d272eb266c1d9edf34095f30e472b604d335 10.49MB / 208.72MB 1.9s
+#6 sha256:63136717c5aab33166cfc9f0e4e2d272eb266c1d9edf34095f30e472b604d335 22.02MB / 208.72MB 2.7s
+#6 sha256:63136717c5aab33166cfc9f0e4e2d272eb266c1d9edf34095f30e472b604d335 33.55MB / 208.72MB 3.9s
+#6 sha256:26eaaf0513e9eb8a145ec9d413076a347eaae47c3e6db002daa6483f3ad417b9 4.19MB / 47.81MB 4.1s
+#6 sha256:26eaaf0513e9eb8a145ec9d413076a347eaae47c3e6db002daa6483f3ad417b9 7.34MB / 47.81MB 4.6s
+#6 sha256:26eaaf0513e9eb8a145ec9d413076a347eaae47c3e6db002daa6483f3ad417b9 12.58MB / 47.81MB 5.2s
+#6 sha256:63136717c5aab33166cfc9f0e4e2d272eb266c1d9edf34095f30e472b604d335 44.04MB / 208.72MB 5.3s
+#6 sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 34.60MB / 1.92GB 5.9s
+#6 sha256:26eaaf0513e9eb8a145ec9d413076a347eaae47c3e6db002daa6483f3ad417b9 17.83MB / 47.81MB 5.9s
+#6 sha256:26eaaf0513e9eb8a145ec9d413076a347eaae47c3e6db002daa6483f3ad417b9 20.97MB / 47.81MB 6.4s
+#6 sha256:26eaaf0513e9eb8a145ec9d413076a347eaae47c3e6db002daa6483f3ad417b9 25.17MB / 47.81MB 6.8s
+#6 sha256:63136717c5aab33166cfc9f0e4e2d272eb266c1d9edf34095f30e472b604d335 54.53MB / 208.72MB 6.9s
+#6 sha256:26eaaf0513e9eb8a145ec9d413076a347eaae47c3e6db002daa6483f3ad417b9 29.36MB / 47.81MB 7.3s
+#6 sha256:26eaaf0513e9eb8a145ec9d413076a347eaae47c3e6db002daa6483f3ad417b9 32.51MB / 47.81MB 7.8s
+#6 sha256:26eaaf0513e9eb8a145ec9d413076a347eaae47c3e6db002daa6483f3ad417b9 35.65MB / 47.81MB 8.1s
+#6 sha256:26eaaf0513e9eb8a145ec9d413076a347eaae47c3e6db002daa6483f3ad417b9 38.80MB / 47.81MB 8.4s
+#6 sha256:63136717c5aab33166cfc9f0e4e2d272eb266c1d9edf34095f30e472b604d335 65.01MB / 208.72MB 8.7s
+#6 sha256:26eaaf0513e9eb8a145ec9d413076a347eaae47c3e6db002daa6483f3ad417b9 41.94MB / 47.81MB 8.7s
+#6 sha256:26eaaf0513e9eb8a145ec9d413076a347eaae47c3e6db002daa6483f3ad417b9 47.19MB / 47.81MB 9.1s
+#6 sha256:26eaaf0513e9eb8a145ec9d413076a347eaae47c3e6db002daa6483f3ad417b9 47.81MB / 47.81MB 9.2s done
+#6 sha256:eef89cd94df13c21d8832bea45b63fa58143c72db948cad77e7521df71121374 0B / 149B 9.2s
+#6 sha256:eef89cd94df13c21d8832bea45b63fa58143c72db948cad77e7521df71121374 149B / 149B 9.6s done
+#6 sha256:5f704c80e358e6726a420ce65193f59be8d6353718f67d067d4ae9f70809fc1f 0B / 4.93kB 9.7s
+#6 sha256:63136717c5aab33166cfc9f0e4e2d272eb266c1d9edf34095f30e472b604d335 75.50MB / 208.72MB 9.9s
+#6 sha256:5f704c80e358e6726a420ce65193f59be8d6353718f67d067d4ae9f70809fc1f 4.93kB / 4.93kB 10.0s done
+#6 sha256:2c6062e0ee0bc9c44b9419d98aae80a6a715d4d11afe5ab59b1addcd8108e2d3 0B / 2.08kB 10.1s
+#6 sha256:2c6062e0ee0bc9c44b9419d98aae80a6a715d4d11afe5ab59b1addcd8108e2d3 2.08kB / 2.08kB 10.4s done
+#6 sha256:b2f6274ec968ec8f6fff31f8c1b2b005a1b81fbc9be5ac877b866e3e0dd15e33 0B / 1.63kB 10.5s
+#6 sha256:63136717c5aab33166cfc9f0e4e2d272eb266c1d9edf34095f30e472b604d335 87.03MB / 208.72MB 11.0s
+#6 sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 98.57MB / 1.92GB 11.0s
+#6 sha256:b2f6274ec968ec8f6fff31f8c1b2b005a1b81fbc9be5ac877b866e3e0dd15e33 1.63kB / 1.63kB 11.0s done
+#6 sha256:9f858dac54ef07fc41f4c6c7b0fcc0ed3b88b2e41ba171a1e5d21a4c357ee353 0B / 694B 11.2s
+#6 sha256:9f858dac54ef07fc41f4c6c7b0fcc0ed3b88b2e41ba171a1e5d21a4c357ee353 694B / 694B 11.7s done
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 0B / 3.93GB 11.8s
+#6 sha256:63136717c5aab33166cfc9f0e4e2d272eb266c1d9edf34095f30e472b604d335 97.52MB / 208.72MB 12.0s
+#6 sha256:63136717c5aab33166cfc9f0e4e2d272eb266c1d9edf34095f30e472b604d335 109.05MB / 208.72MB 12.8s
+#6 sha256:63136717c5aab33166cfc9f0e4e2d272eb266c1d9edf34095f30e472b604d335 119.54MB / 208.72MB 13.6s
+#6 sha256:63136717c5aab33166cfc9f0e4e2d272eb266c1d9edf34095f30e472b604d335 131.07MB / 208.72MB 14.3s
+#6 sha256:63136717c5aab33166cfc9f0e4e2d272eb266c1d9edf34095f30e472b604d335 145.75MB / 208.72MB 15.3s
+#6 sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 195.04MB / 1.92GB 15.7s
+#6 sha256:63136717c5aab33166cfc9f0e4e2d272eb266c1d9edf34095f30e472b604d335 160.43MB / 208.72MB 16.2s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 59.77MB / 3.93GB 16.8s
+#6 sha256:63136717c5aab33166cfc9f0e4e2d272eb266c1d9edf34095f30e472b604d335 173.02MB / 208.72MB 17.0s
+#6 sha256:63136717c5aab33166cfc9f0e4e2d272eb266c1d9edf34095f30e472b604d335 183.50MB / 208.72MB 17.7s
+#6 sha256:63136717c5aab33166cfc9f0e4e2d272eb266c1d9edf34095f30e472b604d335 195.04MB / 208.72MB 18.8s
+#6 sha256:63136717c5aab33166cfc9f0e4e2d272eb266c1d9edf34095f30e472b604d335 207.62MB / 208.72MB 20.5s
+#6 sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 274.73MB / 1.92GB 20.7s
+#6 sha256:63136717c5aab33166cfc9f0e4e2d272eb266c1d9edf34095f30e472b604d335 208.72MB / 208.72MB 21.1s done
+#6 extracting sha256:63136717c5aab33166cfc9f0e4e2d272eb266c1d9edf34095f30e472b604d335 0.1s
+#6 sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 0B / 1.75GB 21.2s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 121.63MB / 3.93GB 21.9s
+#6 sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 309.33MB / 1.92GB 25.9s
+#6 extracting sha256:63136717c5aab33166cfc9f0e4e2d272eb266c1d9edf34095f30e472b604d335 5.1s
+#6 sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 23.07MB / 1.75GB 26.3s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 148.90MB / 3.93GB 26.9s
+#6 extracting sha256:63136717c5aab33166cfc9f0e4e2d272eb266c1d9edf34095f30e472b604d335 9.5s done
+#6 sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 331.35MB / 1.92GB 31.0s
+#6 sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 39.85MB / 1.75GB 31.4s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 176.16MB / 3.93GB 31.9s
+#6 sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 357.56MB / 1.92GB 36.1s
+#6 sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 59.77MB / 1.75GB 36.5s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 230.69MB / 3.93GB 36.9s
+#6 sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 385.88MB / 1.92GB 41.2s
+#6 sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 88.08MB / 1.75GB 41.6s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 288.36MB / 3.93GB 42.1s
+#6 sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 415.24MB / 1.92GB 46.3s
+#6 sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 122.68MB / 1.75GB 46.7s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 350.22MB / 3.93GB 47.1s
+#6 sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 469.76MB / 1.92GB 51.3s
+#6 sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 161.48MB / 1.75GB 51.7s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 414.19MB / 3.93GB 52.1s
+#6 sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 524.29MB / 1.92GB 56.4s
+#6 sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 200.28MB / 1.75GB 56.8s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 465.57MB / 3.93GB 57.2s
+#6 sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 584.06MB / 1.92GB 61.4s
+#6 sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 241.17MB / 1.75GB 61.9s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 526.39MB / 3.93GB 62.2s
+#6 sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 660.60MB / 1.92GB 66.5s
+#6 sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 308.28MB / 1.75GB 67.0s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 605.03MB / 3.93GB 67.3s
+#6 sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 743.44MB / 1.92GB 71.6s
+#6 sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 379.58MB / 1.75GB 72.0s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 685.77MB / 3.93GB 72.4s
+#6 sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 832.57MB / 1.92GB 76.6s
+#6 sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 443.55MB / 1.75GB 77.0s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 779.09MB / 3.93GB 77.4s
+#6 sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 932.18MB / 1.92GB 81.8s
+#6 sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 532.68MB / 1.75GB 81.8s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 867.17MB / 3.93GB 82.5s
+#6 sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 622.85MB / 1.75GB 85.8s
+#6 sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 1.03GB / 1.92GB 86.1s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 995.10MB / 3.93GB 87.6s
+#6 sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 1.13GB / 1.92GB 89.8s
+#6 sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 715.13MB / 1.75GB 90.5s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 1.12GB / 3.93GB 92.7s
+#6 sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 1.23GB / 1.92GB 93.3s
+#6 sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 805.31MB / 1.75GB 94.5s
+#6 sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 1.33GB / 1.92GB 96.8s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 1.26GB / 3.93GB 97.8s
+#6 sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 898.63MB / 1.75GB 99.0s
+#6 sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 1.43GB / 1.92GB 100.7s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 1.39GB / 3.93GB 102.9s
+#6 sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 988.81MB / 1.75GB 103.0s
+#6 sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 1.52GB / 1.92GB 104.8s
+#6 sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 1.08GB / 1.75GB 106.8s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 1.55GB / 3.93GB 108.0s
+#6 sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 1.62GB / 1.92GB 108.9s
+#6 sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 1.17GB / 1.75GB 111.0s
+#6 sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 1.72GB / 1.92GB 112.8s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 1.70GB / 3.93GB 113.1s
+#6 sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 1.26GB / 1.75GB 115.0s
+#6 sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 1.82GB / 1.92GB 117.2s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 1.86GB / 3.93GB 118.1s
+#6 sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 1.35GB / 1.75GB 119.3s
+#6 extracting sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406
+#6 sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 1.92GB / 1.92GB 122.1s done
+#6 sha256:55ef63138cf07a2d688f0c4ced042c3ce058c8c690af7986281421b0c5e156e6 0B / 897B 122.2s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 2.00GB / 3.93GB 123.2s
+#6 sha256:55ef63138cf07a2d688f0c4ced042c3ce058c8c690af7986281421b0c5e156e6 897B / 897B 123.3s done
+#6 sha256:719563b5a851ddb7d0f61ab7e01f3ace6d3d1c3fdf63d2a8793e418cd536c7cc 0B / 533.44kB 123.4s
+#6 sha256:719563b5a851ddb7d0f61ab7e01f3ace6d3d1c3fdf63d2a8793e418cd536c7cc 533.44kB / 533.44kB 123.8s done
+#6 sha256:7b9c545e809d09f20c714da571e38dc8dc9953f97562a764bf1afcf7e13c63a7 0B / 314.55MB 123.9s
+#6 sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 1.43GB / 1.75GB 124.4s
+#6 sha256:7b9c545e809d09f20c714da571e38dc8dc9953f97562a764bf1afcf7e13c63a7 15.73MB / 314.55MB 125.9s
+#6 extracting sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 5.1s
+#6 sha256:7b9c545e809d09f20c714da571e38dc8dc9953f97562a764bf1afcf7e13c63a7 32.51MB / 314.55MB 127.8s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 2.06GB / 3.93GB 128.2s
+#6 sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 1.47GB / 1.75GB 129.4s
+#6 sha256:7b9c545e809d09f20c714da571e38dc8dc9953f97562a764bf1afcf7e13c63a7 48.23MB / 314.55MB 130.1s
+#6 sha256:7b9c545e809d09f20c714da571e38dc8dc9953f97562a764bf1afcf7e13c63a7 63.96MB / 314.55MB 132.1s
+#6 extracting sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 10.2s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 2.10GB / 3.93GB 133.3s
+#6 sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 1.50GB / 1.75GB 134.4s
+#6 sha256:7b9c545e809d09f20c714da571e38dc8dc9953f97562a764bf1afcf7e13c63a7 79.69MB / 314.55MB 134.8s
+#6 extracting sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 15.2s
+#6 sha256:7b9c545e809d09f20c714da571e38dc8dc9953f97562a764bf1afcf7e13c63a7 95.42MB / 314.55MB 137.9s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 2.16GB / 3.93GB 138.4s
+#6 sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 1.56GB / 1.75GB 139.5s
+#6 sha256:7b9c545e809d09f20c714da571e38dc8dc9953f97562a764bf1afcf7e13c63a7 112.20MB / 314.55MB 140.2s
+#6 sha256:7b9c545e809d09f20c714da571e38dc8dc9953f97562a764bf1afcf7e13c63a7 127.93MB / 314.55MB 141.6s
+#6 extracting sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 20.3s
+#6 sha256:7b9c545e809d09f20c714da571e38dc8dc9953f97562a764bf1afcf7e13c63a7 143.65MB / 314.55MB 142.8s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 2.29GB / 3.93GB 143.6s
+#6 sha256:7b9c545e809d09f20c714da571e38dc8dc9953f97562a764bf1afcf7e13c63a7 160.43MB / 314.55MB 144.0s
+#6 sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 1.65GB / 1.75GB 144.1s
+#6 sha256:7b9c545e809d09f20c714da571e38dc8dc9953f97562a764bf1afcf7e13c63a7 179.31MB / 314.55MB 145.2s
+#6 sha256:7b9c545e809d09f20c714da571e38dc8dc9953f97562a764bf1afcf7e13c63a7 195.04MB / 314.55MB 146.1s
+#6 sha256:7b9c545e809d09f20c714da571e38dc8dc9953f97562a764bf1afcf7e13c63a7 213.91MB / 314.55MB 147.1s
+#6 extracting sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 25.3s
+#6 sha256:7b9c545e809d09f20c714da571e38dc8dc9953f97562a764bf1afcf7e13c63a7 229.64MB / 314.55MB 148.0s
+#6 sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 1.74GB / 1.75GB 148.1s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 2.43GB / 3.93GB 148.6s
+#6 sha256:7b9c545e809d09f20c714da571e38dc8dc9953f97562a764bf1afcf7e13c63a7 247.46MB / 314.55MB 148.8s
+#6 sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 1.75GB / 1.75GB 148.8s done
+#6 sha256:c70c49a935faf891e17009be898cd0943708ee9d5b62d85216cbced5ad3818f2 0B / 198B 148.9s
+#6 sha256:c70c49a935faf891e17009be898cd0943708ee9d5b62d85216cbced5ad3818f2 198B / 198B 149.3s done
+#6 sha256:d165faa71aeed207762cc767cee24f0ca254c757dd60a4df6e9f0e277107f565 0B / 482.97MB 149.3s
+#6 sha256:7b9c545e809d09f20c714da571e38dc8dc9953f97562a764bf1afcf7e13c63a7 263.19MB / 314.55MB 149.6s
+#6 sha256:7b9c545e809d09f20c714da571e38dc8dc9953f97562a764bf1afcf7e13c63a7 281.02MB / 314.55MB 150.4s
+#6 sha256:d165faa71aeed207762cc767cee24f0ca254c757dd60a4df6e9f0e277107f565 26.21MB / 482.97MB 150.9s
+#6 sha256:7b9c545e809d09f20c714da571e38dc8dc9953f97562a764bf1afcf7e13c63a7 298.84MB / 314.55MB 151.5s
+#6 sha256:d165faa71aeed207762cc767cee24f0ca254c757dd60a4df6e9f0e277107f565 51.38MB / 482.97MB 152.2s
+#6 sha256:7b9c545e809d09f20c714da571e38dc8dc9953f97562a764bf1afcf7e13c63a7 314.55MB / 314.55MB 152.3s done
+#6 sha256:4f4fb700ef54461cfa02571ae0db9a0dc1e0cdb5577484a6d75e68dc38e8acc1 0B / 32B 152.4s
+#6 extracting sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 30.4s
+#6 sha256:4f4fb700ef54461cfa02571ae0db9a0dc1e0cdb5577484a6d75e68dc38e8acc1 32B / 32B 152.7s done
+#6 sha256:c86cce3b4ba79b58e755a6cbfa67fa6df2678842666ba2106ccffbbd9342f787 0B / 11.39MB 152.7s
+#6 extracting sha256:bf95eb21c065b0fc863f6c94fb2e6d22ca12c65d86151579e24e3d755e128406 31.0s done
+#6 sha256:d165faa71aeed207762cc767cee24f0ca254c757dd60a4df6e9f0e277107f565 77.59MB / 482.97MB 153.3s
+#6 sha256:c86cce3b4ba79b58e755a6cbfa67fa6df2678842666ba2106ccffbbd9342f787 5.24MB / 11.39MB 153.3s
+#6 extracting sha256:26eaaf0513e9eb8a145ec9d413076a347eaae47c3e6db002daa6483f3ad417b9 0.1s
+#6 sha256:c86cce3b4ba79b58e755a6cbfa67fa6df2678842666ba2106ccffbbd9342f787 6.29MB / 11.39MB 153.4s
+#6 sha256:c86cce3b4ba79b58e755a6cbfa67fa6df2678842666ba2106ccffbbd9342f787 7.34MB / 11.39MB 153.5s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 2.58GB / 3.93GB 153.6s
+#6 sha256:c86cce3b4ba79b58e755a6cbfa67fa6df2678842666ba2106ccffbbd9342f787 11.39MB / 11.39MB 153.6s
+#6 sha256:c86cce3b4ba79b58e755a6cbfa67fa6df2678842666ba2106ccffbbd9342f787 11.39MB / 11.39MB 153.6s done
+#6 sha256:8a6c2861b77a36acf17cc45a5c97d2b1d281d00698e839fbb168dec588150cf5 0B / 450.72MB 153.7s
+#6 extracting sha256:26eaaf0513e9eb8a145ec9d413076a347eaae47c3e6db002daa6483f3ad417b9 0.8s done
+#6 extracting sha256:eef89cd94df13c21d8832bea45b63fa58143c72db948cad77e7521df71121374
+#6 extracting sha256:eef89cd94df13c21d8832bea45b63fa58143c72db948cad77e7521df71121374 0.0s done
+#6 extracting sha256:5f704c80e358e6726a420ce65193f59be8d6353718f67d067d4ae9f70809fc1f 0.0s done
+#6 extracting sha256:2c6062e0ee0bc9c44b9419d98aae80a6a715d4d11afe5ab59b1addcd8108e2d3 0.0s done
+#6 sha256:d165faa71aeed207762cc767cee24f0ca254c757dd60a4df6e9f0e277107f565 105.91MB / 482.97MB 154.6s
+#6 extracting sha256:b2f6274ec968ec8f6fff31f8c1b2b005a1b81fbc9be5ac877b866e3e0dd15e33
+#6 extracting sha256:b2f6274ec968ec8f6fff31f8c1b2b005a1b81fbc9be5ac877b866e3e0dd15e33 0.0s done
+#6 extracting sha256:9f858dac54ef07fc41f4c6c7b0fcc0ed3b88b2e41ba171a1e5d21a4c357ee353 0.0s done
+#6 sha256:8a6c2861b77a36acf17cc45a5c97d2b1d281d00698e839fbb168dec588150cf5 26.21MB / 450.72MB 155.3s
+#6 sha256:d165faa71aeed207762cc767cee24f0ca254c757dd60a4df6e9f0e277107f565 134.22MB / 482.97MB 156.0s
+#6 sha256:8a6c2861b77a36acf17cc45a5c97d2b1d281d00698e839fbb168dec588150cf5 52.43MB / 450.72MB 156.6s
+#6 sha256:d165faa71aeed207762cc767cee24f0ca254c757dd60a4df6e9f0e277107f565 161.48MB / 482.97MB 157.3s
+#6 sha256:8a6c2861b77a36acf17cc45a5c97d2b1d281d00698e839fbb168dec588150cf5 78.64MB / 450.72MB 157.8s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 2.76GB / 3.93GB 158.7s
+#6 sha256:d165faa71aeed207762cc767cee24f0ca254c757dd60a4df6e9f0e277107f565 189.79MB / 482.97MB 159.0s
+#6 sha256:8a6c2861b77a36acf17cc45a5c97d2b1d281d00698e839fbb168dec588150cf5 108.00MB / 450.72MB 159.0s
+#6 sha256:8a6c2861b77a36acf17cc45a5c97d2b1d281d00698e839fbb168dec588150cf5 133.17MB / 450.72MB 160.0s
+#6 sha256:d165faa71aeed207762cc767cee24f0ca254c757dd60a4df6e9f0e277107f565 217.06MB / 482.97MB 160.3s
+#6 sha256:8a6c2861b77a36acf17cc45a5c97d2b1d281d00698e839fbb168dec588150cf5 157.29MB / 450.72MB 161.0s
+#6 sha256:d165faa71aeed207762cc767cee24f0ca254c757dd60a4df6e9f0e277107f565 243.27MB / 482.97MB 161.5s
+#6 sha256:8a6c2861b77a36acf17cc45a5c97d2b1d281d00698e839fbb168dec588150cf5 181.40MB / 450.72MB 162.0s
+#6 sha256:d165faa71aeed207762cc767cee24f0ca254c757dd60a4df6e9f0e277107f565 268.44MB / 482.97MB 162.7s
+#6 sha256:8a6c2861b77a36acf17cc45a5c97d2b1d281d00698e839fbb168dec588150cf5 207.62MB / 450.72MB 163.0s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 2.91GB / 3.93GB 163.7s
+#6 sha256:d165faa71aeed207762cc767cee24f0ca254c757dd60a4df6e9f0e277107f565 297.80MB / 482.97MB 164.1s
+#6 sha256:8a6c2861b77a36acf17cc45a5c97d2b1d281d00698e839fbb168dec588150cf5 235.93MB / 450.72MB 164.1s
+#6 sha256:8a6c2861b77a36acf17cc45a5c97d2b1d281d00698e839fbb168dec588150cf5 263.19MB / 450.72MB 165.2s
+#6 sha256:d165faa71aeed207762cc767cee24f0ca254c757dd60a4df6e9f0e277107f565 322.96MB / 482.97MB 165.4s
+#6 sha256:8a6c2861b77a36acf17cc45a5c97d2b1d281d00698e839fbb168dec588150cf5 288.36MB / 450.72MB 166.1s
+#6 sha256:d165faa71aeed207762cc767cee24f0ca254c757dd60a4df6e9f0e277107f565 351.27MB / 482.97MB 166.5s
+#6 sha256:8a6c2861b77a36acf17cc45a5c97d2b1d281d00698e839fbb168dec588150cf5 312.48MB / 450.72MB 167.0s
+#6 sha256:d165faa71aeed207762cc767cee24f0ca254c757dd60a4df6e9f0e277107f565 376.44MB / 482.97MB 167.6s
+#6 sha256:8a6c2861b77a36acf17cc45a5c97d2b1d281d00698e839fbb168dec588150cf5 335.54MB / 450.72MB 167.9s
+#6 sha256:d165faa71aeed207762cc767cee24f0ca254c757dd60a4df6e9f0e277107f565 401.60MB / 482.97MB 168.5s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 3.05GB / 3.93GB 168.8s
+#6 sha256:8a6c2861b77a36acf17cc45a5c97d2b1d281d00698e839fbb168dec588150cf5 361.76MB / 450.72MB 168.8s
+#6 sha256:d165faa71aeed207762cc767cee24f0ca254c757dd60a4df6e9f0e277107f565 428.87MB / 482.97MB 169.5s
+#6 sha256:8a6c2861b77a36acf17cc45a5c97d2b1d281d00698e839fbb168dec588150cf5 390.07MB / 450.72MB 169.9s
+#6 sha256:d165faa71aeed207762cc767cee24f0ca254c757dd60a4df6e9f0e277107f565 455.08MB / 482.97MB 170.6s
+#6 sha256:8a6c2861b77a36acf17cc45a5c97d2b1d281d00698e839fbb168dec588150cf5 415.24MB / 450.72MB 170.9s
+#6 sha256:d165faa71aeed207762cc767cee24f0ca254c757dd60a4df6e9f0e277107f565 480.25MB / 482.97MB 171.6s
+#6 sha256:d165faa71aeed207762cc767cee24f0ca254c757dd60a4df6e9f0e277107f565 482.97MB / 482.97MB 171.7s done
+#6 sha256:8a6c2861b77a36acf17cc45a5c97d2b1d281d00698e839fbb168dec588150cf5 442.50MB / 450.72MB 171.9s
+#6 sha256:63947660b5befcf5b496695de8ba9d1fb41716216f8f34f4feb6a19506187a37 0B / 263.98kB 171.9s
+#6 sha256:8a6c2861b77a36acf17cc45a5c97d2b1d281d00698e839fbb168dec588150cf5 450.72MB / 450.72MB 172.2s done
+#6 sha256:63947660b5befcf5b496695de8ba9d1fb41716216f8f34f4feb6a19506187a37 263.98kB / 263.98kB 172.2s done
+#6 sha256:e15acbeaf7fa1e6c40da26067787ebb485bd22d1bff70ff040884cc4d0dd4772 0B / 246.56kB 172.3s
+#6 sha256:89ed5f095bd1bac9984a8ed2d2ee740602b87e7ed2cdff45a2fd5ccafe687bc6 0B / 9.85kB 172.3s
+#6 sha256:e15acbeaf7fa1e6c40da26067787ebb485bd22d1bff70ff040884cc4d0dd4772 246.56kB / 246.56kB 172.6s done
+#6 sha256:e08cabb5800dcd5e0b359dd0f11451d0688ef4381abc7812cd751f120b33c883 0B / 805.01MB 172.6s
+#6 sha256:89ed5f095bd1bac9984a8ed2d2ee740602b87e7ed2cdff45a2fd5ccafe687bc6 9.85kB / 9.85kB 172.9s done
+#6 sha256:a9f85860421fd5b68a161f0bcc880007374afc381cfeee320a4697ff279ce623 0B / 467.84MB 172.9s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 3.24GB / 3.93GB 173.8s
+#6 sha256:a9f85860421fd5b68a161f0bcc880007374afc381cfeee320a4697ff279ce623 27.26MB / 467.84MB 174.4s
+#6 sha256:e08cabb5800dcd5e0b359dd0f11451d0688ef4381abc7812cd751f120b33c883 42.99MB / 805.01MB 175.0s
+#6 sha256:a9f85860421fd5b68a161f0bcc880007374afc381cfeee320a4697ff279ce623 51.38MB / 467.84MB 175.4s
+#6 sha256:a9f85860421fd5b68a161f0bcc880007374afc381cfeee320a4697ff279ce623 75.50MB / 467.84MB 176.4s
+#6 sha256:e08cabb5800dcd5e0b359dd0f11451d0688ef4381abc7812cd751f120b33c883 89.13MB / 805.01MB 176.9s
+#6 sha256:a9f85860421fd5b68a161f0bcc880007374afc381cfeee320a4697ff279ce623 100.66MB / 467.84MB 177.5s
+#6 sha256:e08cabb5800dcd5e0b359dd0f11451d0688ef4381abc7812cd751f120b33c883 130.02MB / 805.01MB 178.4s
+#6 sha256:a9f85860421fd5b68a161f0bcc880007374afc381cfeee320a4697ff279ce623 125.83MB / 467.84MB 178.5s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 3.38GB / 3.93GB 178.9s
+#6 sha256:e08cabb5800dcd5e0b359dd0f11451d0688ef4381abc7812cd751f120b33c883 171.97MB / 805.01MB 179.7s
+#6 sha256:a9f85860421fd5b68a161f0bcc880007374afc381cfeee320a4697ff279ce623 153.09MB / 467.84MB 180.0s
+#6 sha256:e08cabb5800dcd5e0b359dd0f11451d0688ef4381abc7812cd751f120b33c883 214.96MB / 805.01MB 181.1s
+#6 sha256:a9f85860421fd5b68a161f0bcc880007374afc381cfeee320a4697ff279ce623 177.21MB / 467.84MB 181.2s
+#6 sha256:a9f85860421fd5b68a161f0bcc880007374afc381cfeee320a4697ff279ce623 201.33MB / 467.84MB 182.2s
+#6 sha256:e08cabb5800dcd5e0b359dd0f11451d0688ef4381abc7812cd751f120b33c883 260.05MB / 805.01MB 182.6s
+#6 sha256:a9f85860421fd5b68a161f0bcc880007374afc381cfeee320a4697ff279ce623 228.59MB / 467.84MB 183.5s
+#6 sha256:e08cabb5800dcd5e0b359dd0f11451d0688ef4381abc7812cd751f120b33c883 300.94MB / 805.01MB 183.8s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 3.53GB / 3.93GB 183.9s
+#6 sha256:a9f85860421fd5b68a161f0bcc880007374afc381cfeee320a4697ff279ce623 254.80MB / 467.84MB 184.7s
+#6 sha256:e08cabb5800dcd5e0b359dd0f11451d0688ef4381abc7812cd751f120b33c883 343.93MB / 805.01MB 185.2s
+#6 sha256:a9f85860421fd5b68a161f0bcc880007374afc381cfeee320a4697ff279ce623 279.97MB / 467.84MB 185.9s
+#6 sha256:e08cabb5800dcd5e0b359dd0f11451d0688ef4381abc7812cd751f120b33c883 392.17MB / 805.01MB 186.7s
+#6 sha256:a9f85860421fd5b68a161f0bcc880007374afc381cfeee320a4697ff279ce623 309.33MB / 467.84MB 187.2s
+#6 sha256:e08cabb5800dcd5e0b359dd0f11451d0688ef4381abc7812cd751f120b33c883 434.11MB / 805.01MB 188.1s
+#6 sha256:a9f85860421fd5b68a161f0bcc880007374afc381cfeee320a4697ff279ce623 334.50MB / 467.84MB 188.3s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 3.68GB / 3.93GB 189.0s
+#6 sha256:a9f85860421fd5b68a161f0bcc880007374afc381cfeee320a4697ff279ce623 360.71MB / 467.84MB 189.4s
+#6 sha256:e08cabb5800dcd5e0b359dd0f11451d0688ef4381abc7812cd751f120b33c883 478.15MB / 805.01MB 190.3s
+#6 sha256:a9f85860421fd5b68a161f0bcc880007374afc381cfeee320a4697ff279ce623 386.92MB / 467.84MB 190.6s
+#6 sha256:a9f85860421fd5b68a161f0bcc880007374afc381cfeee320a4697ff279ce623 412.09MB / 467.84MB 191.8s
+#6 sha256:e08cabb5800dcd5e0b359dd0f11451d0688ef4381abc7812cd751f120b33c883 523.24MB / 805.01MB 192.1s
+#6 sha256:a9f85860421fd5b68a161f0bcc880007374afc381cfeee320a4697ff279ce623 437.26MB / 467.84MB 193.0s
+#6 sha256:e08cabb5800dcd5e0b359dd0f11451d0688ef4381abc7812cd751f120b33c883 568.33MB / 805.01MB 193.8s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 3.85GB / 3.93GB 194.0s
+#6 sha256:a9f85860421fd5b68a161f0bcc880007374afc381cfeee320a4697ff279ce623 461.37MB / 467.84MB 194.2s
+#6 sha256:a9f85860421fd5b68a161f0bcc880007374afc381cfeee320a4697ff279ce623 467.84MB / 467.84MB 194.6s done
+#6 sha256:e08cabb5800dcd5e0b359dd0f11451d0688ef4381abc7812cd751f120b33c883 609.22MB / 805.01MB 195.1s
+#6 sha256:e08cabb5800dcd5e0b359dd0f11451d0688ef4381abc7812cd751f120b33c883 650.12MB / 805.01MB 196.1s
+#6 sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 3.93GB / 3.93GB 196.1s done
+#6 extracting sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 0.1s
+#6 sha256:e08cabb5800dcd5e0b359dd0f11451d0688ef4381abc7812cd751f120b33c883 693.11MB / 805.01MB 196.9s
+#6 sha256:e08cabb5800dcd5e0b359dd0f11451d0688ef4381abc7812cd751f120b33c883 737.15MB / 805.01MB 197.6s
+#6 sha256:e08cabb5800dcd5e0b359dd0f11451d0688ef4381abc7812cd751f120b33c883 782.24MB / 805.01MB 198.3s
+#6 sha256:e08cabb5800dcd5e0b359dd0f11451d0688ef4381abc7812cd751f120b33c883 805.01MB / 805.01MB 198.9s done
+#6 extracting sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 5.2s
+#6 extracting sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 10.3s
+#6 extracting sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 15.4s
+#6 extracting sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 20.5s
+#6 extracting sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 25.6s
+#6 extracting sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 30.6s
+#6 extracting sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 35.7s
+#6 extracting sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 40.7s
+#6 extracting sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 45.8s
+#6 extracting sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 51.0s
+#6 extracting sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 56.0s
+#6 extracting sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 61.1s
+#6 extracting sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 66.1s
+#6 extracting sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 71.2s
+#6 extracting sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 76.2s
+#6 extracting sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 81.3s
+#6 extracting sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 86.4s
+#6 extracting sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 91.5s
+#6 extracting sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 96.5s
+#6 extracting sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 101.6s
+#6 extracting sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 106.7s
+#6 extracting sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 111.8s
+#6 extracting sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 116.8s
+#6 extracting sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 121.9s
+#6 extracting sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 126.9s
+#6 extracting sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 132.0s
+#6 extracting sha256:478fb34bfc3f5144fc86690ebd83dfb8950a7c963223b8097df5f735d8c8d1de 135.6s done
+#6 extracting sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f
+#6 extracting sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 5.1s
+#6 extracting sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 10.1s
+#6 extracting sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 15.2s
+#6 extracting sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 20.2s
+#6 extracting sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 25.2s
+#6 extracting sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 30.3s
+#6 extracting sha256:3dffda9c94f9b48ed62b610d7e15d5e0adb71c201e8c19d5a36b225c01515f5f 31.9s done
+#6 extracting sha256:55ef63138cf07a2d688f0c4ced042c3ce058c8c690af7986281421b0c5e156e6
+#6 extracting sha256:55ef63138cf07a2d688f0c4ced042c3ce058c8c690af7986281421b0c5e156e6 0.0s done
+#6 extracting sha256:719563b5a851ddb7d0f61ab7e01f3ace6d3d1c3fdf63d2a8793e418cd536c7cc 0.0s done
+#6 extracting sha256:7b9c545e809d09f20c714da571e38dc8dc9953f97562a764bf1afcf7e13c63a7
+#6 extracting sha256:7b9c545e809d09f20c714da571e38dc8dc9953f97562a764bf1afcf7e13c63a7 5.0s
+#6 extracting sha256:7b9c545e809d09f20c714da571e38dc8dc9953f97562a764bf1afcf7e13c63a7 9.9s done
+#6 extracting sha256:c70c49a935faf891e17009be898cd0943708ee9d5b62d85216cbced5ad3818f2
+#6 extracting sha256:c70c49a935faf891e17009be898cd0943708ee9d5b62d85216cbced5ad3818f2 0.0s done
+#6 extracting sha256:d165faa71aeed207762cc767cee24f0ca254c757dd60a4df6e9f0e277107f565 0.1s
+#6 extracting sha256:d165faa71aeed207762cc767cee24f0ca254c757dd60a4df6e9f0e277107f565 5.2s
+#6 extracting sha256:d165faa71aeed207762cc767cee24f0ca254c757dd60a4df6e9f0e277107f565 10.2s
+#6 extracting sha256:d165faa71aeed207762cc767cee24f0ca254c757dd60a4df6e9f0e277107f565 11.9s done
+#6 extracting sha256:4f4fb700ef54461cfa02571ae0db9a0dc1e0cdb5577484a6d75e68dc38e8acc1 0.0s done
+#6 extracting sha256:c86cce3b4ba79b58e755a6cbfa67fa6df2678842666ba2106ccffbbd9342f787
+#6 extracting sha256:c86cce3b4ba79b58e755a6cbfa67fa6df2678842666ba2106ccffbbd9342f787 0.4s done
+#6 extracting sha256:8a6c2861b77a36acf17cc45a5c97d2b1d281d00698e839fbb168dec588150cf5
+#6 extracting sha256:8a6c2861b77a36acf17cc45a5c97d2b1d281d00698e839fbb168dec588150cf5 5.0s
+#6 extracting sha256:8a6c2861b77a36acf17cc45a5c97d2b1d281d00698e839fbb168dec588150cf5 10.1s
+#6 extracting sha256:8a6c2861b77a36acf17cc45a5c97d2b1d281d00698e839fbb168dec588150cf5 15.1s
+#6 extracting sha256:8a6c2861b77a36acf17cc45a5c97d2b1d281d00698e839fbb168dec588150cf5 20.1s
+#6 extracting sha256:8a6c2861b77a36acf17cc45a5c97d2b1d281d00698e839fbb168dec588150cf5 25.2s
+#6 extracting sha256:8a6c2861b77a36acf17cc45a5c97d2b1d281d00698e839fbb168dec588150cf5 30.2s
+#6 extracting sha256:8a6c2861b77a36acf17cc45a5c97d2b1d281d00698e839fbb168dec588150cf5 35.3s
+#6 extracting sha256:8a6c2861b77a36acf17cc45a5c97d2b1d281d00698e839fbb168dec588150cf5 38.1s done
+#6 extracting sha256:63947660b5befcf5b496695de8ba9d1fb41716216f8f34f4feb6a19506187a37
+#6 extracting sha256:63947660b5befcf5b496695de8ba9d1fb41716216f8f34f4feb6a19506187a37 0.1s done
+#6 extracting sha256:e15acbeaf7fa1e6c40da26067787ebb485bd22d1bff70ff040884cc4d0dd4772 0.0s done
+#6 extracting sha256:89ed5f095bd1bac9984a8ed2d2ee740602b87e7ed2cdff45a2fd5ccafe687bc6 0.0s done
+#6 extracting sha256:e08cabb5800dcd5e0b359dd0f11451d0688ef4381abc7812cd751f120b33c883
+#6 extracting sha256:e08cabb5800dcd5e0b359dd0f11451d0688ef4381abc7812cd751f120b33c883 5.1s
+#6 extracting sha256:e08cabb5800dcd5e0b359dd0f11451d0688ef4381abc7812cd751f120b33c883 10.1s
+#6 extracting sha256:e08cabb5800dcd5e0b359dd0f11451d0688ef4381abc7812cd751f120b33c883 15.1s
+#6 extracting sha256:e08cabb5800dcd5e0b359dd0f11451d0688ef4381abc7812cd751f120b33c883 19.5s done
+#6 extracting sha256:a9f85860421fd5b68a161f0bcc880007374afc381cfeee320a4697ff279ce623
+#6 extracting sha256:a9f85860421fd5b68a161f0bcc880007374afc381cfeee320a4697ff279ce623 5.1s
+#6 extracting sha256:a9f85860421fd5b68a161f0bcc880007374afc381cfeee320a4697ff279ce623 10.2s
+#6 extracting sha256:a9f85860421fd5b68a161f0bcc880007374afc381cfeee320a4697ff279ce623 15.2s
+#6 extracting sha256:a9f85860421fd5b68a161f0bcc880007374afc381cfeee320a4697ff279ce623 17.5s done
+#6 DONE 462.9s
+
+#7 [builder 2/7] RUN apt-get update && apt-get install -y --no-install-recommends         cuda-nvcc-13-2 cuda-cudart-dev-13-2 cuda-nvtx-13-2         cuda-libraries-dev-13-2         build-essential ninja-build git ca-certificates     && rm -rf /var/lib/apt/lists/*
+#7 0.819 Get:1 http://ports.ubuntu.com/ubuntu-ports jammy InRelease [270 kB]
+#7 1.866 Get:2 http://ports.ubuntu.com/ubuntu-ports jammy-updates InRelease [128 kB]
+#7 2.035 Get:3 https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu jammy InRelease [18.1 kB]
+#7 2.196 Get:4 http://ports.ubuntu.com/ubuntu-ports jammy-backports InRelease [127 kB]
+#7 2.535 Get:5 http://ports.ubuntu.com/ubuntu-ports jammy-security InRelease [129 kB]
+#7 2.573 Get:6 https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu jammy/main arm64 Packages [39.2 kB]
+#7 2.639 Get:7 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  InRelease [1579 B]
+#7 2.739 Get:8 http://ports.ubuntu.com/ubuntu-ports jammy/main arm64 Packages [1758 kB]
+#7 6.108 Get:9 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  Packages [2143 kB]
+#7 6.941 Get:10 http://ports.ubuntu.com/ubuntu-ports jammy/universe arm64 Packages [17.2 MB]
+#7 22.95 Get:11 http://ports.ubuntu.com/ubuntu-ports jammy/restricted arm64 Packages [24.2 kB]
+#7 23.00 Get:12 http://ports.ubuntu.com/ubuntu-ports jammy/multiverse arm64 Packages [224 kB]
+#7 23.21 Get:13 http://ports.ubuntu.com/ubuntu-ports jammy-updates/multiverse arm64 Packages [63.5 kB]
+#7 23.27 Get:14 http://ports.ubuntu.com/ubuntu-ports jammy-updates/universe arm64 Packages [1668 kB]
+#7 23.93 Get:15 http://ports.ubuntu.com/ubuntu-ports jammy-updates/restricted arm64 Packages [7413 kB]
+#7 25.60 Get:16 http://ports.ubuntu.com/ubuntu-ports jammy-updates/main arm64 Packages [4124 kB]
+#7 26.43 Get:17 http://ports.ubuntu.com/ubuntu-ports jammy-backports/universe arm64 Packages [33.7 kB]
+#7 26.43 Get:18 http://ports.ubuntu.com/ubuntu-ports jammy-backports/main arm64 Packages [82.4 kB]
+#7 26.44 Get:19 http://ports.ubuntu.com/ubuntu-ports jammy-security/universe arm64 Packages [1368 kB]
+#7 26.62 Get:20 http://ports.ubuntu.com/ubuntu-ports jammy-security/restricted arm64 Packages [7133 kB]
+#7 27.54 Get:21 http://ports.ubuntu.com/ubuntu-ports jammy-security/multiverse arm64 Packages [56.7 kB]
+#7 27.55 Get:22 http://ports.ubuntu.com/ubuntu-ports jammy-security/main arm64 Packages [3799 kB]
+#7 28.11 Fetched 47.8 MB in 28s (1712 kB/s)
+#7 28.11 Reading package lists...
+#7 28.80 Reading package lists...
+#7 29.45 Building dependency tree...
+#7 29.60 Reading state information...
+#7 29.72 build-essential is already the newest version (12.9ubuntu3).
+#7 29.72 build-essential set to manually installed.
+#7 29.72 ca-certificates is already the newest version (20240203~22.04.1).
+#7 29.72 The following packages were automatically installed and are no longer required:
+#7 29.72   libcublas-13-0 libcusolver-13-0 libcusparse-13-0
+#7 29.72 Use 'apt autoremove' to remove them.
+#7 29.72 The following additional packages will be installed:
+#7 29.72   cuda-cccl-13-2 cuda-crt-13-2 cuda-cudart-13-2 cuda-culibos-dev-13-2
+#7 29.72   cuda-driver-dev-13-2 cuda-nvrtc-13-2 cuda-nvrtc-dev-13-2
+#7 29.72   cuda-profiler-api-13-2 cuda-toolkit-13-2-config-common git-man
+#7 29.72   libcublas-13-2 libcublas-dev-13-2 libcudla-13-2 libcudla-dev-13-2
+#7 29.72   libcufft-13-2 libcufft-dev-13-2 libcufile-13-2 libcufile-dev-13-2
+#7 29.72   libcuobjclient-13-2 libcuobjclient-dev-13-2 libcurand-13-2
+#7 29.72   libcurand-dev-13-2 libcusolver-13-2 libcusolver-dev-13-2 libcusparse-13-2
+#7 29.72   libcusparse-dev-13-2 liberror-perl libnpp-13-2 libnpp-dev-13-2
+#7 29.72   libnvfatbin-13-2 libnvfatbin-dev-13-2 libnvjitlink-13-2
+#7 29.72   libnvjitlink-dev-13-2 libnvjpeg-13-2 libnvjpeg-dev-13-2
+#7 29.72   libnvptxcompiler-13-2 libnvvm-13-2
+#7 29.72 Suggested packages:
+#7 29.72   gettext-base git-daemon-run | git-daemon-sysvinit git-doc git-email git-gui
+#7 29.72   gitk gitweb git-cvs git-mediawiki git-svn
+#7 29.72 Recommended packages:
+#7 29.72   less ssh-client
+#7 29.82 The following NEW packages will be installed:
+#7 29.82   cuda-cccl-13-2 cuda-crt-13-2 cuda-cudart-13-2 cuda-cudart-dev-13-2
+#7 29.82   cuda-culibos-dev-13-2 cuda-driver-dev-13-2 cuda-libraries-dev-13-2
+#7 29.82   cuda-nvcc-13-2 cuda-nvrtc-13-2 cuda-nvrtc-dev-13-2 cuda-nvtx-13-2
+#7 29.82   cuda-profiler-api-13-2 cuda-toolkit-13-2-config-common git git-man
+#7 29.82   libcublas-13-2 libcublas-dev-13-2 libcudla-13-2 libcudla-dev-13-2
+#7 29.82   libcufft-13-2 libcufft-dev-13-2 libcufile-13-2 libcufile-dev-13-2
+#7 29.82   libcuobjclient-13-2 libcuobjclient-dev-13-2 libcurand-13-2
+#7 29.82   libcurand-dev-13-2 libcusolver-13-2 libcusolver-dev-13-2 libcusparse-13-2
+#7 29.82   libcusparse-dev-13-2 liberror-perl libnpp-13-2 libnpp-dev-13-2
+#7 29.82   libnvfatbin-13-2 libnvfatbin-dev-13-2 libnvjitlink-13-2
+#7 29.82   libnvjitlink-dev-13-2 libnvjpeg-13-2 libnvjpeg-dev-13-2
+#7 29.82   libnvptxcompiler-13-2 libnvvm-13-2 ninja-build
+#7 30.12 0 upgraded, 43 newly installed, 0 to remove and 36 not upgraded.
+#7 30.12 Need to get 2568 MB of archives.
+#7 30.12 After this operation, 4783 MB of additional disk space will be used.
+#7 30.12 Get:1 http://ports.ubuntu.com/ubuntu-ports jammy/main arm64 liberror-perl all 0.17029-1 [26.5 kB]
+#7 30.57 Get:2 http://ports.ubuntu.com/ubuntu-ports jammy-updates/main arm64 git-man all 1:2.34.1-1ubuntu1.17 [954 kB]
+#7 33.63 Get:3 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  cuda-cccl-13-2 13.2.75-1 [1260 kB]
+#7 35.99 Get:4 http://ports.ubuntu.com/ubuntu-ports jammy-updates/main arm64 git arm64 1:2.34.1-1ubuntu1.17 [3222 kB]
+#7 38.05 Get:5 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  cuda-toolkit-13-2-config-common 13.2.75-1 [17.4 kB]
+#7 39.74 Get:6 http://ports.ubuntu.com/ubuntu-ports jammy/universe arm64 ninja-build arm64 1.10.1-1 [105 kB]
+#7 40.72 Get:7 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  cuda-cudart-13-2 13.2.75-1 [181 kB]
+#7 43.57 Get:8 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  cuda-culibos-dev-13-2 13.2.75-1 [23.9 kB]
+#7 46.22 Get:9 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  cuda-driver-dev-13-2 13.2.75-1 [32.4 kB]
+#7 49.02 Get:10 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  cuda-cudart-dev-13-2 13.2.75-1 [1421 kB]
+#7 51.64 Get:11 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  cuda-crt-13-2 13.2.78-1 [83.1 kB]
+#7 54.18 Get:12 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  cuda-profiler-api-13-2 13.2.75-1 [19.6 kB]
+#7 57.32 Get:13 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  cuda-nvrtc-13-2 13.2.78-1 [29.7 MB]
+#7 64.25 Get:14 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  cuda-nvrtc-dev-13-2 13.2.78-1 [26.2 MB]
+#7 67.74 Get:15 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  libcublas-13-2 13.4.0.1-1 [484 MB]
+#7 99.97 Get:16 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  libcublas-dev-13-2 13.4.0.1-1 [538 MB]
+#7 226.3 Get:17 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  libcufft-13-2 12.2.0.46-1 [181 MB]
+#7 258.0 Get:18 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  libcufft-dev-13-2 12.2.0.46-1 [182 MB]
+#7 310.5 Get:19 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  libcufile-13-2 1.17.1.22-1 [827 kB]
+#7 314.2 Get:20 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  libcufile-dev-13-2 1.17.1.22-1 [2861 kB]
+#7 318.9 Get:21 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  libcudla-13-2 13.2.75-1 [32.4 kB]
+#7 321.7 Get:22 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  libcudla-dev-13-2 13.2.75-1 [28.6 kB]
+#7 324.3 Get:23 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  libcuobjclient-13-2 1.1.1.22-1 [152 kB]
+#7 327.1 Get:24 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  libcuobjclient-dev-13-2 1.1.1.22-1 [20.3 kB]
+#7 329.9 Get:25 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  libcurand-13-2 10.4.2.55-1 [43.9 MB]
+#7 340.3 Get:26 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  libcurand-dev-13-2 10.4.2.55-1 [43.8 MB]
+#7 350.9 Get:27 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  libcusolver-13-2 12.2.0.1-1 [196 MB]
+#7 434.2 Get:28 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  libcusolver-dev-13-2 12.2.0.1-1 [121 MB]
+#7 491.0 Get:29 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  libcusparse-13-2 12.7.10.1-1 [158 MB]
+#7 509.3 Get:30 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  libcusparse-dev-13-2 12.7.10.1-1 [160 MB]
+#7 518.8 Get:31 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  libnpp-13-2 13.1.0.48-1 [128 MB]
+#7 567.9 Get:32 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  libnpp-dev-13-2 13.1.0.48-1 [126 MB]
+#7 594.4 Get:33 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  libnvjitlink-13-2 13.2.78-1 [26.3 MB]
+#7 598.5 Get:34 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  libnvjitlink-dev-13-2 13.2.78-1 [25.2 MB]
+#7 603.8 Get:35 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  libnvfatbin-13-2 13.2.78-1 [389 kB]
+#7 606.7 Get:36 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  libnvfatbin-dev-13-2 13.2.78-1 [732 kB]
+#7 610.1 Get:37 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  libnvjpeg-13-2 13.1.0.48-1 [3180 kB]
+#7 614.9 Get:38 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  libnvjpeg-dev-13-2 13.1.0.48-1 [2962 kB]
+#7 618.0 Get:39 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  cuda-libraries-dev-13-2 13.2.1-1 [2650 B]
+#7 620.7 Get:40 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  libnvvm-13-2 13.2.78-1 [40.2 MB]
+#7 628.0 Get:41 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  libnvptxcompiler-13-2 13.2.78-1 [13.6 MB]
+#7 632.8 Get:42 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  cuda-nvcc-13-2 13.2.78-1 [26.7 MB]
+#7 637.7 Get:43 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/sbsa  cuda-nvtx-13-2 13.2.75-1 [101 kB]
+#7 637.9 debconf: delaying package configuration, since apt-utils is not installed
+#7 637.9 Fetched 2568 MB in 10min 8s (4224 kB/s)
+#7 637.9 Selecting previously unselected package cuda-cccl-13-2.
+#7 637.9 (Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 22611 files and directories currently installed.)
+#7 638.0 Preparing to unpack .../00-cuda-cccl-13-2_13.2.75-1_arm64.deb ...
+#7 638.0 Unpacking cuda-cccl-13-2 (13.2.75-1) ...
+#7 638.2 Selecting previously unselected package cuda-toolkit-13-2-config-common.
+#7 638.2 Preparing to unpack .../01-cuda-toolkit-13-2-config-common_13.2.75-1_all.deb ...
+#7 638.2 Unpacking cuda-toolkit-13-2-config-common (13.2.75-1) ...
+#7 638.2 Selecting previously unselected package cuda-cudart-13-2.
+#7 638.2 Preparing to unpack .../02-cuda-cudart-13-2_13.2.75-1_arm64.deb ...
+#7 638.2 Unpacking cuda-cudart-13-2 (13.2.75-1) ...
+#7 638.3 Selecting previously unselected package cuda-culibos-dev-13-2.
+#7 638.3 Preparing to unpack .../03-cuda-culibos-dev-13-2_13.2.75-1_arm64.deb ...
+#7 638.3 Unpacking cuda-culibos-dev-13-2 (13.2.75-1) ...
+#7 638.3 Selecting previously unselected package cuda-driver-dev-13-2.
+#7 638.3 Preparing to unpack .../04-cuda-driver-dev-13-2_13.2.75-1_arm64.deb ...
+#7 638.3 Unpacking cuda-driver-dev-13-2 (13.2.75-1) ...
+#7 638.4 Selecting previously unselected package cuda-cudart-dev-13-2.
+#7 638.4 Preparing to unpack .../05-cuda-cudart-dev-13-2_13.2.75-1_arm64.deb ...
+#7 638.4 Unpacking cuda-cudart-dev-13-2 (13.2.75-1) ...
+#7 638.5 Selecting previously unselected package cuda-crt-13-2.
+#7 638.5 Preparing to unpack .../06-cuda-crt-13-2_13.2.78-1_arm64.deb ...
+#7 638.5 Unpacking cuda-crt-13-2 (13.2.78-1) ...
+#7 638.5 Selecting previously unselected package cuda-profiler-api-13-2.
+#7 638.5 Preparing to unpack .../07-cuda-profiler-api-13-2_13.2.75-1_arm64.deb ...
+#7 638.5 Unpacking cuda-profiler-api-13-2 (13.2.75-1) ...
+#7 638.6 Selecting previously unselected package cuda-nvrtc-13-2.
+#7 638.6 Preparing to unpack .../08-cuda-nvrtc-13-2_13.2.78-1_arm64.deb ...
+#7 638.6 Unpacking cuda-nvrtc-13-2 (13.2.78-1) ...
+#7 639.6 Selecting previously unselected package cuda-nvrtc-dev-13-2.
+#7 639.6 Preparing to unpack .../09-cuda-nvrtc-dev-13-2_13.2.78-1_arm64.deb ...
+#7 639.7 Unpacking cuda-nvrtc-dev-13-2 (13.2.78-1) ...
+#7 640.7 Selecting previously unselected package libcublas-13-2.
+#7 640.7 Preparing to unpack .../10-libcublas-13-2_13.4.0.1-1_arm64.deb ...
+#7 640.7 Unpacking libcublas-13-2 (13.4.0.1-1) ...
+#7 646.5 Selecting previously unselected package libcublas-dev-13-2.
+#7 646.5 Preparing to unpack .../11-libcublas-dev-13-2_13.4.0.1-1_arm64.deb ...
+#7 646.5 Unpacking libcublas-dev-13-2 (13.4.0.1-1) ...
+#7 654.6 Selecting previously unselected package libcufft-13-2.
+#7 654.6 Preparing to unpack .../12-libcufft-13-2_12.2.0.46-1_arm64.deb ...
+#7 654.6 Unpacking libcufft-13-2 (12.2.0.46-1) ...
+#7 660.1 Selecting previously unselected package libcufft-dev-13-2.
+#7 660.1 Preparing to unpack .../13-libcufft-dev-13-2_12.2.0.46-1_arm64.deb ...
+#7 660.1 Unpacking libcufft-dev-13-2 (12.2.0.46-1) ...
+#7 665.7 Selecting previously unselected package libcufile-13-2.
+#7 665.7 Preparing to unpack .../14-libcufile-13-2_1.17.1.22-1_arm64.deb ...
+#7 665.7 Unpacking libcufile-13-2 (1.17.1.22-1) ...
+#7 665.8 Selecting previously unselected package libcufile-dev-13-2.
+#7 665.8 Preparing to unpack .../15-libcufile-dev-13-2_1.17.1.22-1_arm64.deb ...
+#7 665.8 Unpacking libcufile-dev-13-2 (1.17.1.22-1) ...
+#7 666.0 Selecting previously unselected package libcudla-13-2.
+#7 666.0 Preparing to unpack .../16-libcudla-13-2_13.2.75-1_arm64.deb ...
+#7 666.0 Unpacking libcudla-13-2 (13.2.75-1) ...
+#7 666.0 Selecting previously unselected package libcudla-dev-13-2.
+#7 666.0 Preparing to unpack .../17-libcudla-dev-13-2_13.2.75-1_arm64.deb ...
+#7 666.0 Unpacking libcudla-dev-13-2 (13.2.75-1) ...
+#7 666.1 Selecting previously unselected package libcuobjclient-13-2.
+#7 666.1 Preparing to unpack .../18-libcuobjclient-13-2_1.1.1.22-1_arm64.deb ...
+#7 666.1 Unpacking libcuobjclient-13-2 (1.1.1.22-1) ...
+#7 666.1 Selecting previously unselected package libcuobjclient-dev-13-2.
+#7 666.1 Preparing to unpack .../19-libcuobjclient-dev-13-2_1.1.1.22-1_arm64.deb ...
+#7 666.1 Unpacking libcuobjclient-dev-13-2 (1.1.1.22-1) ...
+#7 666.2 Selecting previously unselected package libcurand-13-2.
+#7 666.2 Preparing to unpack .../20-libcurand-13-2_10.4.2.55-1_arm64.deb ...
+#7 666.2 Unpacking libcurand-13-2 (10.4.2.55-1) ...
+#7 666.9 Selecting previously unselected package libcurand-dev-13-2.
+#7 666.9 Preparing to unpack .../21-libcurand-dev-13-2_10.4.2.55-1_arm64.deb ...
+#7 666.9 Unpacking libcurand-dev-13-2 (10.4.2.55-1) ...
+#7 667.7 Selecting previously unselected package libcusolver-13-2.
+#7 667.7 Preparing to unpack .../22-libcusolver-13-2_12.2.0.1-1_arm64.deb ...
+#7 667.7 Unpacking libcusolver-13-2 (12.2.0.1-1) ...
+#7 669.9 Selecting previously unselected package libcusolver-dev-13-2.
+#7 669.9 Preparing to unpack .../23-libcusolver-dev-13-2_12.2.0.1-1_arm64.deb ...
+#7 669.9 Unpacking libcusolver-dev-13-2 (12.2.0.1-1) ...
+#7 671.4 Selecting previously unselected package libcusparse-13-2.
+#7 671.4 Preparing to unpack .../24-libcusparse-13-2_12.7.10.1-1_arm64.deb ...
+#7 671.5 Unpacking libcusparse-13-2 (12.7.10.1-1) ...
+#7 673.0 Selecting previously unselected package libcusparse-dev-13-2.
+#7 673.0 Preparing to unpack .../25-libcusparse-dev-13-2_12.7.10.1-1_arm64.deb ...
+#7 673.0 Unpacking libcusparse-dev-13-2 (12.7.10.1-1) ...
+#7 674.9 Selecting previously unselected package libnpp-13-2.
+#7 674.9 Preparing to unpack .../26-libnpp-13-2_13.1.0.48-1_arm64.deb ...
+#7 674.9 Unpacking libnpp-13-2 (13.1.0.48-1) ...
+#7 677.0 Selecting previously unselected package libnpp-dev-13-2.
+#7 677.0 Preparing to unpack .../27-libnpp-dev-13-2_13.1.0.48-1_arm64.deb ...
+#7 677.1 Unpacking libnpp-dev-13-2 (13.1.0.48-1) ...
+#7 679.3 Selecting previously unselected package libnvjitlink-13-2.
+#7 679.3 Preparing to unpack .../28-libnvjitlink-13-2_13.2.78-1_arm64.deb ...
+#7 679.3 Unpacking libnvjitlink-13-2 (13.2.78-1) ...
+#7 680.3 Selecting previously unselected package libnvjitlink-dev-13-2.
+#7 680.3 Preparing to unpack .../29-libnvjitlink-dev-13-2_13.2.78-1_arm64.deb ...
+#7 680.3 Unpacking libnvjitlink-dev-13-2 (13.2.78-1) ...
+#7 681.3 Selecting previously unselected package libnvfatbin-13-2.
+#7 681.3 Preparing to unpack .../30-libnvfatbin-13-2_13.2.78-1_arm64.deb ...
+#7 681.3 Unpacking libnvfatbin-13-2 (13.2.78-1) ...
+#7 681.4 Selecting previously unselected package libnvfatbin-dev-13-2.
+#7 681.4 Preparing to unpack .../31-libnvfatbin-dev-13-2_13.2.78-1_arm64.deb ...
+#7 681.4 Unpacking libnvfatbin-dev-13-2 (13.2.78-1) ...
+#7 681.4 Selecting previously unselected package libnvjpeg-13-2.
+#7 681.5 Preparing to unpack .../32-libnvjpeg-13-2_13.1.0.48-1_arm64.deb ...
+#7 681.5 Unpacking libnvjpeg-13-2 (13.1.0.48-1) ...
+#7 681.6 Selecting previously unselected package libnvjpeg-dev-13-2.
+#7 681.6 Preparing to unpack .../33-libnvjpeg-dev-13-2_13.1.0.48-1_arm64.deb ...
+#7 681.6 Unpacking libnvjpeg-dev-13-2 (13.1.0.48-1) ...
+#7 681.8 Selecting previously unselected package cuda-libraries-dev-13-2.
+#7 681.8 Preparing to unpack .../34-cuda-libraries-dev-13-2_13.2.1-1_arm64.deb ...
+#7 681.8 Unpacking cuda-libraries-dev-13-2 (13.2.1-1) ...
+#7 681.8 Selecting previously unselected package libnvvm-13-2.
+#7 681.8 Preparing to unpack .../35-libnvvm-13-2_13.2.78-1_arm64.deb ...
+#7 681.8 Unpacking libnvvm-13-2 (13.2.78-1) ...
+#7 683.3 Selecting previously unselected package libnvptxcompiler-13-2.
+#7 683.3 Preparing to unpack .../36-libnvptxcompiler-13-2_13.2.78-1_arm64.deb ...
+#7 683.3 Unpacking libnvptxcompiler-13-2 (13.2.78-1) ...
+#7 683.9 Selecting previously unselected package cuda-nvcc-13-2.
+#7 683.9 Preparing to unpack .../37-cuda-nvcc-13-2_13.2.78-1_arm64.deb ...
+#7 683.9 Unpacking cuda-nvcc-13-2 (13.2.78-1) ...
+#7 684.8 Selecting previously unselected package cuda-nvtx-13-2.
+#7 684.8 Preparing to unpack .../38-cuda-nvtx-13-2_13.2.75-1_arm64.deb ...
+#7 684.8 Unpacking cuda-nvtx-13-2 (13.2.75-1) ...
+#7 684.9 Selecting previously unselected package liberror-perl.
+#7 684.9 Preparing to unpack .../39-liberror-perl_0.17029-1_all.deb ...
+#7 684.9 Unpacking liberror-perl (0.17029-1) ...
+#7 684.9 Selecting previously unselected package git-man.
+#7 684.9 Preparing to unpack .../40-git-man_1%3a2.34.1-1ubuntu1.17_all.deb ...
+#7 684.9 Unpacking git-man (1:2.34.1-1ubuntu1.17) ...
+#7 685.0 Selecting previously unselected package git.
+#7 685.0 Preparing to unpack .../41-git_1%3a2.34.1-1ubuntu1.17_arm64.deb ...
+#7 685.0 Unpacking git (1:2.34.1-1ubuntu1.17) ...
+#7 685.2 Selecting previously unselected package ninja-build.
+#7 685.2 Preparing to unpack .../42-ninja-build_1.10.1-1_arm64.deb ...
+#7 685.2 Unpacking ninja-build (1.10.1-1) ...
+#7 685.3 Setting up libcudla-13-2 (13.2.75-1) ...
+#7 685.3 Setting up ninja-build (1.10.1-1) ...
+#7 685.3 Setting up cuda-cccl-13-2 (13.2.75-1) ...
+#7 685.3 Setting up liberror-perl (0.17029-1) ...
+#7 685.3 Setting up cuda-culibos-dev-13-2 (13.2.75-1) ...
+#7 685.4 Setting up cuda-nvrtc-13-2 (13.2.78-1) ...
+#7 685.4 Setting up libnvptxcompiler-13-2 (13.2.78-1) ...
+#7 685.4 Setting up cuda-driver-dev-13-2 (13.2.75-1) ...
+#7 685.4 Setting up git-man (1:2.34.1-1ubuntu1.17) ...
+#7 685.5 Setting up cuda-toolkit-13-2-config-common (13.2.75-1) ...
+#7 685.5 Setting alternatives
+#7 685.5 update-alternatives: using /usr/local/cuda-13.2 to provide /usr/local/cuda (cuda) in auto mode
+#7 685.5 update-alternatives: using /usr/local/cuda-13.2 to provide /usr/local/cuda-13 (cuda-13) in auto mode
+#7 685.5 Setting up cuda-profiler-api-13-2 (13.2.75-1) ...
+#7 685.5 Setting up cuda-nvtx-13-2 (13.2.75-1) ...
+#7 685.6 Setting up libcudla-dev-13-2 (13.2.75-1) ...
+#7 685.6 Setting up libnvvm-13-2 (13.2.78-1) ...
+#7 685.6 Setting up libnvfatbin-13-2 (13.2.78-1) ...
+#7 685.6 Setting up libnpp-13-2 (13.1.0.48-1) ...
+#7 685.7 Setting up libcublas-13-2 (13.4.0.1-1) ...
+#7 685.7 Setting up cuda-cudart-13-2 (13.2.75-1) ...
+#7 685.7 Setting up libcusolver-13-2 (12.2.0.1-1) ...
+#7 685.7 Setting up libcufft-13-2 (12.2.0.46-1) ...
+#7 685.7 Setting up libcufile-13-2 (1.17.1.22-1) ...
+#7 685.8 Setting alternatives
+#7 685.8 update-alternatives: using /usr/local/cuda-13.2/gds/cufile.json to provide /etc/cufile.json (cufile.json) in auto mode
+#7 685.8 Setting up libcublas-dev-13-2 (13.4.0.1-1) ...
+#7 685.8 Setting up libcufile-dev-13-2 (1.17.1.22-1) ...
+#7 685.8 Setting up libcurand-13-2 (10.4.2.55-1) ...
+#7 685.8 Setting up cuda-nvrtc-dev-13-2 (13.2.78-1) ...
+#7 685.9 Setting up libcuobjclient-13-2 (1.1.1.22-1) ...
+#7 685.9 Setting up libcusparse-13-2 (12.7.10.1-1) ...
+#7 685.9 Setting up libnvfatbin-dev-13-2 (13.2.78-1) ...
+#7 685.9 Setting up libnvjpeg-13-2 (13.1.0.48-1) ...
+#7 685.9 Setting up git (1:2.34.1-1ubuntu1.17) ...
+#7 686.0 Setting up libnvjitlink-13-2 (13.2.78-1) ...
+#7 686.0 Setting up libcurand-dev-13-2 (10.4.2.55-1) ...
+#7 686.0 Setting up cuda-cudart-dev-13-2 (13.2.75-1) ...
+#7 686.0 Setting up libnpp-dev-13-2 (13.1.0.48-1) ...
+#7 686.1 Setting up libcusolver-dev-13-2 (12.2.0.1-1) ...
+#7 686.1 Setting up libnvjitlink-dev-13-2 (13.2.78-1) ...
+#7 686.1 Setting up libcuobjclient-dev-13-2 (1.1.1.22-1) ...
+#7 686.1 Setting up libcufft-dev-13-2 (12.2.0.46-1) ...
+#7 686.1 Setting up libcusparse-dev-13-2 (12.7.10.1-1) ...
+#7 686.2 Setting up cuda-crt-13-2 (13.2.78-1) ...
+#7 686.2 Setting up libnvjpeg-dev-13-2 (13.1.0.48-1) ...
+#7 686.2 Setting up cuda-libraries-dev-13-2 (13.2.1-1) ...
+#7 686.2 Setting up cuda-nvcc-13-2 (13.2.78-1) ...
+#7 686.2 Processing triggers for libc-bin (2.35-0ubuntu3.11) ...
+#7 DONE 687.2s
+
+#8 [builder 3/7] RUN pip install --no-cache-dir "cmake>=3.26"
+#8 1.228 Collecting cmake>=3.26
+#8 1.609   Downloading cmake-4.3.2-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl.metadata (6.5 kB)
+#8 1.674 Downloading cmake-4.3.2-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl (29.6 MB)
+#8 2.589    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 29.6/29.6 MB 40.5 MB/s  0:00:00
+#8 2.704 Installing collected packages: cmake
+#8 3.130 Successfully installed cmake-4.3.2
+#8 3.130 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+#8 DONE 3.2s
+
+#9 [builder 4/7] WORKDIR /src
+#9 DONE 0.0s
+
+#10 [builder 5/7] RUN git clone --depth=1 --branch "main" "https://github.com/vllm-project/vllm.git" . 2>/dev/null  || (git clone "https://github.com/vllm-project/vllm.git" . && git checkout "main")  && git rev-parse HEAD > /commit.txt
+#10 DONE 5.4s
+
+#11 [builder 6/7] RUN pip install --no-cache-dir setuptools_rust setuptools wheel
+#11 0.996 Collecting setuptools_rust
+#11 1.290   Downloading setuptools_rust-1.12.1-py3-none-any.whl.metadata (9.6 kB)
+#11 1.293 Requirement already satisfied: setuptools in /usr/local/lib/python3.12/dist-packages (80.10.2)
+#11 1.380 Collecting wheel
+#11 1.446   Downloading wheel-0.47.0-py3-none-any.whl.metadata (2.3 kB)
+#11 1.517 Collecting semantic_version<3,>=2.8.2 (from setuptools_rust)
+#11 1.582   Downloading semantic_version-2.10.0-py2.py3-none-any.whl.metadata (9.7 kB)
+#11 1.593 Requirement already satisfied: packaging>=24.0 in /usr/local/lib/python3.12/dist-packages (from wheel) (26.2)
+#11 1.658 Downloading setuptools_rust-1.12.1-py3-none-any.whl (28 kB)
+#11 1.747 Downloading semantic_version-2.10.0-py2.py3-none-any.whl (15 kB)
+#11 1.817 Downloading wheel-0.47.0-py3-none-any.whl (32 kB)
+#11 1.911 Installing collected packages: wheel, semantic_version, setuptools_rust
+#11 1.995 
+#11 2.001 Successfully installed semantic_version-2.10.0 setuptools_rust-1.12.1 wheel-0.47.0
+#11 2.001 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+#11 DONE 2.1s
+
+#12 [builder 7/7] RUN pip install --no-deps --no-build-isolation --force-reinstall .  && python3 -c "import vllm; print('vllm', vllm.__version__)"  && rm -rf /root/.cache/pip /root/.cache/ccache
+#12 0.354 Processing ./.
+#12 0.355   Preparing metadata (pyproject.toml): started
+#12 2.208   Preparing metadata (pyproject.toml): finished with status 'done'
+#12 2.212 Building wheels for collected packages: vllm
+#12 2.212   Building wheel for vllm (pyproject.toml): started
+#12 64.40   Building wheel for vllm (pyproject.toml): still running...
+#12 316.6   Building wheel for vllm (pyproject.toml): still running...
+#12 1104.4   Building wheel for vllm (pyproject.toml): still running...
+#12 1174.5   Building wheel for vllm (pyproject.toml): still running...
+#12 1238.9   Building wheel for vllm (pyproject.toml): still running...
+#12 1299.0   Building wheel for vllm (pyproject.toml): still running...
+#12 1361.2   Building wheel for vllm (pyproject.toml): still running...
+#12 1426.7   Building wheel for vllm (pyproject.toml): still running...
+#12 1489.1   Building wheel for vllm (pyproject.toml): still running...
+#12 1549.6   Building wheel for vllm (pyproject.toml): still running...
+#12 1621.6   Building wheel for vllm (pyproject.toml): still running...
+#12 1683.1   Building wheel for vllm (pyproject.toml): still running...
+#12 1743.3   Building wheel for vllm (pyproject.toml): still running...
+#12 1816.1   Building wheel for vllm (pyproject.toml): still running...
+#12 1898.2   Building wheel for vllm (pyproject.toml): still running...
+#12 1991.0   Building wheel for vllm (pyproject.toml): still running...
+#12 2051.3   Building wheel for vllm (pyproject.toml): still running...
+#12 2114.5   Building wheel for vllm (pyproject.toml): still running...
+#12 2175.7   Building wheel for vllm (pyproject.toml): still running...
+#12 2235.8   Building wheel for vllm (pyproject.toml): still running...
+#12 2299.3   Building wheel for vllm (pyproject.toml): still running...
+#12 2361.0   Building wheel for vllm (pyproject.toml): still running...
+#12 2427.0   Building wheel for vllm (pyproject.toml): still running...
+#12 2487.1   Building wheel for vllm (pyproject.toml): still running...
+#12 2550.7   Building wheel for vllm (pyproject.toml): still running...
+#12 2617.2   Building wheel for vllm (pyproject.toml): still running...
+#12 2680.7   Building wheel for vllm (pyproject.toml): still running...
+#12 2743.1   Building wheel for vllm (pyproject.toml): still running...
+#12 2796.0   Building wheel for vllm (pyproject.toml): finished with status 'done'
+#12 2796.3   Created wheel for vllm: filename=vllm-0.1.dev1+g0a5cbf633.cu132-cp312-cp312-linux_aarch64.whl size=455752862 sha256=306c040ed56b742e3a66e010e946c64a6d66beed2c33e59ebc4252ea209e32ca
+#12 2796.3   Stored in directory: /tmp/pip-ephem-wheel-cache-h3ed1llv/wheels/be/16/c1/367c544384017c548a18cd5b8ec9d158b60362a7ae1a22dff3
+#12 2796.3 Successfully built vllm
+#12 2796.3 Installing collected packages: vllm
+#12 2796.3   Attempting uninstall: vllm
+#12 2796.3     Found existing installation: vllm 0.22.1rc1.dev112+g3f0a91bb9
+#12 2796.4     Uninstalling vllm-0.22.1rc1.dev112+g3f0a91bb9:
+#12 2797.9       Successfully uninstalled vllm-0.22.1rc1.dev112+g3f0a91bb9
+#12 2803.5 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+#12 2803.5 Successfully installed vllm-0.1.dev1+g0a5cbf633.cu132
+#12 2806.1 vllm 0.1.dev1+g0a5cbf633
+#12 DONE 2806.9s
+
+#13 [stage-1 2/3] COPY --from=builder /usr/local/lib/python3.12/dist-packages/vllm /usr/local/lib/python3.12/dist-packages/vllm
+#13 DONE 2.0s
+
+#14 [stage-1 3/3] COPY --from=builder /commit.txt /opt/vllm/commit.txt
+#14 DONE 0.1s
+
+#15 exporting to image
+#15 exporting layers
+#15 exporting layers 2.4s done
+#15 writing image sha256:6804ccce1df9be66298afe73960ce0d591ae66dbb3b2eb1953e5b49a2c45f12e done
+#15 naming to 10.161.176.9:8443/inferstation/vllm-cuda-spark:nightly-20260603 done
+#15 DONE 2.4s
+→ docker push from spark2
+The push refers to repository [10.161.176.9:8443/inferstation/vllm-cuda-spark]
+a96632ee5071: Preparing
+1101eeccbd38: Preparing
+caa68d854e77: Preparing
+2be43a177e8e: Preparing
+4749c64cc18c: Preparing
+7831c07dbd73: Preparing
+f54cc388cada: Preparing
+edb3363c6909: Preparing
+45a7d4c3847e: Preparing
+5f70bf18a086: Preparing
+53d5d6331548: Preparing
+a411934b4a1e: Preparing
+c9ae091c582c: Preparing
+9c94c8646937: Preparing
+05ad40f63e2a: Preparing
+0d2c48bb04bf: Preparing
+f31723bf23b5: Preparing
+edb3363c6909: Waiting
+0d67433be65e: Preparing
+45a7d4c3847e: Waiting
+5f70bf18a086: Waiting
+dbd68f4f2edd: Preparing
+53d5d6331548: Waiting
+a411934b4a1e: Waiting
+d3091f50135d: Preparing
+c9ae091c582c: Waiting
+d3091f50135d: Preparing
+9c94c8646937: Waiting
+85c1537978d3: Preparing
+05ad40f63e2a: Waiting
+b0aa47883f86: Preparing
+1d210d5af550: Preparing
+0d2c48bb04bf: Waiting
+f31723bf23b5: Waiting
+0d67433be65e: Waiting
+14f61fb65012: Preparing
+dbd68f4f2edd: Waiting
+d3091f50135d: Waiting
+760d08a1c73d: Preparing
+b64d02c42a23: Preparing
+b5de74ba2a18: Preparing
+b7ec8fd7c485: Preparing
+baa1952ab39e: Preparing
+e4e9bbb9e44e: Preparing
+544242a509ad: Preparing
+0d1a800648d7: Preparing
+85c1537978d3: Waiting
+b0aa47883f86: Waiting
+b64d02c42a23: Waiting
+b5de74ba2a18: Waiting
+b7ec8fd7c485: Waiting
+baa1952ab39e: Waiting
+1d210d5af550: Waiting
+e4e9bbb9e44e: Waiting
+544242a509ad: Waiting
+14f61fb65012: Waiting
+0d1a800648d7: Waiting
+760d08a1c73d: Waiting
+7831c07dbd73: Waiting
+f54cc388cada: Waiting
+a96632ee5071: Pushed
+4749c64cc18c: Pushed
+7831c07dbd73: Pushed
+f54cc388cada: Pushed
+45a7d4c3847e: Pushed
+5f70bf18a086: Layer already exists
+53d5d6331548: Pushed
+a411934b4a1e: Pushed
+2be43a177e8e: Pushed
+9c94c8646937: Pushed
+05ad40f63e2a: Pushed
+caa68d854e77: Pushed
+1101eeccbd38: Pushed
+0d67433be65e: Pushed
+dbd68f4f2edd: Pushed
+d3091f50135d: Pushed
+85c1537978d3: Pushed
+b0aa47883f86: Pushed
+c9ae091c582c: Pushed
+1d210d5af550: Pushed
+760d08a1c73d: Pushed
+b64d02c42a23: Pushed
+b5de74ba2a18: Pushed
+b7ec8fd7c485: Layer already exists
+baa1952ab39e: Layer already exists
+e4e9bbb9e44e: Layer already exists
+544242a509ad: Layer already exists
+0d1a800648d7: Layer already exists
+edb3363c6909: Pushed
+0d2c48bb04bf: Pushed
+14f61fb65012: Pushed
+f31723bf23b5: Pushed
+nightly-20260603: digest: sha256:21ea8a5f8b9a2ed109117e6262f1129eecbef0c0bf959c5bf93c6252dc89523f size: 7250
+→ also tag + push :latest -> 10.161.176.9:8443/inferstation/vllm-cuda-spark:latest
+The push refers to repository [10.161.176.9:8443/inferstation/vllm-cuda-spark]
+a96632ee5071: Preparing
+1101eeccbd38: Preparing
+caa68d854e77: Preparing
+2be43a177e8e: Preparing
+4749c64cc18c: Preparing
+7831c07dbd73: Preparing
+f54cc388cada: Preparing
+edb3363c6909: Preparing
+45a7d4c3847e: Preparing
+5f70bf18a086: Preparing
+53d5d6331548: Preparing
+a411934b4a1e: Preparing
+c9ae091c582c: Preparing
+9c94c8646937: Preparing
+7831c07dbd73: Waiting
+05ad40f63e2a: Preparing
+f54cc388cada: Waiting
+edb3363c6909: Waiting
+0d2c48bb04bf: Preparing
+c9ae091c582c: Waiting
+f31723bf23b5: Preparing
+0d67433be65e: Preparing
+53d5d6331548: Waiting
+45a7d4c3847e: Waiting
+dbd68f4f2edd: Preparing
+5f70bf18a086: Waiting
+a411934b4a1e: Waiting
+d3091f50135d: Preparing
+d3091f50135d: Preparing
+85c1537978d3: Preparing
+b0aa47883f86: Preparing
+1d210d5af550: Preparing
+14f61fb65012: Preparing
+760d08a1c73d: Preparing
+b64d02c42a23: Preparing
+b5de74ba2a18: Preparing
+b7ec8fd7c485: Preparing
+baa1952ab39e: Preparing
+e4e9bbb9e44e: Preparing
+9c94c8646937: Waiting
+544242a509ad: Preparing
+05ad40f63e2a: Waiting
+b0aa47883f86: Waiting
+0d2c48bb04bf: Waiting
+1d210d5af550: Waiting
+b64d02c42a23: Waiting
+f31723bf23b5: Waiting
+14f61fb65012: Waiting
+b5de74ba2a18: Waiting
+0d1a800648d7: Preparing
+0d67433be65e: Waiting
+760d08a1c73d: Waiting
+85c1537978d3: Waiting
+d3091f50135d: Waiting
+b7ec8fd7c485: Waiting
+dbd68f4f2edd: Waiting
+544242a509ad: Waiting
+0d1a800648d7: Waiting
+baa1952ab39e: Waiting
+e4e9bbb9e44e: Waiting
+caa68d854e77: Layer already exists
+1101eeccbd38: Layer already exists
+a96632ee5071: Layer already exists
+4749c64cc18c: Layer already exists
+2be43a177e8e: Layer already exists
+7831c07dbd73: Layer already exists
+45a7d4c3847e: Layer already exists
+f54cc388cada: Layer already exists
+5f70bf18a086: Layer already exists
+edb3363c6909: Layer already exists
+53d5d6331548: Layer already exists
+a411934b4a1e: Layer already exists
+c9ae091c582c: Layer already exists
+05ad40f63e2a: Layer already exists
+9c94c8646937: Layer already exists
+0d2c48bb04bf: Layer already exists
+f31723bf23b5: Layer already exists
+d3091f50135d: Layer already exists
+0d67433be65e: Layer already exists
+dbd68f4f2edd: Layer already exists
+85c1537978d3: Layer already exists
+b0aa47883f86: Layer already exists
+14f61fb65012: Layer already exists
+1d210d5af550: Layer already exists
+760d08a1c73d: Layer already exists
+b64d02c42a23: Layer already exists
+b5de74ba2a18: Layer already exists
+544242a509ad: Layer already exists
+e4e9bbb9e44e: Layer already exists
+b7ec8fd7c485: Layer already exists
+baa1952ab39e: Layer already exists
+0d1a800648d7: Layer already exists
+latest: digest: sha256:21ea8a5f8b9a2ed109117e6262f1129eecbef0c0bf959c5bf93c6252dc89523f size: 7250
+✓ vllm-cuda-spark done -> 10.161.176.9:8443/inferstation/vllm-cuda-spark:nightly-20260603
+
+=== [build] vllm-rocm-halo -> 10.161.176.9:8443/inferstation/vllm-rocm-halo:nightly-20260603 ===
+→ rsync context to halo6:/tmp/inferstation-build/vllm-rocm-halo
+→ docker build on halo6 (args: --build-arg VLLM_TAG=v0.22.0 --build-arg PYTORCH_ROCM_ARCH=gfx1151 --build-arg VLLM_BASE=rocm/vllm:rocm7.13.0_gfx1151_ubuntu24.04_py3.13_pytorch_2.10.0_vllm_0.19.1 --build-arg VLLM_TAG=main)
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 4.74kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/rocm/vllm:rocm7.13.0_gfx1151_ubuntu24.04_py3.13_pytorch_2.10.0_vllm_0.19.1
+#2 DONE 0.1s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 2B done
+#3 DONE 0.0s
+
+#4 [builder  1/10] FROM docker.io/rocm/vllm:rocm7.13.0_gfx1151_ubuntu24.04_py3.13_pytorch_2.10.0_vllm_0.19.1@sha256:394194d36edcf9b36bcb563e143b21b80e64e7d04f33a447b448c0c0c00c04a8
+#4 resolve docker.io/rocm/vllm:rocm7.13.0_gfx1151_ubuntu24.04_py3.13_pytorch_2.10.0_vllm_0.19.1@sha256:394194d36edcf9b36bcb563e143b21b80e64e7d04f33a447b448c0c0c00c04a8 0.0s done
+#4 DONE 0.0s
+
+#5 [stage-1 3/4] COPY --from=builder /opt/python/lib/python3.13/site-packages/vllm /opt/python/lib/python3.13/site-packages/vllm
+#5 CACHED
+
+#6 [builder  7/10] RUN if   [ -f requirements/rocm.txt ];     then REQ=requirements/rocm.txt;        elif [ -f requirements-rocm.txt ];     then REQ=requirements-rocm.txt;        elif [ -f requirements/rocm-build.txt ];then REQ=requirements/rocm-build.txt;        else REQ=""; fi  && if [ -n "$REQ" ]; then echo "using $REQ" && pip install -r "$REQ";        else echo "no rocm requirements file in this tag, skipping"; fi
+#6 CACHED
+
+#7 [builder  9/10] RUN python3 -c "import vllm, torch; print('vllm', vllm.__version__, 'torch', torch.__version__, 'hip', torch.version.hip)"
+#7 CACHED
+
+#8 [builder 10/10] RUN rm -rf /opt/vllm-src /root/.cache/pip /root/.cache/ccache
+#8 CACHED
+
+#9 [builder  4/10] WORKDIR /opt/vllm-src
+#9 CACHED
+
+#10 [stage-1 2/4] RUN pip uninstall -y vllm 2>/dev/null || true
+#10 CACHED
+
+#11 [builder  3/10] RUN pip install --upgrade pip  && pip uninstall -y vllm vllm-flash-attn flashinfer flashinfer-python 2>/dev/null || true
+#11 CACHED
+
+#12 [builder  6/10] RUN pip install --upgrade         numba scipy 'huggingface-hub[cli,hf_transfer]' setuptools_scm         setuptools wheel cmake ninja  && pip install 'numpy<2'
+#12 CACHED
+
+#13 [builder  2/10] RUN apt-get update && apt-get install -y --no-install-recommends         git ca-certificates build-essential cmake ninja-build ccache         python3-dev python3-pip     && rm -rf /var/lib/apt/lists/*
+#13 CACHED
+
+#14 [builder  5/10] RUN git clone --depth=1 --branch "main" "https://github.com/vllm-project/vllm.git" . 2>/dev/null  || (git clone "https://github.com/vllm-project/vllm.git" . && git fetch --depth=1 origin "main" && git checkout FETCH_HEAD)
+#14 CACHED
+
+#15 [builder  8/10] RUN VLLM_TARGET_DEVICE=rocm     PYTORCH_ROCM_ARCH=gfx1151     pip install .         --no-build-isolation         --no-deps         --verbose
+#15 CACHED
+
+#16 [stage-1 4/4] COPY --from=builder /opt/python/lib/python3.13/site-packages/vllm-*.dist-info /opt/python/lib/python3.13/site-packages/
+#16 CACHED
+
+#17 exporting to image
+#17 exporting layers done
+#17 exporting manifest sha256:3efe83859dd56bd657267d2ed0a3f923ae8db20a3939b9a3067be4b67a8c8857 done
+#17 exporting config sha256:0315e340c1784117fb9ee497bf263f003e2d7eaed426535e66173b21b9f01ef4 done
+#17 exporting attestation manifest sha256:a10dd1197b48f6608eb8e14c63f3f1349467054d546acdee8c5b31e016a9087d 0.0s done
+#17 exporting manifest list sha256:73813c730c1f90ca72fa919311c81ac97c98b8b99a311acaf118754cc66f627a 0.0s done
+#17 naming to 10.161.176.9:8443/inferstation/vllm-rocm-halo:nightly-20260603 done
+#17 unpacking to 10.161.176.9:8443/inferstation/vllm-rocm-halo:nightly-20260603 0.0s done
+#17 DONE 0.1s
+→ docker push from halo6
+The push refers to repository [10.161.176.9:8443/inferstation/vllm-rocm-halo]
+af5423d362b8: Layer already exists
+191c74e483c4: Layer already exists
+ccddc4571078: Layer already exists
+c7bc5cd72084: Layer already exists
+7ec55728fa73: Layer already exists
+196b77d4d3f8: Layer already exists
+e73b75bc50be: Layer already exists
+aebdcc356425: Layer already exists
+21c41e452679: Layer already exists
+b1f3976ddeb2: Layer already exists
+ac5b14c6f8e7: Layer already exists
+17b96410c253: Layer already exists
+deaa3b3d4524: Layer already exists
+f448594c2d67: Pushed
+d1a71ff21e24: Layer already exists
+e27c5c100445: Layer already exists
+31513e0a4b50: Layer already exists
+36c40e2bb533: Layer already exists
+f184b06eb2f7: Layer already exists
+4f4fb700ef54: Layer already exists
+55cabb9c8b67: Layer already exists
+33e0c3514368: Layer already exists
+6bceceb297be: Layer already exists
+2563fe42d9a9: Layer already exists
+b40150c1c271: Layer already exists
+ebb33317f88c: Layer already exists
+2bac9bab9bc4: Layer already exists
+nightly-20260603: digest: sha256:73813c730c1f90ca72fa919311c81ac97c98b8b99a311acaf118754cc66f627a size: 856
+→ also tag + push :latest -> 10.161.176.9:8443/inferstation/vllm-rocm-halo:latest
+The push refers to repository [10.161.176.9:8443/inferstation/vllm-rocm-halo]
+b40150c1c271: Layer already exists
+6bceceb297be: Layer already exists
+21c41e452679: Layer already exists
+36c40e2bb533: Layer already exists
+17b96410c253: Layer already exists
+31513e0a4b50: Layer already exists
+2563fe42d9a9: Layer already exists
+d1a71ff21e24: Layer already exists
+f448594c2d67: Already exists
+55cabb9c8b67: Layer already exists
+ac5b14c6f8e7: Layer already exists
+e73b75bc50be: Layer already exists
+af5423d362b8: Layer already exists
+ebb33317f88c: Layer already exists
+ccddc4571078: Layer already exists
+f184b06eb2f7: Layer already exists
+4f4fb700ef54: Layer already exists
+196b77d4d3f8: Layer already exists
+aebdcc356425: Layer already exists
+c7bc5cd72084: Layer already exists
+e27c5c100445: Layer already exists
+33e0c3514368: Layer already exists
+191c74e483c4: Layer already exists
+b1f3976ddeb2: Layer already exists
+7ec55728fa73: Layer already exists
+deaa3b3d4524: Layer already exists
+2bac9bab9bc4: Layer already exists
+latest: digest: sha256:73813c730c1f90ca72fa919311c81ac97c98b8b99a311acaf118754cc66f627a size: 856
+✓ vllm-rocm-halo done -> 10.161.176.9:8443/inferstation/vllm-rocm-halo:nightly-20260603
+
+=== [mirror] llama-vulkan-spark -> 10.161.176.9:8443/inferstation/llama-vulkan-spark:nightly-20260603 ===
+→ source_image=ghcr.io/ggml-org/llama.cpp:full-vulkan
+→ docker pull on spark2
+full-vulkan: Pulling from ggml-org/llama.cpp
+Digest: sha256:a2cc51df8e2d5095239df7a02af31aee06a97c0e478676edc6a1e2fe4908fa21
+Status: Image is up to date for ghcr.io/ggml-org/llama.cpp:full-vulkan
+ghcr.io/ggml-org/llama.cpp:full-vulkan
+→ docker tag + push to 10.161.176.9:8443/inferstation/llama-vulkan-spark:nightly-20260603 (and :latest)
+The push refers to repository [10.161.176.9:8443/inferstation/llama-vulkan-spark]
+18c2bf550b46: Preparing
+5f70bf18a086: Preparing
+a532b0c00a7b: Preparing
+58bc27330d52: Preparing
+18bf7795eaa0: Preparing
+275233e882bb: Preparing
+5cde16a3f2e1: Preparing
+275233e882bb: Waiting
+5cde16a3f2e1: Waiting
+5f70bf18a086: Layer already exists
+18bf7795eaa0: Layer already exists
+a532b0c00a7b: Layer already exists
+18c2bf550b46: Layer already exists
+58bc27330d52: Layer already exists
+275233e882bb: Layer already exists
+5cde16a3f2e1: Layer already exists
+nightly-20260603: digest: sha256:356ac31953b543c976c743d9ed199a3ab0bf14c0cb1ef624df11d2f5b8f95949 size: 1792
+The push refers to repository [10.161.176.9:8443/inferstation/llama-vulkan-spark]
+18c2bf550b46: Preparing
+5f70bf18a086: Preparing
+a532b0c00a7b: Preparing
+58bc27330d52: Preparing
+18bf7795eaa0: Preparing
+275233e882bb: Preparing
+5cde16a3f2e1: Preparing
+5cde16a3f2e1: Waiting
+275233e882bb: Waiting
+a532b0c00a7b: Layer already exists
+18c2bf550b46: Layer already exists
+5f70bf18a086: Layer already exists
+58bc27330d52: Layer already exists
+18bf7795eaa0: Layer already exists
+5cde16a3f2e1: Layer already exists
+275233e882bb: Layer already exists
+latest: digest: sha256:356ac31953b543c976c743d9ed199a3ab0bf14c0cb1ef624df11d2f5b8f95949 size: 1792
+✓ llama-vulkan-spark done -> 10.161.176.9:8443/inferstation/llama-vulkan-spark:nightly-20260603
+
+=== [mirror] llama-vulkan-halo -> 10.161.176.9:8443/inferstation/llama-vulkan-halo:nightly-20260603 ===
+→ source_image=ghcr.io/ggml-org/llama.cpp:full-vulkan
+→ docker pull on halo6
+full-vulkan: Pulling from ggml-org/llama.cpp
+Digest: sha256:a2cc51df8e2d5095239df7a02af31aee06a97c0e478676edc6a1e2fe4908fa21
+Status: Image is up to date for ghcr.io/ggml-org/llama.cpp:full-vulkan
+ghcr.io/ggml-org/llama.cpp:full-vulkan
+→ docker tag + push to 10.161.176.9:8443/inferstation/llama-vulkan-halo:nightly-20260603 (and :latest)
+The push refers to repository [10.161.176.9:8443/inferstation/llama-vulkan-halo]
+2c76b5023d00: Layer already exists
+1c24335ddd46: Layer already exists
+c3c21eb06aa1: Layer already exists
+4f4fb700ef54: Layer already exists
+d797f53c8111: Layer already exists
+6f5c5aa4e145: Layer already exists
+5ed2ae8c5d10: Layer already exists
+nightly-20260603: digest: sha256:4ece4ade710358655f4c771ba7387aae8adb7425f55efed4329a51e47e941622 size: 2129
+
+ Info -> Not all multiplatform-content is present and only the available single-platform image was pushed
+         [31msha256:a2cc51df8e2d5095239df7a02af31aee06a97c0e478676edc6a1e2fe4908fa21[0m -> [32msha256:4ece4ade710358655f4c771ba7387aae8adb7425f55efed4329a51e47e941622[0m
+The push refers to repository [10.161.176.9:8443/inferstation/llama-vulkan-halo]
+6f5c5aa4e145: Layer already exists
+5ed2ae8c5d10: Layer already exists
+2c76b5023d00: Layer already exists
+1c24335ddd46: Layer already exists
+d797f53c8111: Layer already exists
+c3c21eb06aa1: Layer already exists
+4f4fb700ef54: Layer already exists
+latest: digest: sha256:4ece4ade710358655f4c771ba7387aae8adb7425f55efed4329a51e47e941622 size: 2129
+
+ Info -> Not all multiplatform-content is present and only the available single-platform image was pushed
+         [31msha256:a2cc51df8e2d5095239df7a02af31aee06a97c0e478676edc6a1e2fe4908fa21[0m -> [32msha256:4ece4ade710358655f4c771ba7387aae8adb7425f55efed4329a51e47e941622[0m
+✓ llama-vulkan-halo done -> 10.161.176.9:8443/inferstation/llama-vulkan-halo:nightly-20260603
+latest: Pulling from inferstation/llama-cuda-spark
+Digest: sha256:34f155dba545d2f136544fd67152e8d7fcdf8689e9c4b9eb6b7b30edd8b0b520
+Status: Image is up to date for 10.161.176.9:8443/inferstation/llama-cuda-spark:latest
+10.161.176.9:8443/inferstation/llama-cuda-spark:latest
+latest: Pulling from inferstation/llama-vulkan-spark
+Digest: sha256:356ac31953b543c976c743d9ed199a3ab0bf14c0cb1ef624df11d2f5b8f95949
+Status: Image is up to date for 10.161.176.9:8443/inferstation/llama-vulkan-spark:latest
+10.161.176.9:8443/inferstation/llama-vulkan-spark:latest
+latest: Pulling from inferstation/vllm-cuda-spark
+12403f88a105: Already exists
+c327bf13a03a: Already exists
+5c04029b1239: Already exists
+cadec1e93194: Already exists
+526d5438c009: Already exists
+a7297278397c: Pulling fs layer
+27d6ce9b5994: Pulling fs layer
+63136717c5aa: Pulling fs layer
+bf95eb21c065: Pulling fs layer
+26eaaf0513e9: Pulling fs layer
+bf95eb21c065: Waiting
+eef89cd94df1: Pulling fs layer
+26eaaf0513e9: Waiting
+5f704c80e358: Pulling fs layer
+eef89cd94df1: Waiting
+2c6062e0ee0b: Pulling fs layer
+5f704c80e358: Waiting
+2c6062e0ee0b: Waiting
+b2f6274ec968: Pulling fs layer
+b2f6274ec968: Waiting
+9f858dac54ef: Pulling fs layer
+478fb34bfc3f: Pulling fs layer
+9f858dac54ef: Waiting
+3dffda9c94f9: Pulling fs layer
+478fb34bfc3f: Waiting
+55ef63138cf0: Pulling fs layer
+3dffda9c94f9: Waiting
+719563b5a851: Pulling fs layer
+55ef63138cf0: Waiting
+719563b5a851: Waiting
+7b9c545e809d: Pulling fs layer
+c70c49a935fa: Pulling fs layer
+7b9c545e809d: Waiting
+a7297278397c: Verifying Checksum
+a7297278397c: Download complete
+d165faa71aee: Pulling fs layer
+c70c49a935fa: Waiting
+4f4fb700ef54: Pulling fs layer
+d165faa71aee: Waiting
+c86cce3b4ba7: Pulling fs layer
+4f4fb700ef54: Waiting
+27d6ce9b5994: Verifying Checksum
+27d6ce9b5994: Download complete
+8a6c2861b77a: Pulling fs layer
+c86cce3b4ba7: Waiting
+63947660b5be: Pulling fs layer
+e15acbeaf7fa: Pulling fs layer
+8a6c2861b77a: Waiting
+63947660b5be: Waiting
+89ed5f095bd1: Pulling fs layer
+e08cabb5800d: Pulling fs layer
+e15acbeaf7fa: Waiting
+89ed5f095bd1: Waiting
+a9f85860421f: Pulling fs layer
+e08cabb5800d: Waiting
+7d6195435fc5: Pulling fs layer
+a9f85860421f: Waiting
+b2270b0ae279: Pulling fs layer
+7d6195435fc5: Waiting
+b2270b0ae279: Waiting
+a7297278397c: Pull complete
+27d6ce9b5994: Pull complete
+26eaaf0513e9: Verifying Checksum
+26eaaf0513e9: Download complete
+eef89cd94df1: Verifying Checksum
+eef89cd94df1: Download complete
+5f704c80e358: Verifying Checksum
+5f704c80e358: Download complete
+2c6062e0ee0b: Verifying Checksum
+2c6062e0ee0b: Download complete
+b2f6274ec968: Download complete
+9f858dac54ef: Verifying Checksum
+9f858dac54ef: Download complete
+63136717c5aa: Verifying Checksum
+63136717c5aa: Download complete
+63136717c5aa: Pull complete
+bf95eb21c065: Verifying Checksum
+bf95eb21c065: Download complete
+55ef63138cf0: Verifying Checksum
+55ef63138cf0: Download complete
+719563b5a851: Verifying Checksum
+719563b5a851: Download complete
+3dffda9c94f9: Verifying Checksum
+3dffda9c94f9: Download complete
+c70c49a935fa: Verifying Checksum
+c70c49a935fa: Download complete
+7b9c545e809d: Verifying Checksum
+7b9c545e809d: Download complete
+4f4fb700ef54: Verifying Checksum
+4f4fb700ef54: Download complete
+c86cce3b4ba7: Verifying Checksum
+c86cce3b4ba7: Download complete
+d165faa71aee: Verifying Checksum
+d165faa71aee: Download complete
+63947660b5be: Verifying Checksum
+63947660b5be: Download complete
+e15acbeaf7fa: Verifying Checksum
+e15acbeaf7fa: Download complete
+89ed5f095bd1: Verifying Checksum
+89ed5f095bd1: Download complete
+8a6c2861b77a: Verifying Checksum
+8a6c2861b77a: Download complete
+a9f85860421f: Verifying Checksum
+a9f85860421f: Download complete
+e08cabb5800d: Verifying Checksum
+e08cabb5800d: Download complete
+b2270b0ae279: Verifying Checksum
+b2270b0ae279: Download complete
+7d6195435fc5: Verifying Checksum
+7d6195435fc5: Download complete
+478fb34bfc3f: Verifying Checksum
+478fb34bfc3f: Download complete
+bf95eb21c065: Pull complete
+26eaaf0513e9: Pull complete
+eef89cd94df1: Pull complete
+5f704c80e358: Pull complete
+2c6062e0ee0b: Pull complete
+b2f6274ec968: Pull complete
+9f858dac54ef: Pull complete
+478fb34bfc3f: Pull complete
+3dffda9c94f9: Pull complete
+55ef63138cf0: Pull complete
+719563b5a851: Pull complete
+7b9c545e809d: Pull complete
+c70c49a935fa: Pull complete
+d165faa71aee: Pull complete
+4f4fb700ef54: Pull complete
+c86cce3b4ba7: Pull complete
+8a6c2861b77a: Pull complete
+63947660b5be: Pull complete
+e15acbeaf7fa: Pull complete
+89ed5f095bd1: Pull complete
+e08cabb5800d: Pull complete
+a9f85860421f: Pull complete
+7d6195435fc5: Pull complete
+b2270b0ae279: Pull complete
+Digest: sha256:21ea8a5f8b9a2ed109117e6262f1129eecbef0c0bf959c5bf93c6252dc89523f
+Status: Downloaded newer image for 10.161.176.9:8443/inferstation/vllm-cuda-spark:latest
+10.161.176.9:8443/inferstation/vllm-cuda-spark:latest
+done
+latest: Pulling from inferstation/llama-cuda-spark
+Digest: sha256:34f155dba545d2f136544fd67152e8d7fcdf8689e9c4b9eb6b7b30edd8b0b520
+Status: Image is up to date for 10.161.176.9:8443/inferstation/llama-cuda-spark:latest
+10.161.176.9:8443/inferstation/llama-cuda-spark:latest
+latest: Pulling from inferstation/llama-vulkan-spark
+Digest: sha256:356ac31953b543c976c743d9ed199a3ab0bf14c0cb1ef624df11d2f5b8f95949
+Status: Image is up to date for 10.161.176.9:8443/inferstation/llama-vulkan-spark:latest
+10.161.176.9:8443/inferstation/llama-vulkan-spark:latest
+latest: Pulling from inferstation/vllm-cuda-spark
+Digest: sha256:21ea8a5f8b9a2ed109117e6262f1129eecbef0c0bf959c5bf93c6252dc89523f
+Status: Image is up to date for 10.161.176.9:8443/inferstation/vllm-cuda-spark:latest
+10.161.176.9:8443/inferstation/vllm-cuda-spark:latest
+done
+latest: Pulling from inferstation/llama-vulkan-halo
+Digest: sha256:4ece4ade710358655f4c771ba7387aae8adb7425f55efed4329a51e47e941622
+Status: Image is up to date for 10.161.176.9:8443/inferstation/llama-vulkan-halo:latest
+10.161.176.9:8443/inferstation/llama-vulkan-halo:latest
+latest: Pulling from inferstation/llama-rocm-halo
+Digest: sha256:888710e5c331d051b49dda3396ad779692073042d430ac5f670911427fdc4613
+Status: Downloaded newer image for 10.161.176.9:8443/inferstation/llama-rocm-halo:latest
+10.161.176.9:8443/inferstation/llama-rocm-halo:latest
+latest: Pulling from inferstation/vllm-rocm-halo
+Digest: sha256:73813c730c1f90ca72fa919311c81ac97c98b8b99a311acaf118754cc66f627a
+Status: Downloaded newer image for 10.161.176.9:8443/inferstation/vllm-rocm-halo:latest
+10.161.176.9:8443/inferstation/vllm-rocm-halo:latest
+done
+latest: Pulling from inferstation/llama-vulkan-halo
+Digest: sha256:4ece4ade710358655f4c771ba7387aae8adb7425f55efed4329a51e47e941622
+Status: Downloaded newer image for 10.161.176.9:8443/inferstation/llama-vulkan-halo:latest
+10.161.176.9:8443/inferstation/llama-vulkan-halo:latest
+latest: Pulling from inferstation/llama-rocm-halo
+Digest: sha256:888710e5c331d051b49dda3396ad779692073042d430ac5f670911427fdc4613
+Status: Image is up to date for 10.161.176.9:8443/inferstation/llama-rocm-halo:latest
+10.161.176.9:8443/inferstation/llama-rocm-halo:latest
+latest: Pulling from inferstation/vllm-rocm-halo
+Digest: sha256:73813c730c1f90ca72fa919311c81ac97c98b8b99a311acaf118754cc66f627a
+Status: Image is up to date for 10.161.176.9:8443/inferstation/vllm-rocm-halo:latest
+10.161.176.9:8443/inferstation/vllm-rocm-halo:latest
+done
+--- repo: llama-cuda-spark ---
+  kept: 2 nightly tag(s); nothing to delete
+--- repo: llama-vulkan-spark ---
+  kept: 2 nightly tag(s); nothing to delete
+--- repo: llama-vulkan-halo ---
+  kept: 2 nightly tag(s); nothing to delete
+--- repo: llama-rocm-halo ---
+  kept: 2 nightly tag(s); nothing to delete
+--- repo: vllm-cuda-spark ---
+  kept: 2 nightly tag(s); nothing to delete
+--- repo: vllm-rocm-halo ---
+  kept: 2 nightly tag(s); nothing to delete
+
+==========================================
+summary  (2026-06-03T17:14:18Z)
+==========================================
+  OK   10s  llama-cuda-spark
+  OK   8s  llama-rocm-halo
+  OK   4171s  vllm-cuda-spark
+  OK   3s  vllm-rocm-halo
+  OK   3s  llama-vulkan-spark
+  OK   3s  llama-vulkan-halo
+  OK   256s  pull-spark1
+  OK   1s  pull-spark2
+  OK   1s  pull-halo5
+  OK   1s  pull-halo6
+  OK   0s  prune

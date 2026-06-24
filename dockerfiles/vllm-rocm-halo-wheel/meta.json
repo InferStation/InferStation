@@ -1,0 +1,21 @@
+{
+  "name": "vllm-rocm-halo-wheel",
+  "kind": "build",
+  "backend": "vllm",
+  "platform": "linux/amd64",
+  "gpu_arch": "gfx1151",
+  "registry": "10.161.176.38:8443/inferstation/vllm-wheel-halo-gfx11",
+  "tag": "gfx11-gfx1151",
+  "build_host": "halo6",
+  "dockerfile": "Dockerfile",
+  "upstream": "https://github.com/ROCm/vllm",
+  "upstream_ref": "gfx11",
+  "build_args": {
+    "VLLM_REPO": "https://github.com/ROCm/vllm.git",
+    "VLLM_TAG": "gfx11",
+    "PYTORCH_ROCM_ARCH": "gfx1151",
+    "VLLM_BASE": "rocm/vllm:rocm7.13.0_gfx1151_ubuntu24.04_py3.13_pytorch_2.10.0_vllm_0.19.1"
+  },
+  "expected_size_mb": 120,
+  "description": "vLLM wheel built from AMD's ROCm/vllm `gfx11` branch (gfx1151-tuned kernels: W4A16 prefill BLOCK_N, GDN prefill shape-keyed config, unquantized-weight stride padding off the gfx11x 4096B cliff). Built on the same rocm/vllm 7.13 / gfx1151 base as the upstream-main wheel, packaged FROM-scratch (.whl + resolved rocm requirements). Incremental via persistent ccache mount. Consumed by the vllm-rocm-halo assembler (the DEFAULT halo line; renamed from vllm-rocm-halo-gfx11). Parallel to the upstream-main vllm-rocm-halo-main (which carries DiffusionGemma); gfx11 trades DiffusionGemma for AMD's gfx1151 perf kernels + keeps FusedMoE.tp_size so AWQ MoE loads without the RoutedExperts regression."
+}

@@ -1,0 +1,13 @@
+{
+  "name": "llama-vulkan-r9700",
+  "kind": "mirror",
+  "backend": "llama.cpp",
+  "platform": "linux/amd64",
+  "gpu_arch": "vulkan-generic",
+  "registry": "10.161.176.38:8443/inferstation/llama-vulkan-r9700",
+  "tag": "upstream-rolling",
+  "source_image": "ghcr.io/ggml-org/llama.cpp:full-vulkan",
+  "mirror_host": "9700x8",
+  "expected_size_mb": 1100,
+  "description": "Upstream ggml-org official Vulkan llama.cpp build, mirrored on the 9700x8 box (x86_64). Runs on AMD Radeon AI PRO R9700 (gfx1201) via mesa RADV (units pass VK_DRIVER_FILES=/usr/share/vulkan/icd.d/radeon_icd.x86_64.json). Same upstream image as llama-vulkan-halo; Vulkan is vendor-agnostic."
+}
