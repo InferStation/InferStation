@@ -41,6 +41,78 @@ HOST_MAP = {
     "NVIDIA DGX Spark": "spark2-shanghai",
 }
 
+DEFAULT_REPRESENTATIVE_UNIT_IDS = [
+    "223339e1dc",
+    "0f74de7ebf",
+    "33acee9370",
+    "4db7e5a52f",
+    "d71494ba88",
+    "3bbd01053e",
+    "44dc3d5888",
+    "520312f017",
+    "bb04014d99",
+    "fbe6c3d46c",
+    "be702df805",
+    "8757aa0b73",
+    "d4dc468b69",
+    "2f7b3e218f",
+    "faea9284ad",
+    "ab6bbafa56",
+    "cf8cc3b683",
+    "bd51058fa8",
+    "2866f5be23",
+    "bbb17a156a",
+    "6b50f83582",
+    "508d11ae81",
+    "b5a6e506c9",
+    "69afa9edd3",
+    "d9cab2e84a",
+    "d11dc6024d",
+    "a3bb54480c",
+    "94265bb66b",
+    "1a271cf80f",
+    "d54c7c95e9",
+    "5fa150dfca",
+    "983e644e94",
+    "nv4090-gemma426ba4bit-bf16-vllm",
+    "nv4090-gemma426ba4bit-bf16-vulkan",
+    "nv4090-gemma426ba4bit-q80-vulkan",
+    "nv4090-gemma426ba4bit-udq4km-vulkan",
+    "nv4090-qwen3635ba3b-bf16-vllm",
+    "nv4090-qwen3635ba3b-bf16-vulkan",
+    "nv4090-qwen3635ba3b-q80-vulkan",
+    "nv4090-qwen3635ba3b-udq4km-vulkan",
+    "r9700-gemma426ba4bit-bf16-vllm",
+    "r9700-gemma426ba4bit-bf16-vulkan",
+    "r9700-gemma426ba4bit-q80-vulkan",
+    "r9700-gemma426ba4bit-udq4km-vulkan",
+    "r9700-mimov25-udq2kxl-vulkan",
+    "r9700-qwen3635ba3b-bf16-vllm",
+    "r9700-qwen3635ba3b-bf16-vulkan",
+    "r9700-qwen3635ba3b-q80-vulkan",
+    "r9700-qwen3635ba3b-udq4km-vulkan",
+    "r9700-step35flash-q4ks-vulkan",
+    "b966fc040b",
+    "b643137087",
+    "5c8e7281de",
+    "b2b43d7074",
+    "f32a8807c9",
+    "667f346635",
+    "242d4e0b0f",
+    "a194f7976d",
+    "51f7f1c9a8",
+    "28d807f63c",
+    "77ae50b925",
+    "d22f86f121",
+    "2ff92ac274",
+    "14c0ca7705",
+    "8988b4ceb7",
+    "8e9b4b18f5",
+    "3e7b9f1196",
+    "8297207d99",
+    "ab00c9d479"
+]
+
 BASE_SUFFIX_RULES = [
     (re.compile(r"-AWQ-4bit$"), ""),
     (re.compile(r"-AWQ-INT4$"), ""),
@@ -86,8 +158,14 @@ def representative_unit_ids() -> list[str]:
         if match:
             seed_ids = json.loads(match.group(1))
 
+    if seed_ids is None:
+        seed_ids = DEFAULT_REPRESENTATIVE_UNIT_IDS
+
+    if not UNITS_DIR.exists():
+        return list(seed_ids)
+
     units_by_id = dict(list_units())
-    candidates = [(uid, units_by_id[uid]) for uid in seed_ids if uid in units_by_id] if seed_ids else list_units()
+    candidates = [(uid, units_by_id[uid]) for uid in seed_ids if uid in units_by_id]
     out: list[str] = []
     for uid, unit in candidates:
         model = unit_model(unit)
