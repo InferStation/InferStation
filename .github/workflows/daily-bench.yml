@@ -2,8 +2,8 @@ name: daily-bench
 
 # Future GitHub-native replacement for the current 4090 crontab daily bench.
 # The existing cron remains authoritative while this workflow is being brought up.
-# Default mode is preview-only so the GitHub path can be validated without
-# dispatching jobs or touching runners.
+# Default mode is preview-only so the GitHub path can be validated on the bench
+# runners without dispatching jobs or touching model-serving containers.
 
 on:
   workflow_dispatch:
@@ -35,17 +35,36 @@ env:
 
 jobs:
   representative-daily-preview:
-    runs-on: [self-hosted, cicd]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - track: halo
+            label: inferstation-halo
+          - track: spark
+            label: inferstation-spark
+          - track: nv4090
+            label: inferstation-nv4090
+          - track: r9700
+            label: inferstation-r9700
+    runs-on:
+      - self-hosted
+      - inferstation-bench
+      - ${{ matrix.label }}
     steps:
       - uses: actions/checkout@v4
-      - name: Build representative daily request body
+      - name: Build representative daily request body on bench runner
         run: |
           set -euo pipefail
+          echo "track=${{ matrix.track }} runner=$RUNNER_NAME arch=$(uname -m)"
           python3 scripts/daily-bench-gha.py --mode preview --trigger '${{ inputs.trigger || 'nightly' }}'
 
   representative-daily-dispatch:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'dispatch' }}
-    runs-on: [self-hosted, cicd]
+    runs-on:
+      - self-hosted
+      - inferstation-bench
+      - inferstation-halo
     steps:
       - uses: actions/checkout@v4
       - name: Dispatch representative daily bench
