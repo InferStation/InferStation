@@ -142,7 +142,11 @@ def unit_quant(unit: dict) -> str:
 
 
 def list_units() -> list[tuple[str, dict]]:
-    if not UNITS_DIR.exists():
+    try:
+        exists = UNITS_DIR.exists()
+    except PermissionError:
+        exists = False
+    if not exists:
         raise SystemExit(f"units dir not found: {UNITS_DIR}")
     rows: list[tuple[str, dict]] = []
     for path in sorted(UNITS_DIR.glob("*.json")):
@@ -161,7 +165,11 @@ def representative_unit_ids() -> list[str]:
     if seed_ids is None:
         seed_ids = DEFAULT_REPRESENTATIVE_UNIT_IDS
 
-    if not UNITS_DIR.exists():
+    try:
+        units_dir_exists = UNITS_DIR.exists()
+    except PermissionError:
+        units_dir_exists = False
+    if not units_dir_exists:
         return list(seed_ids)
 
     units_by_id = dict(list_units())
