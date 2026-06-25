@@ -305,7 +305,11 @@ build_profile() {
         run_on "$build_host" "rm -rf ${remote_dir} && mkdir -p ${remote_dir} && tar -C ${remote_dir} -xzf -"
 
       echo "→ docker build on $build_host (args:${build_args_str})${plat:+ platform=$plat}"
-      run_on "$build_host" "cd ${remote_dir} && docker build ${platarg}${build_args_str} -t ${full_tag} -f ${dockerfile} ."
+      # DOCKER_BUILDKIT=1: the vLLM wheel Dockerfiles use `RUN --mount=type=cache`
+      # (ccache) + `--platform`, both of which REQUIRE BuildKit. The cicd
+      # self-hosted runner's docker does NOT default to BuildKit, so without this
+      # the halo wheel build dies with "the --mount option requires BuildKit".
+      run_on "$build_host" "cd ${remote_dir} && DOCKER_BUILDKIT=1 docker build ${platarg}${build_args_str} -t ${full_tag} -f ${dockerfile} ."
 
       local latest_tag="${registry}:latest"
       if [[ "$push" == "1" ]]; then
