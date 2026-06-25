@@ -10,9 +10,8 @@ name: nightly-build
 #   - one self-hosted runner on cicd (128c/503G, x86) builds the x86 families
 #     by cross-compiling per gfx arch (no GPU needed at build time):
 #       halo  -> gfx1151,  nv4090 -> cuda,  r9700 -> gfx1201
-#   - spark images are arm64 (DGX Spark GB10) and CANNOT build natively on the
-#     x86 cicd box, so build-spark runs on a [self-hosted, spark] runner. Drop
-#     this job (or the spark label) if spark is not being migrated this round.
+#   - spark images are arm64 (DGX Spark GB10), so build-spark mirrors upstream
+#     arm64 images on the x86 cicd box with docker pull --platform.
 #   - ghcr auth uses the GHCR_PAT repo secret (a PAT with write:packages): the
 #     pre-existing ghcr.io/inferstation/* packages were created by that PAT, and
 #     the built-in GITHUB_TOKEN lacks write access to them (permission_denied:
@@ -120,12 +119,63 @@ jobs:
     runs-on: [self-hosted, cicd]
     steps:
       - name: assert today's nightly tags exist in ghcr (fail loudly if a build silently produced nothing)
+        env:
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
         run: |
           set -e
           DATE=$(date -u +%Y%m%d)
           echo "verify nightly-${DATE} for spark/halo/nv4090/r9700 repos under ghcr.io/inferstation"
           echo "spark=${{ needs.build-spark.result }} halo=${{ needs.build-halo.result }} nv4090=${{ needs.build-nv4090.result }} r9700=${{ needs.build-r9700.result }}"
-          test "${{ needs.build-spark.result }}"  != "failure"
-          test "${{ needs.build-halo.result }}"   != "failure"
-          test "${{ needs.build-nv4090.result }}" != "failure"
-          test "${{ needs.build-r9700.result }}"  != "failure"
+
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "manual workflow_dispatch builds intentionally do not move nightly-* tags; skipping nightly tag verification"
+            exit 0
+          fi
+
+          test "${{ needs.build-spark.result }}"  == "success"
+          test "${{ needs.build-halo.result }}"   == "success"
+          test "${{ needs.build-nv4090.result }}" == "success"
+          test "${{ needs.build-r9700.result }}"  == "success"
+
+          if [[ -z "${GHCR_PAT:-}" ]]; then
+            echo "GHCR_PAT is empty; cannot verify private/internal ghcr packages" >&2
+            exit 1
+          fi
+
+          repos=(
+            llama-cuda-spark
+            vllm-cuda-spark
+            llama-vulkan-spark
+            llama-rocm-halo
+            vllm-rocm-halo-main
+            vllm-rocm-halo
+            llama-vulkan-halo
+            llama-cuda-4090
+            vllm-cuda-4090
+            llama-vulkan-4090
+            llama-rocm-r9700
+            vllm-rocm-r9700-main
+            llama-vulkan-r9700
+          )
+          accept='application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.oci.image.manifest.v1+json,application/vnd.docker.distribution.manifest.v2+json'
+          failed=0
+          for repo in "${repos[@]}"; do
+            token=$(curl -fsSL -u "AlisaLi0:${GHCR_PAT}" "https://ghcr.io/token?scope=repository:inferstation/${repo}:pull&service=ghcr.io" \
+              | python3 -c 'import json,sys; print(json.load(sys.stdin).get("token", ""))')
+            if [[ -z "$token" ]]; then
+              echo "MISSING token for ${repo}" >&2
+              failed=1
+              continue
+            fi
+            code=$(curl -sS -o /dev/null -w '%{http_code}' \
+              -H "Authorization: Bearer ${token}" \
+              -H "Accept: ${accept}" \
+              "https://ghcr.io/v2/inferstation/${repo}/manifests/nightly-${DATE}")
+            if [[ "$code" == "200" ]]; then
+              echo "OK ${repo}:nightly-${DATE}"
+            else
+              echo "MISSING ${repo}:nightly-${DATE} (HTTP ${code})" >&2
+              failed=1
+            fi
+          done
+          exit "$failed"
