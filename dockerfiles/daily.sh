@@ -361,18 +361,26 @@ build_pkg_gfx11() {
   fi
 }
 
-# build_r9700_vllm: r9700 vLLM is compiled FROM SOURCE (no wheel profile) on the
-# TheRock gfx1201 base, pinned to the meta's tag (currently v0.22.0-gfx1201).
-# Heavy (~45GB image, compiles vLLM). Produces nightly-<date> + <reltag> + latest.
+# build_r9700_vllm: r9700 vLLM is pinned to an immutable upstream RELEASE (the
+# meta's build_args.VLLM_TAG, currently v0.22.0) — not a moving branch. It uses
+# the SAME wheel-first flow as the halo lines (vllm_build): compile the wheel
+# ONCE on the TheRock gfx1201 base (incremental, persistent ccache mount
+# id=vllm-r9700-ccache), then assemble the thin runtime FROM that wheel (~2 min).
+# Produces nightly-<date> + <reltag> + latest. The legacy single-stage in-place
+# compile (heavy ~45GB image) is kept at vllm-rocm-r9700-main/Dockerfile.legacy.
 build_r9700_vllm() {
-  local profile="vllm-rocm-r9700-main"
+  local profile="vllm-rocm-r9700-main" arch="gfx1201"
   local reltag; reltag=$(jq -r '.tag' "${SCRIPT_DIR}/${profile}/meta.json")
+  # Pinned upstream release (e.g. v0.22.0) = the wheel/assembler ref. vllm_build
+  # derives wheel_tag=<ref>-<arch> and, for a release ref, reuses the wheel if
+  # it is already built (a moving branch would always recompile).
+  local ref; ref=$(jq -r '.build_args.VLLM_TAG' "${SCRIPT_DIR}/${profile}/meta.json")
   if [[ "$MANUAL" == "1" ]]; then
     if harbor_has_tag "$profile" "$reltag"; then
       echo ">>> ${profile}: MANUAL — ${reltag} already built; nothing to do"; return
     fi
-    echo ">>> ${profile}: MANUAL — build ${reltag} (no nightly/latest)"
-    "${SCRIPT_DIR}/build.sh" "$profile" --tag="$reltag" --no-latest
+    echo ">>> ${profile}: MANUAL — wheel+assemble ${ref} as ${reltag} (no nightly/latest)"
+    vllm_build "$profile" "$arch" "$ref" "$reltag" --no-latest
     return
   fi
   if harbor_has_tag "$profile" "$reltag"; then
@@ -381,8 +389,8 @@ build_r9700_vllm() {
     harbor_set_tag "$profile" "$reltag" "latest"  || echo ">>> ${profile}: WARN: could not move :latest"
     return
   fi
-  echo ">>> ${profile}: nightly build (from source, pinned ${reltag}) as ${NIGHTLY} (+${reltag},latest)"
-  if ! "${SCRIPT_DIR}/build.sh" "$profile" --tag="$NIGHTLY" --also-tag="$reltag"; then
+  echo ">>> ${profile}: nightly wheel+assemble (pinned ${ref}) as ${NIGHTLY} (+${reltag},latest)"
+  if ! vllm_build "$profile" "$arch" "$ref" "$NIGHTLY" --also-tag="$reltag"; then
     local rc=$?; echo ">>> ${profile}: build FAILED (rc=$rc)"; return $rc
   fi
 }

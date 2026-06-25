@@ -13,8 +13,9 @@
   "build_args": {
     "VLLM_TAG": "v0.22.0",
     "PYTORCH_ROCM_ARCH": "gfx1201",
-    "VLLM_BASE": "ghcr.io/inferstation/vllm-rocm-r9700:commit-gfx1201-20260619"
+    "VLLM_BASE": "ghcr.io/inferstation/vllm-rocm-r9700:commit-gfx1201-20260619",
+    "WHEEL_IMAGE": "ghcr.io/inferstation/vllm-wheel-r9700:v0.22.0-gfx1201"
   },
-  "expected_size_mb": 45000,
-  "description": "vLLM v0.22.0 compiled from OFFICIAL upstream source (vllm-project/vllm) for AMD Radeon AI PRO R9700 (gfx1201, RDNA4). Compiled in-place on the existing TheRock gfx1201 torch 2.10/rocm7.13 stack (no official rocm/vllm gfx1201 base exists). Replaces the broken prerelease vllm 0.19.1 wheel whose gfx1201 attention/MoE kernels produce garbage output. Build host 9700x8 (32-core EPYC). ROCm is the _rocm_sdk_devel pip package, so ROCM_PATH/HIP_PATH point there, not /opt/rocm."
+  "expected_size_mb": 40000,
+  "description": "vLLM v0.22.0 runtime for the AMD Radeon AI PRO R9700 (gfx1201, RDNA4) ASSEMBLED from a prebuilt upstream-vLLM wheel (vllm-rocm-r9700-main-wheel) installed --no-deps into the TheRock gfx1201 torch 2.10/rocm7.13 base (no official rocm/vllm gfx1201 base exists). Replaces the base's broken prerelease vllm 0.19.1 whose gfx1201 attention/MoE kernels produce garbage output. No source compile in this image (~2 min); rebuild the wheel pkg (vllm-rocm-r9700-main-wheel) first when bumping VLLM_TAG or the TheRock base. Build host 9700x8 (32-core EPYC). ROCm is the _rocm_sdk_devel pip package, so ROCM_PATH/HIP_PATH point there, not /opt/rocm."
 }

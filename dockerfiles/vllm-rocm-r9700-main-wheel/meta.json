@@ -1,0 +1,21 @@
+{
+  "name": "vllm-rocm-r9700-main-wheel",
+  "kind": "build",
+  "backend": "vllm",
+  "platform": "linux/amd64",
+  "gpu_arch": "gfx1201",
+  "registry": "ghcr.io/inferstation/vllm-wheel-r9700",
+  "tag": "v0.22.0-gfx1201",
+  "build_host": "9700x8",
+  "dockerfile": "Dockerfile",
+  "upstream": "https://github.com/vllm-project/vllm",
+  "upstream_ref": "v0.22.0",
+  "build_args": {
+    "VLLM_REPO": "https://github.com/vllm-project/vllm.git",
+    "VLLM_TAG": "v0.22.0",
+    "PYTORCH_ROCM_ARCH": "gfx1201",
+    "VLLM_BASE": "ghcr.io/inferstation/vllm-rocm-r9700:commit-gfx1201-20260619"
+  },
+  "expected_size_mb": 500,
+  "description": "vLLM v0.22.0 wheel compiled from OFFICIAL upstream source (vllm-project/vllm) for the AMD Radeon AI PRO R9700 (gfx1201, RDNA4), on the TheRock gfx1201 torch 2.10/rocm7.13 base (no official rocm/vllm gfx1201 base exists). FROM-scratch wheel artifact; incremental via a persistent ccache mount (id=vllm-r9700-ccache, shared with the legacy in-place build). Consumed by the vllm-rocm-r9700-main assembler. Rebuild only when bumping VLLM_TAG or the TheRock base. ROCm is the _rocm_sdk_devel pip package (ROCM_PATH/HIP_PATH point there); the build needs the rust toolchain for vLLM's Rust extension. Build host 9700x8 (32-core EPYC)."
+}
