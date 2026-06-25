@@ -14,14 +14,15 @@
     "name": "Llama-3.1-8B-Instruct-AWQ-INT4",
     "params_b": null,
     "quantization": "AWQ-INT4",
-    "source_url": "https://huggingface.co/hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4"
+    "source_url": "https://huggingface.co/hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4",
+    "scheme": "W4A16"
   },
   "engine": {
     "slug": "vllm",
     "name": "vLLM",
     "version": "main",
     "commit": "",
-    "backend": "ROCm/HIP \u00b7 TRITON_ATTN",
+    "backend": "ROCm/HIP · TRITON_ATTN",
     "build_flags": "VLLM_TARGET_DEVICE=rocm (gfx1200)"
   },
   "command": "",

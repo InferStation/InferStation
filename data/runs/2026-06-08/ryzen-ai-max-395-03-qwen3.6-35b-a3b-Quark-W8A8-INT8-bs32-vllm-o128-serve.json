@@ -14,7 +14,8 @@
     "name": "Qwen3.6-35B-A3B",
     "params_b": null,
     "quantization": "Quark-W8A8-INT8",
-    "source_url": "https://huggingface.co/unsloth/Qwen3.6-35B-A3B-GGUF"
+    "source_url": "https://huggingface.co/unsloth/Qwen3.6-35B-A3B-GGUF",
+    "scheme": "W8A8"
   },
   "engine": {
     "slug": "vllm",

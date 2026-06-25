@@ -14,7 +14,8 @@
     "name": "Llama-3.1-8B-Instruct-AWQ-INT4",
     "params_b": null,
     "quantization": "AWQ-INT4",
-    "source_url": "https://huggingface.co/hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4"
+    "source_url": "https://huggingface.co/hugging-quants/Meta-Llama-3.1-8B-Instruct-AWQ-INT4",
+    "scheme": "W4A16"
   },
   "engine": {
     "slug": "vllm",

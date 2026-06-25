@@ -14,7 +14,8 @@
     "name": "Qwen2.5-0.5B-Instruct",
     "params_b": null,
     "quantization": "AWQ-LLM",
-    "source_url": "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-AWQ"
+    "source_url": "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-AWQ",
+    "scheme": "W4A16"
   },
   "engine": {
     "slug": "vllm",

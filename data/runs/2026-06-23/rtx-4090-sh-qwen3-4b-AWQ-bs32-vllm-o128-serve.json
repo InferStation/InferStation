@@ -14,7 +14,8 @@
     "name": "Qwen3-4B",
     "params_b": null,
     "quantization": "AWQ",
-    "source_url": "https://huggingface.co/unsloth/Qwen3-4B-GGUF"
+    "source_url": "https://huggingface.co/unsloth/Qwen3-4B-GGUF",
+    "scheme": "W4A16"
   },
   "engine": {
     "slug": "vllm",

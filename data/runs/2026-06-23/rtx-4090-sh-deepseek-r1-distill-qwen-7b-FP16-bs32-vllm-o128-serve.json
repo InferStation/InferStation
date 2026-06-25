@@ -14,7 +14,8 @@
     "name": "DeepSeek-R1-Distill-Qwen-7B",
     "params_b": null,
     "quantization": "FP16",
-    "source_url": "https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
+    "source_url": "https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+    "scheme": "W16A16"
   },
   "engine": {
     "slug": "vllm",

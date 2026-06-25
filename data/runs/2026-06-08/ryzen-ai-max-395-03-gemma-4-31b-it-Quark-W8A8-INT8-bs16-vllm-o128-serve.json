@@ -14,7 +14,8 @@
     "name": "Gemma-4-31B-it",
     "params_b": null,
     "quantization": "Quark-W8A8-INT8",
-    "source_url": "https://huggingface.co/RedHatAI/gemma-4-31B-it-FP8-block"
+    "source_url": "https://huggingface.co/RedHatAI/gemma-4-31B-it-FP8-block",
+    "scheme": "W8A8"
   },
   "engine": {
     "slug": "vllm",

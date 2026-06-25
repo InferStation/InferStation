@@ -14,14 +14,15 @@
     "name": "Gemma-4-E4B-IT",
     "params_b": null,
     "quantization": "BF16",
-    "source_url": "https://huggingface.co/google/gemma-4-E4B-it"
+    "source_url": "https://huggingface.co/google/gemma-4-E4B-it",
+    "scheme": "W16A16"
   },
   "engine": {
     "slug": "vllm",
     "name": "vLLM",
     "version": "main",
     "commit": "",
-    "backend": "ROCm/HIP \u00b7 TRITON_ATTN",
+    "backend": "ROCm/HIP · TRITON_ATTN",
     "build_flags": "VLLM_TARGET_DEVICE=rocm (gfx1200)"
   },
   "command": "",

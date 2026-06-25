@@ -14,7 +14,8 @@
     "name": "Qwen3-1.7B",
     "params_b": null,
     "quantization": "AWQ",
-    "source_url": "https://huggingface.co/unsloth/Qwen3-1.7B-GGUF"
+    "source_url": "https://huggingface.co/unsloth/Qwen3-1.7B-GGUF",
+    "scheme": "W4A16"
   },
   "engine": {
     "slug": "vllm",

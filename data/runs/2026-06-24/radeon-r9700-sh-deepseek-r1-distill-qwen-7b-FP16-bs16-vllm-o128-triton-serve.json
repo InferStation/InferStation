@@ -14,14 +14,15 @@
     "name": "DeepSeek-R1-Distill-Qwen-7B",
     "params_b": null,
     "quantization": "FP16",
-    "source_url": "https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
+    "source_url": "https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+    "scheme": "W16A16"
   },
   "engine": {
     "slug": "vllm",
     "name": "vLLM",
     "version": "main",
     "commit": "",
-    "backend": "ROCm/HIP \u00b7 TRITON_ATTN",
+    "backend": "ROCm/HIP · TRITON_ATTN",
     "build_flags": "VLLM_TARGET_DEVICE=rocm (gfx1200)"
   },
   "command": "",

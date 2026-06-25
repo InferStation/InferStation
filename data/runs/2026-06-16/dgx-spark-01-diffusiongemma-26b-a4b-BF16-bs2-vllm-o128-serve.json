@@ -14,7 +14,8 @@
     "name": "DiffusionGemma-26B-A4B",
     "params_b": null,
     "quantization": "BF16",
-    "source_url": "https://huggingface.co/google/diffusiongemma-26B-A4B-it"
+    "source_url": "https://huggingface.co/google/diffusiongemma-26B-A4B-it",
+    "scheme": "W16A16"
   },
   "engine": {
     "slug": "vllm",

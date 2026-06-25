@@ -14,7 +14,8 @@
     "name": "Qwen3.6-27B",
     "params_b": null,
     "quantization": "BF16",
-    "source_url": "https://huggingface.co/unsloth/Qwen3.6-27B-GGUF"
+    "source_url": "https://huggingface.co/unsloth/Qwen3.6-27B-GGUF",
+    "scheme": "W16A16"
   },
   "engine": {
     "slug": "vllm",

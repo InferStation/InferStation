@@ -14,7 +14,8 @@
     "name": "Qwen3-8B-AWQ",
     "params_b": null,
     "quantization": "AWQ",
-    "source_url": "https://huggingface.co/Qwen/Qwen3-8B-AWQ"
+    "source_url": "https://huggingface.co/Qwen/Qwen3-8B-AWQ",
+    "scheme": "W4A16"
   },
   "engine": {
     "slug": "vllm",

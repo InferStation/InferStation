@@ -14,7 +14,8 @@
     "name": "Llama-2-7B-AWQ",
     "params_b": null,
     "quantization": "AWQ",
-    "source_url": "https://huggingface.co/TheBloke/Llama-2-7B-AWQ"
+    "source_url": "https://huggingface.co/TheBloke/Llama-2-7B-AWQ",
+    "scheme": "W4A16"
   },
   "engine": {
     "slug": "vllm",

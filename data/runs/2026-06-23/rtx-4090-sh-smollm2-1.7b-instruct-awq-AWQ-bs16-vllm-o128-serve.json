@@ -14,7 +14,8 @@
     "name": "SmolLM2-1.7B-Instruct-AWQ",
     "params_b": null,
     "quantization": "AWQ",
-    "source_url": "https://huggingface.co/trymirai/SmolLM2-1.7B-Instruct-AWQ"
+    "source_url": "https://huggingface.co/trymirai/SmolLM2-1.7B-Instruct-AWQ",
+    "scheme": "W4A16"
   },
   "engine": {
     "slug": "vllm",

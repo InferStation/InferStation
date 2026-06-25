@@ -14,7 +14,8 @@
     "name": "OpenVLA-7B",
     "params_b": null,
     "quantization": "BF16",
-    "source_url": "https://huggingface.co/openvla/openvla-7b"
+    "source_url": "https://huggingface.co/openvla/openvla-7b",
+    "scheme": "W16A16"
   },
   "engine": {
     "slug": "vllm",

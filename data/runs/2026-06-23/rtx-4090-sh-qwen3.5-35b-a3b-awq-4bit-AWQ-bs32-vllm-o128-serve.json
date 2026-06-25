@@ -14,7 +14,8 @@
     "name": "Qwen3.5-35B-A3B-AWQ-4bit",
     "params_b": null,
     "quantization": "AWQ",
-    "source_url": "https://huggingface.co/cyankiwi/Qwen3.5-35B-A3B-AWQ-4bit"
+    "source_url": "https://huggingface.co/cyankiwi/Qwen3.5-35B-A3B-AWQ-4bit",
+    "scheme": "W4A16"
   },
   "engine": {
     "slug": "vllm",

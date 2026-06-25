@@ -14,14 +14,15 @@
     "name": "Gemma-4-26B-A4B-it",
     "params_b": null,
     "quantization": "BF16",
-    "source_url": "https://huggingface.co/unsloth/gemma-4-26B-A4B-it-GGUF"
+    "source_url": "https://huggingface.co/unsloth/gemma-4-26B-A4B-it-GGUF",
+    "scheme": "W16A16"
   },
   "engine": {
     "slug": "vllm",
     "name": "vLLM",
     "version": "main",
     "commit": "b593396c7a70ddf31ddbbfaac2007e6c5f4650bd",
-    "backend": "ROCm/HIP \u00b7 TRITON_ATTN",
+    "backend": "ROCm/HIP · TRITON_ATTN",
     "build_flags": "VLLM_TARGET_DEVICE=rocm (gfx1151)"
   },
   "command": "",
