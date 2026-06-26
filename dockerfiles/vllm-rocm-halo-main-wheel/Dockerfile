@@ -13,12 +13,12 @@
 # sources => ccache makes a rebuild ~5-10 min instead of 30-60 min.
 #
 # Build (via dockerfiles/build.sh):
-#   ./build.sh vllm-rocm-halo-wheel                 # release v0.22.0
-#   ./build.sh vllm-rocm-halo-wheel --ref=main --tag=nightly-$(date +%Y%m%d)-gfx1151
+#   ./build.sh vllm-rocm-halo-main-wheel            # upstream main
+#   ./build.sh vllm-rocm-halo-main-wheel --ref=main --tag=nightly-$(date +%Y%m%d)-gfx1151
 
 ARG VLLM_BASE=rocm/vllm:rocm7.13.0_gfx1151_ubuntu24.04_py3.13_pytorch_2.10.0_vllm_0.19.1
 ARG VLLM_REPO=https://github.com/vllm-project/vllm.git
-ARG VLLM_TAG=v0.22.0
+ARG VLLM_TAG=main
 ARG PYTORCH_ROCM_ARCH=gfx1151
 
 FROM ${VLLM_BASE} AS builder

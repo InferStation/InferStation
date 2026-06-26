@@ -15,8 +15,8 @@
 # at Dockerfile.legacy for reference / fallback.
 
 ARG VLLM_BASE=rocm/vllm:rocm7.13.0_gfx1151_ubuntu24.04_py3.13_pytorch_2.10.0_vllm_0.19.1
-ARG WHEEL_IMAGE=10.161.176.38:8443/inferstation/vllm-wheel-halo:v0.22.0-gfx1151
-ARG VLLM_TAG=v0.22.0
+ARG WHEEL_IMAGE=ghcr.io/inferstation/vllm-wheel-halo:main-gfx1151
+ARG VLLM_TAG=main
 ARG PYTORCH_ROCM_ARCH=gfx1151
 
 # The prebuilt-wheel pkg (FROM scratch: vllm-*.whl + rocm-requirements.txt).
