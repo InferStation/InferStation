@@ -420,6 +420,42 @@ build_r9700_vllm() {
   fi
 }
 
+build_w7900_vllm() {
+  local profile="vllm-rocm-w7900-main" arch="gfx1100"
+  local rolling_tag; rolling_tag=$(jq -r '.tag' "${SCRIPT_DIR}/${profile}/meta.json")
+  local ref; ref=$(jq -r '.build_args.VLLM_TAG' "${SCRIPT_DIR}/${profile}/meta.json")
+  local sha; sha=$(upstream_head_sha "$profile" "$ref" || true)
+  local commit_tag=""
+  [[ -n "$sha" ]] && commit_tag="commit-${sha:0:12}"
+  if [[ "$MANUAL" == "1" ]]; then
+    if [[ -n "$commit_tag" ]] && harbor_has_tag "$profile" "$commit_tag"; then
+      echo ">>> ${profile}: MANUAL — ${ref} ${sha:0:12} already built (${commit_tag}); nothing to do"
+      return
+    fi
+    local final_tag="${commit_tag:-$rolling_tag}"
+    echo ">>> ${profile}: MANUAL — wheel+assemble ${ref} ${sha:0:12} as ${final_tag} (+${rolling_tag}, no nightly/latest)"
+    if [[ "$final_tag" == "$rolling_tag" ]]; then
+      vllm_build "$profile" "$arch" "$ref" "$final_tag" --no-latest
+    else
+      vllm_build "$profile" "$arch" "$ref" "$final_tag" --also-tag="$rolling_tag" --no-latest
+    fi
+    return
+  fi
+  if [[ -n "$commit_tag" ]] && harbor_has_tag "$profile" "$commit_tag"; then
+    echo ">>> ${profile}: ${ref} ${sha:0:12} already built (${commit_tag}) -> retag ${NIGHTLY}+${rolling_tag}+latest"
+    harbor_set_tag "$profile" "$commit_tag" "$NIGHTLY" || { echo ">>> ${profile}: retag ${NIGHTLY} FAILED"; return 1; }
+    harbor_set_tag "$profile" "$commit_tag" "$rolling_tag" || echo ">>> ${profile}: WARN: could not move ${rolling_tag}"
+    harbor_set_tag "$profile" "$commit_tag" "latest"  || echo ">>> ${profile}: WARN: could not move :latest"
+    return
+  fi
+  echo ">>> ${profile}: nightly ${ref} ${sha:0:12} -> wheel+assemble as ${NIGHTLY} (+${commit_tag:-no-commit-tag},${rolling_tag},latest)"
+  local extra_tags=(--also-tag="$rolling_tag")
+  [[ -n "$commit_tag" ]] && extra_tags+=(--also-tag="$commit_tag")
+  if ! vllm_build "$profile" "$arch" "$ref" "$NIGHTLY" "${extra_tags[@]}"; then
+    local rc=$?; echo ">>> ${profile}: build FAILED (rc=$rc)"; return $rc
+  fi
+}
+
 echo "=========================================="
 echo "InferStation daily build  track=${TRACK}  $(date -u +%FT%TZ)"
 echo "trigger: ${TRIGGER}  (manual=${MANUAL})"
@@ -438,6 +474,8 @@ case "$TRACK" in
     run_one pytorch-rocm-halo  build_radeon_pytorch_base pytorch-rocm-halo &
     run_one pytorch-rocm-r9700 build_radeon_pytorch_base pytorch-rocm-r9700 &
     run_one pytorch-rocm-w7900 build_radeon_pytorch_base pytorch-rocm-w7900 &
+    wait
+    run_one vllm-rocm-w7900-main build_w7900_vllm &
     wait
     ;;
   spark)

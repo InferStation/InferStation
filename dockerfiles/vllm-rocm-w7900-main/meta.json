@@ -1,0 +1,22 @@
+{
+  "name": "vllm-rocm-w7900-main",
+  "kind": "build",
+  "backend": "vllm",
+  "platform": "linux/amd64",
+  "gpu_arch": "gfx1100",
+  "registry": "ghcr.io/inferstation/vllm-rocm-w7900-main",
+  "tag": "main-gfx1100-v2-staging",
+  "build_host": "9700x8",
+  "dockerfile": "Dockerfile",
+  "upstream": "https://github.com/vllm-project/vllm",
+  "upstream_ref": "main",
+  "build_args": {
+    "VLLM_BASE": "ghcr.io/inferstation/pytorch-rocm-w7900:v2-staging-gfx110x-all",
+    "VLLM_TAG": "main",
+    "PYTORCH_ROCM_ARCH": "gfx1100",
+    "WHEEL_IMAGE": "ghcr.io/inferstation/vllm-wheel-w7900:main-gfx1100-v2-staging",
+    "ROCM_INDEX_URL": "https://rocm.nightlies.amd.com/v2-staging/gfx110X-all/"
+  },
+  "expected_size_mb": 5200,
+  "description": "vLLM runtime image for AMD Radeon W7900 / RDNA3 / gfx1100 assembled from vllm-rocm-w7900-main-wheel. Uses the same daily pytorch-rocm-w7900 base as the wheel builder, filters wheel constraints to ROCm/PyTorch ABI pins, then installs the prebuilt wheel and validates torch/vLLM import."
+}

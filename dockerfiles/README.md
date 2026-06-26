@@ -11,6 +11,7 @@ InferStation 推理镜像的统一构建 / 镜像 (mirror) 配方。
 | [pytorch-rocm-halo](pytorch-rocm-halo/) | PyTorch/ROCm base | x86_64 / Halo gfx1151 | **build** (base) | `v2-staging-gfx1151` | `ghcr.io/inferstation/pytorch-rocm-halo:nightly-YYYYMMDD` |
 | [pytorch-rocm-w7900](pytorch-rocm-w7900/) | PyTorch/ROCm base | x86_64 / RDNA3 gfx110X | **build** (base) | `v2-staging-gfx110x-all` | `ghcr.io/inferstation/pytorch-rocm-w7900:nightly-YYYYMMDD` |
 | [pytorch-rocm-r9700](pytorch-rocm-r9700/) | PyTorch/ROCm base | x86_64 / R9700 gfx1201 | **build** (base) | `v2-staging-gfx120x-all` | `ghcr.io/inferstation/pytorch-rocm-r9700:nightly-YYYYMMDD` |
+| [vllm-rocm-w7900-main](vllm-rocm-w7900-main/) | vLLM upstream-main | x86_64 / RDNA3 gfx110X | **build** (wheel + assemble) | `main-gfx1100-v2-staging` | `ghcr.io/inferstation/vllm-rocm-w7900-main:nightly-YYYYMMDD` |
 | [vllm-cuda-spark](vllm-cuda-spark/) | vLLM | aarch64 / Spark sm_121 | **build** | `v0.22.0-sm121` | `ghcr.io/inferstation/vllm-cuda-spark:v0.22.0-sm121` |
 | [vllm-rocm-halo-wheel](vllm-rocm-halo-wheel/) | vLLM wheel pkg (gfx11 优化分支) | x86_64 / Halo gfx1151 | **build** (wheel) | `gfx11-gfx1151` | *(internal pkg, not on GHCR)* |
 | [vllm-rocm-halo](vllm-rocm-halo/) | vLLM **gfx1151 优化版** (ROCm/vllm `gfx11` 分支) | x86_64 / Halo gfx1151 | **build** (assemble) | `gfx11-gfx1151` | `ghcr.io/inferstation/vllm-rocm-halo:nightly-YYYYMMDD` |

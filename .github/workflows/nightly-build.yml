@@ -176,6 +176,7 @@ jobs:
             llama-vulkan-4090
             pytorch-rocm-r9700
             pytorch-rocm-w7900
+            vllm-rocm-w7900-main
             llama-rocm-r9700
             vllm-rocm-r9700-main
             llama-vulkan-r9700
