@@ -72,7 +72,6 @@ DEFAULT_REPRESENTATIVE_UNIT_IDS = [
     "94265bb66b",
     "1a271cf80f",
     "d54c7c95e9",
-    "5fa150dfca",
     "983e644e94",
     "nv4090-gemma426ba4bit-bf16-vllm",
     "nv4090-gemma426ba4bit-bf16-vulkan",
