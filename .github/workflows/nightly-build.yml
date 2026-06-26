@@ -32,6 +32,7 @@ on:
         default: all
         options:
           - all
+          - radeon-base
           - halo
           - nv4090
           - r9700
@@ -47,6 +48,22 @@ env:
   INFERSTATION_GHCR_MODE: '1'                    # skip Harbor dedup; always build/mirror
 
 jobs:
+  build-radeon-base:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.tracks == 'all' || inputs.tracks == 'radeon-base' || inputs.tracks == 'halo' || inputs.tracks == 'r9700' }}
+    runs-on: [self-hosted, cicd]
+    steps:
+      - uses: actions/checkout@v4
+      - name: ghcr login (GHCR_PAT)
+        run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u AlisaLi0 --password-stdin
+      - name: build Radeon PyTorch/ROCm bases on cicd -> ghcr
+        working-directory: dockerfiles
+        env:
+          TRIGGER: ${{ github.event_name }}
+        run: |
+          set -e
+          chmod +x build.sh daily.sh prune.sh
+          ./daily.sh radeon-base
+
   build-halo:
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.tracks == 'all' || inputs.tracks == 'halo' }}
     runs-on: [self-hosted, cicd]
@@ -80,6 +97,7 @@ jobs:
           ./daily.sh nv4090
 
   build-r9700:
+    needs: [build-radeon-base]
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.tracks == 'all' || inputs.tracks == 'r9700' }}
     runs-on: [self-hosted, cicd]
     steps:
@@ -90,6 +108,7 @@ jobs:
         working-directory: dockerfiles
         env:
           TRIGGER: ${{ github.event_name }}
+          INFERSTATION_SKIP_RADEON_BASE: '1'
         run: |
           set -e
           chmod +x build.sh daily.sh prune.sh
@@ -114,7 +133,7 @@ jobs:
           ./daily.sh spark
 
   verify:
-    needs: [build-spark, build-halo, build-nv4090, build-r9700]
+    needs: [build-radeon-base, build-spark, build-halo, build-nv4090, build-r9700]
     if: ${{ !cancelled() }}
     runs-on: [self-hosted, cicd]
     steps:
@@ -125,13 +144,14 @@ jobs:
           set -e
           DATE=$(date -u +%Y%m%d)
           echo "verify nightly-${DATE} for spark/halo/nv4090/r9700 repos under ghcr.io/inferstation"
-          echo "spark=${{ needs.build-spark.result }} halo=${{ needs.build-halo.result }} nv4090=${{ needs.build-nv4090.result }} r9700=${{ needs.build-r9700.result }}"
+          echo "radeon-base=${{ needs.build-radeon-base.result }} spark=${{ needs.build-spark.result }} halo=${{ needs.build-halo.result }} nv4090=${{ needs.build-nv4090.result }} r9700=${{ needs.build-r9700.result }}"
 
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "manual workflow_dispatch builds intentionally do not move nightly-* tags; skipping nightly tag verification"
             exit 0
           fi
 
+          test "${{ needs.build-radeon-base.result }}" == "success"
           test "${{ needs.build-spark.result }}"  == "success"
           test "${{ needs.build-halo.result }}"   == "success"
           test "${{ needs.build-nv4090.result }}" == "success"
@@ -146,6 +166,7 @@ jobs:
             llama-cuda-spark
             vllm-cuda-spark
             llama-vulkan-spark
+            pytorch-rocm-halo
             llama-rocm-halo
             vllm-rocm-halo-main
             vllm-rocm-halo
@@ -153,6 +174,8 @@ jobs:
             llama-cuda-4090
             vllm-cuda-4090
             llama-vulkan-4090
+            pytorch-rocm-r9700
+            pytorch-rocm-w7900
             llama-rocm-r9700
             vllm-rocm-r9700-main
             llama-vulkan-r9700

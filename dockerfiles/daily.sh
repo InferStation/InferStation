@@ -20,10 +20,10 @@
 # <release>-<arch> tags are permanent (prune.sh only touches nightly-* tags), so
 # every release stays pullable forever; nightly-* keeps a 7-day rolling window.
 #
-# Usage:  ./daily.sh spark | halo
+# Usage:  ./daily.sh spark | halo | nv4090 | r9700 | radeon-base
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TRACK="${1:?usage: daily.sh spark|halo|nv4090|r9700}"
+TRACK="${1:?usage: daily.sh spark|halo|nv4090|r9700|radeon-base}"
 
 # Trigger mode: nightly (scheduled cron) vs manual (workflow_dispatch).
 # CI passes TRIGGER=${{ github.event_name }} (schedule | workflow_dispatch).
@@ -174,9 +174,13 @@ vllm_build() {
   # wheel tag is arch- and ref-scoped: main -> rolling main-<arch> (overwritten
   # nightly as main advances); a release -> immutable <rel>-<arch>.
   local wheel_tag
+  local wheel_meta_tag; wheel_meta_tag=$(jq -r '.tag // ""' "$wheel_meta")
   case "$ref" in
-    main|master) wheel_tag="main-${arch}" ;;
-    *)           wheel_tag="${ref}-${arch}" ;;
+    main|master)
+      if [[ "$wheel_meta_tag" == "main-${arch}"* ]]; then wheel_tag="$wheel_meta_tag"; else wheel_tag="main-${arch}"; fi ;;
+    gfx11)
+      if [[ "$wheel_meta_tag" == "gfx11-${arch}"* ]]; then wheel_tag="$wheel_meta_tag"; else wheel_tag="gfx11-${arch}"; fi ;;
+    *) wheel_tag="${ref}-${arch}" ;;
   esac
   # Cache-bust token for the wheel Dockerfile's `git clone` layer. For a moving
   # branch the clone RUN text is identical every night, so BuildKit caches the
@@ -361,36 +365,57 @@ build_pkg_gfx11() {
   fi
 }
 
-# build_r9700_vllm: r9700 vLLM is pinned to an immutable upstream RELEASE (the
-# meta's build_args.VLLM_TAG, currently v0.22.0) — not a moving branch. It uses
-# the SAME wheel-first flow as the halo lines (vllm_build): compile the wheel
-# ONCE on the TheRock gfx1201 base (incremental, persistent ccache mount
-# id=vllm-r9700-ccache), then assemble the thin runtime FROM that wheel (~2 min).
-# Produces nightly-<date> + <reltag> + latest. The legacy single-stage in-place
-# compile (heavy ~45GB image) is kept at vllm-rocm-r9700-main/Dockerfile.legacy.
+build_radeon_pytorch_base() {
+  local profile="$1"
+  local rolling_tag; rolling_tag=$(jq -r '.tag' "${SCRIPT_DIR}/${profile}/meta.json")
+
+  if [[ "$MANUAL" == "1" ]]; then
+    echo ">>> ${profile}: MANUAL — build PyTorch/ROCm base as ${rolling_tag} (no nightly/latest)"
+    "${SCRIPT_DIR}/build.sh" "$profile" --tag="$rolling_tag" --no-latest
+    return
+  fi
+
+  echo ">>> ${profile}: nightly PyTorch/ROCm base -> ${NIGHTLY} (+${rolling_tag},latest)"
+  "${SCRIPT_DIR}/build.sh" "$profile" --tag="$NIGHTLY" --also-tag="$rolling_tag"
+}
+
+# build_r9700_vllm: r9700 vLLM tracks official upstream main on the ROCm/vllm
+# CI-base flow. The PyTorch/ROCm stack is a separate daily base
+# (pytorch-rocm-r9700); this compiles a gfx1201 wheel from vllm-project/vllm main
+# on that base, then assembles the runtime from the same base. Produces
+# nightly-<date> + commit-<sha> + rolling main-gfx1201 + latest.
 build_r9700_vllm() {
   local profile="vllm-rocm-r9700-main" arch="gfx1201"
-  local reltag; reltag=$(jq -r '.tag' "${SCRIPT_DIR}/${profile}/meta.json")
-  # Pinned upstream release (e.g. v0.22.0) = the wheel/assembler ref. vllm_build
-  # derives wheel_tag=<ref>-<arch> and, for a release ref, reuses the wheel if
-  # it is already built (a moving branch would always recompile).
+  local rolling_tag; rolling_tag=$(jq -r '.tag' "${SCRIPT_DIR}/${profile}/meta.json")
   local ref; ref=$(jq -r '.build_args.VLLM_TAG' "${SCRIPT_DIR}/${profile}/meta.json")
+  local sha; sha=$(upstream_head_sha "$profile" "$ref" || true)
+  local commit_tag=""
+  [[ -n "$sha" ]] && commit_tag="commit-${sha:0:12}"
   if [[ "$MANUAL" == "1" ]]; then
-    if harbor_has_tag "$profile" "$reltag"; then
-      echo ">>> ${profile}: MANUAL — ${reltag} already built; nothing to do"; return
+    if [[ -n "$commit_tag" ]] && harbor_has_tag "$profile" "$commit_tag"; then
+      echo ">>> ${profile}: MANUAL — ${ref} ${sha:0:12} already built (${commit_tag}); nothing to do"
+      return
     fi
-    echo ">>> ${profile}: MANUAL — wheel+assemble ${ref} as ${reltag} (no nightly/latest)"
-    vllm_build "$profile" "$arch" "$ref" "$reltag" --no-latest
+    local final_tag="${commit_tag:-$rolling_tag}"
+    echo ">>> ${profile}: MANUAL — wheel+assemble ${ref} ${sha:0:12} as ${final_tag} (+${rolling_tag}, no nightly/latest)"
+    if [[ "$final_tag" == "$rolling_tag" ]]; then
+      vllm_build "$profile" "$arch" "$ref" "$final_tag" --no-latest
+    else
+      vllm_build "$profile" "$arch" "$ref" "$final_tag" --also-tag="$rolling_tag" --no-latest
+    fi
     return
   fi
-  if harbor_has_tag "$profile" "$reltag"; then
-    echo ">>> ${profile}: ${reltag} already built -> retag ${NIGHTLY}+latest (no recompile)"
-    harbor_set_tag "$profile" "$reltag" "$NIGHTLY" || { echo ">>> ${profile}: retag FAILED"; return 1; }
-    harbor_set_tag "$profile" "$reltag" "latest"  || echo ">>> ${profile}: WARN: could not move :latest"
+  if [[ -n "$commit_tag" ]] && harbor_has_tag "$profile" "$commit_tag"; then
+    echo ">>> ${profile}: ${ref} ${sha:0:12} already built (${commit_tag}) -> retag ${NIGHTLY}+${rolling_tag}+latest"
+    harbor_set_tag "$profile" "$commit_tag" "$NIGHTLY" || { echo ">>> ${profile}: retag ${NIGHTLY} FAILED"; return 1; }
+    harbor_set_tag "$profile" "$commit_tag" "$rolling_tag" || echo ">>> ${profile}: WARN: could not move ${rolling_tag}"
+    harbor_set_tag "$profile" "$commit_tag" "latest"  || echo ">>> ${profile}: WARN: could not move :latest"
     return
   fi
-  echo ">>> ${profile}: nightly wheel+assemble (pinned ${ref}) as ${NIGHTLY} (+${reltag},latest)"
-  if ! vllm_build "$profile" "$arch" "$ref" "$NIGHTLY" --also-tag="$reltag"; then
+  echo ">>> ${profile}: nightly ${ref} ${sha:0:12} -> wheel+assemble as ${NIGHTLY} (+${commit_tag:-no-commit-tag},${rolling_tag},latest)"
+  local extra_tags=(--also-tag="$rolling_tag")
+  [[ -n "$commit_tag" ]] && extra_tags+=(--also-tag="$commit_tag")
+  if ! vllm_build "$profile" "$arch" "$ref" "$NIGHTLY" "${extra_tags[@]}"; then
     local rc=$?; echo ">>> ${profile}: build FAILED (rc=$rc)"; return $rc
   fi
 }
@@ -409,6 +434,12 @@ echo "=========================================="
 # the primary box; llama compile + the light vulkan mirror on the secondary
 # box), so they are launched concurrently and joined with `wait`.
 case "$TRACK" in
+  radeon-base)
+    run_one pytorch-rocm-halo  build_radeon_pytorch_base pytorch-rocm-halo &
+    run_one pytorch-rocm-r9700 build_radeon_pytorch_base pytorch-rocm-r9700 &
+    run_one pytorch-rocm-w7900 build_radeon_pytorch_base pytorch-rocm-w7900 &
+    wait
+    ;;
   spark)
     # NVIDIA images now MIRROR upstream official (verified to run on GB10/sm121),
     # so cicd (x86) produces the arm64 image via `docker pull --platform`.
@@ -432,13 +463,16 @@ case "$TRACK" in
     wait
     ;;
   r9700)
+    if [[ "${INFERSTATION_SKIP_RADEON_BASE:-0}" != "1" ]]; then
+      run_one pytorch-rocm-r9700 build_radeon_pytorch_base pytorch-rocm-r9700
+    fi
     run_one llama-rocm-r9700      build_pkg          llama-rocm-r9700   llama gfx1201 &
     run_one vllm-rocm-r9700-main  build_r9700_vllm &
     run_one llama-vulkan-r9700    mirror_pkg         llama-vulkan-r9700 &
     wait
     ;;
   *)
-    echo "unknown track: $TRACK (expected spark|halo|nv4090|r9700)" >&2; exit 1 ;;
+    echo "unknown track: $TRACK (expected spark|halo|nv4090|r9700|radeon-base)" >&2; exit 1 ;;
 esac
 
 echo

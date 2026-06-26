@@ -1,0 +1,20 @@
+{
+  "name": "pytorch-rocm-r9700",
+  "kind": "build",
+  "backend": "pytorch-rocm-base",
+  "platform": "linux/amd64",
+  "gpu_arch": "gfx1201",
+  "registry": "ghcr.io/inferstation/pytorch-rocm-r9700",
+  "tag": "v2-staging-gfx120x-all",
+  "build_host": "9700x8",
+  "dockerfile": "Dockerfile",
+  "upstream": "https://rocm.nightlies.amd.com/v2-staging/gfx120X-all/",
+  "upstream_ref": "v2-staging-gfx120X-all",
+  "build_args": {
+    "ROCM_CI_BASE": "ghcr.io/rocm/vllm/gfx11-ci:latest",
+    "ROCM_INDEX_URL": "https://rocm.nightlies.amd.com/v2-staging/gfx120X-all/",
+    "PYTORCH_ROCM_ARCH": "gfx1201"
+  },
+  "expected_size_mb": 3000,
+  "description": "Daily PyTorch/ROCm base for AMD Radeon AI PRO R9700 / RDNA4 / gfx1201. Built from ROCm/vLLM thin CI base, installs rocm[devel,libraries] + torch + torchvision from v2-staging/gfx120X-all, runs rocm-sdk init, and exports /opt/rocm-pytorch-constraints.txt for downstream vLLM builds."
+}

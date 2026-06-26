@@ -8,6 +8,9 @@ InferStation 推理镜像的统一构建 / 镜像 (mirror) 配方。
 | [llama-vulkan-spark](llama-vulkan-spark/) | llama.cpp | aarch64 / Spark | **build** | `b5350` | `ghcr.io/inferstation/llama-vulkan-spark:b5350` |
 | [llama-rocm-halo](llama-rocm-halo/) | llama.cpp | x86_64 / Halo gfx1151 | mirror | `b6652-gfx1151` | `ghcr.io/inferstation/llama-rocm-halo:b6652-gfx1151` |
 | [llama-vulkan-halo](llama-vulkan-halo/) | llama.cpp | x86_64 / Halo | mirror | `b5350` | `ghcr.io/inferstation/llama-vulkan-halo:b5350` |
+| [pytorch-rocm-halo](pytorch-rocm-halo/) | PyTorch/ROCm base | x86_64 / Halo gfx1151 | **build** (base) | `v2-staging-gfx1151` | `ghcr.io/inferstation/pytorch-rocm-halo:nightly-YYYYMMDD` |
+| [pytorch-rocm-w7900](pytorch-rocm-w7900/) | PyTorch/ROCm base | x86_64 / RDNA3 gfx110X | **build** (base) | `v2-staging-gfx110x-all` | `ghcr.io/inferstation/pytorch-rocm-w7900:nightly-YYYYMMDD` |
+| [pytorch-rocm-r9700](pytorch-rocm-r9700/) | PyTorch/ROCm base | x86_64 / R9700 gfx1201 | **build** (base) | `v2-staging-gfx120x-all` | `ghcr.io/inferstation/pytorch-rocm-r9700:nightly-YYYYMMDD` |
 | [vllm-cuda-spark](vllm-cuda-spark/) | vLLM | aarch64 / Spark sm_121 | **build** | `v0.22.0-sm121` | `ghcr.io/inferstation/vllm-cuda-spark:v0.22.0-sm121` |
 | [vllm-rocm-halo-wheel](vllm-rocm-halo-wheel/) | vLLM wheel pkg (gfx11 优化分支) | x86_64 / Halo gfx1151 | **build** (wheel) | `gfx11-gfx1151` | *(internal pkg, not on GHCR)* |
 | [vllm-rocm-halo](vllm-rocm-halo/) | vLLM **gfx1151 优化版** (ROCm/vllm `gfx11` 分支) | x86_64 / Halo gfx1151 | **build** (assemble) | `gfx11-gfx1151` | `ghcr.io/inferstation/vllm-rocm-halo:nightly-YYYYMMDD` |
@@ -49,6 +52,8 @@ InferStation 推理镜像的统一构建 / 镜像 (mirror) 配方。
 ```
 
 ## vLLM wheel-pkg build（编一次，到处装）
+
+Radeon vLLM 线现在多了一层 **PyTorch/ROCm base**：先按 GPU 代际每天产出 `pytorch-rocm-halo` / `pytorch-rocm-w7900` / `pytorch-rocm-r9700`，再让 vLLM wheel/runtime 从对应 base 继承。base 使用 `https://rocm.nightlies.amd.com/v2-staging/<arch>/`，例如 R9700 是 `gfx120X-all`，并在 `/opt/rocm-pytorch-constraints.txt` 里记录 torch/ROCm/triton ABI pins。这样 vLLM 构建不再重复下载/安装 ROCm+torch，也不会在 wheel/runtime 两段之间发生 ABI 漂移。
 
 vLLM 的 C++/HIP 扩展从源码编译要 30–60 min。为避免每个 nightly/release 都从零编，
 `vllm-rocm-halo` 拆成 **wheel builder（慢，增量）** + **assembler（快，干净）** 两层：
