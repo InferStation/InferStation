@@ -185,7 +185,15 @@ def body(unit_ids: list[str], trigger: str) -> dict:
 def login(base_url: str, username: str, password: str) -> str:
     data = parse.urlencode({"username": username, "password": password}).encode()
     req = request.Request(f"{base_url}/admin/login", data=data, method="POST")
-    opener = request.build_opener(request.HTTPRedirectHandler())
+
+    # /admin/login replies 303 See Other + Set-Cookie. Do NOT follow the
+    # redirect: the Set-Cookie is on the 303 itself, and following it to
+    # /admin/ drops the cookie (the GET response has no Set-Cookie).
+    class _NoRedirect(request.HTTPRedirectHandler):
+        def redirect_request(self, *args, **kwargs):
+            return None
+
+    opener = request.build_opener(_NoRedirect())
     try:
         resp = opener.open(req, timeout=30)
     except error.HTTPError as exc:
