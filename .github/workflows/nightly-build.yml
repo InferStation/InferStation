@@ -19,14 +19,13 @@ name: nightly-build
 #     INFERSTATION_FORCE_LOCAL_BUILD=1 make daily.sh/build.sh build locally on the
 #     runner and push to ghcr.
 #
-# Triggers: WEEKLY @ Beijing Sun 22:00 (Sun 14:00 UTC) + manual workflow_dispatch.
-# (changed from daily 2026-06-27 to match the weekly bench cadence; the bench runs
-#  Mon 01:00 CST = Sun 17:00 UTC and looks for nightly-<Sun UTC>, so this Sun-14:00-UTC
-#  build produces that tag ~3h ahead — same build->bench relationship as the old daily.)
+# Triggers: WEEKLY @ Beijing Sat 00:00 ("Friday midnight", Fri 16:00 UTC) + manual workflow_dispatch.
+# (changed 2026-06-27. The weekly bench runs Sat 08:00 CST = Sat 00:00 UTC, ~8h
+#  later, and resolves :latest -> this Fri-16:00-UTC build is the image it tests.)
 
 on:
   schedule:
-    - cron: '0 14 * * 0'
+    - cron: '0 16 * * 5'
   workflow_dispatch:
     inputs:
       tracks:

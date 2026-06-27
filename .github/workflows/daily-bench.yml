@@ -23,11 +23,11 @@ on:
           - nightly
           - manual
   schedule:
-    # WEEKLY dry-run preview (changed from daily 2026-06-27 to match the 4090
-    # crontab weekly bench). Enable dispatch only after the dispatcher
-    # URL/credentials are wired and the crontab bench is retired.
-    # Sun 16:30 UTC = Mon 00:30 CST, just before the Mon 01:00 CST weekly bench.
-    - cron: '30 16 * * 0'
+    # WEEKLY dry-run preview, ~30 min before the live weekly bench. Enable
+    # dispatch only after the dispatcher URL/credentials are wired and the
+    # crontab bench is retired.
+    # Fri 23:30 UTC = Sat 07:30 CST, just before the Sat 08:00 CST weekly bench.
+    - cron: '30 23 * * 5'
 
 permissions:
   contents: read
