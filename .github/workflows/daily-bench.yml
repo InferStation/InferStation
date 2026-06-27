@@ -1,9 +1,9 @@
 name: daily-bench
 
-# Future GitHub-native replacement for the current 4090 crontab daily bench.
-# The existing cron remains authoritative while this workflow is being brought up.
-# Default mode is preview-only so the GitHub path can be validated on the bench
-# runners without dispatching jobs or touching model-serving containers.
+# GitHub-native weekly bench. **Authoritative as of 2026-06-28** — the 4090
+# crontab inferstation-daily-bench.sh has been retired/disabled. On schedule this
+# DISPATCHES the real 62-unit weekly bench to the live dispatcher via a bench
+# runner. workflow_dispatch still offers mode=preview (dry-run) for validation.
 
 on:
   workflow_dispatch:
@@ -23,11 +23,12 @@ on:
           - nightly
           - manual
   schedule:
-    # WEEKLY dry-run preview, ~30 min before the live weekly bench. Enable
-    # dispatch only after the dispatcher URL/credentials are wired and the
-    # crontab bench is retired.
-    # Fri 22:30 UTC = Sat 06:30 CST, just before the Sat 07:00 CST weekly bench.
-    - cron: '30 22 * * 5'
+    # WEEKLY real dispatch. Fri 23:00 UTC = Sat 07:00 CST, ~8h after the Fri
+    # 15:00 UTC image build. Authoritative trigger (replaced the 4090 crontab
+    # 2026-06-28). Uses trigger=manual -> dispatcher resolves :latest (= this
+    # week's Fri build): robust even if GitHub fires the schedule 1-2h late and
+    # crosses UTC midnight (a nightly-<today> match would break there).
+    - cron: '0 23 * * 5'
 
 permissions:
   contents: read
@@ -37,6 +38,9 @@ env:
 
 jobs:
   representative-daily-preview:
+    # Dry-run preview only on an explicit manual preview request — NOT on
+    # schedule (schedule runs the real dispatch job below).
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'preview' }}
     strategy:
       fail-fast: false
       matrix:
@@ -62,7 +66,7 @@ jobs:
           python3 scripts/daily-bench-gha.py --mode preview --trigger '${{ inputs.trigger || 'nightly' }}'
 
   representative-daily-dispatch:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'dispatch' }}
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'dispatch') }}
     runs-on:
       - self-hosted
       - inferstation-bench
@@ -76,4 +80,4 @@ jobs:
           INFERSTATION_ADMIN_PASS: ${{ secrets.INFERSTATION_ADMIN_PASS }}
         run: |
           set -euo pipefail
-          python3 scripts/daily-bench-gha.py --mode dispatch --trigger '${{ inputs.trigger }}'
+          python3 scripts/daily-bench-gha.py --mode dispatch --trigger '${{ inputs.trigger || 'manual' }}'
