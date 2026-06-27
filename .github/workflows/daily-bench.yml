@@ -26,8 +26,8 @@ on:
     # WEEKLY dry-run preview, ~30 min before the live weekly bench. Enable
     # dispatch only after the dispatcher URL/credentials are wired and the
     # crontab bench is retired.
-    # Fri 23:30 UTC = Sat 07:30 CST, just before the Sat 08:00 CST weekly bench.
-    - cron: '30 23 * * 5'
+    # Fri 22:30 UTC = Sat 06:30 CST, just before the Sat 07:00 CST weekly bench.
+    - cron: '30 22 * * 5'
 
 permissions:
   contents: read
