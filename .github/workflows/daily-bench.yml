@@ -22,6 +22,13 @@ on:
         options:
           - nightly
           - manual
+      scope:
+        description: 'representative (62 weekly units) or all (full catalog sweep, multi-day)'
+        type: choice
+        default: representative
+        options:
+          - representative
+          - all
   schedule:
     # WEEKLY real dispatch. Fri 23:00 UTC = Sat 07:00 CST, ~8h after the Fri
     # 15:00 UTC image build. Authoritative trigger (replaced the 4090 crontab
@@ -63,7 +70,7 @@ jobs:
         run: |
           set -euo pipefail
           echo "track=${{ matrix.track }} runner=$RUNNER_NAME arch=$(uname -m)"
-          python3 scripts/daily-bench-gha.py --mode preview --trigger '${{ inputs.trigger || 'nightly' }}'
+          python3 scripts/daily-bench-gha.py --mode preview --trigger '${{ inputs.trigger || 'nightly' }}' --scope '${{ inputs.scope || 'representative' }}'
 
   representative-daily-dispatch:
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'dispatch') }}
@@ -80,4 +87,4 @@ jobs:
           INFERSTATION_ADMIN_PASS: ${{ secrets.INFERSTATION_ADMIN_PASS }}
         run: |
           set -euo pipefail
-          python3 scripts/daily-bench-gha.py --mode dispatch --trigger '${{ inputs.trigger || 'manual' }}'
+          python3 scripts/daily-bench-gha.py --mode dispatch --trigger '${{ inputs.trigger || 'manual' }}' --scope '${{ inputs.scope || 'representative' }}'

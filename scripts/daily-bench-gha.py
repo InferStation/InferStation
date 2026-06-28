@@ -224,14 +224,23 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", choices=("preview", "dispatch"), default="preview")
     parser.add_argument("--trigger", default="nightly")
+    parser.add_argument("--scope", choices=("representative", "all"), default="representative",
+                        help="representative = the 62 weekly units; all = full catalog sweep via selector:{}")
     parser.add_argument("--dispatcher-url", default=os.environ.get("INFERSTATION_DISPATCHER_URL", ""))
     parser.add_argument("--username", default=os.environ.get("INFERSTATION_ADMIN_USER", "admin"))
     parser.add_argument("--password", default=os.environ.get("INFERSTATION_ADMIN_PASS", "admin"))
     args = parser.parse_args()
 
-    ids = representative_unit_ids()
-    payload = body(ids, args.trigger)
-    print(f"daily representative units: {len(ids)}")
+    if args.scope == "all":
+        # Full catalog sweep: let the dispatcher expand selector:{} to every
+        # registered unit (the runner has no units dir). host_map mirrors the
+        # representative path; trigger=manual keeps blank-image units on :latest.
+        payload = {"selector": {}, "host_map": HOST_MAP, "trigger": args.trigger}
+        print("FULL sweep: selector={} -> all catalog units (resolved server-side)")
+    else:
+        ids = representative_unit_ids()
+        payload = body(ids, args.trigger)
+        print(f"daily representative units: {len(ids)}")
     print(json.dumps(payload, indent=2, ensure_ascii=False))
 
     if args.mode == "preview":
