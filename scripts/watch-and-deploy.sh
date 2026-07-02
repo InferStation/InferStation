@@ -11,8 +11,8 @@
 set -euo pipefail
 
 REPO="${REPO:-/home/lkang/codes/InferStation}"
-SSH="ssh -F /home/lkang/docs/ssh/config -i /home/lkang/docs/ssh/id_rsa -o BatchMode=yes -o ConnectTimeout=10"
-DEPLOY_TARGET="${DEPLOY_TARGET:-amd@10.161.176.110:/home/amd/inferstation/site/}"
+SSH="ssh -F /home/lkang/.ssh/config -i /home/lkang/.ssh/id_rsa -o BatchMode=yes -o ConnectTimeout=10"
+DEPLOY_TARGET="${DEPLOY_TARGET:-lkang@10.161.176.110:/home/lkang/inferstation/site/}"
 LOG="${LOG:-/tmp/inferstation-watch.log}"
 LOCK="/tmp/inferstation-watch.lock"
 

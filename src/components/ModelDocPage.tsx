@@ -275,9 +275,7 @@ export function ModelDocPage(p: ModelDocProps) {
           <Section id="reproduce" label="How To Reproduce">
             <div className="flex flex-col gap-4">
               <p className="text-xs text-zinc-500">
-                Verbatim commands as dispatched by the InferStation runner. Each unit file lives at
-                {" "}<span className="font-mono">/home/amd/inferstation/admin_api/units/&lt;id&gt;.json</span> on the dispatcher host;
-                the dispatcher SSHes to the target host alias and executes the <span className="font-mono">launch_cmd</span> below.
+                Verbatim commands captured from the published benchmark records. The command below is the exact invocation used for reproduction.
               </p>
               {p.reproduce.map((r) => (
                 <CopyBlock key={r.title} title={r.title} code={r.code} />
@@ -340,10 +338,6 @@ export function ModelDocPage(p: ModelDocProps) {
                      href="https://github.com/JoursBleu/InferStation/blob/main/scripts/bench-batch.py">
                     scripts/bench-batch.py
                   </a>
-                </li>
-                <li>
-                  Unit registry on dispatcher:{" "}
-                  <span className="font-mono">/home/amd/inferstation/admin_api/units/*.json</span>
                 </li>
                 <li>
                   Raw run records: <Link className="underline underline-offset-2" href="/runs">/runs</Link>

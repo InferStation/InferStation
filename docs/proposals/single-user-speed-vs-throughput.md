@@ -3,8 +3,7 @@
 **Status:** Proposed — NOT yet implemented (2026-06-13)
 **Scope:** serve-mode benchmark presentation (charts + methodology wording).
 Frontend-only; no re-measurement of any run is required.
-**Related docs:** [`../methodology.md`](../methodology.md) (user-facing),
-[`../serve-bench-architecture.md`](../serve-bench-architecture.md) (internal design).
+**Related docs:** [`../methodology.md`](../methodology.md).
 
 ## Motivation
 

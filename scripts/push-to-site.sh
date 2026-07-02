@@ -8,7 +8,7 @@ set -euo pipefail
 
 REPO="${REPO:-$HOME/InferStation}"
 SITE_HOST="${SITE_HOST:-amd@10.161.176.110}"
-SITE_ROOT="${SITE_ROOT:-/home/amd/inferstation/site}"
+SITE_ROOT="${SITE_ROOT:-/home/lkang/inferstation/site}"
 
 cd "$REPO"
 

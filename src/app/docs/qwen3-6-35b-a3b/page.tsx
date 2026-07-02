@@ -369,9 +369,7 @@ export default function Qwen3635BA3BDoc() {
           <Section id="reproduce" label="How To Reproduce">
             <div className="flex flex-col gap-4">
               <p className="text-xs text-zinc-500">
-                Verbatim commands as dispatched by the InferStation runner. Each unit file lives at
-                {" "}<span className="font-mono">/home/amd/inferstation/admin_api/units/&lt;id&gt;.json</span> on the dispatcher host;
-                the dispatcher SSHes to the target host alias and executes the <span className="font-mono">launch_cmd</span> below.
+                Verbatim commands captured from the published benchmark records. The command below is the exact invocation used for reproduction.
                 Models are pre-downloaded with <span className="font-mono">hf download unsloth/Qwen3.6-35B-A3B-GGUF &lt;file&gt;.gguf</span> into the host&apos;s models dir.
               </p>
               <CopyBlock

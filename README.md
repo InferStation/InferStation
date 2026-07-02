@@ -25,11 +25,10 @@ Tower workstations and more engines come once v0 is stable.
 - Run data as plain JSON under `data/runs/<YYYY-MM-DD>/...`
 - Schema: see [`data/runs/SCHEMA.md`](data/runs/SCHEMA.md)
 
-## Benchmark internals
+## Benchmark Methodology
 
-- Methodology (user-facing): [`docs/methodology.md`](docs/methodology.md)
-- Serve-mode benchmark design (dispatcher, flow, unit schema, gaps):
-  [`docs/serve-bench-architecture.md`](docs/serve-bench-architecture.md)
+- Methodology: [`docs/methodology.md`](docs/methodology.md)
+- Result records and raw evidence are exposed through the site under `/runs`.
 
 ## Develop locally
 
