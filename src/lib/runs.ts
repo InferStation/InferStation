@@ -19,6 +19,7 @@ export interface RunRecord {
     name: string;
     params_b: number;
     quantization: string;
+    scheme?: string;
     source_url: string;
   };
   engine: {

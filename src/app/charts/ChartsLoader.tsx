@@ -23,6 +23,7 @@ export default function ChartsLoader({ modelSlug, framework }: { modelSlug?: str
             model_name: r.model.name,
             params_b: r.model.params_b,
             quantization: r.model.quantization,
+            scheme: r.model.scheme ?? "",
             concurrency: r.concurrency,
             pp_toks_per_s: r.pp_toks_per_s,
             tg_toks_per_s: r.tg_toks_per_s,

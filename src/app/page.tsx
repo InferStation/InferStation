@@ -222,10 +222,21 @@ function StatBar({ value, max, color }: { value: number; max: number; color: str
   );
 }
 
-function perfDevice(name: string): "Spark" | "Halo" | null {
-  if (/spark|dgx/i.test(name)) return "Spark";
-  if (/halo|ryzen|strix/i.test(name)) return "Halo";
-  return null;
+const PERF_DEVICE_ORDER = ["Spark", "Halo", "RTX 4090", "R9700"];
+const PERF_DEVICE_LABEL: Record<string, string> = {
+  Spark: "DGX Spark",
+  Halo: "Strix Halo",
+  "RTX 4090": "RTX 4090",
+  R9700: "Radeon R9700",
+};
+
+function perfDevice(host: { name: string; slug: string }): string {
+  const s = `${host.name} ${host.slug}`;
+  if (/spark|dgx/i.test(s)) return "Spark";
+  if (/halo|ryzen|strix/i.test(s)) return "Halo";
+  if (/4090|rtx/i.test(s)) return "RTX 4090";
+  if (/r9700|radeon/i.test(s)) return "R9700";
+  return host.name || host.slug;
 }
 
 interface PerfCell {
@@ -237,38 +248,40 @@ interface PerfCell {
 interface PerfRow {
   model: string;
   slug: string;
-  spark: PerfCell | null;
-  halo: PerfCell | null;
+  cells: Record<string, PerfCell | null>;
 }
 
-/** Peak combined throughput (concurrency=32) per model on each device, with the
- *  engine/quant that achieved it. A direct "fastest config" lookup, no narrative. */
-function buildPerfTable(runs: RunSummary[]): PerfRow[] {
+/** Peak combined throughput per model on each device (best concurrency / engine /
+ *  quant). A direct "fastest config" lookup across every benchmarked device. */
+function buildPerfTable(runs: RunSummary[]): { rows: PerfRow[]; devices: string[] } {
   const map = new Map<string, PerfRow>();
+  const seen = new Set<string>();
   for (const r of runs) {
-    if (r.concurrency !== 32) continue;
     const total = r.total_toks_per_s ?? r.combined_toks_per_s;
     if (total == null || total <= 0) continue;
-    const dev = perfDevice(r.host.name);
-    if (!dev) continue;
-    const row = map.get(r.model.slug) ?? {
-      model: r.model.name,
-      slug: r.model.slug,
-      spark: null,
-      halo: null,
-    };
+    const dev = perfDevice(r.host);
+    seen.add(dev);
+    const row =
+      map.get(r.model.slug) ?? { model: r.model.name, slug: r.model.slug, cells: {} };
     const fw = /vllm/i.test(r.engine.name) ? "vLLM" : "llama.cpp";
-    const cell: PerfCell = { tps: total, engine: fw, quant: r.model.quantization };
-    if (dev === "Spark" && (!row.spark || total > row.spark.tps)) row.spark = cell;
-    if (dev === "Halo" && (!row.halo || total > row.halo.tps)) row.halo = cell;
+    const cur = row.cells[dev];
+    if (!cur || total > cur.tps) {
+      row.cells[dev] = { tps: total, engine: fw, quant: r.model.quantization };
+    }
     map.set(r.model.slug, row);
   }
-  return [...map.values()].sort((a, b) => {
+  const devices = [...seen].sort((a, b) => {
+    const ia = PERF_DEVICE_ORDER.indexOf(a);
+    const ib = PERF_DEVICE_ORDER.indexOf(b);
+    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib) || a.localeCompare(b);
+  });
+  const rows = [...map.values()].sort((a, b) => {
     const ra = modelReleaseRank(a.slug);
     const rb = modelReleaseRank(b.slug);
     if (ra !== rb) return ra - rb;
     return a.model.localeCompare(b.model);
   });
+  return { rows, devices };
 }
 
 export default function Home() {
@@ -290,7 +303,7 @@ export default function Home() {
       </div>
     );
   const hosts = aggregateHosts(runs);
-  const perfTable = buildPerfTable(runs);
+  const { rows: perfTable, devices: perfDevices } = buildPerfTable(runs);
 
   const totalRuns = runs.length;
   const totalModels = new Set(runs.map((r) => r.model.slug)).size;
@@ -375,17 +388,19 @@ export default function Home() {
           </Link>
         </div>
         <p className="mt-2 max-w-3xl text-xs text-zinc-500">
-          Best combined (prefill + decode) throughput at 32 concurrent requests, with the fastest
-          engine and quantization measured on each device.
+          Peak combined (prefill + decode) throughput, with the fastest engine,
+          quantization and concurrency measured on each device.
         </p>
         <div className="mt-3 overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-zinc-200 text-left text-[11px] uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
                 <th className="px-4 py-2 font-medium">Model</th>
-                <th className="px-4 py-2 text-right font-medium">DGX Spark</th>
-                <th className="px-4 py-2 text-right font-medium">Strix Halo</th>
-                <th className="px-4 py-2 text-right font-medium">Spark / Halo</th>
+                {perfDevices.map((d) => (
+                  <th key={d} className="px-4 py-2 text-right font-medium">
+                    {PERF_DEVICE_LABEL[d] ?? d}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -395,44 +410,32 @@ export default function Home() {
                   className="border-b border-zinc-100 last:border-0 dark:border-zinc-900"
                 >
                   <td className="px-4 py-2 font-medium">{row.model}</td>
-                  <td className="px-4 py-2 text-right">
-                    {row.spark ? (
-                      <div>
-                        <div className="font-mono font-semibold tabular-nums">
-                          {fmt(row.spark.tps)}
-                        </div>
-                        <div className="text-[10px] text-zinc-500">
-                          {row.spark.engine} · {row.spark.quant}
-                        </div>
-                      </div>
-                    ) : (
-                      <span className="text-zinc-400">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-2 text-right">
-                    {row.halo ? (
-                      <div>
-                        <div className="font-mono font-semibold tabular-nums">
-                          {fmt(row.halo.tps)}
-                        </div>
-                        <div className="text-[10px] text-zinc-500">
-                          {row.halo.engine} · {row.halo.quant}
-                        </div>
-                      </div>
-                    ) : (
-                      <span className="text-zinc-400">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-2 text-right font-mono tabular-nums text-zinc-600 dark:text-zinc-400">
-                    {row.spark && row.halo ? ratio(row.spark.tps, row.halo.tps) : "—"}
-                  </td>
+                  {perfDevices.map((d) => {
+                    const cell = row.cells[d];
+                    return (
+                      <td key={d} className="px-4 py-2 text-right">
+                        {cell ? (
+                          <div>
+                            <div className="font-mono font-semibold tabular-nums">
+                              {fmt(cell.tps)}
+                            </div>
+                            <div className="text-[10px] text-zinc-500">
+                              {cell.engine} · {cell.quant}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-zinc-400">—</span>
+                        )}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
         <p className="mt-2 text-[11px] text-zinc-500">
-          Combined tok/s at concurrency 32. “—” = not benchmarked on that device.
+          Peak combined tok/s (best concurrency). “—” = not benchmarked on that device.
         </p>
       </section>
 

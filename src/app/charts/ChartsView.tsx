@@ -14,6 +14,7 @@ export interface ChartRun {
   model_name: string;
   params_b: number;
   quantization: string;
+  scheme?: string;
   concurrency: number | null;
   pp_toks_per_s: number | null;
   tg_toks_per_s: number | null;
@@ -44,6 +45,21 @@ function vendorColor(vendor: string, fallbackIdx: number): string {
   const v = (vendor || "").toLowerCase();
   for (const e of VENDOR_COLORS) if (v.includes(e.match)) return e.color;
   return FALLBACK_COLORS[fallbackIdx % FALLBACK_COLORS.length];
+}
+
+// Per-device base color. Two boxes from the SAME vendor (DGX Spark + RTX 4090,
+// or Strix Halo + R9700) must not collide on the vendor brand color, so each
+// known device gets its own hue; unknown hosts fall back to the vendor color.
+const DEVICE_COLORS: { match: RegExp; color: string }[] = [
+  { match: /dgx|spark/i, color: "#76B900" }, // DGX Spark - NVIDIA green
+  { match: /4090|rtx/i, color: "#0891b2" }, // RTX 4090 - cyan
+  { match: /halo|ryzen|strix/i, color: "#ED1C24" }, // Strix Halo - AMD red
+  { match: /r9700|radeon/i, color: "#d97706" }, // Radeon R9700 - amber
+];
+function deviceColor(hostSlug: string, hostName: string, vendor: string, fallbackIdx: number): string {
+  const s = `${hostSlug} ${hostName}`;
+  for (const e of DEVICE_COLORS) if (e.match.test(s)) return e.color;
+  return vendorColor(vendor, fallbackIdx);
 }
 
 // Same vendor, different backend: keep brand hue, shift the others so the
@@ -99,18 +115,10 @@ function darken(hex: string, amount: number): string {
 
 const QUANT_ORDER = ["BF16", "Q8_0", "FP8", "FP8-block", "Quark-W8A8-INT8", "AWQ-4bit", "UD-Q4_K_M", "Q4_K_M", "Q4_K_S", "UD-Q3_K_M", "UD-Q2_K_XL", "UD-IQ2_M"];
 
-// vLLM 8-bit quants are device-exclusive (DGX Spark uses FP8/FP8-block since
-// SM121 has no INT8 W8A8 kernel; Strix Halo uses Quark-W8A8-INT8 via Triton).
-// They're the same 8-bit tier, so they share ONE chart with both devices' bars
-// side by side instead of two single-device charts.
-const EIGHTBIT_VLLM_GROUP = "__8bit_vllm__";
-function is8bitVllm(q: string): boolean {
-  const u = (q || "").toUpperCase();
-  return u.includes("FP8") || u.includes("INT8") || u.includes("W8A8");
-}
-function quantGroupKey(q: string): string {
-  return is8bitVllm(q) ? EIGHTBIT_VLLM_GROUP : q;
-}
+// schemeOf() maps a quant label to a weight/activation precision scheme. It is
+// now only a FALLBACK: chart grouping prefers each run's DECLARED `scheme`
+// field (tags.scheme, set at the unit level from the model's quantization_config)
+// because loose labels like "AWQ" / "AWQ-LLM" don't reliably imply W4A16.
 function quantRank(q: string): number {
   const i = QUANT_ORDER.indexOf(q);
   return i >= 0 ? i : QUANT_ORDER.length + 1;
@@ -132,6 +140,14 @@ function quantRank(q: string): number {
 function schemeOf(q: string, engine: string): string {
   const u = (q || "").toUpperCase();
   if (u === "BF16" || u === "F16" || u.includes("FP16")) return "W16A16";
+  // Unquantized / native-dtype runs (served without a quant arg) are full precision.
+  if (u === "" || u === "?" || u === "DEFAULT" || u === "NONE" || u === "UNQUANTIZED" || u === "AUTO")
+    return "W16A16";
+  // Quant already given as an explicit WxAy scheme (compressed-tensors style,
+  // e.g. "W4A16"): trust it verbatim so it groups with same-scheme quants
+  // instead of falling through to its own raw-string chart.
+  const sm = /^W(\d+)A(\d+)$/.exec(u);
+  if (sm) return `W${sm[1]}A${sm[2]}`;
   const isLlama = (engine || "").toLowerCase().includes("llama");
 
   // Weight bit width from the quant name.
@@ -316,15 +332,23 @@ function ModelCharts({
   setMetric: (m: Metric) => void;
 }) {
   const quantGroups = useMemo(() => {
-    // Merge quant strings that should share a chart (device-exclusive vLLM
-    // 8-bit family). Each group's label shows the distinct quant names present.
+    // Group runs into charts. For vLLM, the chart = a weight/activation precision
+    // SCHEME (W4A16 / W8A8 / W16A16). The scheme comes from each run's DECLARED
+    // `scheme` field (tags.scheme, baked in at the unit level from the model's
+    // quantization_config) — NOT guessed from the quant label, since "AWQ" /
+    // "AWQ-LLM" etc. don't reliably imply W4A16. Only runs with no declared
+    // scheme fall back to the schemeOf() heuristic. llama.cpp keeps one chart
+    // per raw GGUF quant.
     const engine = group.runs[0]?.engine || "";
-    const groups = new Map<string, { key: string; quants: Set<string> }>();
+    const isVllm = (engine || "").toLowerCase().includes("vllm");
+    const groups = new Map<string, { key: string; scheme: string; quants: Set<string> }>();
     for (const r of group.runs) {
-      const gk = quantGroupKey(r.quantization);
+      const declared = (r.scheme || "").trim();
+      const scheme = declared || schemeOf(r.quantization, r.engine);
+      const gk = isVllm ? scheme : r.quantization;
       let g = groups.get(gk);
       if (!g) {
-        g = { key: gk, quants: new Set() };
+        g = { key: gk, scheme: isVllm ? scheme : schemeOf(r.quantization, r.engine), quants: new Set() };
         groups.set(gk, g);
       }
       g.quants.add(r.quantization);
@@ -354,7 +378,7 @@ function ModelCharts({
                   .join("/")}`,
               )
               .join("  \u00b7  ");
-      return { key: g.key, quants: g.quants, label: schemeOf(qs[0], engine), note, sortQuant: qs[0] };
+      return { key: g.key, quants: g.quants, label: g.scheme, note, sortQuant: qs[0] };
     });
     return arr.sort((a, b) => {
       const r = quantRank(a.sortQuant) - quantRank(b.sortQuant);
@@ -382,7 +406,7 @@ function ModelCharts({
       const backend = displayBackend(r);
       const key = `${r.host_slug}::${backend}`;
       if (!map.has(key)) {
-        const base = vendorColor(r.host_vendor, idx);
+        const base = deviceColor(r.host_slug, r.host_name, r.host_vendor, idx);
         const color = backendShade(base, backend);
         map.set(key, {
           key,
@@ -563,15 +587,20 @@ function BarChart({
   for (let i = 0; i <= ticks; i++) yTickValues.push((niceMax * i) / ticks);
 
   return (
-    <section>
-      <div className="mb-2 flex items-baseline justify-between gap-3">
+    <section className="flex h-full flex-col">
+      <div className="mb-2 grid h-20 grid-cols-[minmax(0,1fr)_auto] items-start gap-3 overflow-hidden">
         <div className="min-w-0">
           <h3 className="font-mono text-sm font-semibold">{title}</h3>
           {note ? (
-            <p className="mt-0.5 text-xs text-zinc-500">{note}</p>
+            <p
+              className="mt-0.5 overflow-hidden text-xs leading-snug text-zinc-500"
+              style={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 3 }}
+            >
+              {note}
+            </p>
           ) : null}
         </div>
-        <p className="shrink-0 text-xs text-zinc-500">{subtitle}</p>
+        <p className="shrink-0 text-right text-xs leading-snug text-zinc-500">{subtitle}</p>
       </div>
       <div className="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
         <svg viewBox={`0 0 ${W} ${H}`} width="100%" className="block" role="img" aria-label={title}>
