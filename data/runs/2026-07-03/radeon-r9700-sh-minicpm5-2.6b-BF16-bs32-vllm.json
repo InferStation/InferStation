@@ -1,0 +1,52 @@
+{
+  "schema_version": 0,
+  "run_date": "2026-07-03",
+  "host": {
+    "slug": "radeon-r9700-sh",
+    "name": "Radeon AI PRO R9700",
+    "vendor": "AMD",
+    "chip": "RDNA4 gfx1200 x2",
+    "vram_gb": 64,
+    "deployment_form": "workstation"
+  },
+  "model": {
+    "slug": "minicpm5-2.6b",
+    "name": "MiniCPM5-2.6B",
+    "params_b": 2.6,
+    "quantization": "BF16",
+    "source_url": "https://github.com/OpenBMB/MiniCPM"
+  },
+  "engine": {
+    "slug": "vllm-rocm",
+    "name": "vLLM",
+    "version": "gbf292b5f6",
+    "commit": "gbf292b5f6",
+    "backend": "vLLM-ROCm",
+    "build_flags": ""
+  },
+  "command": "vllm bench throughput --model /model --dtype bfloat16 --max-model-len 2304 --max-num-seqs 32 --gpu-memory-utilization 0.85 --dataset-name random --input-len 512 --output-len 128 --num-prompts 256 --output-json /tmp/vllm-bench-minicpm5-2.6b-BF16-bs32.json",
+  "pp_test": "in512",
+  "pp_toks_per_s": 4724.076056858593,
+  "tg_test": "out128",
+  "tg_toks_per_s": 1181.0190142146482,
+  "combined_toks_per_s": 10629.171127931833,
+  "ttft_ms": null,
+  "ctx": 640,
+  "batch": 32,
+  "concurrency": 32,
+  "n_gpu_layers": null,
+  "vram_used_gb": null,
+  "scenario": "vllm-bench-throughput-in512-out128-npl32",
+  "usability_tag": "ok",
+  "log_url": "",
+  "source_url": "",
+  "notes": "vllm bench throughput; pp_toks_per_s derived as num_prompts*input_len/elapsed",
+  "raw_vllm_bench": {
+    "elapsed_time": 27.74553127901163,
+    "num_requests": 256,
+    "total_num_tokens": 294912,
+    "requests_per_second": 9.22671104855194,
+    "tokens_per_second": 10629.171127931833
+  },
+  "image": "ghcr.io/inferstation/vllm-rocm-r9700-main:latest"
+}
