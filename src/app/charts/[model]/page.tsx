@@ -1,8 +1,8 @@
 import ChartsRedirect from "../ChartsRedirect";
-import { MODEL_RELEASE_ORDER } from "@/lib/modelOrder";
+import { staticModelParams } from "@/lib/modelStaticParams";
 
 export function generateStaticParams() {
-  return MODEL_RELEASE_ORDER.map((model) => ({ model }));
+  return staticModelParams();
 }
 
 export default async function ModelChartsPage({ params }: { params: Promise<{ model: string }> }) {

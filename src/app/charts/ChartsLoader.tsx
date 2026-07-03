@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import ChartsView, { type ChartRun } from "./ChartsView";
+import { canonicalModelSlug } from "@/lib/modelCanonical";
 import { fetchAllRuns } from "@/lib/runsClient";
 
 export default function ChartsLoader({ modelSlug, framework }: { modelSlug?: string; framework?: string }) {
@@ -39,7 +40,7 @@ export default function ChartsLoader({ modelSlug, framework }: { modelSlug?: str
         setData(
           mapped.filter(
             (r) =>
-              (!modelSlug || r.model_slug === modelSlug) &&
+                (!modelSlug || canonicalModelSlug(r.model_slug) === canonicalModelSlug(modelSlug)) &&
               (!fw || (r.engine || "").toLowerCase() === fw),
           ),
         );

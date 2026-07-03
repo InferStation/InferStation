@@ -1,16 +1,8 @@
 import ChartsLoader from "../../ChartsLoader";
-import { MODEL_RELEASE_ORDER } from "@/lib/modelOrder";
-
-const FRAMEWORKS = ["llama.cpp", "vllm"];
+import { staticChartParams } from "@/lib/modelStaticParams";
 
 export function generateStaticParams() {
-  const params: { model: string; framework: string }[] = [];
-  for (const model of MODEL_RELEASE_ORDER) {
-    for (const framework of FRAMEWORKS) {
-      params.push({ model, framework });
-    }
-  }
-  return params;
+  return staticChartParams();
 }
 
 export default async function ModelFrameworkChartsPage({

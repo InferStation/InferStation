@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { fetchAllRuns } from "@/lib/runsClient";
 import type { RunSummary } from "@/lib/runs";
+import { canonicalModelName, canonicalModelSlug } from "@/lib/modelCanonical";
 import { modelReleaseRank } from "@/lib/modelOrder";
 
 type SectionKind = "charts" | "compare" | "runs";
@@ -92,11 +93,12 @@ export default function ModelOverviewPage({ kind }: { kind: SectionKind }) {
     if (!runs) return [];
     const map = new Map<string, ModelCard>();
     for (const r of runs) {
-      let c = map.get(r.model.slug);
+      const slug = canonicalModelSlug(r.model.slug);
+      let c = map.get(slug);
       if (!c) {
         c = {
-          slug: r.model.slug,
-          name: r.model.name,
+          slug,
+          name: canonicalModelName(r.model.name, r.model.slug),
           params: r.model.params_b,
           runs: 0,
           latest: r.run_date || "",
@@ -104,7 +106,7 @@ export default function ModelOverviewPage({ kind }: { kind: SectionKind }) {
           frameworks: [],
           quants: [],
         };
-        map.set(r.model.slug, c);
+        map.set(slug, c);
       }
       c.runs += 1;
       if (r.run_date > c.latest) c.latest = r.run_date;

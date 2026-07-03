@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { canonicalModelName, canonicalModelSlug } from "@/lib/modelCanonical";
 
 export interface ChartRun {
   id: string;
@@ -223,15 +224,16 @@ export default function ChartsView({ runs, navRuns = runs, basePath = "/charts",
     const byEngine = new Map<string, Map<string, ModelGroup>>();
     for (const r of navRuns) {
       const eng = (r.engine || "unknown").toLowerCase();
+      const modelSlug = canonicalModelSlug(r.model_slug);
       let mm = byEngine.get(eng);
       if (!mm) {
         mm = new Map();
         byEngine.set(eng, mm);
       }
-      let g = mm.get(r.model_slug);
+      let g = mm.get(modelSlug);
       if (!g) {
-        g = { slug: r.model_slug, name: r.model_name, params_b: r.params_b, runs: [] };
-        mm.set(r.model_slug, g);
+        g = { slug: modelSlug, name: canonicalModelName(r.model_name, r.model_slug), params_b: r.params_b, runs: [] };
+        mm.set(modelSlug, g);
       }
       g.runs.push(r);
     }
@@ -265,7 +267,7 @@ export default function ChartsView({ runs, navRuns = runs, basePath = "/charts",
   const selected = useMemo<ModelGroup | undefined>(() => {
     const r = runs[0];
     if (!r) return undefined;
-    return { slug: r.model_slug, name: r.model_name, params_b: r.params_b, runs };
+    return { slug: canonicalModelSlug(r.model_slug), name: canonicalModelName(r.model_name, r.model_slug), params_b: r.params_b, runs };
   }, [runs]);
   const selectedSlug = selected?.slug || firstKey.split("::")[1] || "";
   const activeFramework = (selectedFramework || "").toLowerCase();
