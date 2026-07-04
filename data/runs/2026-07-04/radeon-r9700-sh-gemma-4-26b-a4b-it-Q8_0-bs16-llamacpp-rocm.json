@@ -1,0 +1,66 @@
+{
+  "schema_version": 0,
+  "run_date": "2026-07-04",
+  "host": {
+    "slug": "radeon-r9700-sh",
+    "name": "Radeon AI PRO R9700",
+    "vendor": "AMD",
+    "chip": "RDNA4 gfx1200 x2",
+    "vram_gb": 64,
+    "deployment_form": "workstation"
+  },
+  "model": {
+    "slug": "gemma-4-26b-a4b-it",
+    "name": "Gemma-4-26B-A4B-it",
+    "params_b": 26,
+    "quantization": "Q8_0",
+    "source_url": "https://huggingface.co/unsloth/gemma-4-26B-A4B-it-GGUF"
+  },
+  "engine": {
+    "slug": "llamacpp-rocm",
+    "name": "llama.cpp",
+    "version": "0.00.036.517 E ggml_cuda_init: failed to initialize ROCm: no ROCm-capable device is detected",
+    "commit": "0.00.036.517 E ggml_cuda_init: failed to initialize ROCm: no ROCm-capable device is detected",
+    "backend": "ROCm",
+    "build_flags": "-DGGML_HIP=ON"
+  },
+  "command": "bench_bin=$(command -v llama-batched-bench || true); if [ -z \"$bench_bin\" ]; then for p in /app/llama-batched-bench /usr/local/bin/llama-batched-bench /usr/bin/llama-batched-bench /opt/llama.cpp/llama-batched-bench; do [ -x \"$p\" ] && bench_bin=\"$p\" && break; done; fi; [ -n \"$bench_bin\" ] || { echo 'llama-batched-bench not found' >&2; exit 127; }; \"$bench_bin\" -m /models/gemma-4-26B-A4B-it-Q8_0.gguf -ngl 999 -npp 512 -ntg 128 -npl 16 --output-format jsonl",
+  "pp_test": "pp512",
+  "pp_toks_per_s": 2276.765869,
+  "tg_test": "tg128",
+  "tg_toks_per_s": 490.573792,
+  "combined_toks_per_s": 1317.416382,
+  "ttft_ms": null,
+  "ctx": 10240,
+  "batch": 2048,
+  "concurrency": 16,
+  "n_gpu_layers": 999,
+  "vram_used_gb": null,
+  "scenario": "llama-batched-bench-pp512-tg128-npl16",
+  "usability_tag": "ok",
+  "log_url": "https://github.com/InferStation/InferStation/actions/runs/28707041311",
+  "source_url": "https://github.com/InferStation/InferStation/actions/runs/28707041311",
+  "notes": "",
+  "raw_llamabench": [
+    {
+      "n_kv_max": 262144,
+      "n_batch": 2048,
+      "n_ubatch": 512,
+      "flash_attn": -1,
+      "is_pp_shared": 0,
+      "n_gpu_layers": 999,
+      "n_threads": 64,
+      "n_threads_batch": 64,
+      "pp": 512,
+      "tg": 128,
+      "pl": 16,
+      "n_kv": 10240,
+      "t_pp": 3.598086,
+      "speed_pp": 2276.765869,
+      "t_tg": 4.174703,
+      "speed_tg": 490.573792,
+      "t": 7.772789,
+      "speed": 1317.416382
+    }
+  ]
+}
