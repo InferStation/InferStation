@@ -53,7 +53,8 @@ RUN --mount=type=cache,target=/root/.cache/uv,id=vllm-halo-main-runtime-uv,shari
        --extra-index-url https://pypi.org/simple/ \
        --index-strategy unsafe-best-match \
        --prerelease allow \
-       /tmp/wheels/vllm-*.whl \
+       -r /tmp/wheels/requirements/rocm.txt \
+ && uv -v pip install --system --python python --no-deps /tmp/wheels/vllm-*.whl \
  && rm -rf /tmp/wheels /root/.cache/pip \
  && python -c "import vllm, transformers, torch; print('vllm', vllm.__version__, 'transformers', transformers.__version__, 'torch', torch.__version__, 'hip', torch.version.hip)"
 
