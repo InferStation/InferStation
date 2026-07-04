@@ -1,0 +1,52 @@
+{
+  "schema_version": 0,
+  "run_date": "2026-07-04",
+  "host": {
+    "slug": "rtx-4090-sh",
+    "name": "RTX 4090",
+    "vendor": "NVIDIA",
+    "chip": "AD102 (sm_89) x2",
+    "vram_gb": 96,
+    "deployment_form": "workstation"
+  },
+  "model": {
+    "slug": "minicpm5-2.6b",
+    "name": "MiniCPM5-2.6B",
+    "params_b": 2.6,
+    "quantization": "BF16",
+    "source_url": "https://github.com/OpenBMB/MiniCPM"
+  },
+  "engine": {
+    "slug": "vllm",
+    "name": "vLLM",
+    "version": "ge312c5cb2",
+    "commit": "ge312c5cb2",
+    "backend": "vLLM",
+    "build_flags": ""
+  },
+  "command": "vllm bench throughput --model /model --dtype bfloat16 --max-model-len 2304 --max-num-seqs 32 --gpu-memory-utilization 0.85 --dataset-name random --input-len 512 --output-len 128 --num-prompts 256 --output-json /tmp/vllm-bench-minicpm5-2.6b-BF16-bs32.json",
+  "pp_test": "in512",
+  "pp_toks_per_s": 8301.805029999701,
+  "tg_test": "out128",
+  "tg_toks_per_s": 2075.4512574999253,
+  "combined_toks_per_s": 18679.061317499327,
+  "ttft_ms": null,
+  "ctx": 640,
+  "batch": 32,
+  "concurrency": 32,
+  "n_gpu_layers": null,
+  "vram_used_gb": null,
+  "scenario": "vllm-bench-throughput-in512-out128-npl32",
+  "usability_tag": "ok",
+  "image": "ghcr.io/inferstation/vllm-cuda-4090:latest",
+  "log_url": "https://github.com/InferStation/InferStation/actions/runs/28695811140",
+  "source_url": "https://github.com/InferStation/InferStation/actions/runs/28695811140",
+  "notes": "vllm bench throughput; pp_toks_per_s derived as num_prompts*input_len/elapsed",
+  "raw_vllm_bench": {
+    "elapsed_time": 15.788373676128685,
+    "num_requests": 256,
+    "total_num_tokens": 294912,
+    "requests_per_second": 16.214462949218166,
+    "tokens_per_second": 18679.061317499327
+  }
+}
