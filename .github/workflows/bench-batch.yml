@@ -38,7 +38,7 @@ on:
       keep_models:
         description: 'Keep downloaded models after the run'
         type: boolean
-        default: false
+        default: true
       skip_push:
         description: 'Run without committing/pushing result JSONs'
         type: boolean
@@ -98,7 +98,7 @@ jobs:
           BENCH_TARGET: ${{ inputs.target || 'all' }}
           BENCH_FILTER: ${{ inputs.filter || '' }}
           BENCH_SCOPE: ${{ inputs.scope || 'representative' }}
-          KEEP_MODELS: ${{ inputs.keep_models || false }}
+          KEEP_MODELS: ${{ github.event_name == 'schedule' || inputs.keep_models || false }}
           SKIP_PUSH: ${{ inputs.skip_push || false }}
         run: |
           set -euo pipefail
