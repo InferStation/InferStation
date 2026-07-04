@@ -61,6 +61,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
+      - name: ghcr login (GHCR_PAT)
+        if: ${{ inputs.target == 'all' || inputs.target == matrix.target }}
+        run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u AlisaLi0 --password-stdin
       - name: Run bench-batch directly
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
