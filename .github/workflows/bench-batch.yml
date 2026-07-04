@@ -53,7 +53,6 @@ jobs:
           - target: r9700
             label: inferstation-r9700-weekly
             host: radeon-r9700-sh
-    if: ${{ inputs.target == 'all' || inputs.target == matrix.target }}
     runs-on:
       - self-hosted
       - inferstation-bench
@@ -67,6 +66,10 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           set -euo pipefail
+          if [[ "${{ inputs.target }}" != "all" && "${{ inputs.target }}" != "${{ matrix.target }}" ]]; then
+            echo "skip target=${{ matrix.target }} because requested target=${{ inputs.target }}"
+            exit 0
+          fi
           args=()
           if [[ -n "${{ inputs.filter }}" ]]; then
             prefixed=()
