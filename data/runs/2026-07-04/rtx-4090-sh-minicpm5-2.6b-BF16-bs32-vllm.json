@@ -26,10 +26,10 @@
   },
   "command": "vllm bench throughput --model /model --dtype bfloat16 --max-model-len 2304 --max-num-seqs 32 --gpu-memory-utilization 0.85 --dataset-name random --input-len 512 --output-len 128 --num-prompts 256 --output-json /tmp/vllm-bench-minicpm5-2.6b-BF16-bs32.json",
   "pp_test": "in512",
-  "pp_toks_per_s": 8321.527512090106,
+  "pp_toks_per_s": 8306.75187644438,
   "tg_test": "out128",
-  "tg_toks_per_s": 2080.3818780225265,
-  "combined_toks_per_s": 18723.43690220274,
+  "tg_toks_per_s": 2076.687969111095,
+  "combined_toks_per_s": 18690.19172199985,
   "ttft_ms": null,
   "ctx": 640,
   "batch": 32,
@@ -39,14 +39,14 @@
   "scenario": "vllm-bench-throughput-in512-out128-npl32",
   "usability_tag": "ok",
   "image": "ghcr.io/inferstation/vllm-cuda-4090:latest",
-  "log_url": "https://github.com/InferStation/InferStation/actions/runs/28706512974",
-  "source_url": "https://github.com/InferStation/InferStation/actions/runs/28706512974",
+  "log_url": "https://github.com/InferStation/InferStation/actions/runs/28707041311",
+  "source_url": "https://github.com/InferStation/InferStation/actions/runs/28707041311",
   "notes": "vllm bench throughput; pp_toks_per_s derived as num_prompts*input_len/elapsed",
   "raw_vllm_bench": {
-    "elapsed_time": 15.750954354181886,
+    "elapsed_time": 15.778971365652978,
     "num_requests": 256,
     "total_num_tokens": 294912,
-    "requests_per_second": 16.25298342205099,
-    "tokens_per_second": 18723.43690220274
+    "requests_per_second": 16.22412475868043,
+    "tokens_per_second": 18690.19172199985
   }
 }
