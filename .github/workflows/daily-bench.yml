@@ -1,0 +1,90 @@
+name: daily-bench
+
+# GitHub-native weekly bench. **Authoritative as of 2026-06-28** — the 4090
+# crontab inferstation-daily-bench.sh has been retired/disabled. On schedule this
+# DISPATCHES the real 62-unit weekly bench to the live dispatcher via a bench
+# runner. workflow_dispatch still offers mode=preview (dry-run) for validation.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'preview only, or dispatch to the live admin API'
+        type: choice
+        default: preview
+        options:
+          - preview
+          - dispatch
+      trigger:
+        description: 'dispatcher trigger value'
+        type: choice
+        default: nightly
+        options:
+          - nightly
+          - manual
+      scope:
+        description: 'representative (62 weekly units) or all (full catalog sweep, multi-day)'
+        type: choice
+        default: representative
+        options:
+          - representative
+          - all
+  schedule:
+    # WEEKLY real dispatch. Fri 23:00 UTC = Sat 07:00 CST, ~8h after the Fri
+    # 15:00 UTC image build. Authoritative trigger (replaced the 4090 crontab
+    # 2026-06-28). Uses trigger=manual -> dispatcher resolves :latest (= this
+    # week's Fri build): robust even if GitHub fires the schedule 1-2h late and
+    # crosses UTC midnight (a nightly-<today> match would break there).
+    - cron: '0 23 * * 5'
+
+permissions:
+  contents: read
+
+env:
+  INFERSTATION_UNITS_DIR: /home/amd/inferstation/admin_api/units
+
+jobs:
+  representative-daily-preview:
+    # Dry-run preview only on an explicit manual preview request — NOT on
+    # schedule (schedule runs the real dispatch job below).
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'preview' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - track: halo
+            label: inferstation-halo
+          - track: spark
+            label: inferstation-spark
+          - track: nv4090
+            label: inferstation-nv4090
+          - track: r9700
+            label: inferstation-r9700
+    runs-on:
+      - self-hosted
+      - inferstation-bench
+      - ${{ matrix.label }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build representative daily request body on bench runner
+        run: |
+          set -euo pipefail
+          echo "track=${{ matrix.track }} runner=$RUNNER_NAME arch=$(uname -m)"
+          python3 scripts/daily-bench-gha.py --mode preview --trigger '${{ inputs.trigger || 'nightly' }}' --scope '${{ inputs.scope || 'representative' }}'
+
+  representative-daily-dispatch:
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'dispatch') }}
+    runs-on:
+      - self-hosted
+      - inferstation-bench
+      - inferstation-halo
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dispatch representative daily bench
+        env:
+          INFERSTATION_DISPATCHER_URL: ${{ secrets.INFERSTATION_DISPATCHER_URL }}
+          INFERSTATION_ADMIN_USER: ${{ secrets.INFERSTATION_ADMIN_USER }}
+          INFERSTATION_ADMIN_PASS: ${{ secrets.INFERSTATION_ADMIN_PASS }}
+        run: |
+          set -euo pipefail
+          python3 scripts/daily-bench-gha.py --mode dispatch --trigger '${{ inputs.trigger || 'manual' }}' --scope '${{ inputs.scope || 'representative' }}'
