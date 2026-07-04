@@ -1,0 +1,66 @@
+{
+  "schema_version": 0,
+  "run_date": "2026-07-04",
+  "host": {
+    "slug": "rtx-4090-sh",
+    "name": "RTX 4090",
+    "vendor": "NVIDIA",
+    "chip": "AD102 (sm_89) x2",
+    "vram_gb": 96,
+    "deployment_form": "workstation"
+  },
+  "model": {
+    "slug": "qwen3.6-35b-a3b",
+    "name": "Qwen3.6-35B-A3B",
+    "params_b": 35,
+    "quantization": "Q8_0",
+    "source_url": "https://huggingface.co/unsloth/Qwen3.6-35B-A3B-GGUF"
+  },
+  "engine": {
+    "slug": "llamacpp-cuda",
+    "name": "llama.cpp",
+    "version": "sh: 1: llama-cli: not found",
+    "commit": "sh: 1: llama-cli: not found",
+    "backend": "CUDA",
+    "build_flags": "-DGGML_CUDA=ON"
+  },
+  "command": "bench_bin=$(command -v llama-batched-bench || true); if [ -z \"$bench_bin\" ]; then for p in /app/llama-batched-bench /usr/local/bin/llama-batched-bench /usr/bin/llama-batched-bench /opt/llama.cpp/llama-batched-bench; do [ -x \"$p\" ] && bench_bin=\"$p\" && break; done; fi; [ -n \"$bench_bin\" ] || { echo 'llama-batched-bench not found' >&2; exit 127; }; \"$bench_bin\" -m /models/Qwen3.6-35B-A3B-Q8_0.gguf -ngl 999 -npp 512 -ntg 128 -npl 16 --output-format jsonl",
+  "pp_test": "pp512",
+  "pp_toks_per_s": 10838.716797,
+  "tg_test": "tg128",
+  "tg_toks_per_s": 701.776489,
+  "combined_toks_per_s": 2787.064209,
+  "ttft_ms": null,
+  "ctx": 10240,
+  "batch": 2048,
+  "concurrency": 16,
+  "n_gpu_layers": 999,
+  "vram_used_gb": null,
+  "scenario": "llama-batched-bench-pp512-tg128-npl16",
+  "usability_tag": "ok",
+  "log_url": "https://github.com/InferStation/InferStation/actions/runs/28706512974",
+  "source_url": "https://github.com/InferStation/InferStation/actions/runs/28706512974",
+  "notes": "",
+  "raw_llamabench": [
+    {
+      "n_kv_max": 262144,
+      "n_batch": 2048,
+      "n_ubatch": 512,
+      "flash_attn": -1,
+      "is_pp_shared": 0,
+      "n_gpu_layers": 999,
+      "n_threads": 72,
+      "n_threads_batch": 72,
+      "pp": 512,
+      "tg": 128,
+      "pl": 16,
+      "n_kv": 10240,
+      "t_pp": 0.755809,
+      "speed_pp": 10838.716797,
+      "t_tg": 2.918308,
+      "speed_tg": 701.776489,
+      "t": 3.674117,
+      "speed": 2787.064209
+    }
+  ]
+}
