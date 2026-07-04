@@ -716,9 +716,18 @@ def run_one(entry: dict, models: dict, image_override: str | None) -> list[Path]
     real_dir = os.path.dirname(real_path)
     real_fn = os.path.basename(real_path)
 
-    cmd = (
-        f"llama-batched-bench -m /models/{real_fn} -ngl 999 "
+    bench_args = (
+        f"-m /models/{real_fn} -ngl 999 "
         f"-npp {pp} -ntg {tg} -npl {npl_csv} --output-format jsonl"
+    )
+    cmd = (
+        "bench_bin=$(command -v llama-batched-bench || true); "
+        "if [ -z \"$bench_bin\" ]; then "
+        "for p in /app/llama-batched-bench /usr/local/bin/llama-batched-bench "
+        "/usr/bin/llama-batched-bench /opt/llama.cpp/llama-batched-bench; do "
+        "[ -x \"$p\" ] && bench_bin=\"$p\" && break; done; fi; "
+        "[ -n \"$bench_bin\" ] || { echo 'llama-batched-bench not found' >&2; exit 127; }; "
+        f"\"$bench_bin\" {bench_args}"
     )
     artifacts = REPO / "artifacts"
     artifacts.mkdir(exist_ok=True)
@@ -728,7 +737,7 @@ def run_one(entry: dict, models: dict, image_override: str | None) -> list[Path]
     sh(
         f"{DOCKER} run --rm {docker_extra} --network host --entrypoint bash "
         f"-v {shlex.quote(real_dir)}:/models:ro {image_ref} "
-        f"-lc {shlex.quote(cmd)} 2>/dev/null > {shlex.quote(str(raw))}"
+        f"-lc {shlex.quote(cmd)} > {shlex.quote(str(raw))}"
     )
 
     # Parse jsonl: one line per pl value. Shape:
