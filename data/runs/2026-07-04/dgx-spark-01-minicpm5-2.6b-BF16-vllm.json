@@ -1,0 +1,52 @@
+{
+  "schema_version": 0,
+  "run_date": "2026-07-04",
+  "host": {
+    "slug": "dgx-spark-01",
+    "name": "DGX Spark",
+    "vendor": "NVIDIA",
+    "chip": "GB10",
+    "vram_gb": 128,
+    "deployment_form": "apu_minipc"
+  },
+  "model": {
+    "slug": "minicpm5-2.6b",
+    "name": "MiniCPM5-2.6B",
+    "params_b": 2.6,
+    "quantization": "BF16",
+    "source_url": "https://github.com/OpenBMB/MiniCPM"
+  },
+  "engine": {
+    "slug": "vllm",
+    "name": "vLLM",
+    "version": "0.23.0",
+    "commit": "0.23.0",
+    "backend": "vLLM",
+    "build_flags": ""
+  },
+  "command": "vllm bench throughput --model /model --dtype bfloat16 --max-model-len 2304 --max-num-seqs 1 --gpu-memory-utilization 0.85 --dataset-name random --input-len 512 --output-len 128 --num-prompts 32 --output-json /tmp/vllm-bench-minicpm5-2.6b-BF16.json",
+  "pp_test": "in512",
+  "pp_toks_per_s": 148.5808888906978,
+  "tg_test": "out128",
+  "tg_toks_per_s": 37.14522222267445,
+  "combined_toks_per_s": 334.30700000407,
+  "ttft_ms": null,
+  "ctx": 640,
+  "batch": 1,
+  "concurrency": 1,
+  "n_gpu_layers": null,
+  "vram_used_gb": null,
+  "scenario": "vllm-bench-throughput-in512-out128-npl1",
+  "usability_tag": "ok",
+  "image": "ghcr.io/inferstation/vllm-cuda-spark:latest",
+  "log_url": "https://github.com/InferStation/InferStation/actions/runs/28698037568",
+  "source_url": "https://github.com/InferStation/InferStation/actions/runs/28698037568",
+  "notes": "vllm bench throughput; pp_toks_per_s derived as num_prompts*input_len/elapsed",
+  "raw_vllm_bench": {
+    "elapsed_time": 110.26990161603317,
+    "num_requests": 32,
+    "total_num_tokens": 36864,
+    "requests_per_second": 0.2901970486146441,
+    "tokens_per_second": 334.30700000407
+  }
+}
