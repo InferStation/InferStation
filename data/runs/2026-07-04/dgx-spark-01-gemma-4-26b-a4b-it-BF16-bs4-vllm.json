@@ -1,0 +1,52 @@
+{
+  "schema_version": 0,
+  "run_date": "2026-07-04",
+  "host": {
+    "slug": "dgx-spark-01",
+    "name": "DGX Spark",
+    "vendor": "NVIDIA",
+    "chip": "GB10",
+    "vram_gb": 128,
+    "deployment_form": "apu_minipc"
+  },
+  "model": {
+    "slug": "gemma-4-26b-a4b-it",
+    "name": "Gemma-4-26B-A4B-it",
+    "params_b": 26,
+    "quantization": "BF16",
+    "source_url": "https://huggingface.co/unsloth/gemma-4-26B-A4B-it-GGUF"
+  },
+  "engine": {
+    "slug": "vllm",
+    "name": "vLLM",
+    "version": "0.24.0",
+    "commit": "0.24.0",
+    "backend": "vLLM",
+    "build_flags": ""
+  },
+  "command": "vllm bench throughput --model /model --dtype bfloat16 --max-model-len 2304 --max-num-seqs 4 --gpu-memory-utilization 0.85 --dataset-name random --input-len 512 --output-len 128 --num-prompts 32 --output-json /tmp/vllm-bench-gemma-4-26b-a4b-it-BF16-bs4.json",
+  "pp_test": "in512",
+  "pp_toks_per_s": 235.718449745835,
+  "tg_test": "out128",
+  "tg_toks_per_s": 58.92961243645875,
+  "combined_toks_per_s": 530.3665119281287,
+  "ttft_ms": null,
+  "ctx": 640,
+  "batch": 4,
+  "concurrency": 4,
+  "n_gpu_layers": null,
+  "vram_used_gb": null,
+  "scenario": "vllm-bench-throughput-in512-out128-npl4",
+  "usability_tag": "ok",
+  "image": "ghcr.io/inferstation/vllm-cuda-spark:latest",
+  "log_url": "https://github.com/InferStation/InferStation/actions/runs/28707041311",
+  "source_url": "https://github.com/InferStation/InferStation/actions/runs/28707041311",
+  "notes": "vllm bench throughput; pp_toks_per_s derived as num_prompts*input_len/elapsed",
+  "raw_vllm_bench": {
+    "elapsed_time": 69.50665091199335,
+    "num_requests": 32,
+    "total_num_tokens": 36864,
+    "requests_per_second": 0.46038759715983396,
+    "tokens_per_second": 530.3665119281287
+  }
+}
