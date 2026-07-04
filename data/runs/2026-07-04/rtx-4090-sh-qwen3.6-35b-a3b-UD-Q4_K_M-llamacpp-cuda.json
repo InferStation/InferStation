@@ -26,10 +26,10 @@
   },
   "command": "bench_bin=$(command -v llama-batched-bench || true); if [ -z \"$bench_bin\" ]; then for p in /app/llama-batched-bench /usr/local/bin/llama-batched-bench /usr/bin/llama-batched-bench /opt/llama.cpp/llama-batched-bench; do [ -x \"$p\" ] && bench_bin=\"$p\" && break; done; fi; [ -n \"$bench_bin\" ] || { echo 'llama-batched-bench not found' >&2; exit 127; }; \"$bench_bin\" -m /models/Qwen3.6-35B-A3B-UD-Q4_K_M.gguf -ngl 999 -npp 512 -ntg 128 -npl 1 --output-format jsonl",
   "pp_test": "pp512",
-  "pp_toks_per_s": 6285.216309,
+  "pp_toks_per_s": 5459.120605,
   "tg_test": "tg128",
-  "tg_toks_per_s": 184.880524,
-  "combined_toks_per_s": 827.087097,
+  "tg_toks_per_s": 177.652435,
+  "combined_toks_per_s": 785.954956,
   "ttft_ms": null,
   "ctx": 640,
   "batch": 2048,
@@ -38,8 +38,8 @@
   "vram_used_gb": null,
   "scenario": "llama-batched-bench-pp512-tg128-npl1",
   "usability_tag": "ok",
-  "log_url": "https://github.com/InferStation/InferStation/actions/runs/28706512974",
-  "source_url": "https://github.com/InferStation/InferStation/actions/runs/28706512974",
+  "log_url": "https://github.com/InferStation/InferStation/actions/runs/28707041311",
+  "source_url": "https://github.com/InferStation/InferStation/actions/runs/28707041311",
   "notes": "",
   "raw_llamabench": [
     {
@@ -55,12 +55,12 @@
       "tg": 128,
       "pl": 1,
       "n_kv": 640,
-      "t_pp": 0.081461,
-      "speed_pp": 6285.216309,
-      "t_tg": 0.692339,
-      "speed_tg": 184.880524,
-      "t": 0.7738,
-      "speed": 827.087097
+      "t_pp": 0.093788,
+      "speed_pp": 5459.120605,
+      "t_tg": 0.720508,
+      "speed_tg": 177.652435,
+      "t": 0.814296,
+      "speed": 785.954956
     }
   ]
 }
