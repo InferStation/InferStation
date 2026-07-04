@@ -1,0 +1,66 @@
+{
+  "schema_version": 0,
+  "run_date": "2026-07-04",
+  "host": {
+    "slug": "radeon-r9700-sh",
+    "name": "Radeon AI PRO R9700",
+    "vendor": "AMD",
+    "chip": "RDNA4 gfx1200 x2",
+    "vram_gb": 64,
+    "deployment_form": "workstation"
+  },
+  "model": {
+    "slug": "qwen3.6-35b-a3b",
+    "name": "Qwen3.6-35B-A3B",
+    "params_b": 35,
+    "quantization": "Q8_0",
+    "source_url": "https://huggingface.co/unsloth/Qwen3.6-35B-A3B-GGUF"
+  },
+  "engine": {
+    "slug": "llamacpp-vulkan",
+    "name": "llama.cpp",
+    "version": "sh: 1: llama-cli: not found",
+    "commit": "sh: 1: llama-cli: not found",
+    "backend": "Vulkan",
+    "build_flags": "-DGGML_VULKAN=ON"
+  },
+  "command": "bench_bin=$(command -v llama-batched-bench || true); if [ -z \"$bench_bin\" ]; then for p in /app/llama-batched-bench /usr/local/bin/llama-batched-bench /usr/bin/llama-batched-bench /opt/llama.cpp/llama-batched-bench; do [ -x \"$p\" ] && bench_bin=\"$p\" && break; done; fi; [ -n \"$bench_bin\" ] || { echo 'llama-batched-bench not found' >&2; exit 127; }; \"$bench_bin\" -m /models/Qwen3.6-35B-A3B-Q8_0.gguf -ngl 999 -npp 512 -ntg 128 -npl 16 --output-format jsonl",
+  "pp_test": "pp512",
+  "pp_toks_per_s": 224.808502,
+  "tg_test": "tg128",
+  "tg_toks_per_s": 34.198208,
+  "combined_toks_per_s": 106.30558,
+  "ttft_ms": null,
+  "ctx": 10240,
+  "batch": 2048,
+  "concurrency": 16,
+  "n_gpu_layers": 999,
+  "vram_used_gb": null,
+  "scenario": "llama-batched-bench-pp512-tg128-npl16",
+  "usability_tag": "ok",
+  "log_url": "https://github.com/InferStation/InferStation/actions/runs/28707041311",
+  "source_url": "https://github.com/InferStation/InferStation/actions/runs/28707041311",
+  "notes": "",
+  "raw_llamabench": [
+    {
+      "n_kv_max": 262144,
+      "n_batch": 2048,
+      "n_ubatch": 512,
+      "flash_attn": -1,
+      "is_pp_shared": 0,
+      "n_gpu_layers": 999,
+      "n_threads": 64,
+      "n_threads_batch": 64,
+      "pp": 512,
+      "tg": 128,
+      "pl": 16,
+      "n_kv": 10240,
+      "t_pp": 36.439903,
+      "speed_pp": 224.808502,
+      "t_tg": 59.886181,
+      "speed_tg": 34.198208,
+      "t": 96.32608,
+      "speed": 106.30558
+    }
+  ]
+}
