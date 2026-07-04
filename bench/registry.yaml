@@ -79,7 +79,7 @@ models:
   gemma-4-26b-a4b-it:
     name: Gemma-4-26B-A4B-it
     params_b: 26
-    host_dir: Gemma-4-26B-A4B-it-smoke
+    host_dir: gemma-4-26B-A4B-it
     hf_repo: unsloth/gemma-4-26B-A4B-it-GGUF
     source_url: https://huggingface.co/unsloth/gemma-4-26B-A4B-it-GGUF
     quants:
