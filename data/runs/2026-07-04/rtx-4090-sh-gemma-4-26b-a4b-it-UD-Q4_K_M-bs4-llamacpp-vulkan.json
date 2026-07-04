@@ -1,0 +1,66 @@
+{
+  "schema_version": 0,
+  "run_date": "2026-07-04",
+  "host": {
+    "slug": "rtx-4090-sh",
+    "name": "RTX 4090",
+    "vendor": "NVIDIA",
+    "chip": "AD102 (sm_89) x2",
+    "vram_gb": 96,
+    "deployment_form": "workstation"
+  },
+  "model": {
+    "slug": "gemma-4-26b-a4b-it",
+    "name": "Gemma-4-26B-A4B-it",
+    "params_b": 26,
+    "quantization": "UD-Q4_K_M",
+    "source_url": "https://huggingface.co/unsloth/gemma-4-26B-A4B-it-GGUF"
+  },
+  "engine": {
+    "slug": "llamacpp-vulkan",
+    "name": "llama.cpp",
+    "version": "sh: 1: llama-cli: not found",
+    "commit": "sh: 1: llama-cli: not found",
+    "backend": "Vulkan",
+    "build_flags": "-DGGML_VULKAN=ON"
+  },
+  "command": "bench_bin=$(command -v llama-batched-bench || true); if [ -z \"$bench_bin\" ]; then for p in /app/llama-batched-bench /usr/local/bin/llama-batched-bench /usr/bin/llama-batched-bench /opt/llama.cpp/llama-batched-bench; do [ -x \"$p\" ] && bench_bin=\"$p\" && break; done; fi; [ -n \"$bench_bin\" ] || { echo 'llama-batched-bench not found' >&2; exit 127; }; \"$bench_bin\" -m /models/gemma-4-26B-A4B-it-UD-Q4_K_M.gguf -ngl 999 -npp 512 -ntg 128 -npl 4 --output-format jsonl",
+  "pp_test": "pp512",
+  "pp_toks_per_s": 354.868256,
+  "tg_test": "tg128",
+  "tg_toks_per_s": 65.810478,
+  "combined_toks_per_s": 188.914948,
+  "ttft_ms": null,
+  "ctx": 2560,
+  "batch": 2048,
+  "concurrency": 4,
+  "n_gpu_layers": 999,
+  "vram_used_gb": null,
+  "scenario": "llama-batched-bench-pp512-tg128-npl4",
+  "usability_tag": "ok",
+  "log_url": "https://github.com/InferStation/InferStation/actions/runs/28707041311",
+  "source_url": "https://github.com/InferStation/InferStation/actions/runs/28707041311",
+  "notes": "",
+  "raw_llamabench": [
+    {
+      "n_kv_max": 262144,
+      "n_batch": 2048,
+      "n_ubatch": 512,
+      "flash_attn": -1,
+      "is_pp_shared": 0,
+      "n_gpu_layers": 999,
+      "n_threads": 72,
+      "n_threads_batch": 72,
+      "pp": 512,
+      "tg": 128,
+      "pl": 4,
+      "n_kv": 2560,
+      "t_pp": 5.771156,
+      "speed_pp": 354.868256,
+      "t_tg": 7.779916,
+      "speed_tg": 65.810478,
+      "t": 13.551071,
+      "speed": 188.914948
+    }
+  ]
+}
