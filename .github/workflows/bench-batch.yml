@@ -7,6 +7,11 @@ name: bench-batch
 # JSONs back to the site.
 
 on:
+  schedule:
+    # WEEKLY real bench. Fri 23:00 UTC = Sat 07:00 CST, ~8h after the
+    # nightly-build image build. This is the authoritative scheduled bench;
+    # it runs directly on GitHub self-hosted bench runners, no /admin dispatcher.
+    - cron: '0 23 * * 5'
   workflow_dispatch:
     inputs:
       target:
@@ -62,21 +67,25 @@ jobs:
         with:
           fetch-depth: 1
       - name: ghcr login (GHCR_PAT)
-        if: ${{ inputs.target == 'all' || inputs.target == matrix.target }}
+        if: ${{ (inputs.target || 'all') == 'all' || (inputs.target || 'all') == matrix.target }}
         run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u AlisaLi0 --password-stdin
       - name: Run bench-batch directly
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          BENCH_TARGET: ${{ inputs.target || 'all' }}
+          BENCH_FILTER: ${{ inputs.filter || '' }}
+          KEEP_MODELS: ${{ inputs.keep_models || false }}
+          SKIP_PUSH: ${{ inputs.skip_push || false }}
         run: |
           set -euo pipefail
-          if [[ "${{ inputs.target }}" != "all" && "${{ inputs.target }}" != "${{ matrix.target }}" ]]; then
-            echo "skip target=${{ matrix.target }} because requested target=${{ inputs.target }}"
+          if [[ "$BENCH_TARGET" != "all" && "$BENCH_TARGET" != "${{ matrix.target }}" ]]; then
+            echo "skip target=${{ matrix.target }} because requested target=$BENCH_TARGET"
             exit 0
           fi
           args=()
-          if [[ -n "${{ inputs.filter }}" ]]; then
+          if [[ -n "$BENCH_FILTER" ]]; then
             prefixed=()
-            IFS=',' read -ra filters <<< "${{ inputs.filter }}"
+            IFS=',' read -ra filters <<< "$BENCH_FILTER"
             for f in "${filters[@]}"; do
               f="${f//[[:space:]]/}"
               [[ -n "$f" ]] && prefixed+=("${{ matrix.host }}:${f}")
@@ -85,10 +94,10 @@ jobs:
           else
             args+=("--filter=${{ matrix.host }}")
           fi
-          if [[ "${{ inputs.keep_models }}" == "true" ]]; then
+          if [[ "$KEEP_MODELS" == "true" ]]; then
             args+=("--keep-models")
           fi
-          if [[ "${{ inputs.skip_push }}" == "true" ]]; then
+          if [[ "$SKIP_PUSH" == "true" ]]; then
             args+=("--skip-push" "--skip-push-site")
           fi
           echo "target=${{ matrix.target }} runner=${RUNNER_NAME} args=${args[*]:-<none>}"
