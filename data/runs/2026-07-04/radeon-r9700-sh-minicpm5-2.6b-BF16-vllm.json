@@ -19,17 +19,17 @@
   "engine": {
     "slug": "vllm-rocm",
     "name": "vLLM",
-    "version": "g3775d5fca",
-    "commit": "g3775d5fca",
+    "version": "gbf292b5f6",
+    "commit": "gbf292b5f6",
     "backend": "vLLM-ROCm",
     "build_flags": ""
   },
   "command": "vllm bench throughput --model /model --dtype bfloat16 --max-model-len 2304 --max-num-seqs 1 --gpu-memory-utilization 0.85 --dataset-name random --input-len 512 --output-len 128 --num-prompts 32 --output-json /tmp/vllm-bench-minicpm5-2.6b-BF16.json",
   "pp_test": "in512",
-  "pp_toks_per_s": 448.61966642309096,
+  "pp_toks_per_s": 395.79481025285355,
   "tg_test": "out128",
-  "tg_toks_per_s": 112.15491660577274,
-  "combined_toks_per_s": 1009.3942494519547,
+  "tg_toks_per_s": 98.94870256321339,
+  "combined_toks_per_s": 890.5383230689205,
   "ttft_ms": null,
   "ctx": 640,
   "batch": 1,
@@ -39,14 +39,14 @@
   "scenario": "vllm-bench-throughput-in512-out128-npl1",
   "usability_tag": "ok",
   "image": "ghcr.io/inferstation/vllm-rocm-r9700-main:latest",
-  "log_url": "https://github.com/InferStation/InferStation/actions/runs/28703581525",
-  "source_url": "https://github.com/InferStation/InferStation/actions/runs/28703581525",
+  "log_url": "https://github.com/InferStation/InferStation/actions/runs/28698037568",
+  "source_url": "https://github.com/InferStation/InferStation/actions/runs/28698037568",
   "notes": "vllm bench throughput; pp_toks_per_s derived as num_prompts*input_len/elapsed",
   "raw_vllm_bench": {
-    "elapsed_time": 36.52091342903441,
+    "elapsed_time": 41.395186534995446,
     "num_requests": 32,
     "total_num_tokens": 36864,
-    "requests_per_second": 0.8762102859825995,
-    "tokens_per_second": 1009.3942494519547
+    "requests_per_second": 0.7730367387751046,
+    "tokens_per_second": 890.5383230689205
   }
 }
