@@ -179,7 +179,9 @@ HOSTS = {
         "form": "workstation",
         "models_root": "/dc/inferstation-models",
         "backends": {
-            "cuda": f"{GHCR_REGISTRY}/llama-cuda-4090:latest",
+            # The InferStation llama-cuda-4090 mirror currently tracks the
+            # upstream server image, which does not include llama-batched-bench.
+            "cuda": "ghcr.io/ggml-org/llama.cpp:full-cuda",
             "vulkan": f"{GHCR_REGISTRY}/llama-vulkan-4090:latest",
             "vllm": f"{GHCR_REGISTRY}/vllm-cuda-4090:latest",
         },
@@ -241,6 +243,7 @@ WEEKLY_DOCKER_EXTRA = {
         "--gpus all -e NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics "
         "-e VK_DRIVER_FILES=/usr/share/vulkan/icd.d/nvidia_icd.json"
     ),
+    ("rtx-4090-sh", "vllm"): "--gpus all --shm-size 16g --ipc=host",
 }
 REPRESENTATIVE_MODELS = {
     "minicpm5-2.6b",
@@ -303,7 +306,10 @@ def representative_runs(runs: list[dict]) -> list[dict]:
         model = entry["model"]
         quant = entry["quant"]
         backend = entry.get("backend", "cuda")
+        npl = int(entry.get("npl", 1))
         if model not in REPRESENTATIVE_MODELS:
+            continue
+        if entry["host"] == "rtx-4090-sh" and backend == "vulkan" and npl > 4:
             continue
         if backend in {"vllm", "vllm-rocm"}:
             if quant in REPRESENTATIVE_VLLM_QUANTS:
@@ -816,16 +822,24 @@ def run_one(entry: dict, models: dict, image_override: str | None) -> list[Path]
     return out_paths
 
 
-def git_commit_push(out_abs: Path, entry: dict) -> None:
-    sh(f"cd {REPO} && git add {shlex.quote(str(out_abs.relative_to(REPO)))}")
+def git_commit_push(out_paths: Path | list[Path], entry: dict) -> None:
+    if isinstance(out_paths, Path):
+        paths = [out_paths]
+    else:
+        paths = out_paths
+    rel_paths = " ".join(shlex.quote(str(p.relative_to(REPO))) for p in paths)
+    sh(f"cd {REPO} && git add {rel_paths}")
     rc = subprocess.run(
         "git diff --cached --quiet", shell=True, cwd=REPO
     ).returncode
     if rc == 0:
         print("[skip] no diff to commit")
         return
-    npl = int(entry.get("npl", 1))
-    suffix = "" if npl == 1 else f" bs{npl}"
+    if "npls" in entry:
+        suffix = " bs" + ",".join(str(x) for x in entry["npls"])
+    else:
+        npl = int(entry.get("npl", 1))
+        suffix = "" if npl == 1 else f" bs{npl}"
     backend = entry.get("backend", "cuda")
     msg = (
         f"bench({entry['host']}): {entry['model']} {entry['quant']}{suffix} llama.cpp-{backend}"
@@ -963,9 +977,8 @@ def main() -> int:
         print(f"\n=== {r['model']} :: {r['quant']} on {r['host']} ({r.get('backend','cuda')}) ===")
         try:
             out_abs_list = run_one(r, reg["models"], image_override)
-            for out_abs in out_abs_list:
-                if not args.skip_push:
-                    git_commit_push(out_abs, r)
+            if not args.skip_push:
+                git_commit_push(out_abs_list, r)
             if not args.skip_push_site and push_site_script.exists():
                 try:
                     sh(str(push_site_script))
