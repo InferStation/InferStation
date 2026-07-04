@@ -19,17 +19,17 @@
   "engine": {
     "slug": "vllm",
     "name": "vLLM",
-    "version": "0.23.0",
-    "commit": "0.23.0",
+    "version": "0.24.0",
+    "commit": "0.24.0",
     "backend": "vLLM",
     "build_flags": ""
   },
   "command": "vllm bench throughput --model /model --dtype bfloat16 --max-model-len 2304 --max-num-seqs 4 --gpu-memory-utilization 0.85 --dataset-name random --input-len 512 --output-len 128 --num-prompts 32 --output-json /tmp/vllm-bench-minicpm5-2.6b-BF16-bs4.json",
   "pp_test": "in512",
-  "pp_toks_per_s": 672.1779733395911,
+  "pp_toks_per_s": 663.9753782048239,
   "tg_test": "out128",
-  "tg_toks_per_s": 168.04449333489777,
-  "combined_toks_per_s": 1512.40044001408,
+  "tg_toks_per_s": 165.99384455120597,
+  "combined_toks_per_s": 1493.9446009608537,
   "ttft_ms": null,
   "ctx": 640,
   "batch": 4,
@@ -39,14 +39,14 @@
   "scenario": "vllm-bench-throughput-in512-out128-npl4",
   "usability_tag": "ok",
   "image": "ghcr.io/inferstation/vllm-cuda-spark:latest",
-  "log_url": "https://github.com/InferStation/InferStation/actions/runs/28698037568",
-  "source_url": "https://github.com/InferStation/InferStation/actions/runs/28698037568",
+  "log_url": "https://github.com/InferStation/InferStation/actions/runs/28707041311",
+  "source_url": "https://github.com/InferStation/InferStation/actions/runs/28707041311",
   "notes": "vllm bench throughput; pp_toks_per_s derived as num_prompts*input_len/elapsed",
   "raw_vllm_bench": {
-    "elapsed_time": 24.374497007986065,
+    "elapsed_time": 24.675613792031072,
     "num_requests": 32,
     "total_num_tokens": 36864,
-    "requests_per_second": 1.3128476041788888,
-    "tokens_per_second": 1512.40044001408
+    "requests_per_second": 1.2968269105562966,
+    "tokens_per_second": 1493.9446009608537
   }
 }
