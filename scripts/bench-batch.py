@@ -28,6 +28,7 @@ import os
 import shlex
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 try:
@@ -150,7 +151,7 @@ HOSTS = {
         "chip": "GB10",
         "vram_gb": 128,
         "form": "apu_minipc",
-        "models_root": "/home/bench/models",
+        "models_root": "/opt/inferstation/models",
         "backends": {
             "cuda":   f"{GHCR_REGISTRY}/llama-cuda-spark:latest",
             "vulkan": f"{GHCR_REGISTRY}/llama-vulkan-spark:latest",
@@ -163,7 +164,7 @@ HOSTS = {
         "chip": "Strix Halo / Radeon 8060S (gfx1151)",
         "vram_gb": 128,
         "form": "apu_minipc",
-        "models_root": "/home/bench/models",
+        "models_root": "/opt/inferstation/models",
         "backends": {
             "rocm":      f"{GHCR_REGISTRY}/llama-rocm-halo:latest",
             "vulkan":    f"{GHCR_REGISTRY}/llama-vulkan-halo:latest",
@@ -176,8 +177,10 @@ HOSTS = {
         "chip": "AD102 (sm_89) x2",
         "vram_gb": 96,
         "form": "workstation",
-        "models_root": "/opt/inferstation/models",
+        "models_root": "/dc/inferstation-models",
         "backends": {
+            "cuda": f"{GHCR_REGISTRY}/llama-cuda-4090:latest",
+            "vulkan": f"{GHCR_REGISTRY}/llama-vulkan-4090:latest",
             "vllm": f"{GHCR_REGISTRY}/vllm-cuda-4090:latest",
         },
     },
@@ -189,6 +192,8 @@ HOSTS = {
         "form": "workstation",
         "models_root": "/opt/inferstation/models",
         "backends": {
+            "rocm": f"{GHCR_REGISTRY}/llama-rocm-r9700:latest",
+            "vulkan": f"{GHCR_REGISTRY}/llama-vulkan-r9700:latest",
             "vllm-rocm": f"{GHCR_REGISTRY}/vllm-rocm-r9700-main:latest",
         },
     },
@@ -204,6 +209,128 @@ HOSTS = {
         },
     },
 }
+
+WEEKLY_TEMPLATE_HOST = "dgx-spark-01"
+WEEKLY_BACKEND_MAP = {
+    "ryzen-ai-max-395-03": {
+        "cuda": "rocm",
+        "vulkan": "vulkan",
+        "vllm": "vllm-rocm",
+    },
+    "rtx-4090-sh": {
+        "cuda": "cuda",
+        "vulkan": "vulkan",
+        "vllm": "vllm",
+    },
+    "radeon-r9700-sh": {
+        "cuda": "rocm",
+        "vulkan": "vulkan",
+        "vllm": "vllm-rocm",
+    },
+}
+WEEKLY_DOCKER_EXTRA = {
+    ("ryzen-ai-max-395-03", "vulkan"): (
+        "--device=/dev/dri --group-add video --security-opt seccomp=unconfined "
+        "-e VK_DRIVER_FILES=/usr/share/vulkan/icd.d/radeon_icd.x86_64.json"
+    ),
+    ("radeon-r9700-sh", "vulkan"): (
+        "--device=/dev/dri --group-add video --security-opt seccomp=unconfined "
+        "-e VK_DRIVER_FILES=/usr/share/vulkan/icd.d/radeon_icd.x86_64.json"
+    ),
+    ("rtx-4090-sh", "vulkan"): (
+        "--gpus all -e NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics "
+        "-e VK_DRIVER_FILES=/usr/share/vulkan/icd.d/nvidia_icd.json"
+    ),
+}
+REPRESENTATIVE_MODELS = {
+    "minicpm5-2.6b",
+    "qwen3.6-35b-a3b",
+    "gemma-4-26b-a4b-it",
+}
+REPRESENTATIVE_GGUF_QUANTS = {"Q8_0", "UD-Q4_K_M"}
+REPRESENTATIVE_VLLM_QUANTS = {"BF16"}
+
+
+def run_key(entry: dict) -> tuple:
+    if "npls" in entry:
+        npl_key = tuple(int(x) for x in entry["npls"])
+    else:
+        npl_key = (int(entry.get("npl", 1)),)
+    return (
+        entry["host"],
+        entry["model"],
+        entry["quant"],
+        entry.get("backend", "cuda"),
+        npl_key,
+    )
+
+
+def expand_weekly_runs(runs: list[dict]) -> list[dict]:
+    """Expand the canonical Spark recipe to the other weekly host classes.
+
+    `bench/registry.yaml` keeps Spark as the full recipe template. Weekly jobs
+    filter by public host slug, so synthesize equivalent host-specific entries
+    for Halo, 4090, and R9700 while preserving explicit entries in the registry.
+    """
+    expanded = [dict(r) for r in runs]
+    seen = {run_key(r) for r in expanded}
+    templates = [r for r in runs if r.get("host") == WEEKLY_TEMPLATE_HOST]
+    for host, backend_map in WEEKLY_BACKEND_MAP.items():
+        for template in templates:
+            src_backend = template.get("backend", "cuda")
+            dst_backend = backend_map.get(src_backend)
+            if not dst_backend:
+                continue
+            entry = dict(template)
+            entry["host"] = host
+            entry["backend"] = dst_backend
+            entry.pop("image", None)
+            entry.pop("docker_extra", None)
+            docker_extra = WEEKLY_DOCKER_EXTRA.get((host, dst_backend))
+            if docker_extra:
+                entry["docker_extra"] = docker_extra
+            key = run_key(entry)
+            if key in seen:
+                continue
+            seen.add(key)
+            expanded.append(entry)
+    return expanded
+
+
+def representative_runs(runs: list[dict]) -> list[dict]:
+    out = []
+    for entry in runs:
+        model = entry["model"]
+        quant = entry["quant"]
+        backend = entry.get("backend", "cuda")
+        if model not in REPRESENTATIVE_MODELS:
+            continue
+        if backend in {"vllm", "vllm-rocm"}:
+            if quant in REPRESENTATIVE_VLLM_QUANTS:
+                out.append(entry)
+            continue
+        if quant in REPRESENTATIVE_GGUF_QUANTS:
+            out.append(entry)
+    return out
+
+
+def host_slugs() -> set[str]:
+    return set(HOSTS)
+
+
+def scope_base_runs(expanded_runs: list[dict], scope: str, flt: str) -> list[dict]:
+    """Choose the source run list before applying filters.
+
+    Scheduled matrix jobs pass a host slug as --filter. That should still mean
+    "representative weekly set for this host", not "full sweep for this host".
+    Manual model/quant/backend filters intentionally use the full expanded set.
+    """
+    if scope != "representative":
+        return expanded_runs
+    keys = {k.strip() for k in flt.split(",") if k.strip()}
+    if not keys or keys <= host_slugs():
+        return representative_runs(expanded_runs)
+    return expanded_runs
 
 
 def sh(cmd: str, *, capture: bool = False, check: bool = True) -> str:
@@ -597,8 +724,9 @@ def run_one(entry: dict, models: dict, image_override: str | None) -> list[Path]
     artifacts.mkdir(exist_ok=True)
     raw_suffix = "" if len(npls) == 1 and npls[0] == 1 else (f"-bs{npls[0]}" if len(npls) == 1 else "-bsall")
     raw = artifacts / f"{host_slug}-{model_slug}-{quant}{raw_suffix}-{bcfg['file_suffix']}.jsonl"
+    docker_extra = entry.get("docker_extra") or bcfg["docker_extra"]
     sh(
-        f"{DOCKER} run --rm {bcfg['docker_extra']} --network host --entrypoint bash "
+        f"{DOCKER} run --rm {docker_extra} --network host --entrypoint bash "
         f"-v {shlex.quote(real_dir)}:/models:ro {image_ref} "
         f"-lc {shlex.quote(cmd)} 2>/dev/null > {shlex.quote(str(raw))}"
     )
@@ -697,22 +825,28 @@ def git_commit_push(out_abs: Path, entry: dict) -> None:
         f"cd {REPO} && git -c user.name='InferStation Bench Bot' "
         f"-c user.email='actions@inferstation' commit -m {shlex.quote(msg)}"
     )
-    # Pull (rebase) before push so we don't fail when origin has moved ahead.
-    pull_rc = subprocess.run(
-        "git pull --rebase --autostash origin main",
-        shell=True, cwd=REPO,
-    ).returncode
-    if pull_rc != 0:
-        print(f"[git pull --rebase] rc={pull_rc}, aborting rebase")
-        subprocess.run("git rebase --abort", shell=True, cwd=REPO)
-    # Push is best-effort: a failure here must not abort the bench run nor
-    # block the downstream push-to-site step. The commit stays in the local
-    # repo and will be pushed by a later successful run.
-    push_rc = subprocess.run(
-        "git push origin HEAD:main", shell=True, cwd=REPO,
-    ).returncode
-    if push_rc != 0:
-        print(f"[git push] rc={push_rc} (continuing)")
+    attempts = int(os.environ.get("BENCH_GIT_PUSH_ATTEMPTS", "6"))
+    last_error = ""
+    for attempt in range(1, attempts + 1):
+        pull_rc = subprocess.run(
+            "git pull --rebase --autostash origin main",
+            shell=True, cwd=REPO,
+        ).returncode
+        if pull_rc != 0:
+            last_error = f"git pull --rebase rc={pull_rc}"
+            print(f"[{last_error}] attempt {attempt}/{attempts}, aborting rebase")
+            subprocess.run("git rebase --abort", shell=True, cwd=REPO)
+        else:
+            push_rc = subprocess.run(
+                "git push origin HEAD:main", shell=True, cwd=REPO,
+            ).returncode
+            if push_rc == 0:
+                return
+            last_error = f"git push rc={push_rc}"
+            print(f"[{last_error}] attempt {attempt}/{attempts}")
+        if attempt < attempts:
+            time.sleep(min(2 * attempt, 15))
+    raise RuntimeError(f"failed to push benchmark result after {attempts} attempts: {last_error}")
 
 
 def select(runs: list[dict], flt: str | None) -> list[dict]:
@@ -774,8 +908,15 @@ def main() -> int:
         default=os.environ.get("BENCH_FILTER", ""),
         help='Comma-separated "<model>:<quant>" or "<model>" entries. Empty = all.',
     )
+    ap.add_argument(
+        "--scope",
+        choices=("representative", "all"),
+        default=os.environ.get("BENCH_SCOPE", "representative"),
+        help="Default run set when --filter is empty. representative is the weekly schedule; all is the full expanded registry.",
+    )
     ap.add_argument("--skip-push", action="store_true")
     ap.add_argument("--skip-push-site", action="store_true", help="Do not rsync each completed run to the site host.")
+    ap.add_argument("--dry-run", action="store_true", help="Print the selected plan and exit without running benchmarks.")
     ap.add_argument("--keep-models", action="store_true", help="Do not delete model files after the last benchmark referencing them.")
     ap.add_argument(
         "--image", default=os.environ.get("BENCH_IMAGE", ""),
@@ -787,7 +928,9 @@ def main() -> int:
     push_site_script = REPO / "scripts" / "push-to-site.sh"
 
     reg = yaml.safe_load(REGISTRY.read_text())
-    runs = select(reg.get("runs", []), args.filter)
+    expanded_runs = expand_weekly_runs(reg.get("runs", []))
+    base_runs = scope_base_runs(expanded_runs, args.scope, args.filter)
+    runs = select(base_runs, args.filter)
     if not runs:
         print("nothing to do")
         return 0
@@ -796,6 +939,8 @@ def main() -> int:
         bs_disp = r.get("npl") if "npl" in r else (",".join(str(x) for x in r.get("npls", [1])))
         eff_image = image_override or r.get("image") or HOSTS.get(r["host"], {}).get("backends", {}).get(r.get("backend", "cuda"), "<unset>")
         print(f"  - {r['host']} :: {r['model']} :: {r['quant']} ({r.get('backend','cuda')}) bs={bs_disp} image={eff_image}")
+    if args.dry_run:
+        return 0
 
     # Per-(host, model, quant) reference counter. When a key hits zero (after
     # all runs that use that artifact have completed), free the disk.

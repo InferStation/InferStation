@@ -72,6 +72,9 @@ models:
       BF16:
         format: hf-snapshot
         hf_repo: unsloth/Qwen3.6-35B-A3B
+        local_paths:
+          rtx-4090-sh: /dc/inferstation-models/Qwen3.6-35B-A3B
+          radeon-r9700-sh: /opt/inferstation/models/Qwen3.6-35B-A3B
 
   gemma-4-26b-a4b-it:
     name: Gemma-4-26B-A4B-it
@@ -104,6 +107,9 @@ models:
       BF16:
         format: hf-snapshot
         hf_repo: unsloth/gemma-4-26B-A4B-it
+        local_paths:
+          dgx-spark-01: /opt/inferstation/models/gemma-4-26B-A4B-it
+          rtx-4090-sh: /dc/inferstation-models/gemma-4-26B-A4B-it
 
   qwen3.6-27b:
     name: Qwen3.6-27B
@@ -137,8 +143,14 @@ models:
       BF16:
         format: hf-snapshot
         hf_repo: unsloth/Qwen3.6-27B
+        local_paths:
+          rtx-4090-sh: /dc/inferstation-models/Qwen3.6-27B
+          radeon-r9700-sh: /opt/inferstation/models/Qwen3.6-27B
 
 # `runs` is the queue.
+# Spark entries are the canonical recipe template. scripts/bench-batch.py expands
+# them at runtime to the approved weekly hosts (Halo, Spark, 4090, R9700) with
+# host-specific backends/images. Do not add W7900 entries to weekly.
 runs:
 
   # ---- MiniCPM5-2.6B BF16 (vLLM, day-0 adaptation) ----

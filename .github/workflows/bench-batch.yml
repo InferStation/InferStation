@@ -28,6 +28,13 @@ on:
         description: 'Optional bench-batch filter, e.g. minicpm5-2.6b:BF16'
         type: string
         default: ''
+      scope:
+        description: 'representative weekly set, or all expanded registry entries'
+        type: choice
+        default: representative
+        options:
+          - representative
+          - all
       keep_models:
         description: 'Keep downloaded models after the run'
         type: boolean
@@ -68,12 +75,29 @@ jobs:
           fetch-depth: 1
       - name: ghcr login (GHCR_PAT)
         if: ${{ (inputs.target || 'all') == 'all' || (inputs.target || 'all') == matrix.target }}
-        run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u AlisaLi0 --password-stdin
+        env:
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
+        run: |
+          set -euo pipefail
+          logged_in=0
+          if docker version >/dev/null 2>&1; then
+            printf '%s\n' "$GHCR_PAT" | docker login ghcr.io -u AlisaLi0 --password-stdin
+            logged_in=1
+          fi
+          if sudo -n docker version >/dev/null 2>&1; then
+            printf '%s\n' "$GHCR_PAT" | sudo -n docker login ghcr.io -u AlisaLi0 --password-stdin
+            logged_in=1
+          fi
+          if [[ "$logged_in" -eq 0 ]]; then
+            echo "neither docker nor sudo docker is usable on this runner" >&2
+            exit 1
+          fi
       - name: Run bench-batch directly
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           BENCH_TARGET: ${{ inputs.target || 'all' }}
           BENCH_FILTER: ${{ inputs.filter || '' }}
+          BENCH_SCOPE: ${{ inputs.scope || 'representative' }}
           KEEP_MODELS: ${{ inputs.keep_models || false }}
           SKIP_PUSH: ${{ inputs.skip_push || false }}
         run: |
@@ -94,6 +118,7 @@ jobs:
           else
             args+=("--filter=${{ matrix.host }}")
           fi
+          args+=("--scope=$BENCH_SCOPE")
           if [[ "$KEEP_MODELS" == "true" ]]; then
             args+=("--keep-models")
           fi
