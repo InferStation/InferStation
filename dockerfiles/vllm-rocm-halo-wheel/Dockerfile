@@ -8,15 +8,15 @@
 # then installs that wheel into a clean runtime image in ~2 min with no
 # compiler.
 #
-# The wheel is ABI-locked to (VLLM_TAG, VLLM_BASE, gfx1151, py3.13). Rebuild it
-# only when bumping vLLM or the rocm/vllm base image. Same base + only-changed
+# The wheel is ABI-locked to (VLLM_TAG, VLLM_BASE, gfx1151, py3.12). Rebuild it
+# only when bumping vLLM or the PyTorch/ROCm base image. Same base + only-changed
 # sources => ccache makes a rebuild ~5-10 min instead of 30-60 min.
 #
 # Build (via dockerfiles/build.sh):
 #   ./build.sh vllm-rocm-halo-wheel                 # release v0.22.0
 #   ./build.sh vllm-rocm-halo-wheel --ref=main --tag=nightly-$(date +%Y%m%d)-gfx1151
 
-ARG VLLM_BASE=rocm/vllm:rocm7.13.0_gfx1151_ubuntu24.04_py3.13_pytorch_2.10.0_vllm_0.19.1
+ARG VLLM_BASE=ghcr.io/inferstation/pytorch-rocm-halo:v2-staging-gfx1151
 ARG VLLM_REPO=https://github.com/vllm-project/vllm.git
 ARG VLLM_TAG=v0.22.0
 ARG PYTORCH_ROCM_ARCH=gfx1151
@@ -34,8 +34,12 @@ ARG CACHEBUST=main
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTORCH_ROCM_ARCH=${PYTORCH_ROCM_ARCH}
+ENV VLLM_TARGET_DEVICE=rocm
 ENV MAX_JOBS=8
 ENV CMAKE_BUILD_PARALLEL_LEVEL=8
+ENV ROCM_PATH=/usr/local/lib/python3.12/site-packages/_rocm_sdk_devel
+ENV HIP_PATH=/usr/local/lib/python3.12/site-packages/_rocm_sdk_devel
+ENV HSA_OVERRIDE_GFX_VERSION=11.5.1
 # Route every C / C++ / HIP compile through ccache. The cache itself lives in
 # the BuildKit cache mount on the RUN below, so it persists across builds and
 # only changed translation units recompile.
@@ -45,8 +49,7 @@ ENV CMAKE_HIP_COMPILER_LAUNCHER=ccache
 ENV CCACHE_DIR=/root/.cache/ccache
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        git ca-certificates build-essential cmake ninja-build ccache \
-        python3-dev python3-pip \
+    git ca-certificates build-essential ccache curl protobuf-compiler \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/vllm-src
@@ -70,11 +73,11 @@ RUN for f in $(grep -rl 'std::in_range<int>(b_row_stride_bytes)' csrc/rocm/ 2>/d
     done \
  && ! grep -rn 'std::in_range<int>(' csrc/rocm/
 
-# Build-time toolchain + numpy pin (same as the old one-shot Dockerfile).
-RUN pip install --upgrade \
-        numba scipy 'huggingface-hub[cli,hf_transfer]' setuptools_scm \
-        setuptools wheel build cmake ninja \
- && pip install 'numpy<2'
+# Build-time toolchain. The PyTorch/ROCm stack comes from VLLM_BASE and is kept
+# pinned through /opt/rocm-pytorch-constraints.txt.
+RUN uv pip install --system --python python -U \
+    packaging 'cmake<4' ninja wheel build 'setuptools>=77.0.3,<80.0.0' setuptools_scm \
+    setuptools-rust pybind11 Cython scikit-build-core numba scipy 'huggingface-hub[cli,hf_transfer]'
 
 # requirements/rocm.txt path moved between vllm versions; resolve it and stash a
 # copy into /wheels so the assembler can install the exact same runtime deps.
@@ -109,6 +112,7 @@ RUN --mount=type=cache,target=/root/.cache/ccache,id=vllm-halo-ccache,sharing=lo
             --no-deps \
             -w /wheels \
             --verbose \
+ && cp /opt/rocm-pytorch-constraints.txt /constraints.txt \
  && ls -lh /wheels/*.whl \
  && ccache -s
 
@@ -117,3 +121,4 @@ RUN --mount=type=cache,target=/root/.cache/ccache,id=vllm-halo-ccache,sharing=lo
 # Pulled by the assembler via `COPY --from=<this image>`.
 FROM scratch
 COPY --from=builder /wheels/ /
+COPY --from=builder /constraints.txt /constraints.txt
