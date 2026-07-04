@@ -1,0 +1,89 @@
+name: bench-batch
+
+# Direct GitHub runner entrypoint for the current InferStation recipe runner.
+# This does NOT use the retired /admin dispatcher. Each matrix job runs on the
+# matching self-hosted bench runner and invokes scripts/run-all.sh, which drives
+# scripts/bench-batch.py against bench/registry.yaml and pushes completed run
+# JSONs back to the site.
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Which weekly bench runner pool to use'
+        type: choice
+        default: all
+        options:
+          - all
+          - halo
+          - spark
+          - nv4090
+          - r9700
+      filter:
+        description: 'Optional bench-batch filter, e.g. minicpm5-2.6b:BF16'
+        type: string
+        default: ''
+      keep_models:
+        description: 'Keep downloaded models after the run'
+        type: boolean
+        default: false
+      skip_push:
+        description: 'Run without committing/pushing result JSONs'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  bench:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: halo
+            label: inferstation-halo-weekly
+            host: ryzen-ai-max-395-03
+          - target: spark
+            label: inferstation-spark-weekly
+            host: dgx-spark-01
+          - target: nv4090
+            label: inferstation-nv4090-weekly
+            host: rtx-4090-sh
+          - target: r9700
+            label: inferstation-r9700-weekly
+            host: radeon-r9700-sh
+    if: ${{ inputs.target == 'all' || inputs.target == matrix.target }}
+    runs-on:
+      - self-hosted
+      - inferstation-bench
+      - ${{ matrix.label }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Run bench-batch directly
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          set -euo pipefail
+          args=()
+          if [[ -n "${{ inputs.filter }}" ]]; then
+            prefixed=()
+            IFS=',' read -ra filters <<< "${{ inputs.filter }}"
+            for f in "${filters[@]}"; do
+              f="${f//[[:space:]]/}"
+              [[ -n "$f" ]] && prefixed+=("${{ matrix.host }}:${f}")
+            done
+            args+=("--filter=$(IFS=,; echo "${prefixed[*]}")")
+          else
+            args+=("--filter=${{ matrix.host }}")
+          fi
+          if [[ "${{ inputs.keep_models }}" == "true" ]]; then
+            args+=("--keep-models")
+          fi
+          if [[ "${{ inputs.skip_push }}" == "true" ]]; then
+            args+=("--skip-push" "--skip-push-site")
+          fi
+          echo "target=${{ matrix.target }} runner=${RUNNER_NAME} args=${args[*]:-<none>}"
+          scripts/run-all.sh "${args[@]}"

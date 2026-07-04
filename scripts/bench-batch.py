@@ -49,6 +49,10 @@ REGISTRY = REPO / "bench" / "registry.yaml"
 # already be cached (see /memories/api-keys.md for credentials).
 INFER_REGISTRY = os.environ.get("INFER_REGISTRY", "10.161.176.9:8443")
 
+# Newer InferStation images are published on GHCR. Keep the old INFER_REGISTRY
+# default for legacy entries, but let registry.yaml point runs at GHCR images.
+GHCR_REGISTRY = os.environ.get("INFER_GHCR_REGISTRY", "ghcr.io/inferstation")
+
 # Backend metadata. Image is NO LONGER stored here — it is resolved from
 # (host, backend) via HOSTS[<slug>]["backends"][<backend>]["image"], and may
 # be overridden per-run by a `runs[].image: "<ref>"` field, or globally with
@@ -124,6 +128,11 @@ BACKENDS = {
 # Default to the official hub; HF_TOKEN bumps the rate limit / speed.
 HF_ENDPOINT = os.environ.get("HF_ENDPOINT", "https://huggingface.co")
 HF_TOKEN = os.environ.get("HF_TOKEN", "")
+DOCKER = os.environ.get("BENCH_DOCKER") or (
+    "sudo -n docker"
+    if subprocess.run("docker version >/dev/null 2>&1", shell=True).returncode != 0
+    else "docker"
+)
 
 # Host metadata. Keyed by the slug used in registry `runs[].host`.
 # IMPORTANT: BOTH `name` (display) AND the slug key (used in URLs / filenames)
@@ -143,22 +152,55 @@ HOSTS = {
         "form": "apu_minipc",
         "models_root": "/home/bench/models",
         "backends": {
-            "cuda":   f"{INFER_REGISTRY}/inferstation/llama-cuda-spark:b5350-sm121",
-            "vulkan": f"{INFER_REGISTRY}/inferstation/llama-vulkan-spark:b5350",
-            "vllm":   f"{INFER_REGISTRY}/inferstation/vllm-cuda-spark:v0.22.0-sm121",
+            "cuda":   f"{GHCR_REGISTRY}/llama-cuda-spark:latest",
+            "vulkan": f"{GHCR_REGISTRY}/llama-vulkan-spark:latest",
+            "vllm":   f"{GHCR_REGISTRY}/vllm-cuda-spark:latest",
         },
     },
-    "strix-halo-01": {
+    "ryzen-ai-max-395-03": {
         "name": "Strix Halo",
         "vendor": "AMD",
-        "chip": "Strix Halo (gfx1151)",
+        "chip": "Strix Halo / Radeon 8060S (gfx1151)",
         "vram_gb": 128,
         "form": "apu_minipc",
         "models_root": "/home/bench/models",
         "backends": {
-            "rocm":      f"{INFER_REGISTRY}/inferstation/llama-rocm-halo:b6652-gfx1151",
-            "vulkan":    f"{INFER_REGISTRY}/inferstation/llama-vulkan-halo:b5350",
-            "vllm-rocm": f"{INFER_REGISTRY}/inferstation/vllm-rocm-halo:v0.19.1-gfx1151",
+            "rocm":      f"{GHCR_REGISTRY}/llama-rocm-halo:latest",
+            "vulkan":    f"{GHCR_REGISTRY}/llama-vulkan-halo:latest",
+            "vllm-rocm": f"{GHCR_REGISTRY}/vllm-rocm-halo:latest",
+        },
+    },
+    "rtx-4090-sh": {
+        "name": "RTX 4090",
+        "vendor": "NVIDIA",
+        "chip": "AD102 (sm_89) x2",
+        "vram_gb": 96,
+        "form": "workstation",
+        "models_root": "/opt/inferstation/models",
+        "backends": {
+            "vllm": f"{GHCR_REGISTRY}/vllm-cuda-4090:latest",
+        },
+    },
+    "radeon-r9700-sh": {
+        "name": "Radeon AI PRO R9700",
+        "vendor": "AMD",
+        "chip": "RDNA4 gfx1200 x2",
+        "vram_gb": 64,
+        "form": "workstation",
+        "models_root": "/opt/inferstation/models",
+        "backends": {
+            "vllm-rocm": f"{GHCR_REGISTRY}/vllm-rocm-r9700-main:latest",
+        },
+    },
+    "radeon-w7900d": {
+        "name": "Radeon PRO W7900 Dual",
+        "vendor": "AMD",
+        "chip": "RDNA3 gfx1100 x2",
+        "vram_gb": 96,
+        "form": "workstation",
+        "models_root": "/home/lkang/inferstation/models",
+        "backends": {
+            "vllm-rocm": f"{GHCR_REGISTRY}/vllm-rocm-w7900-main:latest",
         },
     },
 }
@@ -176,7 +218,7 @@ def sh(cmd: str, *, capture: bool = False, check: bool = True) -> str:
 def host_test(path: str) -> bool:
     """Test for file existence on the host (not in the runner container)."""
     rc = subprocess.run(
-        f"docker run --rm -v /:/hostfs:ro alpine:3 test -f /hostfs{shlex.quote(path)}",
+        f"{DOCKER} run --rm -v /:/hostfs:ro alpine:3 test -f /hostfs{shlex.quote(path)}",
         shell=True,
     ).returncode
     return rc == 0
@@ -184,7 +226,7 @@ def host_test(path: str) -> bool:
 
 def host_readlink(path: str) -> str:
     out = sh(
-        f"docker run --rm -v /:/hostfs:ro alpine:3 readlink -f /hostfs{shlex.quote(path)}",
+        f"{DOCKER} run --rm -v /:/hostfs:ro alpine:3 readlink -f /hostfs{shlex.quote(path)}",
         capture=True,
     ).strip()
     return out.removeprefix("/hostfs")
@@ -220,13 +262,13 @@ def ensure_image(image_ref: str, *, backend: str) -> str:
         `llama-cli --version` last word.
       - vllm:     `python3 -c 'import vllm; print(vllm.__version__)'`
     """
-    have = sh(f"docker images -q {image_ref}", capture=True).strip()
+    have = sh(f"{DOCKER} images -q {image_ref}", capture=True).strip()
     if not have:
-        sh(f"docker pull {image_ref}")
+        sh(f"{DOCKER} pull {image_ref}")
 
     if backend in ("vllm", "vllm-rocm"):
         ver = sh(
-            f"docker run --rm --entrypoint python3 {image_ref} "
+            f"{DOCKER} run --rm --entrypoint python3 {image_ref} "
             f"-c 'import vllm; print(vllm.__version__)'",
             capture=True,
         ).strip().splitlines()[-1]
@@ -240,7 +282,7 @@ def ensure_image(image_ref: str, *, backend: str) -> str:
     ]
     cmd = " || ".join(probes)
     out = sh(
-        f"docker run --rm --entrypoint sh {image_ref} -c {shlex.quote(cmd)}",
+        f"{DOCKER} run --rm --entrypoint sh {image_ref} -c {shlex.quote(cmd)}",
         capture=True,
     ).strip()
     return out or "unknown"
@@ -259,6 +301,12 @@ def ensure_model(host_cfg: dict, model_slug: str, model_def: dict, quant: str) -
 
     if fmt == "hf-snapshot":
         # vLLM-style: download a full HF repo snapshot into a per-quant dir.
+        local_path = (qdef.get("local_paths") or {}).get(host_cfg.get("slug", "")) or qdef.get("local_path")
+        if local_path:
+            if host_test(f"{local_path.rstrip('/')}/config.json"):
+                print(f"[ok] {local_path} already present")
+                return local_path.rstrip("/")
+            raise SystemExit(f"missing local HF snapshot at {local_path}; expected config.json")
         repo = qdef.get("hf_repo") or model_def.get("hf_repo")
         if not repo:
             raise SystemExit(f"missing hf_repo for {model_slug}:{quant}")
@@ -268,7 +316,7 @@ def ensure_model(host_cfg: dict, model_slug: str, model_def: dict, quant: str) -
             print(f"[ok] {snap_dir} already present")
             return snap_dir
         sh(
-            f"docker run --rm -v /:/hostfs alpine:3 "
+            f"{DOCKER} run --rm -v /:/hostfs alpine:3 "
             f"sh -c {shlex.quote(f'mkdir -p /hostfs{snap_dir}')}"
         )
         # Use `hf download` from an arm64-friendly python image.
@@ -284,7 +332,7 @@ def ensure_model(host_cfg: dict, model_slug: str, model_def: dict, quant: str) -
         )
         token_env = f"-e HF_TOKEN={shlex.quote(HF_TOKEN)} " if HF_TOKEN else ""
         sh(
-            f"docker run --rm --network host --user 0:0 "
+            f"{DOCKER} run --rm --network host --user 0:0 "
             f"-v {shlex.quote(snap_dir)}:/dst "
             f"-e HF_HOME=/dst/.hf "
             f"-e HF_ENDPOINT={shlex.quote(HF_ENDPOINT)} "
@@ -309,13 +357,13 @@ def ensure_model(host_cfg: dict, model_slug: str, model_def: dict, quant: str) -
     url = f"{HF_ENDPOINT}/{repo}/resolve/main/{fn}"
     print(f"[dl] {url} -> {path}")
     sh(
-        f"docker run --rm -v /:/hostfs alpine:3 "
+        f"{DOCKER} run --rm -v /:/hostfs alpine:3 "
         f"sh -c {shlex.quote(f'mkdir -p /hostfs{model_dir}')}"
     )
     # curlimages/curl runs as uid 100; the model dir was created by alpine
     # (root) so we need --user 0:0 to be able to write into it.
     sh(
-        f"docker run --rm --network host --user 0:0 "
+        f"{DOCKER} run --rm --network host --user 0:0 "
         f"-v {shlex.quote(model_dir)}:/dst "
         f"curlimages/curl:8.10.1 "
         f"-fL --retry 3 --retry-delay 5 -o /dst/{shlex.quote(fn)} {shlex.quote(url)}"
@@ -340,7 +388,7 @@ def cleanup_model(host_cfg: dict, model_slug: str, model_def: dict, quant: str) 
             return
         print(f"[cleanup] rm -rf {snap_dir}")
         sh(
-            f"docker run --rm -v /:/hostfs alpine:3 "
+            f"{DOCKER} run --rm -v /:/hostfs alpine:3 "
             f"sh -c {shlex.quote(f'rm -rf /hostfs{snap_dir}')}"
         )
         return
@@ -351,7 +399,7 @@ def cleanup_model(host_cfg: dict, model_slug: str, model_def: dict, quant: str) 
         return
     print(f"[cleanup] rm {path}")
     sh(
-        f"docker run --rm -v /:/hostfs alpine:3 "
+        f"{DOCKER} run --rm -v /:/hostfs alpine:3 "
         f"sh -c {shlex.quote(f'rm -f /hostfs{path} && rmdir /hostfs{model_dir} 2>/dev/null || true')}"
     )
 
@@ -365,10 +413,13 @@ def run_one_vllm(entry: dict, models: dict, image_override: str | None) -> Path:
     """
     host_slug = entry["host"]
     host_cfg = HOSTS[host_slug]
+    host_cfg = dict(host_cfg)
+    host_cfg["slug"] = host_slug
     model_slug = entry["model"]
     quant = entry["quant"]
     backend = entry.get("backend", "vllm")
     bcfg = BACKENDS[backend]
+    docker_extra = entry.get("docker_extra") or bcfg["docker_extra"]
     image_ref = resolve_image(entry, host_cfg, backend, image_override)
     engine_commit = ensure_image(image_ref, backend=backend)
     model_def = models[model_slug]
@@ -408,7 +459,7 @@ def run_one_vllm(entry: dict, models: dict, image_override: str | None) -> Path:
     # registry images (incl. our private vllm-cuda-spark) bake an OpenAI
     # server entrypoint by default.
     sh(
-        f"docker run --rm {bcfg['docker_extra']} --network host "
+        f"{DOCKER} run --rm {docker_extra} --network host "
         f"--entrypoint sh "
         f"-v {shlex.quote(real_dir)}:/model:ro "
         f"-v {shlex.quote(str(artifacts))}:/out "
@@ -485,6 +536,7 @@ def run_one_vllm(entry: dict, models: dict, image_override: str | None) -> Path:
         "vram_used_gb": None,
         "scenario": scenario,
         "usability_tag": "ok",
+        "image": image_ref,
         "log_url": log_url,
         "source_url": log_url,
         "notes": "vllm bench throughput; pp_toks_per_s derived as num_prompts*input_len/elapsed",
@@ -511,6 +563,8 @@ def run_one(entry: dict, models: dict, image_override: str | None) -> list[Path]
         return out_paths
     host_slug = entry["host"]
     host_cfg = HOSTS[host_slug]
+    host_cfg = dict(host_cfg)
+    host_cfg["slug"] = host_slug
     model_slug = entry["model"]
     quant = entry["quant"]
     bcfg = BACKENDS[backend]
@@ -544,7 +598,7 @@ def run_one(entry: dict, models: dict, image_override: str | None) -> list[Path]
     raw_suffix = "" if len(npls) == 1 and npls[0] == 1 else (f"-bs{npls[0]}" if len(npls) == 1 else "-bsall")
     raw = artifacts / f"{host_slug}-{model_slug}-{quant}{raw_suffix}-{bcfg['file_suffix']}.jsonl"
     sh(
-        f"docker run --rm {bcfg['docker_extra']} --network host --entrypoint bash "
+        f"{DOCKER} run --rm {bcfg['docker_extra']} --network host --entrypoint bash "
         f"-v {shlex.quote(real_dir)}:/models:ro {image_ref} "
         f"-lc {shlex.quote(cmd)} 2>/dev/null > {shlex.quote(str(raw))}"
     )

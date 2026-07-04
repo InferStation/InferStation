@@ -23,6 +23,20 @@
 #   python3 scripts/bench-batch.py --image=<full-ref> --filter=...
 
 models:
+  minicpm5-2.6b:
+    name: MiniCPM5-2.6B
+    params_b: 2.6
+    host_dir: MiniCPM5-2.6B-0426_job_327123_step_24000_fusion_think_512k
+    source_url: https://github.com/OpenBMB/MiniCPM
+    quants:
+      BF16:
+        format: hf-snapshot
+        local_paths:
+          ryzen-ai-max-395-03: /opt/inferstation/models/MiniCPM5-2.6B-0426_job_327123_step_24000_fusion_think_512k
+          dgx-spark-01: /opt/inferstation/models/MiniCPM5-2.6B-0426_job_327123_step_24000_fusion_think_512k
+          rtx-4090-sh: /dc/inferstation-models/MiniCPM5-2.6B-0426_job_327123_step_24000_fusion_think_512k
+          radeon-r9700-sh: /opt/inferstation/models/MiniCPM5-2.6B-0426_job_327123_step_24000_fusion_think_512k
+
   qwen3.6-35b-a3b:
     name: Qwen3.6-35B-A3B
     params_b: 35
@@ -126,6 +140,12 @@ models:
 
 # `runs` is the queue.
 runs:
+
+  # ---- MiniCPM5-2.6B BF16 (vLLM, day-0 adaptation) ----
+  - { host: ryzen-ai-max-395-03, model: minicpm5-2.6b, quant: BF16, backend: vllm-rocm, npls: [1, 4, 16, 32], image: "ghcr.io/inferstation/vllm-rocm-halo:latest" }
+  - { host: dgx-spark-01, model: minicpm5-2.6b, quant: BF16, backend: vllm, npls: [1, 4, 16, 32], image: "ghcr.io/inferstation/vllm-cuda-spark:latest" }
+  - { host: rtx-4090-sh, model: minicpm5-2.6b, quant: BF16, backend: vllm, npls: [1, 4, 16, 32], image: "ghcr.io/inferstation/vllm-cuda-4090:latest", docker_extra: "--gpus all --shm-size 16g --ipc=host" }
+  - { host: radeon-r9700-sh, model: minicpm5-2.6b, quant: BF16, backend: vllm-rocm, npls: [1, 4, 16, 32], image: "ghcr.io/inferstation/vllm-rocm-r9700-main:latest" }
 
   # ---- qwen3.6-35b-a3b (cuda) ----
   - { host: dgx-spark-01, model: qwen3.6-35b-a3b, quant: Q8_0, npl: 1 }
