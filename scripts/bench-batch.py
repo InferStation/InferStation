@@ -153,7 +153,9 @@ HOSTS = {
         "form": "apu_minipc",
         "models_root": "/opt/inferstation/models",
         "backends": {
-            "cuda":   f"{GHCR_REGISTRY}/llama-cuda-spark:latest",
+            # The InferStation mirror currently tracks a server image that does
+            # not include llama-batched-bench; the upstream full image is multi-arch.
+            "cuda":   "ghcr.io/ggml-org/llama.cpp:full-cuda",
             "vulkan": f"{GHCR_REGISTRY}/llama-vulkan-spark:latest",
             "vllm":   f"{GHCR_REGISTRY}/vllm-cuda-spark:latest",
         },
@@ -852,7 +854,9 @@ def git_commit_push(out_paths: Path | list[Path], entry: dict) -> None:
     last_error = ""
     for attempt in range(1, attempts + 1):
         pull_rc = subprocess.run(
-            "git pull --rebase --autostash origin main",
+            "git -c user.name='InferStation Bench Bot' "
+            "-c user.email='actions@inferstation' "
+            "pull --rebase --autostash origin main",
             shell=True, cwd=REPO,
         ).returncode
         if pull_rc != 0:
