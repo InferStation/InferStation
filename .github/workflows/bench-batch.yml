@@ -31,7 +31,7 @@ on:
       scope:
         description: 'representative weekly set, or all expanded registry entries'
         type: choice
-        default: representative
+        default: all
         options:
           - representative
           - all
@@ -97,7 +97,7 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           BENCH_TARGET: ${{ inputs.target || 'all' }}
           BENCH_FILTER: ${{ inputs.filter || '' }}
-          BENCH_SCOPE: ${{ inputs.scope || 'representative' }}
+          BENCH_SCOPE: ${{ inputs.scope || 'all' }}
           KEEP_MODELS: ${{ github.event_name == 'schedule' || inputs.keep_models || false }}
           SKIP_PUSH: ${{ inputs.skip_push || false }}
         run: |

@@ -1232,7 +1232,7 @@ def main() -> int:
     ap.add_argument(
         "--scope",
         choices=("representative", "all"),
-        default=os.environ.get("BENCH_SCOPE", "representative"),
+        default=os.environ.get("BENCH_SCOPE", "all"),
         help="Default run set when --filter is empty. representative is the weekly schedule; all is the full expanded registry.",
     )
     ap.add_argument("--skip-push", action="store_true")
