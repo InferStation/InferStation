@@ -1001,8 +1001,7 @@ def run_one_vllm(entry: dict, models: dict, image_override: str | None) -> Path:
         f"--max-num-seqs {server_max_seqs} "
         f"--tensor-parallel-size {tp} "
         f"--gpu-memory-utilization {gpu_mem_util} "
-        f"--trust-remote-code "
-        f"--disable-log-requests"
+        f"--trust-remote-code"
     )
     base_url = f"http://127.0.0.1:{port}"
     sh(f"{DOCKER} rm -f {shlex.quote(container_name)} >/dev/null 2>&1 || true", check=False)
