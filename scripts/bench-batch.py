@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Drive a batch of llama.cpp benchmarks from bench/registry.yaml.
+"""Drive a batch of online serve-stream benchmarks from bench/registry.yaml.
 
 For each selected (host, model, quant):
-  1. Ensure the GGUF file exists on the host (download from HF mirror if not).
-  2. Build (or reuse) the llama.cpp CUDA docker image.
-  3. Run `llama-bench -p 512 -n 128 -ngl 999 -o json`.
-  4. Convert the output into the InferStation schema and write to
-     data/runs/<date>/<host>-<model>-<quant>-llamacpp-cuda.json.
-  5. git add + commit + push the result, one commit per run, so the site
+  1. Ensure the model artifact exists on the host.
+  2. Pull (or reuse) the configured engine container image.
+  3. Start an OpenAI-compatible server (`llama-server` or `vllm serve`).
+  4. Drive it with the historical streaming client shape: in512/out128.
+  5. Convert the output into the InferStation schema and write to
+      data/runs/<date>/<host>-<model>-<quant>[-bsN]-<engine>-o128-serve.json.
+  6. git add + commit + push the result, one commit per run, so the site
      updates incrementally.
 
 Environment expectations:
@@ -22,13 +23,19 @@ Typical wrapper: `scripts/run-all.sh`.
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import datetime
 import json
 import os
 import shlex
+import socket
+import statistics
 import subprocess
 import sys
+import threading
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 try:
@@ -96,9 +103,8 @@ BACKENDS = {
         ),
         "file_suffix": "llamacpp-rocm",
     },
-    # vLLM (one-shot `vllm bench throughput`). Model format: HF safetensors
-    # snapshot (not GGUF); quant entry in registry.yaml must set
-    # `format: hf-snapshot` + `hf_repo`.
+    # vLLM online serving. Model format: HF safetensors snapshot (not GGUF);
+    # quant entry in registry.yaml must set `format: hf-snapshot` + `hf_repo`.
     "vllm": {
         "engine_slug": "vllm",
         "engine_backend": "vLLM",
@@ -134,6 +140,7 @@ DOCKER = os.environ.get("BENCH_DOCKER") or (
     if subprocess.run("docker version >/dev/null 2>&1", shell=True).returncode != 0
     else "docker"
 )
+SERVE_CONCURRENCIES = [1, 4, 16, 32]
 
 # Host metadata. Keyed by the slug used in registry `runs[].host`.
 # IMPORTANT: BOTH `name` (display) AND the slug key (used in URLs / filenames)
@@ -153,8 +160,7 @@ HOSTS = {
         "form": "apu_minipc",
         "models_root": "/opt/inferstation/models",
         "backends": {
-            # The InferStation mirror currently tracks a server image that does
-            # not include llama-batched-bench; the upstream full image is multi-arch.
+            # The upstream full image is multi-arch and includes llama-server.
             "cuda":   "ghcr.io/ggml-org/llama.cpp:full-cuda",
             "vulkan": f"{GHCR_REGISTRY}/llama-vulkan-spark:latest",
             "vllm":   f"{GHCR_REGISTRY}/vllm-cuda-spark:latest",
@@ -181,8 +187,8 @@ HOSTS = {
         "form": "workstation",
         "models_root": "/dc/inferstation-models",
         "backends": {
-            # The InferStation llama-cuda-4090 mirror currently tracks the
-            # upstream server image, which does not include llama-batched-bench.
+            # The upstream full image includes llama-server and works across
+            # the dual-4090 workstation.
             "cuda": "ghcr.io/ggml-org/llama.cpp:full-cuda",
             "vulkan": f"{GHCR_REGISTRY}/llama-vulkan-4090:latest",
             "vllm": f"{GHCR_REGISTRY}/vllm-cuda-4090:latest",
@@ -541,13 +547,420 @@ def cleanup_model(host_cfg: dict, model_slug: str, model_def: dict, quant: str) 
     )
 
 
-def run_one_vllm(entry: dict, models: dict, image_override: str | None) -> Path:
-    """Run `vllm bench throughput` for one (host, model, quant) tuple.
+def sanitize_container_part(value: str) -> str:
+    out = "".join(c.lower() if c.isalnum() else "-" for c in value)
+    return "-".join(part for part in out.split("-") if part)[:48] or "bench"
 
-    `npl` maps to vLLM's `--max-num-seqs` (server-side concurrency cap) and
-    also determines how many prompts to issue: 32 * npl, capped at 256, so
-    higher concurrency runs still complete in bounded time.
-    """
+
+def get_free_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("127.0.0.1", 0))
+        return int(s.getsockname()[1])
+
+
+def image_tag(image_ref: str) -> str:
+    last = image_ref.rsplit("/", 1)[-1]
+    if ":" in last:
+        return last.rsplit(":", 1)[-1]
+    if "@" in last:
+        return last.split("@", 1)[-1]
+    return "latest"
+
+
+def quant_scheme(quant: str) -> str | None:
+    if quant == "BF16":
+        return "W16A16"
+    if quant == "Q8_0":
+        return "W8A8"
+    if "Q4" in quant or "IQ4" in quant or "MXFP4" in quant:
+        return "W4A16"
+    return None
+
+
+def accelerator_suffix(host_cfg: dict) -> str:
+    chip = host_cfg.get("chip", "")
+    for marker in ("gfx1151", "gfx1200", "gfx1201", "gfx1100", "sm_89", "sm_121"):
+        if marker in chip:
+            return f" ({marker})"
+    if "GB10" in chip:
+        return " (sm_121)"
+    if "AD102" in chip:
+        return " (sm_89)"
+    return ""
+
+
+def public_engine(backend: str, bcfg: dict, host_cfg: dict) -> dict:
+    accel = accelerator_suffix(host_cfg)
+    host_slug = host_cfg.get("slug", "")
+    if backend == "rocm":
+        return {
+            "slug": "llamacpp-hip",
+            "name": "llama.cpp",
+            "backend": "ROCm/HIP",
+            "build_flags": f"-DGGML_HIP=ON{accel}",
+            "file_suffix": "llamacpp-hip",
+        }
+    if backend == "vllm-rocm":
+        return {
+            "slug": "vllm",
+            "name": "vLLM",
+            "backend": "ROCm/HIP · TRITON_ATTN",
+            "build_flags": f"VLLM_TARGET_DEVICE=rocm{accel}",
+            "file_suffix": "vllm",
+        }
+    if backend == "vllm":
+        backend_name = "CUDA · TRITON_ATTN" if host_slug == "dgx-spark-01" else "CUDA"
+        return {
+            "slug": "vllm",
+            "name": "vLLM",
+            "backend": backend_name,
+            "build_flags": f"VLLM_TARGET_DEVICE=cuda{accel}",
+            "file_suffix": "vllm",
+        }
+    return {
+        "slug": bcfg["engine_slug"],
+        "name": "llama.cpp",
+        "backend": bcfg["engine_backend"],
+        "build_flags": f"{bcfg['build_flags']}{accel}" if bcfg.get("build_flags") else "",
+        "file_suffix": bcfg["file_suffix"],
+    }
+
+
+def serve_stream_scenario_suffix(entry: dict) -> tuple[str, str]:
+    backend = entry.get("backend", "cuda")
+    host_slug = entry.get("host", "")
+    if backend in {"vllm", "vllm-rocm"} and host_slug in {"dgx-spark-01", "ryzen-ai-max-395-03"}:
+        return "serve-stream-in512-out128-c1x4x16x32-attn-triton", "o128-triton-serve"
+    return "serve-stream-in512-out128-c1x4x16x32", "o128-serve"
+
+
+def json_request(url: str, *, timeout: float = 30.0) -> tuple[int, str]:
+    req = urllib.request.Request(url, headers={"User-Agent": "inferstation-bench/1"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return int(resp.status), resp.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        return int(e.code), e.read().decode("utf-8", "replace")
+    except urllib.error.URLError as e:
+        return 0, str(e)
+
+
+def wait_health(base_url: str, container_name: str, *, timeout_s: int = 1800) -> None:
+    deadline = time.monotonic() + timeout_s
+    last = ""
+    while time.monotonic() < deadline:
+        status, body = json_request(f"{base_url}/health", timeout=5)
+        if 200 <= status < 300:
+            return
+        last = f"HTTP {status}: {body[:200]}"
+        rc = subprocess.run(
+            f"{DOCKER} inspect -f '{{{{.State.Running}}}}' {shlex.quote(container_name)}",
+            shell=True,
+            text=True,
+            capture_output=True,
+        )
+        if rc.returncode == 0 and rc.stdout.strip() == "false":
+            logs = subprocess.run(
+                f"{DOCKER} logs --tail 200 {shlex.quote(container_name)}",
+                shell=True,
+                text=True,
+                capture_output=True,
+            )
+            raise RuntimeError(f"server container exited before health check passed\n{logs.stdout}\n{logs.stderr}")
+        time.sleep(2)
+    logs = subprocess.run(
+        f"{DOCKER} logs --tail 200 {shlex.quote(container_name)}",
+        shell=True,
+        text=True,
+        capture_output=True,
+    )
+    raise RuntimeError(f"server health timeout after {timeout_s}s; last={last}\n{logs.stdout}\n{logs.stderr}")
+
+
+def make_prompt(seq: int, approx_tokens: int) -> str:
+    sentence = f"InferStation request {seq}: the quick brown fox jumps over the lazy dog. "
+    reps = max(1, approx_tokens // 9 + 1)
+    return (sentence * reps).strip()
+
+
+def stream_completion(base_url: str, model: str, prompt: str, output_len: int, *, timeout_s: int) -> dict:
+    payload = {
+        "model": model,
+        "prompt": prompt,
+        "max_tokens": output_len,
+        "temperature": 0,
+        "stream": True,
+        "ignore_eos": True,
+        "stream_options": {"include_usage": True},
+    }
+
+    def run_once(body: dict) -> dict:
+        data = json.dumps(body).encode("utf-8")
+        req = urllib.request.Request(
+            f"{base_url}/v1/completions",
+            data=data,
+            headers={"Content-Type": "application/json", "User-Agent": "inferstation-bench/1"},
+            method="POST",
+        )
+        submit_t = time.perf_counter()
+        first_t: float | None = None
+        chunk_times: list[float] = []
+        usage: dict = {}
+        with urllib.request.urlopen(req, timeout=timeout_s) as resp:
+            for raw in resp:
+                now = time.perf_counter()
+                line = raw.decode("utf-8", "replace").strip()
+                if not line or line.startswith(":") or not line.startswith("data:"):
+                    continue
+                text = line[5:].strip()
+                if text == "[DONE]":
+                    break
+                try:
+                    event = json.loads(text)
+                except json.JSONDecodeError:
+                    continue
+                if event.get("usage"):
+                    usage = event["usage"] or usage
+                for choice in event.get("choices", []) or []:
+                    delta = choice.get("text")
+                    if delta is None:
+                        delta = (choice.get("delta") or {}).get("content")
+                    if delta:
+                        if first_t is None:
+                            first_t = now
+                        chunk_times.append(now)
+        end_t = time.perf_counter()
+        completion_tokens = int(usage.get("completion_tokens") or output_len)
+        prompt_tokens = int(usage.get("prompt_tokens") or 0) or None
+        ttft_s = (first_t or end_t) - submit_t
+        latency_s = end_t - submit_t
+        tpot_s = (latency_s - ttft_s) / max(completion_tokens - 1, 1)
+        itl_ms = [
+            (chunk_times[i] - chunk_times[i - 1]) * 1000.0
+            for i in range(1, len(chunk_times))
+        ]
+        return {
+            "latency_s": latency_s,
+            "ttft_s": ttft_s,
+            "tpot_s": tpot_s,
+            "itl_ms": itl_ms,
+            "completion_tokens": completion_tokens,
+            "prompt_tokens": prompt_tokens,
+        }
+
+    try:
+        return run_once(payload)
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", "replace")
+        if e.code in (400, 422) and "stream_options" in body:
+            payload.pop("stream_options", None)
+            return run_once(payload)
+        raise RuntimeError(f"completion HTTP {e.code}: {body[:500]}") from e
+
+
+def pct(values: list[float], percentile: int) -> float | None:
+    if not values:
+        return None
+    if len(values) == 1:
+        return values[0]
+    return statistics.quantiles(values, n=100, method="inclusive")[percentile - 1]
+
+
+def mean(values: list[float]) -> float | None:
+    return statistics.fmean(values) if values else None
+
+
+def stddev(values: list[float]) -> float | None:
+    return statistics.stdev(values) if len(values) > 1 else (0.0 if values else None)
+
+
+def run_serve_client(base_url: str, model_name: str, *, concurrency: int, input_len: int, output_len: int) -> dict:
+    # Historical serve-stream runs used 8 prompts for c1/c4, 16 for c16, 32 for c32.
+    num_prompts = max(8, concurrency)
+    timeout_s = int(os.environ.get("BENCH_REQUEST_TIMEOUT", "1800"))
+
+    for warmup_id in range(2):
+        stream_completion(
+            base_url,
+            model_name,
+            make_prompt(100000 + warmup_id, 32),
+            8,
+            timeout_s=min(timeout_s, 300),
+        )
+
+    results: list[dict] = []
+    errors: list[str] = []
+    lock = threading.Lock()
+
+    def worker(seq: int) -> None:
+        try:
+            result = stream_completion(
+                base_url,
+                model_name,
+                make_prompt(seq, input_len),
+                output_len,
+                timeout_s=timeout_s,
+            )
+            with lock:
+                results.append(result)
+        except Exception as e:  # noqa: BLE001
+            with lock:
+                errors.append(str(e))
+
+    start_t = time.perf_counter()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as pool:
+        futures = [pool.submit(worker, i) for i in range(num_prompts)]
+        concurrent.futures.wait(futures)
+    duration_s = time.perf_counter() - start_t
+
+    completed = len(results)
+    failed = len(errors)
+    if failed or completed != num_prompts:
+        raise RuntimeError(f"serve-stream failed: completed={completed}/{num_prompts}, errors={errors[:3]}")
+
+    ttft_ms = [r["ttft_s"] * 1000.0 for r in results]
+    tpot_ms = [r["tpot_s"] * 1000.0 for r in results]
+    e2e_ms = [r["latency_s"] * 1000.0 for r in results]
+    itl_ms = [x for r in results for x in r["itl_ms"]]
+    prefill_tps = [
+        input_len / max(r["ttft_s"] - r["tpot_s"], 1e-9)
+        for r in results
+    ]
+    total_output_tokens = sum(int(r["completion_tokens"]) for r in results)
+    total_input_tokens = completed * input_len
+    output_throughput = total_output_tokens / duration_s if duration_s > 0 else None
+    total_throughput = (total_input_tokens + total_output_tokens) / duration_s if duration_s > 0 else None
+
+    return {
+        "completed": completed,
+        "failed": failed,
+        "num_prompts": num_prompts,
+        "max_concurrency": concurrency,
+        "input_len": input_len,
+        "output_len": output_len,
+        "duration_s": duration_s,
+        "request_throughput": completed / duration_s if duration_s > 0 else None,
+        "output_throughput": output_throughput,
+        "total_output_tokens": total_output_tokens,
+        "total_input_tokens": total_input_tokens,
+        "total_throughput": total_throughput,
+        "decode_throughput": output_throughput,
+        "prefill_throughput": mean(prefill_tps),
+        "median_prefill_throughput": statistics.median(prefill_tps) if prefill_tps else None,
+        "mean_ttft_ms": mean(ttft_ms),
+        "median_ttft_ms": statistics.median(ttft_ms) if ttft_ms else None,
+        "std_ttft_ms": stddev(ttft_ms),
+        "p99_ttft_ms": pct(ttft_ms, 99),
+        "mean_tpot_ms": mean(tpot_ms),
+        "median_tpot_ms": statistics.median(tpot_ms) if tpot_ms else None,
+        "std_tpot_ms": stddev(tpot_ms),
+        "p99_tpot_ms": pct(tpot_ms, 99),
+        "mean_itl_ms": mean(itl_ms),
+        "median_itl_ms": statistics.median(itl_ms) if itl_ms else None,
+        "std_itl_ms": stddev(itl_ms),
+        "p99_itl_ms": pct(itl_ms, 99),
+        "mean_e2el_ms": mean(e2e_ms),
+        "median_e2el_ms": statistics.median(e2e_ms) if e2e_ms else None,
+    }
+
+
+def write_serve_record(
+    entry: dict,
+    host_cfg: dict,
+    model_def: dict,
+    bcfg: dict,
+    image_ref: str,
+    engine_commit: str,
+    server_cmd: str,
+    bench: dict,
+) -> Path:
+    host_slug = entry["host"]
+    model_slug = entry["model"]
+    quant = entry["quant"]
+    backend = entry.get("backend", "cuda")
+    public = public_engine(backend, bcfg, host_cfg)
+    npl = int(bench["max_concurrency"])
+    b_slug = "" if npl == 1 else f"-bs{npl}"
+    run_date = datetime.datetime.utcnow().strftime("%Y-%m-%d")
+    scenario, serve_suffix = serve_stream_scenario_suffix(entry)
+    out_rel = f"data/runs/{run_date}/{host_slug}-{model_slug}-{quant}{b_slug}-{public['file_suffix']}-{serve_suffix}.json"
+    out_abs = REPO / out_rel
+    out_abs.parent.mkdir(parents=True, exist_ok=True)
+
+    run_id = os.environ.get("GITHUB_RUN_ID", "manual")
+    repo_slug = os.environ.get("GITHUB_REPOSITORY", "JoursBleu/InferStation")
+    server = os.environ.get("GITHUB_SERVER_URL", "https://github.com")
+    log_url = f"{server}/{repo_slug}/actions/runs/{run_id}" if run_id != "manual" else ""
+    scheme = quant_scheme(quant)
+    model_record = {
+        "slug": model_slug,
+        "name": model_def["name"],
+        "params_b": model_def["params_b"],
+        "quantization": quant,
+        "source_url": model_def.get("source_url", ""),
+    }
+    if scheme:
+        model_record["scheme"] = scheme
+
+    notes = (
+        f"serve stream: completed={bench['completed']}/{bench['num_prompts']}, "
+        f"ttft={bench['mean_ttft_ms']:.0f}ms tpot={bench['mean_tpot_ms']:.1f}ms; "
+        f"prefill={bench['prefill_throughput']:.3g} decode={bench['decode_throughput']:.4g} "
+        f"total={bench['total_throughput']:.4g} tok/s; "
+        f"req_tput={bench['request_throughput']:.3f}/s"
+    )
+    record = {
+        "schema_version": 0,
+        "run_date": run_date,
+        "host": {
+            "slug": host_slug,
+            "name": host_cfg["name"],
+            "vendor": host_cfg["vendor"],
+            "chip": host_cfg["chip"],
+            "vram_gb": host_cfg["vram_gb"],
+            "deployment_form": host_cfg["form"],
+        },
+        "model": model_record,
+        "engine": {
+            "slug": public["slug"],
+            "name": public["name"],
+            "version": engine_commit,
+            "commit": engine_commit if public["name"] == "llama.cpp" else "",
+            "backend": public["backend"],
+            "build_flags": public["build_flags"],
+        },
+        "command": server_cmd,
+        "pp_test": f"in{bench['input_len']}",
+        "pp_toks_per_s": bench["prefill_throughput"],
+        "tg_test": f"out{bench['output_len']}",
+        "tg_toks_per_s": bench["decode_throughput"],
+        "combined_toks_per_s": bench["total_throughput"],
+        "ttft_ms": bench["mean_ttft_ms"],
+        "tpot_ms": bench["mean_tpot_ms"],
+        "prefill_toks_per_s": bench["prefill_throughput"],
+        "decode_toks_per_s": bench["decode_throughput"],
+        "total_toks_per_s": bench["total_throughput"],
+        "ctx": None,
+        "batch": npl,
+        "concurrency": npl,
+        "n_gpu_layers": None,
+        "vram_used_gb": None,
+        "scenario": scenario,
+        "image": image_ref,
+        "image_tag": image_tag(image_ref),
+        "usability_tag": "ok",
+        "log_url": log_url,
+        "source_url": log_url,
+        "notes": notes,
+        "raw_llamabench": [bench],
+    }
+    out_abs.write_text(json.dumps(record, indent=2) + "\n")
+    print(f"wrote {out_abs}")
+    return out_abs
+
+
+def run_one_vllm(entry: dict, models: dict, image_override: str | None) -> Path:
+    """Run the historical online serve-stream benchmark through vLLM."""
     host_slug = entry["host"]
     host_cfg = HOSTS[host_slug]
     host_cfg = dict(host_cfg)
@@ -560,131 +973,61 @@ def run_one_vllm(entry: dict, models: dict, image_override: str | None) -> Path:
     image_ref = resolve_image(entry, host_cfg, backend, image_override)
     engine_commit = ensure_image(image_ref, backend=backend)
     model_def = models[model_slug]
-    npl = int(entry.get("npl", 1))
     tp = int(entry.get("tp", 1))
     pp = int(entry.get("pp", 512))
     tg = int(entry.get("tg", 128))
-    num_prompts = max(32, min(256, npl * 8))
-    b_slug = "" if npl == 1 else f"-bs{npl}"
-    tp_slug = "" if tp == 1 else f"-tp{tp}"
-    scenario = f"vllm-bench-throughput-in{pp}-out{tg}-npl{npl}{tp_slug}"
+    npl = int(entry.get("npl", 1))
 
     snap_dir = ensure_model(host_cfg, model_slug, model_def, quant)
     real_dir = host_readlink(snap_dir) or snap_dir
 
-    # vllm bench throughput uses --dataset-name random + fixed lengths.
-    out_json = f"/tmp/vllm-bench-{model_slug}-{quant}{b_slug}.json"
+    port = get_free_port()
+    container_name = (
+        f"inferstation-bench-{sanitize_container_part(host_slug)}-"
+        f"{sanitize_container_part(model_slug)}-{sanitize_container_part(quant)}-"
+        f"{os.getpid()}-{port}"
+    )
+    model_name = "inferstation-bench"
+    max_model_len = int(entry.get("max_model_len", max(2048, (pp + tg) * 2 + 1024)))
+    gpu_mem_util = float(entry.get("gpu_memory_utilization", 0.85))
     inner_cmd = (
-        f"vllm bench throughput "
-        f"--model /model "
+        f"exec vllm serve /model "
+        f"--served-model-name {shlex.quote(model_name)} "
+        f"--host 0.0.0.0 --port {port} "
         f"--dtype bfloat16 "
-        # vllm random dataset can produce prompts longer than --input-len
-        # (it samples around the target). Give a comfortable buffer.
-        f"--max-model-len {(pp + tg) * 2 + 1024} "
+        f"--max-model-len {max_model_len} "
         f"--max-num-seqs {npl} "
         f"--tensor-parallel-size {tp} "
-        f"--gpu-memory-utilization 0.85 "
-        f"--dataset-name random "
-        f"--input-len {pp} "
-        f"--output-len {tg} "
-        f"--num-prompts {num_prompts} "
-        f"--output-json {out_json}"
+        f"--gpu-memory-utilization {gpu_mem_util} "
+        f"--trust-remote-code "
+        f"--disable-log-requests"
     )
-
-    artifacts = REPO / "artifacts"
-    artifacts.mkdir(exist_ok=True)
-    raw_host = artifacts / f"{host_slug}-{model_slug}-{quant}{b_slug}-vllm.json"
-    # Mount snapshot read-only as /model; capture vllm bench output JSON into
-    # an artifacts dir mounted at /out. Force --entrypoint sh because some
-    # registry images (incl. our private vllm-cuda-spark) bake an OpenAI
-    # server entrypoint by default.
-    sh(
-        f"{DOCKER} run --rm {docker_extra} --network host "
-        f"--entrypoint sh "
-        f"-v {shlex.quote(real_dir)}:/model:ro "
-        f"-v {shlex.quote(str(artifacts))}:/out "
-        f"{image_ref} "
-        f"-c {shlex.quote(inner_cmd + f' && cp {out_json} /out/' + raw_host.name)}"
-    )
-
-    parsed = json.loads(raw_host.read_text())
-    # vllm bench throughput JSON keys vary by version:
-    #   old (>=0.6.x): request_throughput, output_throughput, total_token_throughput
-    #   new (0.17+, NGC 26.03): tokens_per_second (combined), requests_per_second
-    # Derive from elapsed + known prompt geometry so we don't depend on which
-    # keys the bench happens to emit.
-    elapsed = float(parsed.get("elapsed_time") or 0.0)
-    if elapsed > 0:
-        pp_per_s = num_prompts * pp / elapsed
-        out_throughput = num_prompts * tg / elapsed
-    else:
-        pp_per_s = None
-        out_throughput = float(parsed.get("output_throughput") or 0.0)
-    total_throughput = (
-        float(parsed.get("total_token_throughput") or 0.0)
-        or float(parsed.get("tokens_per_second") or 0.0)
-        or ((pp_per_s or 0.0) + out_throughput)
-    )
-
-    run_date = datetime.datetime.utcnow().strftime("%Y-%m-%d")
-    out_rel = f"data/runs/{run_date}/{host_slug}-{model_slug}-{quant}{b_slug}-vllm.json"
-    out_abs = REPO / out_rel
-    out_abs.parent.mkdir(parents=True, exist_ok=True)
-
-    run_id = os.environ.get("GITHUB_RUN_ID", "manual")
-    repo_slug = os.environ.get("GITHUB_REPOSITORY", "JoursBleu/InferStation")
-    server = os.environ.get("GITHUB_SERVER_URL", "https://github.com")
-    log_url = f"{server}/{repo_slug}/actions/runs/{run_id}" if run_id != "manual" else ""
-
-    record = {
-        "schema_version": 0,
-        "run_date": run_date,
-        "host": {
-            "slug": host_slug,
-            "name": host_cfg["name"],
-            "vendor": host_cfg["vendor"],
-            "chip": host_cfg["chip"],
-            "vram_gb": host_cfg["vram_gb"],
-            "deployment_form": host_cfg["form"],
-        },
-        "model": {
-            "slug": model_slug,
-            "name": model_def["name"],
-            "params_b": model_def["params_b"],
-            "quantization": quant,
-            "source_url": model_def.get("source_url", ""),
-        },
-        "engine": {
-            "slug": bcfg["engine_slug"],
-            "name": "vLLM",
-            "version": engine_commit,
-            "commit": engine_commit,
-            "backend": bcfg["engine_backend"],
-            "build_flags": bcfg["build_flags"],
-        },
-        "command": inner_cmd,
-        "pp_test": f"in{pp}",
-        "pp_toks_per_s": pp_per_s,
-        "tg_test": f"out{tg}",
-        "tg_toks_per_s": out_throughput,
-        "combined_toks_per_s": total_throughput,
-        "ttft_ms": None,
-        "ctx": pp + tg,
-        "batch": npl,
-        "concurrency": npl,
-        "n_gpu_layers": None,
-        "vram_used_gb": None,
-        "scenario": scenario,
-        "usability_tag": "ok",
-        "image": image_ref,
-        "log_url": log_url,
-        "source_url": log_url,
-        "notes": "vllm bench throughput; pp_toks_per_s derived as num_prompts*input_len/elapsed",
-        "raw_vllm_bench": parsed,
-    }
-    out_abs.write_text(json.dumps(record, indent=2) + "\n")
-    print(f"wrote {out_abs}")
-    return out_abs
+    base_url = f"http://127.0.0.1:{port}"
+    sh(f"{DOCKER} rm -f {shlex.quote(container_name)} >/dev/null 2>&1 || true", check=False)
+    try:
+        sh(
+            f"{DOCKER} run -d --name {shlex.quote(container_name)} {docker_extra} --network host "
+            f"--entrypoint bash "
+            f"-v {shlex.quote(real_dir)}:/model:ro "
+            f"{image_ref} "
+            f"-lc {shlex.quote(inner_cmd)}"
+        )
+        wait_health(base_url, container_name)
+        bench = run_serve_client(base_url, model_name, concurrency=npl, input_len=pp, output_len=tg)
+        return write_serve_record(entry, host_cfg, model_def, bcfg, image_ref, engine_commit, inner_cmd, bench)
+    except Exception:
+        logs = subprocess.run(
+            f"{DOCKER} logs --tail 200 {shlex.quote(container_name)}",
+            shell=True,
+            text=True,
+            capture_output=True,
+        )
+        if logs.stdout or logs.stderr:
+            print(logs.stdout, file=sys.stderr)
+            print(logs.stderr, file=sys.stderr)
+        raise
+    finally:
+        sh(f"{DOCKER} rm -f {shlex.quote(container_name)} >/dev/null 2>&1 || true", check=False)
 
 
 def run_one(entry: dict, models: dict, image_override: str | None) -> list[Path]:
@@ -711,122 +1054,67 @@ def run_one(entry: dict, models: dict, image_override: str | None) -> list[Path]
     image_ref = resolve_image(entry, host_cfg, backend, image_override)
     engine_commit = ensure_image(image_ref, backend=backend)
     model_def = models[model_slug]
-    # Batch-size list. The minimum test unit is (model, quant, framework,
-    # backend) — one docker invocation produces all bs results in a single
-    # GGUF load. `npls` is the canonical field; legacy single `npl` still works.
+    # Serve-stream runs one server per (model, quant, backend) entry and drives
+    # the recipe-declared concurrency level through an OpenAI-compatible client.
     if "npls" in entry:
         npls = [int(x) for x in entry["npls"]]
     else:
         npls = [int(entry.get("npl", 1))]
     pp = int(entry.get("pp", 512))
     tg = int(entry.get("tg", 128))
-    npl_csv = ",".join(str(n) for n in npls)
-    npl_tag = npls[0] if len(npls) == 1 else "x".join(str(n) for n in npls)
-    scenario = f"llama-batched-bench-pp{pp}-tg{tg}-npl{npl_tag}"
+    max_npl = max(npls)
 
     model_path = ensure_model(host_cfg, model_slug, model_def, quant)
     real_path = host_readlink(model_path)
     real_dir = os.path.dirname(real_path)
     real_fn = os.path.basename(real_path)
 
-    bench_args = (
-        f"-m /models/{real_fn} -ngl 999 "
-        f"-npp {pp} -ntg {tg} -npl {npl_csv} --output-format jsonl"
+    port = get_free_port()
+    container_name = (
+        f"inferstation-bench-{sanitize_container_part(host_slug)}-"
+        f"{sanitize_container_part(model_slug)}-{sanitize_container_part(quant)}-"
+        f"{os.getpid()}-{port}"
     )
+    model_name = "inferstation-bench"
+    ctx_size = int(entry.get("ctx", max(4096, (pp + tg) * max_npl + 1024)))
     cmd = (
-        "bench_bin=$(command -v llama-batched-bench || true); "
-        "if [ -z \"$bench_bin\" ]; then "
-        "for p in /app/llama-batched-bench /usr/local/bin/llama-batched-bench "
-        "/usr/bin/llama-batched-bench /opt/llama.cpp/llama-batched-bench; do "
-        "[ -x \"$p\" ] && bench_bin=\"$p\" && break; done; fi; "
-        "[ -n \"$bench_bin\" ] || { echo 'llama-batched-bench not found' >&2; exit 127; }; "
-        f"\"$bench_bin\" {bench_args}"
+        "server_bin=$(command -v llama-server || true); "
+        "if [ -z \"$server_bin\" ]; then "
+        "for p in /app/llama-server /usr/local/bin/llama-server /usr/bin/llama-server /opt/llama.cpp/llama-server; do "
+        "[ -x \"$p\" ] && server_bin=\"$p\" && break; done; fi; "
+        "[ -n \"$server_bin\" ] || { echo 'llama-server not found' >&2; exit 127; }; "
+        f"exec \"$server_bin\" -m /models/{shlex.quote(real_fn)} -ngl 999 "
+        f"--host 0.0.0.0 --port {port} --alias {shlex.quote(model_name)} "
+        f"-c {ctx_size} -np {max_npl} -cb --no-webui"
     )
-    artifacts = REPO / "artifacts"
-    artifacts.mkdir(exist_ok=True)
-    raw_suffix = "" if len(npls) == 1 and npls[0] == 1 else (f"-bs{npls[0]}" if len(npls) == 1 else "-bsall")
-    raw = artifacts / f"{host_slug}-{model_slug}-{quant}{raw_suffix}-{bcfg['file_suffix']}.jsonl"
     docker_extra = entry.get("docker_extra") or bcfg["docker_extra"]
-    sh(
-        f"{DOCKER} run --rm {docker_extra} --network host --entrypoint bash "
-        f"-v {shlex.quote(real_dir)}:/models:ro {image_ref} "
-        f"-lc {shlex.quote(cmd)} > {shlex.quote(str(raw))}"
-    )
-
-    # Parse jsonl: one line per pl value. Shape:
-    # {"pp":512,"tg":128,"pl":4,"n_kv":2560,"speed_pp":...,"speed_tg":...,"speed":...}
-    raw_text = raw.read_text().strip()
-    lines = [json.loads(l) for l in raw_text.splitlines() if l.strip().startswith("{")]
-    by_pl: dict[int, dict] = {}
-    for d in lines:
-        if d.get("pp") == pp and d.get("tg") == tg and d.get("pl") in npls:
-            by_pl[int(d["pl"])] = d
-    missing = [n for n in npls if n not in by_pl]
-    if missing:
-        raise RuntimeError(f"no jsonl record for npl={missing} in {raw}")
-
-    run_date = datetime.datetime.utcnow().strftime("%Y-%m-%d")
-    run_id = os.environ.get("GITHUB_RUN_ID", "manual")
-    repo_slug = os.environ.get("GITHUB_REPOSITORY", "JoursBleu/InferStation")
-    server = os.environ.get("GITHUB_SERVER_URL", "https://github.com")
-    log_url = f"{server}/{repo_slug}/actions/runs/{run_id}" if run_id != "manual" else ""
-
-    out_paths: list[Path] = []
-    for npl in npls:
-        pick = by_pl[npl]
-        b_slug = "" if npl == 1 else f"-bs{npl}"
-        out_rel = f"data/runs/{run_date}/{host_slug}-{model_slug}-{quant}{b_slug}-{bcfg['file_suffix']}.json"
-        out_abs = REPO / out_rel
-        out_abs.parent.mkdir(parents=True, exist_ok=True)
-        record = {
-            "schema_version": 0,
-            "run_date": run_date,
-            "host": {
-                "slug": host_slug,
-                "name": host_cfg["name"],
-                "vendor": host_cfg["vendor"],
-                "chip": host_cfg["chip"],
-                "vram_gb": host_cfg["vram_gb"],
-                "deployment_form": host_cfg["form"],
-            },
-            "model": {
-                "slug": model_slug,
-                "name": model_def["name"],
-                "params_b": model_def["params_b"],
-                "quantization": quant,
-                "source_url": model_def.get("source_url", ""),
-            },
-            "engine": {
-                "slug": bcfg["engine_slug"],
-                "name": "llama.cpp",
-                "version": engine_commit,
-                "commit": engine_commit,
-                "backend": bcfg["engine_backend"],
-                "build_flags": bcfg["build_flags"],
-            },
-            "command": cmd,
-            "pp_test": f"pp{pp}",
-            "pp_toks_per_s": pick.get("speed_pp"),
-            "tg_test": f"tg{tg}",
-            "tg_toks_per_s": pick.get("speed_tg"),
-            "combined_toks_per_s": pick.get("speed"),
-            "ttft_ms": None,
-            "ctx": pick.get("n_kv"),
-            "batch": pick.get("n_batch"),
-            "concurrency": npl,
-            "n_gpu_layers": pick.get("n_gpu_layers"),
-            "vram_used_gb": None,
-            "scenario": scenario,
-            "usability_tag": "ok",
-            "log_url": log_url,
-            "source_url": log_url,
-            "notes": "",
-            "raw_llamabench": [pick],
-        }
-        out_abs.write_text(json.dumps(record, indent=2) + "\n")
-        print(f"wrote {out_abs}")
-        out_paths.append(out_abs)
-    return out_paths
+    base_url = f"http://127.0.0.1:{port}"
+    sh(f"{DOCKER} rm -f {shlex.quote(container_name)} >/dev/null 2>&1 || true", check=False)
+    try:
+        sh(
+            f"{DOCKER} run -d --name {shlex.quote(container_name)} {docker_extra} --network host --entrypoint bash "
+            f"-v {shlex.quote(real_dir)}:/models:ro {image_ref} "
+            f"-lc {shlex.quote(cmd)}"
+        )
+        wait_health(base_url, container_name)
+        out_paths: list[Path] = []
+        for npl in npls:
+            bench = run_serve_client(base_url, model_name, concurrency=npl, input_len=pp, output_len=tg)
+            out_paths.append(write_serve_record(entry, host_cfg, model_def, bcfg, image_ref, engine_commit, cmd, bench))
+        return out_paths
+    except Exception:
+        logs = subprocess.run(
+            f"{DOCKER} logs --tail 200 {shlex.quote(container_name)}",
+            shell=True,
+            text=True,
+            capture_output=True,
+        )
+        if logs.stdout or logs.stderr:
+            print(logs.stdout, file=sys.stderr)
+            print(logs.stderr, file=sys.stderr)
+        raise
+    finally:
+        sh(f"{DOCKER} rm -f {shlex.quote(container_name)} >/dev/null 2>&1 || true", check=False)
 
 
 def git_commit_push(out_paths: Path | list[Path], entry: dict) -> None:
