@@ -355,7 +355,7 @@ runs:
       rtx-4090-sh:
         tp: 2
       radeon-r9700-sh:
-        tp: 2
+        tp: 4
         docker_extra: "--device=/dev/kfd --device=/dev/dri --group-add video --security-opt seccomp=unconfined --shm-size 16g --ipc=host -e NCCL_PROTO=Simple -e NCCL_P2P_DISABLE=1 -e TRITON_CACHE_DIR=/models/.triton-cache -v /opt/inferstation/models:/models"
   - host: dgx-spark-01
     model: qwen3.6-35b-a3b
@@ -366,7 +366,7 @@ runs:
       rtx-4090-sh:
         tp: 2
       radeon-r9700-sh:
-        tp: 2
+        tp: 4
         docker_extra: "--device=/dev/kfd --device=/dev/dri --group-add video --security-opt seccomp=unconfined --shm-size 16g --ipc=host -e NCCL_PROTO=Simple -e NCCL_P2P_DISABLE=1 -e TRITON_CACHE_DIR=/models/.triton-cache -v /opt/inferstation/models:/models"
   - host: dgx-spark-01
     model: qwen3.6-35b-a3b
@@ -377,7 +377,7 @@ runs:
       rtx-4090-sh:
         tp: 2
       radeon-r9700-sh:
-        tp: 2
+        tp: 4
         docker_extra: "--device=/dev/kfd --device=/dev/dri --group-add video --security-opt seccomp=unconfined --shm-size 16g --ipc=host -e NCCL_PROTO=Simple -e NCCL_P2P_DISABLE=1 -e TRITON_CACHE_DIR=/models/.triton-cache -v /opt/inferstation/models:/models"
   - host: dgx-spark-01
     model: qwen3.6-35b-a3b
@@ -388,7 +388,7 @@ runs:
       rtx-4090-sh:
         tp: 2
       radeon-r9700-sh:
-        tp: 2
+        tp: 4
         docker_extra: "--device=/dev/kfd --device=/dev/dri --group-add video --security-opt seccomp=unconfined --shm-size 16g --ipc=host -e NCCL_PROTO=Simple -e NCCL_P2P_DISABLE=1 -e TRITON_CACHE_DIR=/models/.triton-cache -v /opt/inferstation/models:/models"
   # ---- gemma-4-26b-a4b-it (cuda) ----
   - { host: dgx-spark-01, model: gemma-4-26b-a4b-it, quant: MXFP4_MOE, npl: 1 }
@@ -732,7 +732,7 @@ runs:
       rtx-4090-sh:
         tp: 2
       radeon-r9700-sh:
-        tp: 2
+        tp: 4
         docker_extra: "--device=/dev/kfd --device=/dev/dri --group-add video --security-opt seccomp=unconfined --shm-size 16g --ipc=host -e NCCL_PROTO=Simple -e NCCL_P2P_DISABLE=1 -e TRITON_CACHE_DIR=/models/.triton-cache -v /opt/inferstation/models:/models"
   - host: dgx-spark-01
     model: gemma-4-26b-a4b-it
@@ -743,7 +743,7 @@ runs:
       rtx-4090-sh:
         tp: 2
       radeon-r9700-sh:
-        tp: 2
+        tp: 4
         docker_extra: "--device=/dev/kfd --device=/dev/dri --group-add video --security-opt seccomp=unconfined --shm-size 16g --ipc=host -e NCCL_PROTO=Simple -e NCCL_P2P_DISABLE=1 -e TRITON_CACHE_DIR=/models/.triton-cache -v /opt/inferstation/models:/models"
   - host: dgx-spark-01
     model: gemma-4-26b-a4b-it
@@ -754,7 +754,7 @@ runs:
       rtx-4090-sh:
         tp: 2
       radeon-r9700-sh:
-        tp: 2
+        tp: 4
         docker_extra: "--device=/dev/kfd --device=/dev/dri --group-add video --security-opt seccomp=unconfined --shm-size 16g --ipc=host -e NCCL_PROTO=Simple -e NCCL_P2P_DISABLE=1 -e TRITON_CACHE_DIR=/models/.triton-cache -v /opt/inferstation/models:/models"
   - host: dgx-spark-01
     model: gemma-4-26b-a4b-it
@@ -765,7 +765,7 @@ runs:
       rtx-4090-sh:
         tp: 2
       radeon-r9700-sh:
-        tp: 2
+        tp: 4
         docker_extra: "--device=/dev/kfd --device=/dev/dri --group-add video --security-opt seccomp=unconfined --shm-size 16g --ipc=host -e NCCL_PROTO=Simple -e NCCL_P2P_DISABLE=1 -e TRITON_CACHE_DIR=/models/.triton-cache -v /opt/inferstation/models:/models"
   # ---- qwen3.6-27b (vllm) ----
   - { host: dgx-spark-01, model: qwen3.6-27b, quant: BF16, backend: vllm, npl: 1 }
