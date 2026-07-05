@@ -246,6 +246,20 @@ WEEKLY_DOCKER_EXTRA = {
         "-e VK_DRIVER_FILES=/usr/share/vulkan/icd.d/nvidia_icd.json"
     ),
     ("rtx-4090-sh", "vllm"): "--gpus all --shm-size 16g --ipc=host",
+    ("radeon-r9700-sh", "vllm-rocm"): (
+        "--device=/dev/kfd --device=/dev/dri "
+        "--group-add video --security-opt seccomp=unconfined "
+        "--shm-size 16g --ipc=host "
+        "-e NCCL_PROTO=Simple -e NCCL_P2P_DISABLE=1 "
+        "-e TRITON_CACHE_DIR=/models/.triton-cache "
+        "-v /opt/inferstation/models:/models"
+    ),
+}
+WEEKLY_TENSOR_PARALLEL = {
+    ("rtx-4090-sh", "vllm", "qwen3.6-35b-a3b", "BF16"): 2,
+    ("rtx-4090-sh", "vllm", "gemma-4-26b-a4b-it", "BF16"): 2,
+    ("radeon-r9700-sh", "vllm-rocm", "qwen3.6-35b-a3b", "BF16"): 2,
+    ("radeon-r9700-sh", "vllm-rocm", "gemma-4-26b-a4b-it", "BF16"): 2,
 }
 REPRESENTATIVE_MODELS = {
     "minicpm5-2.6b",
@@ -294,6 +308,9 @@ def expand_weekly_runs(runs: list[dict]) -> list[dict]:
             docker_extra = WEEKLY_DOCKER_EXTRA.get((host, dst_backend))
             if docker_extra:
                 entry["docker_extra"] = docker_extra
+            tp = WEEKLY_TENSOR_PARALLEL.get((host, dst_backend, entry["model"], entry["quant"]))
+            if tp:
+                entry["tp"] = tp
             key = run_key(entry)
             if key in seen:
                 continue
@@ -559,11 +576,13 @@ def run_one_vllm(entry: dict, models: dict, image_override: str | None) -> Path:
     engine_commit = ensure_image(image_ref, backend=backend)
     model_def = models[model_slug]
     npl = int(entry.get("npl", 1))
+    tp = int(entry.get("tp", 1))
     pp = int(entry.get("pp", 512))
     tg = int(entry.get("tg", 128))
     num_prompts = max(32, min(256, npl * 8))
     b_slug = "" if npl == 1 else f"-bs{npl}"
-    scenario = f"vllm-bench-throughput-in{pp}-out{tg}-npl{npl}"
+    tp_slug = "" if tp == 1 else f"-tp{tp}"
+    scenario = f"vllm-bench-throughput-in{pp}-out{tg}-npl{npl}{tp_slug}"
 
     snap_dir = ensure_model(host_cfg, model_slug, model_def, quant)
     real_dir = host_readlink(snap_dir) or snap_dir
@@ -578,6 +597,7 @@ def run_one_vllm(entry: dict, models: dict, image_override: str | None) -> Path:
         # (it samples around the target). Give a comfortable buffer.
         f"--max-model-len {(pp + tg) * 2 + 1024} "
         f"--max-num-seqs {npl} "
+        f"--tensor-parallel-size {tp} "
         f"--gpu-memory-utilization 0.85 "
         f"--dataset-name random "
         f"--input-len {pp} "
