@@ -1078,7 +1078,7 @@ def run_one(entry: dict, models: dict, image_override: str | None) -> list[Path]
         f"{os.getpid()}-{port}"
     )
     model_name = "inferstation-bench"
-    ctx_size = int(entry.get("ctx", max(4096, (pp + tg) * max_npl + 1024)))
+    ctx_size = int(entry.get("ctx", 32768))
     cmd = (
         "server_bin=$(command -v llama-server || true); "
         "if [ -z \"$server_bin\" ]; then "
@@ -1087,7 +1087,7 @@ def run_one(entry: dict, models: dict, image_override: str | None) -> list[Path]
         "[ -n \"$server_bin\" ] || { echo 'llama-server not found' >&2; exit 127; }; "
         f"exec \"$server_bin\" -m /models/{shlex.quote(real_fn)} -ngl 999 "
         f"--host 0.0.0.0 --port {port} --alias {shlex.quote(model_name)} "
-        f"-c {ctx_size} -np {max_npl} -cb --no-webui"
+        f"-c {ctx_size} -np {max_npl} -fa on -cb --no-webui"
     )
     docker_extra = entry.get("docker_extra") or bcfg["docker_extra"]
     base_url = f"http://127.0.0.1:{port}"
