@@ -141,6 +141,7 @@ DOCKER = os.environ.get("BENCH_DOCKER") or (
     else "docker"
 )
 SERVE_CONCURRENCIES = [1, 4, 16, 32]
+SERVE_MAX_CONCURRENCY = max(SERVE_CONCURRENCIES)
 
 # Host metadata. Keyed by the slug used in registry `runs[].host`.
 # IMPORTANT: BOTH `name` (display) AND the slug key (used in URLs / filenames)
@@ -977,6 +978,7 @@ def run_one_vllm(entry: dict, models: dict, image_override: str | None) -> Path:
     pp = int(entry.get("pp", 512))
     tg = int(entry.get("tg", 128))
     npl = int(entry.get("npl", 1))
+    server_max_seqs = int(entry.get("server_max_seqs", SERVE_MAX_CONCURRENCY))
 
     snap_dir = ensure_model(host_cfg, model_slug, model_def, quant)
     real_dir = host_readlink(snap_dir) or snap_dir
@@ -996,7 +998,7 @@ def run_one_vllm(entry: dict, models: dict, image_override: str | None) -> Path:
         f"--host 0.0.0.0 --port {port} "
         f"--dtype bfloat16 "
         f"--max-model-len {max_model_len} "
-        f"--max-num-seqs {npl} "
+        f"--max-num-seqs {server_max_seqs} "
         f"--tensor-parallel-size {tp} "
         f"--gpu-memory-utilization {gpu_mem_util} "
         f"--trust-remote-code "
@@ -1062,7 +1064,7 @@ def run_one(entry: dict, models: dict, image_override: str | None) -> list[Path]
         npls = [int(entry.get("npl", 1))]
     pp = int(entry.get("pp", 512))
     tg = int(entry.get("tg", 128))
-    max_npl = max(npls)
+    max_npl = max(max(npls), SERVE_MAX_CONCURRENCY)
 
     model_path = ensure_model(host_cfg, model_slug, model_def, quant)
     real_path = host_readlink(model_path)
