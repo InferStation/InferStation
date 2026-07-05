@@ -1,0 +1,52 @@
+{
+  "schema_version": 0,
+  "run_date": "2026-07-05",
+  "host": {
+    "slug": "rtx-4090-sh",
+    "name": "RTX 4090",
+    "vendor": "NVIDIA",
+    "chip": "AD102 (sm_89) x2",
+    "vram_gb": 96,
+    "deployment_form": "workstation"
+  },
+  "model": {
+    "slug": "qwen3.6-35b-a3b",
+    "name": "Qwen3.6-35B-A3B",
+    "params_b": 35,
+    "quantization": "BF16",
+    "source_url": "https://huggingface.co/unsloth/Qwen3.6-35B-A3B-GGUF"
+  },
+  "engine": {
+    "slug": "vllm",
+    "name": "vLLM",
+    "version": "g2dfaae752",
+    "commit": "g2dfaae752",
+    "backend": "vLLM",
+    "build_flags": ""
+  },
+  "command": "vllm bench throughput --model /model --dtype bfloat16 --max-model-len 2304 --max-num-seqs 32 --tensor-parallel-size 2 --gpu-memory-utilization 0.85 --dataset-name random --input-len 512 --output-len 128 --num-prompts 256 --output-json /tmp/vllm-bench-qwen3.6-35b-a3b-BF16-bs32.json",
+  "pp_test": "in512",
+  "pp_toks_per_s": 2848.4877824030964,
+  "tg_test": "out128",
+  "tg_toks_per_s": 712.1219456007741,
+  "combined_toks_per_s": 6409.097510406967,
+  "ttft_ms": null,
+  "ctx": 640,
+  "batch": 32,
+  "concurrency": 32,
+  "n_gpu_layers": null,
+  "vram_used_gb": null,
+  "scenario": "vllm-bench-throughput-in512-out128-npl32-tp2",
+  "usability_tag": "ok",
+  "image": "ghcr.io/inferstation/vllm-cuda-4090:latest",
+  "log_url": "https://github.com/InferStation/InferStation/actions/runs/28731385670",
+  "source_url": "https://github.com/InferStation/InferStation/actions/runs/28731385670",
+  "notes": "vllm bench throughput; pp_toks_per_s derived as num_prompts*input_len/elapsed",
+  "raw_vllm_bench": {
+    "elapsed_time": 46.01459090318531,
+    "num_requests": 256,
+    "total_num_tokens": 294912,
+    "requests_per_second": 5.563452700006048,
+    "tokens_per_second": 6409.097510406967
+  }
+}
