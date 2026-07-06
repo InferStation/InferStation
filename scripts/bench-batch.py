@@ -1233,6 +1233,13 @@ def select(runs: list[dict], flt: str | None) -> list[dict]:
             out.append(r)
     return out
 
+def shard_runs(runs: list[dict], shard_index: int, shard_count: int) -> list[dict]:
+    if shard_count <= 1:
+        return runs
+    if shard_index < 0 or shard_index >= shard_count:
+        raise SystemExit(f"invalid shard index {shard_index}; expected 0..{shard_count - 1}")
+    return [r for i, r in enumerate(runs) if i % shard_count == shard_index]
+
 
 def main() -> int:
     ap = argparse.ArgumentParser()
@@ -1251,6 +1258,8 @@ def main() -> int:
     ap.add_argument("--skip-push-site", action="store_true", help="Do not rsync each completed run to the site host.")
     ap.add_argument("--dry-run", action="store_true", help="Print the selected plan and exit without running benchmarks.")
     ap.add_argument("--keep-models", action="store_true", help="Do not delete model files after the last benchmark referencing them.")
+    ap.add_argument("--shard-index", type=int, default=int(os.environ.get("BENCH_SHARD_INDEX", "0")), help="Zero-based shard index for splitting the selected run list across runners.")
+    ap.add_argument("--shard-count", type=int, default=int(os.environ.get("BENCH_SHARD_COUNT", "1")), help="Total number of shards for splitting the selected run list across runners.")
     ap.add_argument(
         "--image", default=os.environ.get("BENCH_IMAGE", ""),
         help="Override container image for ALL selected runs (e.g. 10.161.176.9:8443/inferstation/llama-cuda-spark:dev). "
@@ -1264,10 +1273,11 @@ def main() -> int:
     expanded_runs = expand_weekly_runs(reg.get("runs", []))
     base_runs = scope_base_runs(expanded_runs, args.scope, args.filter)
     runs = select(base_runs, args.filter)
+    runs = shard_runs(runs, args.shard_index, args.shard_count)
     if not runs:
         print("nothing to do")
         return 0
-    print(f"[plan] {len(runs)} run(s):")
+    print(f"[plan] {len(runs)} run(s) shard={args.shard_index}/{args.shard_count}:")
     for r in runs:
         bs_disp = r.get("npl") if "npl" in r else (",".join(str(x) for x in r.get("npls", [1])))
         eff_image = image_override or r.get("image") or HOSTS.get(r["host"], {}).get("backends", {}).get(r.get("backend", "cuda"), "<unset>")

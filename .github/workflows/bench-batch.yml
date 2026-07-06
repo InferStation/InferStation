@@ -54,17 +54,35 @@ jobs:
       matrix:
         include:
           - target: halo
-            label: inferstation-halo-weekly
+            label: inferstation-halo3
             host: ryzen-ai-max-395-03
+            shard_index: 0
+            shard_count: 2
+          - target: halo
+            label: inferstation-halo4
+            host: ryzen-ai-max-395-03
+            shard_index: 1
+            shard_count: 2
           - target: spark
-            label: inferstation-spark-weekly
+            label: inferstation-spark2
             host: dgx-spark-01
+            shard_index: 0
+            shard_count: 2
+          - target: spark
+            label: inferstation-spark1
+            host: dgx-spark-01
+            shard_index: 1
+            shard_count: 2
           - target: nv4090
             label: inferstation-nv4090-weekly
             host: rtx-4090-sh
+            shard_index: 0
+            shard_count: 1
           - target: r9700
             label: inferstation-r9700-weekly
             host: radeon-r9700-sh
+            shard_index: 0
+            shard_count: 1
     runs-on:
       - self-hosted
       - inferstation-bench
@@ -120,6 +138,7 @@ jobs:
             args+=("--filter=${{ matrix.host }}")
           fi
           args+=("--scope=$BENCH_SCOPE")
+          args+=("--shard-index=${{ matrix.shard_index }}" "--shard-count=${{ matrix.shard_count }}")
           if [[ "$KEEP_MODELS" == "true" ]]; then
             args+=("--keep-models")
           fi
