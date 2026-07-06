@@ -506,12 +506,24 @@ def ensure_model(host_cfg: dict, model_slug: str, model_def: dict, quant: str) -
     )
     # curlimages/curl runs as uid 100; the model dir was created by alpine
     # (root) so we need --user 0:0 to be able to write into it.
-    sh(
+    curl_cmd = (
+        "set -e; "
+        "auth=; "
+        "if [ -n \"${HF_TOKEN:-}\" ]; then auth=\"-H Authorization: Bearer ${HF_TOKEN}\"; fi; "
+        f"curl -fL --retry 3 --retry-delay 5 $auth -o /dst/{shlex.quote(fn)} {shlex.quote(url)}"
+    )
+    token_env = "-e HF_TOKEN=<redacted> " if HF_TOKEN else ""
+    token_run_env = f"-e HF_TOKEN={shlex.quote(HF_TOKEN)} " if HF_TOKEN else ""
+    cmd = (
         f"{DOCKER} run --rm --network host --user 0:0 "
         f"-v {shlex.quote(model_dir)}:/dst "
+        f"{token_run_env}"
         f"curlimages/curl:8.10.1 "
-        f"-fL --retry 3 --retry-delay 5 -o /dst/{shlex.quote(fn)} {shlex.quote(url)}"
+        f"sh -c {shlex.quote(curl_cmd)}"
     )
+    display_cmd = cmd.replace(token_run_env, token_env) if token_run_env else cmd
+    print(f"$ {display_cmd}", flush=True)
+    subprocess.run(cmd, shell=True, check=True)
     return path
 
 
