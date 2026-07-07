@@ -1304,6 +1304,7 @@ def main() -> int:
     )
     ap.add_argument("--skip-push", action="store_true")
     ap.add_argument("--skip-push-site", action="store_true", help="Do not rsync each completed run to the site host.")
+    ap.add_argument("--push-batch-size", type=int, default=int(os.environ.get("BENCH_PUSH_BATCH_SIZE", "1")), help="Commit/push after this many generated result files. Default 1 preserves historical per-run pushes.")
     ap.add_argument("--dry-run", action="store_true", help="Print the selected plan and exit without running benchmarks.")
     ap.add_argument("--keep-models", action="store_true", help="Do not delete model files after the last benchmark referencing them.")
     ap.add_argument("--shard-index", type=int, default=int(os.environ.get("BENCH_SHARD_INDEX", "0")), help="Zero-based shard index for splitting the selected run list across runners.")
@@ -1358,17 +1359,31 @@ def main() -> int:
         refs[key] = refs.get(key, 0) + 1
 
     failures: list[tuple[dict, str]] = []
+    pending_paths: list[Path] = []
+
+    def flush_pending(entry: dict) -> None:
+        nonlocal pending_paths
+        if not pending_paths or args.skip_push:
+            return
+        git_commit_push(pending_paths, entry)
+        pending_paths = []
+        if not args.skip_push_site and push_site_script.exists():
+            try:
+                sh(str(push_site_script))
+            except subprocess.CalledProcessError as e:
+                print(f"[push-site-fail] batch after {entry['model']}:{entry['quant']}: {e}", file=sys.stderr)
+
     for r in runs:
         print(f"\n=== {r['model']} :: {r['quant']} on {r['host']} ({r.get('backend','cuda')}) ===")
         try:
             out_abs_list = run_one(r, reg["models"], image_override)
             if not args.skip_push:
-                git_commit_push(out_abs_list, r)
-            if not args.skip_push_site and push_site_script.exists():
-                try:
-                    sh(str(push_site_script))
-                except subprocess.CalledProcessError as e:
-                    print(f"[push-site-fail] {r['model']}:{r['quant']}: {e}", file=sys.stderr)
+                if isinstance(out_abs_list, Path):
+                    pending_paths.append(out_abs_list)
+                else:
+                    pending_paths.extend(out_abs_list)
+                if len(pending_paths) >= max(args.push_batch_size, 1):
+                    flush_pending(r)
         except subprocess.CalledProcessError as e:
             print(f"[fail] {r}: {e}", file=sys.stderr)
             failures.append((r, str(e)))
@@ -1385,6 +1400,9 @@ def main() -> int:
                 cleanup_model(host_cfg, r["model"], reg["models"][r["model"]], r["quant"])
             except Exception as e:  # noqa: BLE001
                 print(f"[cleanup-fail] {r['model']}:{r['quant']}: {e}", file=sys.stderr)
+
+    if pending_paths:
+        flush_pending(runs[-1])
 
     if failures:
         print(f"\n{len(failures)} failure(s):")
