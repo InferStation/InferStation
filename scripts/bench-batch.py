@@ -647,6 +647,54 @@ def serve_stream_scenario_suffix(entry: dict) -> tuple[str, str]:
     return "serve-stream-in512-out128-c1x4x16x32", "o128-serve"
 
 
+def current_run_date() -> str:
+    return os.environ.get("BENCH_RUN_DATE") or datetime.datetime.utcnow().strftime("%Y-%m-%d")
+
+
+def expected_serve_record_paths(entry: dict, host_cfg: dict, bcfg: dict, *, run_date: str | None = None) -> list[Path]:
+    backend = entry.get("backend", "cuda")
+    public = public_engine(backend, bcfg, host_cfg)
+    if "npls" in entry:
+        npls = [int(x) for x in entry["npls"]]
+    else:
+        npls = [int(entry.get("npl", 1))]
+    scenario, serve_suffix = serve_stream_scenario_suffix(entry)
+    del scenario
+    date = run_date or current_run_date()
+    out = []
+    for npl in npls:
+        b_slug = "" if npl == 1 else f"-bs{npl}"
+        out.append(REPO / f"data/runs/{date}/{entry['host']}-{entry['model']}-{entry['quant']}{b_slug}-{public['file_suffix']}-{serve_suffix}.json")
+    return out
+
+
+def successful_serve_record(path: Path) -> bool:
+    try:
+        record = json.loads(path.read_text())
+    except Exception:
+        return False
+    if record.get("usability_tag") not in (None, "ok"):
+        return False
+    if not (record.get("decode_toks_per_s") or record.get("tg_toks_per_s")):
+        return False
+    raw = record.get("raw_llamabench") or []
+    return all(int(r.get("failed") or 0) == 0 and int(r.get("completed") or 0) > 0 for r in raw)
+
+
+def has_successful_record_any_date(expected_path: Path) -> bool:
+    return any(successful_serve_record(path) for path in REPO.glob(f"data/runs/*/{expected_path.name}"))
+
+
+def has_successful_record(expected_path: Path, mode: str) -> bool:
+    if mode == "none":
+        return False
+    if mode == "date":
+        return successful_serve_record(expected_path)
+    if mode == "any":
+        return has_successful_record_any_date(expected_path)
+    raise SystemExit(f"invalid resume mode: {mode}")
+
+
 def json_request(url: str, *, timeout: float = 30.0) -> tuple[int, str]:
     req = urllib.request.Request(url, headers={"User-Agent": "inferstation-bench/1"})
     try:
@@ -894,7 +942,7 @@ def write_serve_record(
     public = public_engine(backend, bcfg, host_cfg)
     npl = int(bench["max_concurrency"])
     b_slug = "" if npl == 1 else f"-bs{npl}"
-    run_date = datetime.datetime.utcnow().strftime("%Y-%m-%d")
+    run_date = current_run_date()
     scenario, serve_suffix = serve_stream_scenario_suffix(entry)
     out_rel = f"data/runs/{run_date}/{host_slug}-{model_slug}-{quant}{b_slug}-{public['file_suffix']}-{serve_suffix}.json"
     out_abs = REPO / out_rel
@@ -1260,6 +1308,7 @@ def main() -> int:
     ap.add_argument("--keep-models", action="store_true", help="Do not delete model files after the last benchmark referencing them.")
     ap.add_argument("--shard-index", type=int, default=int(os.environ.get("BENCH_SHARD_INDEX", "0")), help="Zero-based shard index for splitting the selected run list across runners.")
     ap.add_argument("--shard-count", type=int, default=int(os.environ.get("BENCH_SHARD_COUNT", "1")), help="Total number of shards for splitting the selected run list across runners.")
+    ap.add_argument("--resume-existing", choices=("none", "date", "any"), default=os.environ.get("BENCH_RESUME_EXISTING", "none"), help="Skip selected runs that already have successful result JSONs. date checks BENCH_RUN_DATE; any checks all dates.")
     ap.add_argument(
         "--image", default=os.environ.get("BENCH_IMAGE", ""),
         help="Override container image for ALL selected runs (e.g. 10.161.176.9:8443/inferstation/llama-cuda-spark:dev). "
@@ -1274,6 +1323,22 @@ def main() -> int:
     base_runs = scope_base_runs(expanded_runs, args.scope, args.filter)
     runs = select(base_runs, args.filter)
     runs = shard_runs(runs, args.shard_index, args.shard_count)
+    if args.resume_existing != "none":
+        before = len(runs)
+        remaining = []
+        skipped = 0
+        for r in runs:
+            backend = r.get("backend", "cuda")
+            host_cfg = dict(HOSTS[r["host"]])
+            host_cfg["slug"] = r["host"]
+            bcfg = BACKENDS[backend]
+            expected_paths = expected_serve_record_paths(r, host_cfg, bcfg)
+            if all(has_successful_record(path, args.resume_existing) for path in expected_paths):
+                skipped += 1
+                continue
+            remaining.append(r)
+        runs = remaining
+        print(f"[resume] skipped {skipped}/{before} run(s) mode={args.resume_existing} date={current_run_date()}")
     if not runs:
         print("nothing to do")
         return 0

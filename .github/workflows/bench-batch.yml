@@ -43,6 +43,18 @@ on:
         description: 'Run without committing/pushing result JSONs'
         type: boolean
         default: false
+      resume_existing:
+        description: 'Skip successful results already present for this run date, all dates, or do not skip'
+        type: choice
+        default: date
+        options:
+          - none
+          - date
+          - any
+      run_date:
+        description: 'Optional UTC run_date for result paths, e.g. 2026-07-06. Empty = current UTC date.'
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -117,10 +129,15 @@ jobs:
           BENCH_TARGET: ${{ inputs.target || 'all' }}
           BENCH_FILTER: ${{ inputs.filter || '' }}
           BENCH_SCOPE: ${{ inputs.scope || 'all' }}
+          BENCH_RESUME_EXISTING: ${{ inputs.resume_existing || 'date' }}
+          BENCH_RUN_DATE: ${{ inputs.run_date || '' }}
           KEEP_MODELS: ${{ github.event_name == 'schedule' || inputs.keep_models || false }}
           SKIP_PUSH: ${{ inputs.skip_push || false }}
         run: |
           set -euo pipefail
+          if [[ -z "$BENCH_RUN_DATE" ]]; then
+            export BENCH_RUN_DATE="$(date -u +%F)"
+          fi
           if [[ "$BENCH_TARGET" != "all" && "$BENCH_TARGET" != "${{ matrix.target }}" ]]; then
             echo "skip target=${{ matrix.target }} because requested target=$BENCH_TARGET"
             exit 0
@@ -139,6 +156,7 @@ jobs:
           fi
           args+=("--scope=$BENCH_SCOPE")
           args+=("--shard-index=${{ matrix.shard_index }}" "--shard-count=${{ matrix.shard_count }}")
+          args+=("--resume-existing=$BENCH_RESUME_EXISTING")
           if [[ "$KEEP_MODELS" == "true" ]]; then
             args+=("--keep-models")
           fi
