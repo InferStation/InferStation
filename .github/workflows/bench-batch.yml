@@ -120,12 +120,14 @@ jobs:
           set -euo pipefail
           logged_in=0
           if docker version >/dev/null 2>&1; then
-            printf '%s\n' "$GHCR_PAT" | docker login ghcr.io -u AlisaLi0 --password-stdin
-            logged_in=1
+            if printf '%s\n' "$GHCR_PAT" | docker login ghcr.io -u AlisaLi0 --password-stdin; then
+              logged_in=1
+            fi
           fi
           if sudo -n docker version >/dev/null 2>&1; then
-            printf '%s\n' "$GHCR_PAT" | sudo -n docker login ghcr.io -u AlisaLi0 --password-stdin
-            logged_in=1
+            if printf '%s\n' "$GHCR_PAT" | sudo -n docker login ghcr.io -u AlisaLi0 --password-stdin; then
+              logged_in=1
+            fi
           fi
           if [[ "$logged_in" -eq 0 ]]; then
             echo "neither docker nor sudo docker is usable on this runner" >&2
