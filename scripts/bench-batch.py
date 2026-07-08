@@ -654,6 +654,7 @@ def current_run_date() -> str:
 def expected_serve_record_paths(entry: dict, host_cfg: dict, bcfg: dict, *, run_date: str | None = None) -> list[Path]:
     backend = entry.get("backend", "cuda")
     public = public_engine(backend, bcfg, host_cfg)
+    result_host = entry.get("result_host") or entry["host"]
     if "npls" in entry:
         npls = [int(x) for x in entry["npls"]]
     else:
@@ -664,7 +665,7 @@ def expected_serve_record_paths(entry: dict, host_cfg: dict, bcfg: dict, *, run_
     out = []
     for npl in npls:
         b_slug = "" if npl == 1 else f"-bs{npl}"
-        out.append(REPO / f"data/runs/{date}/{entry['host']}-{entry['model']}-{entry['quant']}{b_slug}-{public['file_suffix']}-{serve_suffix}.json")
+        out.append(REPO / f"data/runs/{date}/{result_host}-{entry['model']}-{entry['quant']}{b_slug}-{public['file_suffix']}-{serve_suffix}.json")
     return out
 
 
@@ -936,6 +937,7 @@ def write_serve_record(
     bench: dict,
 ) -> Path:
     host_slug = entry["host"]
+    result_host_slug = entry.get("result_host") or host_slug
     model_slug = entry["model"]
     quant = entry["quant"]
     backend = entry.get("backend", "cuda")
@@ -944,7 +946,7 @@ def write_serve_record(
     b_slug = "" if npl == 1 else f"-bs{npl}"
     run_date = current_run_date()
     scenario, serve_suffix = serve_stream_scenario_suffix(entry)
-    out_rel = f"data/runs/{run_date}/{host_slug}-{model_slug}-{quant}{b_slug}-{public['file_suffix']}-{serve_suffix}.json"
+    out_rel = f"data/runs/{run_date}/{result_host_slug}-{model_slug}-{quant}{b_slug}-{public['file_suffix']}-{serve_suffix}.json"
     out_abs = REPO / out_rel
     out_abs.parent.mkdir(parents=True, exist_ok=True)
 
@@ -974,7 +976,7 @@ def write_serve_record(
         "schema_version": 0,
         "run_date": run_date,
         "host": {
-            "slug": host_slug,
+            "slug": result_host_slug,
             "name": host_cfg["name"],
             "vendor": host_cfg["vendor"],
             "chip": host_cfg["chip"],
@@ -1309,6 +1311,7 @@ def main() -> int:
     ap.add_argument("--keep-models", action="store_true", help="Do not delete model files after the last benchmark referencing them.")
     ap.add_argument("--shard-index", type=int, default=int(os.environ.get("BENCH_SHARD_INDEX", "0")), help="Zero-based shard index for splitting the selected run list across runners.")
     ap.add_argument("--shard-count", type=int, default=int(os.environ.get("BENCH_SHARD_COUNT", "1")), help="Total number of shards for splitting the selected run list across runners.")
+    ap.add_argument("--result-host", default=os.environ.get("BENCH_RESULT_HOST", ""), help="Override the public host slug written to result JSONs and filenames without changing execution host config.")
     ap.add_argument("--resume-existing", choices=("none", "date", "any"), default=os.environ.get("BENCH_RESUME_EXISTING", "none"), help="Skip selected runs that already have successful result JSONs. date checks BENCH_RUN_DATE; any checks all dates.")
     ap.add_argument(
         "--image", default=os.environ.get("BENCH_IMAGE", ""),
@@ -1324,6 +1327,8 @@ def main() -> int:
     base_runs = scope_base_runs(expanded_runs, args.scope, args.filter)
     runs = select(base_runs, args.filter)
     runs = shard_runs(runs, args.shard_index, args.shard_count)
+    if args.result_host:
+        runs = [{**r, "result_host": args.result_host} for r in runs]
     if args.resume_existing != "none":
         before = len(runs)
         remaining = []

@@ -81,11 +81,13 @@ jobs:
           - target: halo
             label: inferstation-halo4
             host: ryzen-ai-max-395-03
+            result_host: ryzen-ai-max-395-04
             shard_index: 1
             shard_count: 2
           - target: spark
             label: inferstation-spark2
             host: dgx-spark-01
+            result_host: dgx-spark-02
             shard_index: 0
             shard_count: 2
           - target: spark
@@ -142,6 +144,7 @@ jobs:
           BENCH_RESUME_EXISTING: ${{ inputs.resume_existing || 'date' }}
           BENCH_RUN_DATE: ${{ inputs.run_date || '' }}
           BENCH_PUSH_BATCH_SIZE: ${{ inputs.push_batch_size || '20' }}
+          BENCH_RESULT_HOST: ${{ matrix.result_host || '' }}
           SKIP_PUSH_SITE: ${{ inputs.skip_push_site }}
           KEEP_MODELS: ${{ github.event_name == 'schedule' || inputs.keep_models || false }}
           SKIP_PUSH: ${{ inputs.skip_push || false }}
@@ -168,6 +171,9 @@ jobs:
           fi
           args+=("--scope=$BENCH_SCOPE")
           args+=("--shard-index=${{ matrix.shard_index }}" "--shard-count=${{ matrix.shard_count }}")
+          if [[ -n "${BENCH_RESULT_HOST:-}" ]]; then
+            args+=("--result-host=$BENCH_RESULT_HOST")
+          fi
           args+=("--resume-existing=$BENCH_RESUME_EXISTING")
           args+=("--push-batch-size=$BENCH_PUSH_BATCH_SIZE")
           if [[ "$KEEP_MODELS" == "true" ]]; then
