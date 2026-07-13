@@ -560,6 +560,22 @@ def cleanup_model(host_cfg: dict, model_slug: str, model_def: dict, quant: str) 
     )
 
 
+def cleanup_weekly_models(host_cfg: dict, models: dict) -> None:
+    """Remove all weekly benchmark model artifacts for this host.
+
+    This is intentionally host-local and registry-driven: it only removes the
+    directories/files that bench/registry.yaml can create under models_root.
+    """
+    seen: set[tuple[str, str]] = set()
+    for model_slug, model_def in models.items():
+        for quant in (model_def.get("quants") or {}):
+            key = (model_slug, quant)
+            if key in seen:
+                continue
+            seen.add(key)
+            cleanup_model(host_cfg, model_slug, model_def, quant)
+
+
 def sanitize_container_part(value: str) -> str:
     out = "".join(c.lower() if c.isalnum() else "-" for c in value)
     return "-".join(part for part in out.split("-") if part)[:48] or "bench"
@@ -1309,6 +1325,7 @@ def main() -> int:
     ap.add_argument("--push-batch-size", type=int, default=int(os.environ.get("BENCH_PUSH_BATCH_SIZE", "1")), help="Commit/push after this many generated result files. Default 1 preserves historical per-run pushes.")
     ap.add_argument("--dry-run", action="store_true", help="Print the selected plan and exit without running benchmarks.")
     ap.add_argument("--keep-models", action="store_true", help="Do not delete model files after the last benchmark referencing them.")
+    ap.add_argument("--cleanup-all-models", action="store_true", default=os.environ.get("BENCH_CLEANUP_ALL_MODELS", "false").lower() == "true", help="After the run, remove all registry-managed weekly model artifacts for selected hosts.")
     ap.add_argument("--shard-index", type=int, default=int(os.environ.get("BENCH_SHARD_INDEX", "0")), help="Zero-based shard index for splitting the selected run list across runners.")
     ap.add_argument("--shard-count", type=int, default=int(os.environ.get("BENCH_SHARD_COUNT", "1")), help="Total number of shards for splitting the selected run list across runners.")
     ap.add_argument("--result-host", default=os.environ.get("BENCH_RESULT_HOST", ""), help="Override the public host slug written to result JSONs and filenames without changing execution host config.")
@@ -1408,6 +1425,19 @@ def main() -> int:
 
     if pending_paths:
         flush_pending(runs[-1])
+
+    if args.cleanup_all_models and not args.keep_models:
+        cleaned_hosts = set()
+        for r in runs:
+            host = r["host"]
+            if host in cleaned_hosts:
+                continue
+            cleaned_hosts.add(host)
+            try:
+                host_cfg = HOSTS[host]
+                cleanup_weekly_models(host_cfg, reg["models"])
+            except Exception as e:  # noqa: BLE001
+                print(f"[cleanup-all-fail] {host}: {e}", file=sys.stderr)
 
     if failures:
         print(f"\n{len(failures)} failure(s):")
