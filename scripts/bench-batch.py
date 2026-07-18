@@ -368,6 +368,15 @@ def host_test(path: str) -> bool:
     return rc == 0
 
 
+def host_dir_test(path: str) -> bool:
+    """Test for directory existence on the host (not in the runner container)."""
+    rc = subprocess.run(
+        f"{DOCKER} run --rm -v /:/hostfs:ro alpine:3 test -d /hostfs{shlex.quote(path)}",
+        shell=True,
+    ).returncode
+    return rc == 0
+
+
 def host_readlink(path: str) -> str:
     out = sh(
         f"{DOCKER} run --rm -v /:/hostfs:ro alpine:3 readlink -f /hostfs{shlex.quote(path)}",
@@ -444,21 +453,44 @@ def ensure_model(host_cfg: dict, model_slug: str, model_def: dict, quant: str) -
     host_dir = model_def.get("host_dir", model_slug)
 
     if fmt == "hf-snapshot":
-        # vLLM-style: download a full HF repo snapshot into a per-quant dir.
+        # vLLM-style: materialize a full snapshot at the host-specific target.
         local_path = (qdef.get("local_paths") or {}).get(host_cfg.get("slug", "")) or qdef.get("local_path")
-        if local_path:
-            if host_test(f"{local_path.rstrip('/')}/config.json"):
-                print(f"[ok] {local_path} already present")
-                return local_path.rstrip("/")
-            raise SystemExit(f"missing local HF snapshot at {local_path}; expected config.json")
-        repo = qdef.get("hf_repo") or model_def.get("hf_repo")
-        if not repo:
-            raise SystemExit(f"missing hf_repo for {model_slug}:{quant}")
-        snap_dir = f"{host_cfg['models_root']}/{host_dir}-{quant}"
-        # Sentinel: config.json must be present in a healthy HF snapshot.
+        snap_dir = local_path.rstrip("/") if local_path else f"{host_cfg['models_root']}/{host_dir}-{quant}"
         if host_test(f"{snap_dir}/config.json"):
             print(f"[ok] {snap_dir} already present")
             return snap_dir
+
+        archive_url = qdef.get("archive_url") or model_def.get("archive_url")
+        archive_sha256 = qdef.get("archive_sha256") or model_def.get("archive_sha256")
+        if archive_url:
+            if not archive_sha256:
+                raise RuntimeError(f"missing archive_sha256 for {model_slug}:{quant}")
+            archive_path = f"{snap_dir}.download.tar"
+            partial_dir = f"{snap_dir}.partial"
+            parent_dir = os.path.dirname(snap_dir)
+            script = (
+                "set -eu; "
+                f"rm -rf {shlex.quote(partial_dir)}; "
+                f"rm -f {shlex.quote(archive_path)}; "
+                f"mkdir -p {shlex.quote(parent_dir)} {shlex.quote(partial_dir)}; "
+                f"trap 'rm -rf {shlex.quote(partial_dir)}; rm -f {shlex.quote(archive_path)}' EXIT; "
+                f"curl -fL --retry 3 --retry-delay 5 --connect-timeout 30 "
+                f"-o {shlex.quote(archive_path)} {shlex.quote(archive_url)}; "
+                f"printf '%s  %s\\n' {shlex.quote(archive_sha256)} {shlex.quote(archive_path)} | sha256sum -c -; "
+                f"tar -xf {shlex.quote(archive_path)} -C {shlex.quote(partial_dir)}; "
+                f"test -f {shlex.quote(f'{partial_dir}/config.json')}; "
+                f"rm -rf {shlex.quote(snap_dir)}; "
+                f"mv {shlex.quote(partial_dir)} {shlex.quote(snap_dir)}; "
+                f"rm -f {shlex.quote(archive_path)}; "
+                "trap - EXIT"
+            )
+            print(f"[dl] {archive_url} -> {snap_dir}")
+            sh(script)
+            return snap_dir
+
+        repo = qdef.get("hf_repo") or model_def.get("hf_repo")
+        if not repo:
+            raise RuntimeError(f"no snapshot source configured for {model_slug}:{quant}")
         sh(
             f"{DOCKER} run --rm -v /:/hostfs alpine:3 "
             f"sh -c {shlex.quote(f'mkdir -p /hostfs{snap_dir}')}"
@@ -497,7 +529,7 @@ def ensure_model(host_cfg: dict, model_slug: str, model_def: dict, quant: str) -
         return path
     repo = qdef.get("hf_repo") or model_def.get("hf_repo")
     if not repo:
-        raise SystemExit(f"missing {path} and no hf_repo configured for {model_slug}:{quant}")
+        raise RuntimeError(f"missing {path} and no hf_repo configured for {model_slug}:{quant}")
     url = f"{HF_ENDPOINT}/{repo}/resolve/main/{fn}"
     print(f"[dl] {url} -> {path}")
     sh(
@@ -539,8 +571,9 @@ def cleanup_model(host_cfg: dict, model_slug: str, model_def: dict, quant: str) 
     fmt = qdef.get("format", "gguf")
     host_dir = model_def.get("host_dir", model_slug)
     if fmt == "hf-snapshot":
-        snap_dir = f"{host_cfg['models_root']}/{host_dir}-{quant}"
-        if not host_test(snap_dir):
+        local_path = (qdef.get("local_paths") or {}).get(host_cfg.get("slug", "")) or qdef.get("local_path")
+        snap_dir = local_path.rstrip("/") if local_path else f"{host_cfg['models_root']}/{host_dir}-{quant}"
+        if not host_dir_test(snap_dir):
             return
         print(f"[cleanup] rm -rf {snap_dir}")
         sh(
@@ -1049,17 +1082,16 @@ def run_one_vllm(entry: dict, models: dict, image_override: str | None) -> Path:
     backend = entry.get("backend", "vllm")
     bcfg = BACKENDS[backend]
     docker_extra = entry.get("docker_extra") or bcfg["docker_extra"]
+    model_def = models[model_slug]
+    snap_dir = ensure_model(host_cfg, model_slug, model_def, quant)
+    real_dir = host_readlink(snap_dir) or snap_dir
     image_ref = resolve_image(entry, host_cfg, backend, image_override)
     engine_commit = ensure_image(image_ref, backend=backend)
-    model_def = models[model_slug]
     tp = int(entry.get("tp", 1))
     pp = int(entry.get("pp", 512))
     tg = int(entry.get("tg", 128))
     npl = int(entry.get("npl", 1))
     server_max_seqs = int(entry.get("server_max_seqs", SERVE_MAX_CONCURRENCY))
-
-    snap_dir = ensure_model(host_cfg, model_slug, model_def, quant)
-    real_dir = host_readlink(snap_dir) or snap_dir
 
     port = get_free_port()
     container_name = (
@@ -1130,9 +1162,13 @@ def run_one(entry: dict, models: dict, image_override: str | None) -> list[Path]
     model_slug = entry["model"]
     quant = entry["quant"]
     bcfg = BACKENDS[backend]
+    model_def = models[model_slug]
+    model_path = ensure_model(host_cfg, model_slug, model_def, quant)
+    real_path = host_readlink(model_path)
+    real_dir = os.path.dirname(real_path)
+    real_fn = os.path.basename(real_path)
     image_ref = resolve_image(entry, host_cfg, backend, image_override)
     engine_commit = ensure_image(image_ref, backend=backend)
-    model_def = models[model_slug]
     # Serve-stream runs one server per (model, quant, backend) entry and drives
     # the recipe-declared concurrency level through an OpenAI-compatible client.
     if "npls" in entry:
@@ -1142,11 +1178,6 @@ def run_one(entry: dict, models: dict, image_override: str | None) -> list[Path]
     pp = int(entry.get("pp", 512))
     tg = int(entry.get("tg", 128))
     max_npl = max(max(npls), SERVE_MAX_CONCURRENCY)
-
-    model_path = ensure_model(host_cfg, model_slug, model_def, quant)
-    real_path = host_readlink(model_path)
-    real_dir = os.path.dirname(real_path)
-    real_fn = os.path.basename(real_path)
 
     port = get_free_port()
     container_name = (
@@ -1418,7 +1449,8 @@ def main() -> int:
         refs[key] -= 1
         if refs[key] == 0 and not args.keep_models:
             try:
-                host_cfg = HOSTS[r["host"]]
+                host_cfg = dict(HOSTS[r["host"]])
+                host_cfg["slug"] = r["host"]
                 cleanup_model(host_cfg, r["model"], reg["models"][r["model"]], r["quant"])
             except Exception as e:  # noqa: BLE001
                 print(f"[cleanup-fail] {r['model']}:{r['quant']}: {e}", file=sys.stderr)
@@ -1434,7 +1466,8 @@ def main() -> int:
                 continue
             cleaned_hosts.add(host)
             try:
-                host_cfg = HOSTS[host]
+                host_cfg = dict(HOSTS[host])
+                host_cfg["slug"] = host
                 cleanup_weekly_models(host_cfg, reg["models"])
             except Exception as e:  # noqa: BLE001
                 print(f"[cleanup-all-fail] {host}: {e}", file=sys.stderr)
