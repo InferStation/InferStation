@@ -63,6 +63,10 @@ on:
         description: 'Optional UTC run_date for result paths, e.g. 2026-07-06. Empty = current UTC date.'
         type: string
         default: ''
+      gpu_device:
+        description: 'Optional single NVIDIA GPU index. Only valid with target=nv4090.'
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -145,6 +149,7 @@ jobs:
           BENCH_SCOPE: ${{ inputs.scope || 'all' }}
           BENCH_RESUME_EXISTING: ${{ inputs.resume_existing || 'date' }}
           BENCH_RUN_DATE: ${{ inputs.run_date || '' }}
+          BENCH_GPU_DEVICE: ${{ inputs.gpu_device || '' }}
           BENCH_PUSH_BATCH_SIZE: ${{ inputs.push_batch_size || '20' }}
           BENCH_RESULT_HOST: ${{ matrix.result_host || '' }}
           BENCH_CLEANUP_ALL_MODELS: true
@@ -156,6 +161,10 @@ jobs:
           if [[ "$BENCH_TARGET" != "all" && "$BENCH_TARGET" != "${{ matrix.target }}" ]]; then
             echo "skip target=${{ matrix.target }} because requested target=$BENCH_TARGET"
             exit 0
+          fi
+          if [[ -n "$BENCH_GPU_DEVICE" && ( "$BENCH_TARGET" != "nv4090" || ! "$BENCH_GPU_DEVICE" =~ ^[0-9]+$ ) ]]; then
+            echo "gpu_device requires target=nv4090 and a numeric GPU index" >&2
+            exit 1
           fi
           if [[ -z "$BENCH_GIT_PAT" ]]; then
             echo "BENCH_GIT_PAT is required for long-running result pushes" >&2

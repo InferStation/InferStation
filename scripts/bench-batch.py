@@ -406,6 +406,18 @@ def resolve_image(entry: dict, host_cfg: dict, backend: str, override: str | Non
     return host_backends[backend]
 
 
+def apply_gpu_device(docker_extra: str) -> str:
+    """Pin NVIDIA Docker launches when BENCH_GPU_DEVICE is set."""
+    gpu_device = os.environ.get("BENCH_GPU_DEVICE", "").strip()
+    if not gpu_device:
+        return docker_extra
+    if not gpu_device.isdigit():
+        raise ValueError(f"invalid BENCH_GPU_DEVICE: {gpu_device!r}")
+    if "--gpus all" not in docker_extra:
+        raise ValueError("BENCH_GPU_DEVICE requires Docker args containing '--gpus all'")
+    return docker_extra.replace("--gpus all", f"--gpus device={gpu_device}", 1)
+
+
 def ensure_image(image_ref: str, *, backend: str) -> str:
     """Make sure `image_ref` is present locally; return engine version/commit.
 
@@ -1081,7 +1093,7 @@ def run_one_vllm(entry: dict, models: dict, image_override: str | None) -> Path:
     quant = entry["quant"]
     backend = entry.get("backend", "vllm")
     bcfg = BACKENDS[backend]
-    docker_extra = entry.get("docker_extra") or bcfg["docker_extra"]
+    docker_extra = apply_gpu_device(entry.get("docker_extra") or bcfg["docker_extra"])
     model_def = models[model_slug]
     snap_dir = ensure_model(host_cfg, model_slug, model_def, quant)
     real_dir = host_readlink(snap_dir) or snap_dir
@@ -1197,7 +1209,7 @@ def run_one(entry: dict, models: dict, image_override: str | None) -> list[Path]
         f"--host 0.0.0.0 --port {port} --alias {shlex.quote(model_name)} "
         f"-c {ctx_size} -np {max_npl} -fa on -cb --no-webui"
     )
-    docker_extra = entry.get("docker_extra") or bcfg["docker_extra"]
+    docker_extra = apply_gpu_device(entry.get("docker_extra") or bcfg["docker_extra"])
     base_url = f"http://127.0.0.1:{port}"
     sh(f"{DOCKER} rm -f {shlex.quote(container_name)} >/dev/null 2>&1 || true", check=False)
     try:
