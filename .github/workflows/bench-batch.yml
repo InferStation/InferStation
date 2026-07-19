@@ -114,6 +114,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
+          persist-credentials: false
       - name: ghcr login (GHCR_PAT)
         if: ${{ (inputs.target || 'all') == 'all' || (inputs.target || 'all') == matrix.target }}
         env:
@@ -138,6 +139,7 @@ jobs:
       - name: Run bench-batch directly
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          BENCH_GIT_PAT: ${{ secrets.GHCR_PAT }}
           BENCH_TARGET: ${{ inputs.target || 'all' }}
           BENCH_FILTER: ${{ inputs.filter || '' }}
           BENCH_SCOPE: ${{ inputs.scope || 'all' }}
@@ -151,12 +153,22 @@ jobs:
           SKIP_PUSH: ${{ inputs.skip_push || false }}
         run: |
           set -euo pipefail
-          if [[ -z "$BENCH_RUN_DATE" ]]; then
-            export BENCH_RUN_DATE="$(date -u +%F)"
-          fi
           if [[ "$BENCH_TARGET" != "all" && "$BENCH_TARGET" != "${{ matrix.target }}" ]]; then
             echo "skip target=${{ matrix.target }} because requested target=$BENCH_TARGET"
             exit 0
+          fi
+          if [[ -z "$BENCH_GIT_PAT" ]]; then
+            echo "BENCH_GIT_PAT is required for long-running result pushes" >&2
+            exit 1
+          fi
+          git_auth="$(printf 'x-access-token:%s' "$BENCH_GIT_PAT" | base64 | tr -d '\n')"
+          export GIT_CONFIG_COUNT=1
+          export GIT_CONFIG_KEY_0=http.https://github.com/.extraheader
+          export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $git_auth"
+          git push --dry-run origin HEAD:main
+          echo "durable Git write authentication verified"
+          if [[ -z "$BENCH_RUN_DATE" ]]; then
+            export BENCH_RUN_DATE="$(date -u +%F)"
           fi
           args=()
           if [[ -n "$BENCH_FILTER" ]]; then
