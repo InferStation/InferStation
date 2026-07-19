@@ -73,6 +73,7 @@ permissions:
 
 jobs:
   bench:
+    if: ${{ (inputs.target || 'all') == 'all' || (inputs.target || 'all') == matrix.target }}
     strategy:
       fail-fast: false
       matrix:

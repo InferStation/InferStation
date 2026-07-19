@@ -550,11 +550,23 @@ def ensure_model(host_cfg: dict, model_slug: str, model_def: dict, quant: str) -
     )
     # curlimages/curl runs as uid 100; the model dir was created by alpine
     # (root) so we need --user 0:0 to be able to write into it.
+    dst = f"/dst/{fn}"
+    partial = f"{dst}.partial"
     curl_cmd = (
-        "set -e; "
-        "auth=; "
-        "if [ -n \"${HF_TOKEN:-}\" ]; then auth=\"-H Authorization: Bearer ${HF_TOKEN}\"; fi; "
-        f"curl -fL --retry 3 --retry-delay 5 $auth -o /dst/{shlex.quote(fn)} {shlex.quote(url)}"
+        "set -eu; "
+        "if [ -n \"${HF_TOKEN:-}\" ]; then "
+        "set -- -H \"Authorization: Bearer ${HF_TOKEN}\"; else set --; fi; "
+        f"rm -f {shlex.quote(partial)}; "
+        f"trap 'rm -f {shlex.quote(partial)}' EXIT; "
+        f"expected=$(curl -fsSIL --retry 3 \"$@\" {shlex.quote(url)} | "
+        "awk 'tolower($1) == \"content-length:\" { gsub(\"\\r\", \"\", $2); n=$2 } END { print n }'); "
+        f"curl -fL --retry 3 --retry-all-errors --retry-delay 5 \"$@\" "
+        f"-o {shlex.quote(partial)} {shlex.quote(url)}; "
+        f"actual=$(wc -c < {shlex.quote(partial)}); "
+        "if [ -z \"$expected\" ] || [ \"$expected\" -le 0 ] || [ \"$actual\" -ne \"$expected\" ]; then "
+        "echo \"download size mismatch: expected=$expected actual=$actual\" >&2; exit 1; fi; "
+        f"mv -f {shlex.quote(partial)} {shlex.quote(dst)}; "
+        "trap - EXIT"
     )
     token_env = "-e HF_TOKEN=<redacted> " if HF_TOKEN else ""
     token_run_env = f"-e HF_TOKEN={shlex.quote(HF_TOKEN)} " if HF_TOKEN else ""
@@ -601,7 +613,7 @@ def cleanup_model(host_cfg: dict, model_slug: str, model_def: dict, quant: str) 
     print(f"[cleanup] rm {path}")
     sh(
         f"{DOCKER} run --rm -v /:/hostfs alpine:3 "
-        f"sh -c {shlex.quote(f'rm -f /hostfs{path} && rmdir /hostfs{model_dir} 2>/dev/null || true')}"
+        f"sh -c {shlex.quote(f'rm -f /hostfs{path} /hostfs{path}.partial && rmdir /hostfs{model_dir} 2>/dev/null || true')}"
     )
 
 
