@@ -40,18 +40,21 @@ RUN --mount=type=cache,target=/root/.cache/uv,id=pytorch-rocm-halo-uv,sharing=lo
         "rocm-sdk-devel==${ROCM_VERSION}" \
         "rocm-sdk-libraries==${ROCM_VERSION}" \
         "rocm-sdk-device-${PYTORCH_ROCM_ARCH}==${ROCM_VERSION}" \
-        "torch==${TORCH_VERSION}" \
+        "torch[device-${PYTORCH_ROCM_ARCH}]==${TORCH_VERSION}" \
         "torchvision==${TORCHVISION_VERSION}" \
  && rocm-sdk init \
- && python -m pip freeze | grep -E '^(rocm[A-Za-z0-9_.+-]*|torch|torchvision|triton)==' > /opt/rocm-pytorch-constraints.txt \
+ && python -m pip freeze | grep -E '^(amd-torch-device-[A-Za-z0-9_.+-]*|rocm[A-Za-z0-9_.+-]*|torch|torchvision|triton)==' > /opt/rocm-pytorch-constraints.txt \
  && python - <<'PY'
+import os
 import torch
 import importlib.metadata as metadata
 
+arch = os.environ['PYTORCH_ROCM_ARCH']
 print(
     'OK pytorch-rocm-base',
     'rocm', metadata.version('rocm-sdk-core'),
     'torch', torch.__version__,
+    'torch_device', metadata.version(f'amd-torch-device-{arch}'),
     'hip', torch.version.hip,
     'cuda_available', torch.cuda.is_available(),
 )
