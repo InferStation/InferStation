@@ -20,10 +20,10 @@
 # <release>-<arch> tags are permanent (prune.sh only touches nightly-* tags), so
 # every release stays pullable forever; nightly-* keeps a 7-day rolling window.
 #
-# Usage:  ./daily.sh spark | halo | nv4090 | r9700 | radeon-base
+# Usage:  ./daily.sh spark | halo | nv4090 | r9700 | radeon-base | halo-base | halo-vllm
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TRACK="${1:?usage: daily.sh spark|halo|nv4090|r9700|radeon-base}"
+TRACK="${1:?usage: daily.sh spark|halo|nv4090|r9700|radeon-base|halo-base|halo-vllm}"
 
 # Trigger mode: nightly (scheduled cron) vs manual (workflow_dispatch).
 # CI passes TRIGGER=${{ github.event_name }} (schedule | workflow_dispatch).
@@ -470,6 +470,9 @@ echo "=========================================="
 # the primary box; llama compile + the light vulkan mirror on the secondary
 # box), so they are launched concurrently and joined with `wait`.
 case "$TRACK" in
+  halo-base)
+    run_one pytorch-rocm-halo build_radeon_pytorch_base pytorch-rocm-halo
+    ;;
   radeon-base)
     run_one pytorch-rocm-halo  build_radeon_pytorch_base pytorch-rocm-halo &
     run_one pytorch-rocm-r9700 build_radeon_pytorch_base pytorch-rocm-r9700 &
@@ -493,6 +496,9 @@ case "$TRACK" in
     run_one llama-vulkan-halo     mirror_pkg      llama-vulkan-halo &
     wait
     ;;
+  halo-vllm)
+    run_one vllm-rocm-halo build_pkg_gfx11
+    ;;
   nv4090)
     # NVIDIA images MIRROR upstream official (sm89 is well-supported).
     run_one llama-cuda-4090       mirror_pkg      llama-cuda-4090 ghcr.io/ggml-org/llama.cpp:server-cuda &
@@ -510,7 +516,7 @@ case "$TRACK" in
     wait
     ;;
   *)
-    echo "unknown track: $TRACK (expected spark|halo|nv4090|r9700|radeon-base)" >&2; exit 1 ;;
+    echo "unknown track: $TRACK (expected spark|halo|nv4090|r9700|radeon-base|halo-base|halo-vllm)" >&2; exit 1 ;;
 esac
 
 echo

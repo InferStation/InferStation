@@ -5,16 +5,19 @@
   "platform": "linux/amd64",
   "gpu_arch": "gfx1151",
   "registry": "ghcr.io/inferstation/pytorch-rocm-halo",
-  "tag": "v2-staging-gfx1151",
+  "tag": "multiarch-7.15.0a20260719-gfx1151",
   "build_host": "halo6",
   "dockerfile": "Dockerfile",
-  "upstream": "https://rocm.nightlies.amd.com/v2-staging/gfx1151/",
-  "upstream_ref": "v2-staging-gfx1151",
+  "upstream": "https://rocm.nightlies.amd.com/whl-multi-arch/",
+  "upstream_ref": "7.15.0a20260719",
   "build_args": {
     "ROCM_CI_BASE": "ghcr.io/rocm/vllm/gfx11-ci:latest",
-    "ROCM_INDEX_URL": "https://rocm.nightlies.amd.com/v2-staging/gfx1151/",
+    "ROCM_INDEX_URL": "https://rocm.nightlies.amd.com/whl-multi-arch/",
+    "ROCM_VERSION": "7.15.0a20260719",
+    "TORCH_VERSION": "2.14.0a0+rocm7.15.0a20260719",
+    "TORCHVISION_VERSION": "0.29.0a0+rocm7.15.0a20260719",
     "PYTORCH_ROCM_ARCH": "gfx1151"
   },
   "expected_size_mb": 3000,
-  "description": "Daily PyTorch/ROCm base for AMD Strix Halo / RDNA3.5 / gfx1151. Built from ROCm/vLLM thin CI base, installs rocm[devel,libraries] + torch + torchvision from v2-staging/gfx1151, runs rocm-sdk init, and exports /opt/rocm-pytorch-constraints.txt for downstream vLLM builds."
+  "description": "Pinned PyTorch/ROCm multi-arch base for AMD Strix Halo / RDNA3.5 / gfx1151. Installs the complete ROCm 7.15.0a20260719 core, development, common library, and gfx1151 device wheel set with matching PyTorch and torchvision, then exports ABI constraints for downstream vLLM builds."
 }

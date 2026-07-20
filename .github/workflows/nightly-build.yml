@@ -61,12 +61,18 @@ jobs:
         working-directory: dockerfiles
         env:
           TRIGGER: ${{ github.event_name }}
+          TRACKS: ${{ inputs.tracks }}
         run: |
           set -e
           chmod +x build.sh daily.sh prune.sh
-          ./daily.sh radeon-base
+          if [[ "$TRIGGER" == "workflow_dispatch" && "$TRACKS" == "halo" ]]; then
+            ./daily.sh halo-base
+          else
+            ./daily.sh radeon-base
+          fi
 
   build-halo:
+    needs: [build-radeon-base]
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.tracks == 'all' || inputs.tracks == 'halo' }}
     runs-on: [self-hosted, cicd]
     steps:
@@ -77,10 +83,15 @@ jobs:
         working-directory: dockerfiles
         env:
           TRIGGER: ${{ github.event_name }}
+          TRACKS: ${{ inputs.tracks }}
         run: |
           set -e
           chmod +x build.sh daily.sh prune.sh
-          ./daily.sh halo
+          if [[ "$TRIGGER" == "workflow_dispatch" && "$TRACKS" == "halo" ]]; then
+            ./daily.sh halo-vllm
+          else
+            ./daily.sh halo
+          fi
 
   build-nv4090:
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.tracks == 'all' || inputs.tracks == 'nv4090' }}

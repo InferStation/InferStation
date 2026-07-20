@@ -14,7 +14,7 @@
 # The legacy one-shot Dockerfile (compile-in-place + COPY /opt/python) is kept
 # at Dockerfile.legacy for reference / fallback.
 
-ARG VLLM_BASE=ghcr.io/inferstation/pytorch-rocm-halo:v2-staging-gfx1151
+ARG VLLM_BASE=ghcr.io/inferstation/pytorch-rocm-halo:multiarch-7.15.0a20260719-gfx1151
 ARG WHEEL_IMAGE=ghcr.io/inferstation/vllm-wheel-halo:main-gfx1151
 ARG VLLM_TAG=main
 ARG PYTORCH_ROCM_ARCH=gfx1151
@@ -49,7 +49,7 @@ RUN --mount=type=cache,target=/root/.cache/uv,id=vllm-halo-main-runtime-uv,shari
  && printf 'numpy<2.5\nsetuptools>=77.0.3,<80.0.0\ntransformers==5.10.2\nhuggingface-hub[hf_transfer,cli]\n' >> /tmp/wheels/runtime-constraints.txt \
  && uv -v pip install --system --python python \
        --constraint /tmp/wheels/runtime-constraints.txt \
-       --index-url "https://rocm.nightlies.amd.com/v2-staging/gfx1151/" \
+       --index-url "https://rocm.nightlies.amd.com/whl-multi-arch/" \
        --extra-index-url https://pypi.org/simple/ \
        --index-strategy unsafe-best-match \
        --prerelease allow \

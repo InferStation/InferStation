@@ -16,7 +16,7 @@
 #   ./build.sh vllm-rocm-halo-wheel                 # release v0.22.0
 #   ./build.sh vllm-rocm-halo-wheel --ref=main --tag=nightly-$(date +%Y%m%d)-gfx1151
 
-ARG VLLM_BASE=ghcr.io/inferstation/pytorch-rocm-halo:v2-staging-gfx1151
+ARG VLLM_BASE=ghcr.io/inferstation/pytorch-rocm-halo:multiarch-7.15.0a20260719-gfx1151
 ARG VLLM_REPO=https://github.com/vllm-project/vllm.git
 ARG VLLM_TAG=v0.22.0
 ARG PYTORCH_ROCM_ARCH=gfx1151
