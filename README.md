@@ -25,6 +25,11 @@ Tower workstations and more engines come once v0 is stable.
 - Run data as plain JSON under `data/runs/<YYYY-MM-DD>/...`
 - Schema: see [`data/runs/SCHEMA.md`](data/runs/SCHEMA.md)
 
+## Container Images
+
+- Validated image versions, immutable digests, and withdrawn releases:
+   [`IMAGE_RELEASES.md`](IMAGE_RELEASES.md)
+
 ## Benchmark Methodology
 
 - Methodology: [`docs/methodology.md`](docs/methodology.md)
