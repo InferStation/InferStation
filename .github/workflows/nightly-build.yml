@@ -36,6 +36,7 @@ on:
           - all
           - radeon-base
           - halo
+          - halo-runtime
           - nv4090
           - r9700
           - spark
@@ -93,6 +94,25 @@ jobs:
             ./daily.sh halo
           fi
 
+  build-halo-runtime:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.tracks == 'halo-runtime' }}
+    runs-on: [self-hosted, cicd]
+    steps:
+      - uses: actions/checkout@v4
+      - name: ghcr login (GHCR_PAT)
+        run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u AlisaLi0 --password-stdin
+      - name: assemble patched halo runtime on cicd -> ghcr
+        working-directory: dockerfiles
+        env:
+          CANDIDATE_TAG: runtime-${{ github.sha }}
+        run: |
+          set -euo pipefail
+          chmod +x build.sh
+          ./build.sh vllm-rocm-halo \
+            --ref=gfx11 \
+            --tag="${CANDIDATE_TAG:0:20}" \
+            --no-latest
+
   build-nv4090:
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.tracks == 'all' || inputs.tracks == 'nv4090' }}
     runs-on: [self-hosted, cicd]
@@ -146,7 +166,7 @@ jobs:
           ./daily.sh spark
 
   verify:
-    needs: [build-radeon-base, build-spark, build-halo, build-nv4090, build-r9700]
+    needs: [build-radeon-base, build-spark, build-halo, build-halo-runtime, build-nv4090, build-r9700]
     if: ${{ !cancelled() }}
     runs-on: [self-hosted, cicd]
     steps:
@@ -157,7 +177,7 @@ jobs:
           set -e
           DATE=$(date -u +%Y%m%d)
           echo "verify nightly-${DATE} for spark/halo/nv4090/r9700 repos under ghcr.io/inferstation"
-          echo "radeon-base=${{ needs.build-radeon-base.result }} spark=${{ needs.build-spark.result }} halo=${{ needs.build-halo.result }} nv4090=${{ needs.build-nv4090.result }} r9700=${{ needs.build-r9700.result }}"
+          echo "radeon-base=${{ needs.build-radeon-base.result }} spark=${{ needs.build-spark.result }} halo=${{ needs.build-halo.result }} halo-runtime=${{ needs.build-halo-runtime.result }} nv4090=${{ needs.build-nv4090.result }} r9700=${{ needs.build-r9700.result }}"
 
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "manual workflow_dispatch builds intentionally do not move nightly-* tags; skipping nightly tag verification"

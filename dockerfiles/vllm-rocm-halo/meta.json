@@ -17,5 +17,5 @@
     "WHEEL_IMAGE": "ghcr.io/inferstation/vllm-wheel-halo-gfx11:gfx11-gfx1151"
   },
   "expected_size_mb": 50000,
-  "description": "vLLM runtime for AMD Strix Halo (gfx1151) ASSEMBLED from AMD's ROCm/vllm `gfx11`-branch wheel (vllm-wheel-halo-gfx11). Uses the pinned InferStation ROCm 7.15.0a20260719 multi-arch Halo base so torch/ROCm ABI matches the wheel builder. This is the DEFAULT halo vLLM line (repo renamed from vllm-rocm-halo-gfx11). gfx11 ships AMD's gfx1151-tuned kernels and retains FusedMoE.tp_size (AWQ MoE loads cleanly), at the cost of trailing upstream main (no DiffusionGemma; use vllm-rocm-halo-main for that). Rebuild the wheel pkg first whenever the base image changes."
+  "description": "vLLM runtime for AMD Strix Halo (gfx1151) ASSEMBLED from AMD's ROCm/vllm `gfx11`-branch wheel (vllm-wheel-halo-gfx11). Uses the pinned InferStation ROCm 7.15.0a20260719 multi-arch Halo base so torch/ROCm ABI matches the wheel builder, and backports vLLM PR #38824 to enable ROCM_ATTN head size 512 for Gemma4. This is the DEFAULT halo vLLM line (repo renamed from vllm-rocm-halo-gfx11). gfx11 ships AMD's gfx1151-tuned kernels and retains FusedMoE.tp_size (AWQ MoE loads cleanly), at the cost of trailing upstream main (no DiffusionGemma; use vllm-rocm-halo-main for that). Rebuild the wheel pkg first whenever the base image changes."
 }

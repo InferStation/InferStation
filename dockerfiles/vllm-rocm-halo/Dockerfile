@@ -55,8 +55,19 @@ RUN --mount=type=cache,target=/root/.cache/uv,id=vllm-halo-runtime-uv,sharing=lo
        --prerelease allow \
        -r /tmp/wheels/requirements/rocm.txt \
  && uv -v pip install --system --python python --no-deps /tmp/wheels/vllm-*.whl \
- && rm -rf /tmp/wheels /root/.cache/pip \
- && python -c "import vllm, transformers, torch; print('vllm', vllm.__version__, 'transformers', transformers.__version__, 'torch', torch.__version__, 'hip', torch.version.hip)"
+ && python - <<'PY'
+from pathlib import Path
+
+path = Path('/usr/local/lib/python3.12/site-packages/vllm/v1/attention/backends/rocm_attn.py')
+old = 'return [32, 64, 80, 96, 128, 160, 192, 224, 256]'
+new = 'return [32, 64, 80, 96, 128, 160, 192, 224, 256, 512]'
+text = path.read_text()
+if text.count(old) != 1:
+      raise RuntimeError(f'expected exactly one ROCM_ATTN head-size list in {path}')
+path.write_text(text.replace(old, new))
+PY
+RUN rm -rf /tmp/wheels /root/.cache/pip \
+ && python -c "import vllm, transformers, torch; from vllm.v1.attention.backends.rocm_attn import RocmAttentionBackend; assert 512 in RocmAttentionBackend.get_supported_head_sizes(); print('vllm', vllm.__version__, 'transformers', transformers.__version__, 'torch', torch.__version__, 'hip', torch.version.hip, 'rocm_attn_head_512', True)"
 
 EXPOSE 8000
 ENTRYPOINT ["python", "-m", "vllm.entrypoints.openai.api_server"]
