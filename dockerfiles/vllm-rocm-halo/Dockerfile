@@ -67,34 +67,31 @@ if text.count(old) != 1:
 path.write_text(text.replace(old, new))
 
 path = Path('/usr/local/lib/python3.12/site-packages/vllm/v1/attention/ops/triton_unified_attention.py')
-old = '''        elif head_size > 64:
-                  tile_size = min(tile_size, 128)
-
-      return tile_size
-'''
-new = '''        elif head_size > 64:
-                  tile_size = min(tile_size, 128)
-
-      # Backport vLLM PR #39018: large padded heads need a 16-wide tile on
-      # devices with less than 96 KiB shared memory per block.
-      head_size_padded = triton.next_power_of_2(head_size)
-      if (
-            tile_size == 32
-            and head_size_padded >= 512
-            and element_size >= 2
-            and current_platform.is_navi()
-      ):
-            tile_size = 16
-
-      return tile_size
-'''
-text = path.read_text()
-if text.count(old) != 1:
-      raise RuntimeError(f'expected exactly one Triton tile-size return block in {path}')
-path.write_text(text.replace(old, new))
+lines = path.read_text().splitlines()
+start = next(i for i, line in enumerate(lines) if line.startswith('def _get_tile_size('))
+end = next(i for i, line in enumerate(lines[start + 1 :], start + 1) if line.startswith('def unified_attention('))
+returns = [i for i in range(start, end) if lines[i].strip() == 'return tile_size']
+if len(returns) != 1:
+      raise RuntimeError(f'expected exactly one tile-size return in {path}, found {len(returns)}')
+index = returns[0]
+indent = lines[index][: len(lines[index]) - len(lines[index].lstrip())]
+patch = [
+      f'{indent}# Backport vLLM PR #39018 for 64 KiB shared-memory devices.',
+      f'{indent}head_size_padded = triton.next_power_of_2(head_size)',
+      f'{indent}if (',
+      f'{indent}    tile_size == 32',
+      f'{indent}    and head_size_padded >= 512',
+      f'{indent}    and element_size >= 2',
+      f'{indent}    and current_platform.is_navi()',
+      f'{indent}):',
+      f'{indent}    tile_size = 16',
+      '',
+]
+lines[index:index] = patch
+path.write_text('\n'.join(lines) + '\n')
 PY
 RUN rm -rf /tmp/wheels /root/.cache/pip \
- && python -c "import vllm, transformers, torch; from vllm.v1.attention.backends.rocm_attn import RocmAttentionBackend; from vllm.v1.attention.ops.triton_unified_attention import _get_tile_size; assert 512 in RocmAttentionBackend.get_supported_head_sizes(); print('vllm', vllm.__version__, 'transformers', transformers.__version__, 'torch', torch.__version__, 'hip', torch.version.hip, 'rocm_attn_head_512', True, 'triton_limited_smem_patch', True)"
+ && python -c "import inspect, vllm, transformers, torch; from vllm.v1.attention.backends.rocm_attn import RocmAttentionBackend; from vllm.v1.attention.ops.triton_unified_attention import _get_tile_size; assert 512 in RocmAttentionBackend.get_supported_head_sizes(); assert 'head_size_padded >= 512' in inspect.getsource(_get_tile_size); print('vllm', vllm.__version__, 'transformers', transformers.__version__, 'torch', torch.__version__, 'hip', torch.version.hip, 'rocm_attn_head_512', True, 'triton_limited_smem_patch', True)"
 
 EXPOSE 8000
 ENTRYPOINT ["python", "-m", "vllm.entrypoints.openai.api_server"]
