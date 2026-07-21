@@ -421,14 +421,15 @@ def apply_gpu_device(docker_extra: str) -> str:
 def ensure_image(image_ref: str, *, backend: str) -> str:
     """Make sure `image_ref` is present locally; return engine version/commit.
 
-    Always pulls if missing (no fallback to local build). If already cached,
-    skips pull. Engine version is extracted with a backend-specific probe:
+    Always pulls if missing (no fallback to local build). Mutable `latest` tags
+    are refreshed even when cached. Engine version is extracted with a backend-specific probe:
       - llama.cpp: `cat /opt/llama.cpp/commit.txt` if present, else
         `llama-cli --version` last word.
       - vllm:     `python3 -c 'import vllm; print(vllm.__version__)'`
     """
     have = sh(f"{DOCKER} images -q {image_ref}", capture=True).strip()
-    if not have:
+    image_tag = image_ref.rsplit(":", 1)[-1] if ":" in image_ref.rsplit("/", 1)[-1] else "latest"
+    if not have or image_tag == "latest":
         sh(f"{DOCKER} pull {image_ref}")
 
     if backend in ("vllm", "vllm-rocm"):
