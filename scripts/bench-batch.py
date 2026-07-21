@@ -1127,6 +1127,7 @@ def run_one_vllm(entry: dict, models: dict, image_override: str | None) -> Path:
     model_name = "inferstation-bench"
     max_model_len = int(entry.get("max_model_len", max(2048, (pp + tg) * 2 + 1024)))
     gpu_mem_util = float(entry.get("gpu_memory_utilization", 0.85))
+    vllm_args = shlex.join(shlex.split(str(entry.get("vllm_args", ""))))
     inner_cmd = (
         f"exec vllm serve /model "
         f"--served-model-name {shlex.quote(model_name)} "
@@ -1137,6 +1138,7 @@ def run_one_vllm(entry: dict, models: dict, image_override: str | None) -> Path:
         f"--tensor-parallel-size {tp} "
         f"--gpu-memory-utilization {gpu_mem_util} "
         f"--trust-remote-code"
+        f"{f' {vllm_args}' if vllm_args else ''}"
     )
     base_url = f"http://127.0.0.1:{port}"
     sh(f"{DOCKER} rm -f {shlex.quote(container_name)} >/dev/null 2>&1 || true", check=False)
