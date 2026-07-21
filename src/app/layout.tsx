@@ -69,7 +69,7 @@ export default function RootLayout({
               </li>
               <li>
                 <a
-                  href="https://github.com/JoursBleu/InferStation"
+                  href="https://github.com/InferStation/InferStation"
                   target="_blank"
                   rel="noreferrer"
                   aria-label="GitHub repository"

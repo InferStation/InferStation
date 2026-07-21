@@ -13,12 +13,11 @@
 # sources => ccache makes a rebuild ~5-10 min instead of 30-60 min.
 #
 # Build (via dockerfiles/build.sh):
-#   ./build.sh vllm-rocm-halo-wheel                 # release v0.22.0
-#   ./build.sh vllm-rocm-halo-wheel --ref=main --tag=nightly-$(date +%Y%m%d)-gfx1151
+#   ./build.sh vllm-rocm-halo-wheel --ref=gfx11 --tag=gfx11-gfx1151 --no-latest
 
 ARG VLLM_BASE=ghcr.io/inferstation/pytorch-rocm-halo:multiarch-7.15.0a20260719-gfx1151
-ARG VLLM_REPO=https://github.com/vllm-project/vllm.git
-ARG VLLM_TAG=v0.22.0
+ARG VLLM_REPO=https://github.com/ROCm/vllm.git
+ARG VLLM_TAG=gfx11
 ARG PYTORCH_ROCM_ARCH=gfx1151
 
 FROM ${VLLM_BASE} AS builder
@@ -113,6 +112,7 @@ RUN --mount=type=cache,target=/root/.cache/ccache,id=vllm-halo-ccache,sharing=lo
             -w /wheels \
             --verbose \
  && cp /opt/rocm-pytorch-constraints.txt /constraints.txt \
+ && git rev-parse HEAD > /commit.txt \
  && ls -lh /wheels/*.whl \
  && ccache -s
 
@@ -122,3 +122,4 @@ RUN --mount=type=cache,target=/root/.cache/ccache,id=vllm-halo-ccache,sharing=lo
 FROM scratch
 COPY --from=builder /wheels/ /
 COPY --from=builder /constraints.txt /constraints.txt
+COPY --from=builder /commit.txt /commit.txt

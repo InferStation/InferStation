@@ -105,13 +105,42 @@ jobs:
         working-directory: dockerfiles
         env:
           CANDIDATE_TAG: runtime-${{ github.sha }}
+          BASE_REF: ghcr.io/inferstation/pytorch-rocm-halo:multiarch-7.15.0a20260719-gfx1151
+          WHEEL_REF: ghcr.io/inferstation/vllm-wheel-halo-gfx11:gfx11-gfx1151
         run: |
           set -euo pipefail
           chmod +x build.sh
+          base_digest=$(docker buildx imagetools inspect --raw "$BASE_REF" | sha256sum | awk '{print $1}')
+          wheel_digest=$(docker buildx imagetools inspect --raw "$WHEEL_REF" | sha256sum | awk '{print $1}')
+          docker pull "${WHEEL_REF}@sha256:${wheel_digest}" >/dev/null
+          wheel_container=$(docker create "${WHEEL_REF}@sha256:${wheel_digest}" true)
+          trap 'docker rm -f "$wheel_container" >/dev/null 2>&1 || true' EXIT
+          if docker cp "$wheel_container:/commit.txt" /tmp/wheel-commit.txt 2>/dev/null; then
+            wheel_revision=$(cat /tmp/wheel-commit.txt)
+          else
+            # Migration exception for the one pre-provenance wheel. Never infer
+            # a revision from a mutable tag or metadata alone.
+            legacy_digest=eae68b65bc69c465c32d89bae098253ff9f1e0cfcbb59855f5b49538fa96c904
+            legacy_revision=965d21822d144724d95fa5fdbe51baf41e42e05d
+            [[ "$wheel_digest" == "$legacy_digest" ]] || {
+              echo "wheel sha256:${wheel_digest} has no commit.txt and is not the known legacy wheel" >&2
+              exit 1
+            }
+            wheel_revision=$legacy_revision
+            echo "using verified legacy wheel mapping sha256:${wheel_digest} -> ${wheel_revision}"
+          fi
+          [[ "$wheel_revision" =~ ^[0-9a-f]{40}$ ]]
+          echo "base=${BASE_REF}@sha256:${base_digest}"
+          echo "wheel=${WHEEL_REF}@sha256:${wheel_digest}"
+          echo "vllm_revision=${wheel_revision}"
           ./build.sh vllm-rocm-halo \
             --ref=gfx11 \
             --tag="${CANDIDATE_TAG:0:20}" \
-            --no-latest
+            --build-arg "VLLM_BASE=${BASE_REF}@sha256:${base_digest}" \
+            --build-arg "WHEEL_IMAGE=${WHEEL_REF}@sha256:${wheel_digest}" \
+            --build-arg "VLLM_REVISION=${wheel_revision}" \
+            --no-latest \
+            --fail-if-exists
 
   build-nv4090:
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.tracks == 'all' || inputs.tracks == 'nv4090' }}
@@ -165,8 +194,24 @@ jobs:
           chmod +x build.sh daily.sh prune.sh
           ./daily.sh spark
 
+  verify-halo-runtime:
+    needs: [build-halo-runtime]
+    if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.tracks == 'halo-runtime' }}
+    runs-on: [self-hosted, cicd]
+    steps:
+      - name: assert isolated halo runtime candidate exists in ghcr
+        env:
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
+        run: |
+          set -euo pipefail
+          test "${{ needs.build-halo-runtime.result }}" == "success"
+          printf '%s\n' "$GHCR_PAT" | docker login ghcr.io -u AlisaLi0 --password-stdin
+          tag="runtime-${GITHUB_SHA:0:12}"
+          docker buildx imagetools inspect "ghcr.io/inferstation/vllm-rocm-halo:${tag}" >/dev/null
+          echo "verified ghcr.io/inferstation/vllm-rocm-halo:${tag}"
+
   verify:
-    needs: [build-radeon-base, build-spark, build-halo, build-halo-runtime, build-nv4090, build-r9700]
+    needs: [build-radeon-base, build-spark, build-halo, build-nv4090, build-r9700]
     if: ${{ !cancelled() }}
     runs-on: [self-hosted, cicd]
     steps:
@@ -177,7 +222,7 @@ jobs:
           set -e
           DATE=$(date -u +%Y%m%d)
           echo "verify nightly-${DATE} for spark/halo/nv4090/r9700 repos under ghcr.io/inferstation"
-          echo "radeon-base=${{ needs.build-radeon-base.result }} spark=${{ needs.build-spark.result }} halo=${{ needs.build-halo.result }} halo-runtime=${{ needs.build-halo-runtime.result }} nv4090=${{ needs.build-nv4090.result }} r9700=${{ needs.build-r9700.result }}"
+          echo "radeon-base=${{ needs.build-radeon-base.result }} spark=${{ needs.build-spark.result }} halo=${{ needs.build-halo.result }} nv4090=${{ needs.build-nv4090.result }} r9700=${{ needs.build-r9700.result }}"
 
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "manual workflow_dispatch builds intentionally do not move nightly-* tags; skipping nightly tag verification"

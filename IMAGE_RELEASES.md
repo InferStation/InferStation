@@ -8,14 +8,16 @@ convenience pointers and are never sufficient to identify a release.
 
 - Release ID format: `<track>-YYYY.MM.DD.N`.
 - Record the runtime, base, and wheel digests before promotion.
-- Keep at least one immutable runtime tag for every recommended release.
+- Keep at least one candidate or release tag for every recommended release,
+  but treat only the manifest digest as immutable identity.
 - Promote `latest` only after a real-device smoke test.
 - Mark a broken release `WITHDRAWN`; do not silently remove its history.
-- Never reuse a release ID or move an immutable release tag.
+- Never reuse a release ID. A future named release tag must be created with an
+  exists-check and must never be moved.
 
 ## Release Index
 
-| Release ID | Status | Track | Runtime digest | Immutable tag | Validation |
+| Release ID | Status | Track | Runtime digest | Published tag | Validation |
 |---|---|---|---|---|---|
 | `halo-vllm-2026.07.21.1` | **RECOMMENDED** | Strix Halo vLLM gfx11 | `sha256:b206a4a83d28398b5d0b13969d6cb66969a058009c06afb9d75f9e02e198235c` | `runtime-9d97f29fe96a` | Halo BF16 16/16 |
 | `halo-vllm-2026.07.17.1` | **WITHDRAWN** | Strix Halo vLLM gfx11 | `sha256:e378a9e1102711874fd8cb36a1d6ae11cdeeaa50e566ab99e449b7a68174380f` | `commit-79bb388e987c` | ROCr crashes during HSA initialization |
@@ -69,7 +71,14 @@ Local backports:
 - A real Gemma4 BF16 service loaded 48.51 GiB of weights, allocated 46.22 GiB
   of KV cache, became healthy, and returned a 32-token completion over HTTP 200.
 - The `2026-07-17` Halo BF16 recovery set is complete: 16/16 records, all with
-  vLLM engine version `g965d21822.d20260721` and `failed=0`.
+  vLLM engine version `g965d21822.d20260721` and `failed=0`. The records were
+  accumulated across scoped recovery runs: runs `29791723005` and `29797169628`
+  had overall failures while preserving successful per-model records; final
+  Gemma run `29806707299` completed successfully.
+- These historical records store `image: ...:latest` and engine version but
+  predate the `image_digest` field. The release digest was separately verified
+  during candidate promotion. New benchmark records capture `image_digest`
+  directly.
 
 Known limitations:
 
@@ -106,7 +115,7 @@ Copy this section for future releases:
 Status: **CANDIDATE | RECOMMENDED | WITHDRAWN**
 
 - Runtime digest:
-- Immutable tag:
+- Published tag:
 - InferStation source:
 - Upstream source/ref:
 - Base digest:

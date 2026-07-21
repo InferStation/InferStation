@@ -517,8 +517,8 @@ ssh spark2 'vllm bench throughput \\
                   Sweep concurrency by re-running with larger <span className="font-mono">--max-num-seqs</span> as memory allows.
                 </li>
                 <li>
-                  <span className="font-mono">HSA_OVERRIDE_GFX_VERSION=11.5.1</span> is required on Halo: gfx1151 has no shipped ROCm code-object,
-                  so we report as the nearest target (gfx1150). Removing the override breaks every HIP launch with a "no kernel image" error.
+                  The pinned multi-arch ROCm/PyTorch stack ships native gfx1151 runtime and PyTorch device packages.
+                  Reproduction must use the image digest recorded in the release ledger; do not substitute a host-only PyTorch wheel.
                 </li>
               </ul>
             </Card>
@@ -531,21 +531,21 @@ ssh spark2 'vllm bench throughput \\
                 <li>
                   Bench driver:{" "}
                   <a className="underline underline-offset-2" target="_blank" rel="noreferrer"
-                     href="https://github.com/JoursBleu/InferStation/blob/main/scripts/bench-batch.py">
+                     href="https://github.com/InferStation/InferStation/blob/main/scripts/bench-batch.py">
                     scripts/bench-batch.py
                   </a>
                 </li>
                 <li>
                   Registry (one entry per quant × concurrency × backend):{" "}
                   <a className="underline underline-offset-2" target="_blank" rel="noreferrer"
-                     href="https://github.com/JoursBleu/InferStation/blob/main/bench/registry.yaml">
+                     href="https://github.com/InferStation/InferStation/blob/main/bench/registry.yaml">
                     bench/registry.yaml
                   </a>
                 </li>
                 <li>
                   Raw run records:{" "}
                   <a className="underline underline-offset-2" target="_blank" rel="noreferrer"
-                     href="https://github.com/JoursBleu/InferStation/tree/main/data/runs">
+                     href="https://github.com/InferStation/InferStation/tree/main/data/runs">
                     data/runs/
                   </a>
                 </li>

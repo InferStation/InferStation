@@ -2,7 +2,7 @@
 # Built from upstream actions/runner release tarball with SHA256 pinning.
 #
 # Runtime contract:
-#   - REPO_URL        (e.g. https://github.com/JoursBleu/InferStation)
+#   - REPO_URL        (e.g. https://github.com/InferStation/InferStation)
 #   - RUNNER_TOKEN    (one-time registration token; obtain from repo Settings)
 #   - RUNNER_NAME     (e.g. spark1-shanghai)
 #   - RUNNER_LABELS   (comma-separated; appended to default self-hosted,linux,<arch>)

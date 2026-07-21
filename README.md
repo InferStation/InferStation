@@ -12,12 +12,10 @@ verify every data point.
 
 | Axis | v0 |
 |---|---|
-| Hardware | AMD Strix Halo · NVIDIA DGX Spark |
-| Engines | llama.cpp (HIP) · llama.cpp (Vulkan) · vLLM |
-| Metrics | pp · tg · ttft · VRAM peak |
-| Not yet | PD-disagg · power · multi-GPU sharding |
-
-Tower workstations and more engines come once v0 is stable.
+| Hardware | AMD Strix Halo · NVIDIA DGX Spark · NVIDIA RTX 4090 · Radeon AI PRO R9700 |
+| Engines | llama.cpp (HIP/CUDA/Vulkan) · vLLM |
+| Metrics | TTFT · TPOT · prefill/decode/total throughput |
+| Not yet | PD-disaggregated serving · standardized power methodology |
 
 ## Stack
 
@@ -33,6 +31,8 @@ Tower workstations and more engines come once v0 is stable.
 ## Benchmark Methodology
 
 - Methodology: [`docs/methodology.md`](docs/methodology.md)
+- GitHub runner workflow: [`.github/workflows/bench-batch.yml`](.github/workflows/bench-batch.yml)
+- Batch entrypoint: [`scripts/run-all.sh`](scripts/run-all.sh)
 - Result records and raw evidence are exposed through the site under `/runs`.
 
 ## Develop locally
@@ -46,7 +46,7 @@ pnpm dev
 ## Contributing a run
 
 1. Capture a raw log on the target host.
-2. Add a JSON file under `data/runs/<date>/<host>-<model>-<engine>.json` following
+2. Add a JSON file under `data/runs/<date>/` following
    [`data/runs/SCHEMA.md`](data/runs/SCHEMA.md).
 3. Open a PR. The site rebuilds from the JSON tree at deploy time.
 

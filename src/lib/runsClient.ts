@@ -43,5 +43,5 @@ export async function fetchRunRecord(id: string): Promise<RunRecord | undefined>
 }
 
 export function githubBlobUrl(relPath: string): string {
-  return `https://github.com/JoursBleu/InferStation/blob/main/${relPath}`;
+  return `https://github.com/InferStation/InferStation/blob/main/${relPath}`;
 }

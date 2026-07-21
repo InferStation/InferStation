@@ -33,7 +33,7 @@ const COPY: Record<SectionKind, { eyebrow: string; title: string; body: string; 
 interface ModelCard {
   slug: string;
   name: string;
-  params: number;
+  params: number | null;
   runs: number;
   latest: string;
   devices: string[];
@@ -94,9 +94,9 @@ export default function ModelOverviewPage({ kind }: { kind: SectionKind }) {
     const map = new Map<string, ModelCard>();
     for (const r of runs) {
       const slug = canonicalModelSlug(r.model.slug);
-      let c = map.get(slug);
-      if (!c) {
-        c = {
+      let card = map.get(slug);
+      if (!card) {
+        card = {
           slug,
           name: canonicalModelName(r.model.name, r.model.slug),
           params: r.model.params_b,
@@ -106,21 +106,21 @@ export default function ModelOverviewPage({ kind }: { kind: SectionKind }) {
           frameworks: [],
           quants: [],
         };
-        map.set(slug, c);
+        map.set(slug, card);
       }
-      c.runs += 1;
-      if (r.run_date > c.latest) c.latest = r.run_date;
+      card.runs += 1;
+      if (r.run_date > card.latest) card.latest = r.run_date;
       const dev = deviceLabel(r);
       const fw = frameworkLabel(r);
-      if (!c.devices.includes(dev)) c.devices.push(dev);
-      if (!c.frameworks.includes(fw)) c.frameworks.push(fw);
-      if (!c.quants.includes(r.model.quantization)) c.quants.push(r.model.quantization);
+      if (!card.devices.includes(dev)) card.devices.push(dev);
+      if (!card.frameworks.includes(fw)) card.frameworks.push(fw);
+      if (!card.quants.includes(r.model.quantization)) card.quants.push(r.model.quantization);
     }
     return [...map.values()].sort((a, b) => {
       const ra = modelReleaseRank(a.slug);
       const rb = modelReleaseRank(b.slug);
       if (ra !== rb) return ra - rb;
-      return b.params - a.params || a.name.localeCompare(b.name);
+      return (b.params ?? -1) - (a.params ?? -1) || a.name.localeCompare(b.name);
     });
   }, [runs]);
 

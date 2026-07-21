@@ -190,7 +190,13 @@ vllm_build() {
   # release tag needs no bust (its content can't change); use the tag itself.
   local cachebust="$ref"
   case "$ref" in
-    main|master|gfx11) cachebust=$(upstream_head_sha "$profile" "$ref" || true); [[ -n "$cachebust" ]] || cachebust=$(date -u +%Y%m%d) ;;
+    main|master|gfx11)
+      cachebust=$(upstream_head_sha "$profile" "$ref" || true)
+      [[ "$cachebust" =~ ^[0-9a-f]{40}$ ]] || {
+        echo ">>> ${profile}: cannot resolve exact upstream ${ref} revision" >&2
+        return 1
+      }
+      ;;
   esac
   # Reuse only an immutable release wheel; a moving branch is always recompiled.
   if [[ "$ref" != "main" && "$ref" != "master" && "$ref" != "gfx11" ]] && harbor_has_tag "$wheel_profile" "$wheel_tag"; then
@@ -207,7 +213,8 @@ vllm_build() {
   # extra --build-args last, so this wins over the meta default.
   echo ">>> ${profile}: assemble ${final_tag} from ${wheel_profile}:${wheel_tag}"
   "${SCRIPT_DIR}/build.sh" "$profile" --ref="$ref" --tag="$final_tag" \
-    --build-arg "WHEEL_IMAGE=${wheel_registry}:${wheel_tag}" "$@"
+    --build-arg "WHEEL_IMAGE=${wheel_registry}:${wheel_tag}" \
+    --build-arg "VLLM_REVISION=${cachebust}" "$@"
 }
 
 # build-profile:

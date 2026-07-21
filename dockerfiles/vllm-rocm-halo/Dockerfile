@@ -11,12 +11,10 @@
 #   ./build.sh vllm-rocm-halo-wheel        # 1) compile the wheel (slow, incremental)
 #   ./build.sh vllm-rocm-halo              # 2) assemble runtime from the wheel (~2 min)
 #
-# The legacy one-shot Dockerfile (compile-in-place + COPY /opt/python) is kept
-# at Dockerfile.legacy for reference / fallback.
-
 ARG VLLM_BASE=ghcr.io/inferstation/pytorch-rocm-halo:multiarch-7.15.0a20260719-gfx1151
 ARG WHEEL_IMAGE=ghcr.io/inferstation/vllm-wheel-halo-gfx11:gfx11-gfx1151
-ARG VLLM_TAG=v0.22.0
+ARG VLLM_TAG=gfx11
+ARG VLLM_REVISION=unknown
 ARG PYTORCH_ROCM_ARCH=gfx1151
 
 # The prebuilt-wheel pkg (FROM scratch: vllm-*.whl + rocm-requirements.txt).
@@ -24,10 +22,13 @@ FROM ${WHEEL_IMAGE} AS wheel
 
 FROM ${VLLM_BASE}
 ARG VLLM_TAG
+ARG VLLM_REVISION
 ARG PYTORCH_ROCM_ARCH
 
-LABEL org.opencontainers.image.source="https://github.com/vllm-project/vllm" \
-      org.opencontainers.image.version="${VLLM_TAG}" \
+LABEL org.opencontainers.image.source="https://github.com/ROCm/vllm" \
+      org.opencontainers.image.version="${VLLM_REVISION}" \
+      org.opencontainers.image.revision="${VLLM_REVISION}" \
+      org.inferstation.vllm.ref="${VLLM_TAG}" \
       org.opencontainers.image.description="vLLM ${VLLM_TAG} for AMD Strix Halo (${PYTORCH_ROCM_ARCH}), assembled from a prebuilt wheel" \
       org.opencontainers.image.licenses="Apache-2.0" \
       io.amd.rocm.arch="${PYTORCH_ROCM_ARCH}"
@@ -55,6 +56,8 @@ RUN --mount=type=cache,target=/root/.cache/uv,id=vllm-halo-runtime-uv,sharing=lo
        --prerelease allow \
        -r /tmp/wheels/requirements/rocm.txt \
  && uv -v pip install --system --python python --no-deps /tmp/wheels/vllm-*.whl \
+ && test "${VLLM_REVISION}" != unknown \
+ && if [ -f /tmp/wheels/commit.txt ]; then test "$(cat /tmp/wheels/commit.txt)" = "${VLLM_REVISION}"; else echo "legacy wheel has no commit.txt; using pinned VLLM_REVISION=${VLLM_REVISION}"; fi \
  && python - <<'PY'
 from pathlib import Path
 

@@ -3,7 +3,7 @@
 #
 # This is now a thin ASSEMBLER. It installs a PREBUILT vLLM wheel (produced by
 # the `vllm-cuda-spark-wheel` profile and stored as a FROM-scratch pkg image in
-# Harbor) into the vllm-openai aarch64 base, ~2 min, no compiler. The wheel
+# GHCR) into the vllm-openai aarch64 base, ~2 min, no compiler. The wheel
 # carries vLLM's sm_121-native C/CUDA extensions built with the CUDA-13.0
 # toolkit (PTX 9.0, JIT-able by the 580 host driver) -- this is what fixes the
 # cudaErrorUnsupportedPtxVersion crash on Marlin/AWQ. To change the vLLM
@@ -17,7 +17,7 @@
 # Dockerfile.legacy for reference / fallback.
 
 ARG VLLM_BASE=vllm/vllm-openai:nightly-aarch64
-ARG WHEEL_IMAGE=10.161.176.38:8443/inferstation/vllm-wheel-spark:v0.22.0-sm121
+ARG WHEEL_IMAGE=ghcr.io/inferstation/vllm-wheel-spark:v0.22.0-sm121
 ARG VLLM_TAG=v0.22.0
 ARG TORCH_CUDA_ARCH_LIST=12.1
 

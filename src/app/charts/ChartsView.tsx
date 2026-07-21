@@ -13,7 +13,7 @@ export interface ChartRun {
   engine_backend: string;
   model_slug: string;
   model_name: string;
-  params_b: number;
+  params_b: number | null;
   quantization: string;
   scheme?: string;
   concurrency: number | null;
@@ -101,19 +101,6 @@ function lighten(hex: string, amount: number): string {
   return `#${((1 << 24) | (lr << 16) | (lg << 8) | lb).toString(16).slice(1)}`;
 }
 
-function darken(hex: string, amount: number): string {
-  const m = /^#([0-9a-f]{6})$/i.exec(hex);
-  if (!m) return hex;
-  const n = parseInt(m[1], 16);
-  const r = (n >> 16) & 0xff;
-  const g = (n >> 8) & 0xff;
-  const b = n & 0xff;
-  const dr = Math.round(r * (1 - amount));
-  const dg = Math.round(g * (1 - amount));
-  const db = Math.round(b * (1 - amount));
-  return `#${((1 << 24) | (dr << 16) | (dg << 8) | db).toString(16).slice(1)}`;
-}
-
 const QUANT_ORDER = ["BF16", "Q8_0", "FP8", "FP8-block", "Quark-W8A8-INT8", "AWQ-4bit", "UD-Q4_K_M", "Q4_K_M", "Q4_K_S", "UD-Q3_K_M", "UD-Q2_K_XL", "UD-IQ2_M"];
 
 // schemeOf() maps a quant label to a weight/activation precision scheme. It is
@@ -174,7 +161,7 @@ function schemeOf(q: string, engine: string): string {
 interface ModelGroup {
   slug: string;
   name: string;
-  params_b: number;
+  params_b: number | null;
   runs: ChartRun[];
 }
 

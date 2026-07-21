@@ -454,6 +454,21 @@ def ensure_image(image_ref: str, *, backend: str) -> str:
     return out or "unknown"
 
 
+def image_digest(image_ref: str) -> str:
+    """Return the pulled manifest digest for an image, or an empty string."""
+    if "@sha256:" in image_ref:
+        return image_ref.rsplit("@", 1)[-1]
+    out = sh(
+        f"{DOCKER} image inspect --format '{{{{json .RepoDigests}}}}' {shlex.quote(image_ref)}",
+        capture=True,
+    ).strip()
+    repo_digests = (json.loads(out) if out else []) or []
+    repository = image_ref.rsplit(":", 1)[0] if ":" in image_ref.rsplit("/", 1)[-1] else image_ref
+    matching = [item for item in repo_digests if item.partition("@")[0] == repository]
+    selected = matching[0] if matching else (repo_digests[0] if repo_digests else "")
+    return selected.partition("@")[2]
+
+
 def ensure_model(host_cfg: dict, model_slug: str, model_def: dict, quant: str) -> str:
     """Make sure the model files for (model, quant) are on the host.
 
@@ -1006,6 +1021,7 @@ def write_serve_record(
     model_def: dict,
     bcfg: dict,
     image_ref: str,
+    image_manifest_digest: str,
     engine_commit: str,
     server_cmd: str,
     bench: dict,
@@ -1025,7 +1041,7 @@ def write_serve_record(
     out_abs.parent.mkdir(parents=True, exist_ok=True)
 
     run_id = os.environ.get("GITHUB_RUN_ID", "manual")
-    repo_slug = os.environ.get("GITHUB_REPOSITORY", "JoursBleu/InferStation")
+    repo_slug = os.environ.get("GITHUB_REPOSITORY", "InferStation/InferStation")
     server = os.environ.get("GITHUB_SERVER_URL", "https://github.com")
     log_url = f"{server}/{repo_slug}/actions/runs/{run_id}" if run_id != "manual" else ""
     scheme = quant_scheme(quant)
@@ -1085,6 +1101,7 @@ def write_serve_record(
         "scenario": scenario,
         "image": image_ref,
         "image_tag": image_tag(image_ref),
+        "image_digest": image_manifest_digest,
         "usability_tag": "ok",
         "log_url": log_url,
         "source_url": log_url,
@@ -1112,6 +1129,7 @@ def run_one_vllm(entry: dict, models: dict, image_override: str | None) -> Path:
     real_dir = host_readlink(snap_dir) or snap_dir
     image_ref = resolve_image(entry, host_cfg, backend, image_override)
     engine_commit = ensure_image(image_ref, backend=backend)
+    image_manifest_digest = image_digest(image_ref)
     tp = int(entry.get("tp", 1))
     pp = int(entry.get("pp", 512))
     tg = int(entry.get("tg", 128))
@@ -1152,7 +1170,17 @@ def run_one_vllm(entry: dict, models: dict, image_override: str | None) -> Path:
         )
         wait_health(base_url, container_name)
         bench = run_serve_client(base_url, model_name, concurrency=npl, input_len=pp, output_len=tg)
-        return write_serve_record(entry, host_cfg, model_def, bcfg, image_ref, engine_commit, inner_cmd, bench)
+        return write_serve_record(
+            entry,
+            host_cfg,
+            model_def,
+            bcfg,
+            image_ref,
+            image_manifest_digest,
+            engine_commit,
+            inner_cmd,
+            bench,
+        )
     except Exception:
         logs = subprocess.run(
             f"{DOCKER} logs --tail 200 {shlex.quote(container_name)}",
@@ -1196,6 +1224,7 @@ def run_one(entry: dict, models: dict, image_override: str | None) -> list[Path]
     real_fn = os.path.basename(real_path)
     image_ref = resolve_image(entry, host_cfg, backend, image_override)
     engine_commit = ensure_image(image_ref, backend=backend)
+    image_manifest_digest = image_digest(image_ref)
     # Serve-stream runs one server per (model, quant, backend) entry and drives
     # the recipe-declared concurrency level through an OpenAI-compatible client.
     if "npls" in entry:
@@ -1237,7 +1266,19 @@ def run_one(entry: dict, models: dict, image_override: str | None) -> list[Path]
         out_paths: list[Path] = []
         for npl in npls:
             bench = run_serve_client(base_url, model_name, concurrency=npl, input_len=pp, output_len=tg)
-            out_paths.append(write_serve_record(entry, host_cfg, model_def, bcfg, image_ref, engine_commit, cmd, bench))
+            out_paths.append(
+                write_serve_record(
+                    entry,
+                    host_cfg,
+                    model_def,
+                    bcfg,
+                    image_ref,
+                    image_manifest_digest,
+                    engine_commit,
+                    cmd,
+                    bench,
+                )
+            )
         return out_paths
     except Exception:
         logs = subprocess.run(

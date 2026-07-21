@@ -12,7 +12,7 @@ export interface ChartRun {
   engine_backend: string;
   model_slug: string;
   model_name: string;
-  params_b: number;
+  params_b: number | null;
   quantization: string;
   concurrency: number | null;
   pp_toks_per_s: number | null;
@@ -132,7 +132,7 @@ function precisionRank(p: string): number {
 interface ModelGroup {
   slug: string;
   name: string;
-  params_b: number;
+  params_b: number | null;
   runs: ChartRun[];
 }
 
@@ -174,7 +174,7 @@ export default function CompareView({ runs, navRuns = runs, basePath = "/compare
       const ra = modelReleaseRank(a.slug);
       const rb = modelReleaseRank(b.slug);
       if (ra !== rb) return ra - rb;
-      return b.params_b - a.params_b || a.name.localeCompare(b.name);
+      return (b.params_b ?? -1) - (a.params_b ?? -1) || a.name.localeCompare(b.name);
     });
   }, [navRuns]);
 

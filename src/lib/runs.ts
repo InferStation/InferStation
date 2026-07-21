@@ -17,7 +17,7 @@ export interface RunRecord {
   model: {
     slug: string;
     name: string;
-    params_b: number;
+    params_b: number | null;
     quantization: string;
     scheme?: string;
     source_url: string;
@@ -49,6 +49,7 @@ export interface RunRecord {
   scenario: string;
   image?: string;
   image_tag?: string;
+  image_digest?: string;
   usability_tag: UsabilityTag;
   log_url: string;
   source_url: string;
@@ -127,5 +128,5 @@ export function getRunRecord(id: string): RunRecord | undefined {
 }
 
 export function getGithubBlobUrl(relPath: string): string {
-  return `https://github.com/JoursBleu/InferStation/blob/main/${relPath}`;
+  return `https://github.com/InferStation/InferStation/blob/main/${relPath}`;
 }

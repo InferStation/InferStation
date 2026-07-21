@@ -13,7 +13,7 @@ export interface HistoryRun {
   engine_backend: string;
   model_slug: string;
   model_name: string;
-  params_b: number;
+  params_b: number | null;
   quantization: string;
   concurrency: number | null;
   pp_toks_per_s: number | null;
@@ -77,7 +77,7 @@ function schemeOf(q: string, engine: string): string {
 interface ModelGroup {
   slug: string;
   name: string;
-  params_b: number;
+  params_b: number | null;
   runs: HistoryRun[];
 }
 

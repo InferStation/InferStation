@@ -226,7 +226,7 @@ build_profile() {
   [[ -f "$meta" ]] || die "no meta.json at $meta"
 
   # ---- parse overrides ----
-  local override_ref="" override_repo="" override_tag="" push="1" no_latest="0"
+  local override_ref="" override_repo="" override_tag="" push="1" no_latest="0" fail_if_exists="0"
   local extra_build_args=()
   local also_tags=()
   while [[ $# -gt 0 ]]; do
@@ -244,6 +244,7 @@ build_profile() {
       --no-push)      push="0"; shift ;;
       --push)         push="1"; shift ;;
       --no-latest)    no_latest="1"; shift ;;
+      --fail-if-exists) fail_if_exists="1"; shift ;;
       *)              die "unknown flag: $1" ;;
     esac
   done
@@ -271,6 +272,15 @@ build_profile() {
       local build_host dockerfile
       resolve_host "$(jq -r .build_host "$meta")"; build_host="$RESOLVED_HOST"
       dockerfile=$(jq -r '.dockerfile // "Dockerfile"' "$meta")
+
+      if [[ "$fail_if_exists" == "1" ]]; then
+        local protected_tag
+        for protected_tag in "$full_tag" "${also_tags[@]/#/${registry}:}"; do
+          if run_on "$build_host" "docker manifest inspect ${protected_tag} >/dev/null 2>&1"; then
+            die "refusing to overwrite existing image tag: ${protected_tag}"
+          fi
+        done
+      fi
 
       local build_args_str=""
       while IFS= read -r kv; do
@@ -341,6 +351,14 @@ build_profile() {
       local mirror_host source_image
       resolve_host "$(jq -r .mirror_host "$meta")"; mirror_host="$RESOLVED_HOST"
       source_image=$(jq -r .source_image "$meta")
+      if [[ "$fail_if_exists" == "1" ]]; then
+        local protected_tag
+        for protected_tag in "$full_tag" "${also_tags[@]/#/${registry}:}"; do
+          if run_on "$mirror_host" "docker manifest inspect ${protected_tag} >/dev/null 2>&1"; then
+            die "refusing to overwrite existing image tag: ${protected_tag}"
+          fi
+        done
+      fi
       # --repo override fully replaces source_image (allows mirroring any
       # arbitrary external image without editing meta.json).
       if [[ -n "$override_repo" ]]; then
@@ -405,6 +423,7 @@ Flags (build profiles):
   --no-push / --push        skip / force push (default: push)
   --also-tag=<tag>          push an extra tag pointing at this build (repeatable)
   --no-latest               do NOT move :latest to this build (manual/dev builds)
+  --fail-if-exists          fail instead of overwriting the requested registry tag
 
 Other subcommands:
   list     list build/mirror profiles

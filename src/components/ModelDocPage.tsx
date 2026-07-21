@@ -320,9 +320,9 @@ export function ModelDocPage(p: ModelDocProps) {
                 )}
                 {p.hosts.includes("halo") && (
                   <li>
-                    On Halo <span className="font-mono">HSA_OVERRIDE_GFX_VERSION=11.5.1</span> is required: gfx1151
-                    has no shipped ROCm code-object, so we report as gfx1150. Removing the override breaks every HIP
-                    launch with &quot;no kernel image&quot;.
+                    Halo ROCm/PyTorch images must include native gfx1151 runtime and PyTorch device packages.
+                    Pin the validated image digest; a host-only multi-arch PyTorch wheel can enumerate the GPU but
+                    cannot launch kernels.
                   </li>
                 )}
               </ul>
@@ -335,7 +335,7 @@ export function ModelDocPage(p: ModelDocProps) {
                 <li>
                   Bench driver:{" "}
                   <a className="underline underline-offset-2" target="_blank" rel="noreferrer"
-                     href="https://github.com/JoursBleu/InferStation/blob/main/scripts/bench-batch.py">
+                     href="https://github.com/InferStation/InferStation/blob/main/scripts/bench-batch.py">
                     scripts/bench-batch.py
                   </a>
                 </li>

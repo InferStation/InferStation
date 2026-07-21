@@ -12,6 +12,7 @@
   "upstream_ref": "gfx11",
   "build_args": {
     "VLLM_TAG": "gfx11",
+    "VLLM_REVISION": "965d21822d144724d95fa5fdbe51baf41e42e05d",
     "PYTORCH_ROCM_ARCH": "gfx1151",
     "VLLM_BASE": "ghcr.io/inferstation/pytorch-rocm-halo:multiarch-7.15.0a20260719-gfx1151",
     "WHEEL_IMAGE": "ghcr.io/inferstation/vllm-wheel-halo-gfx11:gfx11-gfx1151"

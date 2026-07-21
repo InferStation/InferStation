@@ -45,12 +45,11 @@ export default function About() {
       <h2>How to contribute</h2>
       <p>
         Open an issue or PR on{" "}
-        <a href="https://github.com/JoursBleu/InferStation" target="_blank" rel="noreferrer">
+        <a href="https://github.com/InferStation/InferStation" target="_blank" rel="noreferrer">
           GitHub
         </a>
-        . New runs are submitted as a single JSON file under{" "}
-        <code>data/runs/&lt;date&gt;/&lt;host&gt;-&lt;model&gt;-&lt;engine&gt;.json</code> with a
-        link to the raw log.
+        . New runs are submitted as JSON under <code>data/runs/&lt;date&gt;/</code> using the
+        current schema and include an Actions log URL plus image provenance.
       </p>
     </article>
   );
