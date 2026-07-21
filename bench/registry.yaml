@@ -745,7 +745,7 @@ runs:
     weekly_overrides:
       ryzen-ai-max-395-03:
         gpu_memory_utilization: 0.80
-        vllm_args: "--attention-backend ROCM_ATTN"
+        vllm_args: "--attention-backend TRITON_ATTN"
       rtx-4090-sh:
         tp: 2
       radeon-r9700-sh:
@@ -759,7 +759,7 @@ runs:
     weekly_overrides:
       ryzen-ai-max-395-03:
         gpu_memory_utilization: 0.80
-        vllm_args: "--attention-backend ROCM_ATTN"
+        vllm_args: "--attention-backend TRITON_ATTN"
       rtx-4090-sh:
         tp: 2
       radeon-r9700-sh:
@@ -773,7 +773,7 @@ runs:
     weekly_overrides:
       ryzen-ai-max-395-03:
         gpu_memory_utilization: 0.80
-        vllm_args: "--attention-backend ROCM_ATTN"
+        vllm_args: "--attention-backend TRITON_ATTN"
       rtx-4090-sh:
         tp: 2
       radeon-r9700-sh:
@@ -787,7 +787,7 @@ runs:
     weekly_overrides:
       ryzen-ai-max-395-03:
         gpu_memory_utilization: 0.80
-        vllm_args: "--attention-backend ROCM_ATTN"
+        vllm_args: "--attention-backend TRITON_ATTN"
       rtx-4090-sh:
         tp: 2
       radeon-r9700-sh:

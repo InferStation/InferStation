@@ -65,9 +65,36 @@ text = path.read_text()
 if text.count(old) != 1:
       raise RuntimeError(f'expected exactly one ROCM_ATTN head-size list in {path}')
 path.write_text(text.replace(old, new))
+
+path = Path('/usr/local/lib/python3.12/site-packages/vllm/v1/attention/ops/triton_unified_attention.py')
+old = '''        elif head_size > 64:
+                  tile_size = min(tile_size, 128)
+
+      return tile_size
+'''
+new = '''        elif head_size > 64:
+                  tile_size = min(tile_size, 128)
+
+      # Backport vLLM PR #39018: large padded heads need a 16-wide tile on
+      # devices with less than 96 KiB shared memory per block.
+      head_size_padded = triton.next_power_of_2(head_size)
+      if (
+            tile_size == 32
+            and head_size_padded >= 512
+            and element_size >= 2
+            and current_platform.is_navi()
+      ):
+            tile_size = 16
+
+      return tile_size
+'''
+text = path.read_text()
+if text.count(old) != 1:
+      raise RuntimeError(f'expected exactly one Triton tile-size return block in {path}')
+path.write_text(text.replace(old, new))
 PY
 RUN rm -rf /tmp/wheels /root/.cache/pip \
- && python -c "import vllm, transformers, torch; from vllm.v1.attention.backends.rocm_attn import RocmAttentionBackend; assert 512 in RocmAttentionBackend.get_supported_head_sizes(); print('vllm', vllm.__version__, 'transformers', transformers.__version__, 'torch', torch.__version__, 'hip', torch.version.hip, 'rocm_attn_head_512', True)"
+ && python -c "import vllm, transformers, torch; from vllm.v1.attention.backends.rocm_attn import RocmAttentionBackend; from vllm.v1.attention.ops.triton_unified_attention import _get_tile_size; assert 512 in RocmAttentionBackend.get_supported_head_sizes(); print('vllm', vllm.__version__, 'transformers', transformers.__version__, 'torch', torch.__version__, 'hip', torch.version.hip, 'rocm_attn_head_512', True, 'triton_limited_smem_patch', True)"
 
 EXPOSE 8000
 ENTRYPOINT ["python", "-m", "vllm.entrypoints.openai.api_server"]
