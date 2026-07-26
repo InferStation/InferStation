@@ -75,6 +75,10 @@ on:
         description: 'Per-request timeout in seconds for long high-concurrency recovery runs.'
         type: string
         default: '1800'
+      runner_label:
+        description: 'Optional exact physical runner label for targeted recovery.'
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -160,6 +164,7 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           BENCH_GIT_PAT: ${{ secrets.GHCR_PAT }}
           BENCH_TARGET: ${{ inputs.target || 'all' }}
+          BENCH_RUNNER_LABEL: ${{ inputs.runner_label || '' }}
           BENCH_FILTER: ${{ inputs.filter || '' }}
           BENCH_SCOPE: ${{ inputs.scope || 'all' }}
           BENCH_RESUME_EXISTING: ${{ inputs.resume_existing || 'date' }}
@@ -174,6 +179,10 @@ jobs:
           SKIP_PUSH: ${{ inputs.skip_push || false }}
         run: |
           set -euo pipefail
+          if [[ -n "$BENCH_RUNNER_LABEL" && "$BENCH_RUNNER_LABEL" != "${{ matrix.label }}" ]]; then
+            echo "skip runner=${{ matrix.label }} because requested runner=$BENCH_RUNNER_LABEL"
+            exit 0
+          fi
           if [[ "$BENCH_TARGET" != "all" && "$BENCH_TARGET" != "${{ matrix.target }}" ]]; then
             echo "skip target=${{ matrix.target }} because requested target=$BENCH_TARGET"
             exit 0
