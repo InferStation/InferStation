@@ -249,8 +249,8 @@ WEEKLY_DOCKER_EXTRA = {
         "-e VK_DRIVER_FILES=/usr/share/vulkan/icd.d/radeon_icd.x86_64.json"
     ),
     ("rtx-4090-sh", "vulkan"): (
-        "--gpus all -e NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics "
-        "-e VK_DRIVER_FILES=/usr/share/vulkan/icd.d/nvidia_icd.json"
+        "--device nvidia.com/gpu=all "
+        "-e VK_DRIVER_FILES=/etc/vulkan/icd.d/nvidia_icd.json"
     ),
     ("rtx-4090-sh", "vllm"): "--gpus all --shm-size 16g --ipc=host",
 }
@@ -413,9 +413,15 @@ def apply_gpu_device(docker_extra: str) -> str:
         return docker_extra
     if not gpu_device.isdigit():
         raise ValueError(f"invalid BENCH_GPU_DEVICE: {gpu_device!r}")
-    if "--gpus all" not in docker_extra:
-        raise ValueError("BENCH_GPU_DEVICE requires Docker args containing '--gpus all'")
-    return docker_extra.replace("--gpus all", f"--gpus device={gpu_device}", 1)
+    if "--gpus all" in docker_extra:
+        return docker_extra.replace("--gpus all", f"--gpus device={gpu_device}", 1)
+    if "--device nvidia.com/gpu=all" in docker_extra:
+        return docker_extra.replace(
+            "--device nvidia.com/gpu=all",
+            f"--device nvidia.com/gpu={gpu_device}",
+            1,
+        )
+    raise ValueError("BENCH_GPU_DEVICE requires NVIDIA GPU or CDI Docker args")
 
 
 def ensure_image(image_ref: str, *, backend: str) -> str:
@@ -1233,7 +1239,7 @@ def run_one(entry: dict, models: dict, image_override: str | None) -> list[Path]
         npls = [int(entry.get("npl", 1))]
     pp = int(entry.get("pp", 512))
     tg = int(entry.get("tg", 128))
-    max_npl = max(max(npls), SERVE_MAX_CONCURRENCY)
+    max_npl = max(npls)
 
     port = get_free_port()
     container_name = (
@@ -1242,7 +1248,7 @@ def run_one(entry: dict, models: dict, image_override: str | None) -> list[Path]
         f"{os.getpid()}-{port}"
     )
     model_name = "inferstation-bench"
-    ctx_size = int(entry.get("ctx", 32768))
+    ctx_size = int(entry.get("ctx", max(32768, max_npl * 2048)))
     cmd = (
         "server_bin=$(command -v llama-server || true); "
         "if [ -z \"$server_bin\" ]; then "

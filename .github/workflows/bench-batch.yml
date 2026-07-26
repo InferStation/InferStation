@@ -119,6 +119,13 @@ jobs:
         with:
           fetch-depth: 1
           persist-credentials: false
+      - name: Refresh NVIDIA CDI spec
+        if: ${{ matrix.target == 'nv4090' && ((inputs.target || 'all') == 'all' || (inputs.target || 'all') == 'nv4090') }}
+        run: |
+          set -euo pipefail
+          sudo -n install -d -m 0755 /etc/cdi
+          sudo -n nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
+          sudo -n nvidia-ctk cdi list | grep -qx 'nvidia.com/gpu=all'
       - name: ghcr login (GHCR_PAT)
         if: ${{ (inputs.target || 'all') == 'all' || (inputs.target || 'all') == matrix.target }}
         env:
