@@ -27,6 +27,7 @@ import concurrent.futures
 import datetime
 import json
 import os
+import re
 import shlex
 import socket
 import statistics
@@ -446,17 +447,21 @@ def ensure_image(image_ref: str, *, backend: str) -> str:
         ).strip().splitlines()[-1]
         return ver.split("+", 1)[-1] if "+" in ver else ver
 
-    # llama.cpp images: try a few common probe paths.
-    probes = [
-        "cat /opt/llama.cpp/commit.txt 2>/dev/null",
-        "cat /usr/local/share/llama.cpp/commit.txt 2>/dev/null",
-        "llama-cli --version 2>&1 | head -n 1",
-    ]
-    cmd = " || ".join(probes)
+    cmd = (
+        "for f in /opt/llama.cpp/commit.txt /usr/local/share/llama.cpp/commit.txt; do "
+        "[ -s \"$f\" ] && { cat \"$f\"; exit 0; }; done; "
+        "for p in /app/llama-server /usr/local/bin/llama-server /usr/bin/llama-server "
+        "/opt/llama.cpp/llama-server; do "
+        "[ -x \"$p\" ] && { \"$p\" --version 2>&1 | head -n 1; exit 0; }; done; "
+        "command -v llama-cli >/dev/null && llama-cli --version 2>&1 | head -n 1"
+    )
     out = sh(
         f"{DOCKER} run --rm --entrypoint sh {image_ref} -c {shlex.quote(cmd)}",
         capture=True,
     ).strip()
+    version_commit = re.search(r"\(([0-9a-f]{7,40})\)", out)
+    if version_commit:
+        return version_commit.group(1)
     return out or "unknown"
 
 

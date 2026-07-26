@@ -67,6 +67,14 @@ on:
         description: 'Optional single NVIDIA GPU index. Only valid with target=nv4090.'
         type: string
         default: ''
+      unsharded:
+        description: 'Run the full filtered plan on each selected result host; normally pair with resume_existing=date.'
+        type: boolean
+        default: false
+      request_timeout:
+        description: 'Per-request timeout in seconds for long high-concurrency recovery runs.'
+        type: string
+        default: '1800'
 
 permissions:
   contents: write
@@ -157,6 +165,7 @@ jobs:
           BENCH_RESUME_EXISTING: ${{ inputs.resume_existing || 'date' }}
           BENCH_RUN_DATE: ${{ inputs.run_date || '' }}
           BENCH_GPU_DEVICE: ${{ inputs.gpu_device || '' }}
+          BENCH_REQUEST_TIMEOUT: ${{ inputs.request_timeout || '1800' }}
           BENCH_PUSH_BATCH_SIZE: ${{ inputs.push_batch_size || '20' }}
           BENCH_RESULT_HOST: ${{ matrix.result_host || '' }}
           BENCH_CLEANUP_ALL_MODELS: true
@@ -199,7 +208,11 @@ jobs:
             args+=("--filter=${{ matrix.host }}")
           fi
           args+=("--scope=$BENCH_SCOPE")
-          args+=("--shard-index=${{ matrix.shard_index }}" "--shard-count=${{ matrix.shard_count }}")
+          if [[ "${{ inputs.unsharded || false }}" == "true" ]]; then
+            args+=("--shard-index=0" "--shard-count=1")
+          else
+            args+=("--shard-index=${{ matrix.shard_index }}" "--shard-count=${{ matrix.shard_count }}")
+          fi
           if [[ -n "${BENCH_RESULT_HOST:-}" ]]; then
             args+=("--result-host=$BENCH_RESULT_HOST")
           fi
