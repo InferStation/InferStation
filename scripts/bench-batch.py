@@ -567,9 +567,10 @@ def ensure_model(host_cfg: dict, model_slug: str, model_def: dict, quant: str) -
         print(f"[ok] {path} already present")
         return path
     repo = qdef.get("hf_repo") or model_def.get("hf_repo")
-    if not repo:
+    download_url = qdef.get("download_url")
+    if not download_url and not repo:
         raise RuntimeError(f"missing {path} and no hf_repo configured for {model_slug}:{quant}")
-    url = f"{HF_ENDPOINT}/{repo}/resolve/main/{fn}"
+    url = download_url or f"{HF_ENDPOINT}/{repo}/resolve/main/{fn}"
     print(f"[dl] {url} -> {path}")
     sh(
         f"{DOCKER} run --rm -v /:/hostfs alpine:3 "

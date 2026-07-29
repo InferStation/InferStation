@@ -58,7 +58,9 @@ models:
       UD-IQ4_NL:    { filename: "Qwen3.6-35B-A3B-UD-IQ4_NL.gguf" }
       UD-IQ4_NL_XL: { filename: "Qwen3.6-35B-A3B-UD-IQ4_NL_XL.gguf" }
       UD-IQ4_XS:    { filename: "Qwen3.6-35B-A3B-UD-IQ4_XS.gguf" }
-      UD-Q2_K_XL:   { filename: "Qwen3.6-35B-A3B-UD-Q2_K_XL.gguf" }
+      UD-Q2_K_XL:
+        filename: "Qwen3.6-35B-A3B-UD-Q2_K_XL.gguf"
+        download_url: http://10.161.176.38/inferstation-models/Qwen3.6-35B-A3B-UD-Q2_K_XL.gguf
       UD-Q3_K_S:    { filename: "Qwen3.6-35B-A3B-UD-Q3_K_S.gguf" }
       UD-Q3_K_XL:   { filename: "Qwen3.6-35B-A3B-UD-Q3_K_XL.gguf" }
       UD-Q4_K_S:    { filename: "Qwen3.6-35B-A3B-UD-Q4_K_S.gguf" }
@@ -140,7 +142,9 @@ models:
       UD-Q4_K_XL:  { filename: "Qwen3.6-27B-UD-Q4_K_XL.gguf" }
       UD-Q5_K_XL:  { filename: "Qwen3.6-27B-UD-Q5_K_XL.gguf" }
       UD-Q6_K_XL:  { filename: "Qwen3.6-27B-UD-Q6_K_XL.gguf" }
-      UD-Q8_K_XL:  { filename: "Qwen3.6-27B-UD-Q8_K_XL.gguf" }
+      UD-Q8_K_XL:
+        filename: "Qwen3.6-27B-UD-Q8_K_XL.gguf"
+        download_url: http://10.161.176.38/inferstation-models/Qwen3.6-27B-UD-Q8_K_XL.gguf
       # vLLM-compatible HF snapshot (BF16 safetensors).
       BF16:
         format: hf-snapshot
