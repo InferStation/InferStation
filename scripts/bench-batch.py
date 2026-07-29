@@ -596,8 +596,9 @@ def ensure_model(host_cfg: dict, model_slug: str, model_def: dict, quant: str) -
         f"mv -f {shlex.quote(partial)} {shlex.quote(dst)}; "
         "trap - EXIT"
     )
-    token_env = "-e HF_TOKEN=<redacted> " if HF_TOKEN else ""
-    token_run_env = f"-e HF_TOKEN={shlex.quote(HF_TOKEN)} " if HF_TOKEN else ""
+    use_hf_auth = bool(HF_TOKEN and not download_url)
+    token_env = "-e HF_TOKEN=<redacted> " if use_hf_auth else ""
+    token_run_env = f"-e HF_TOKEN={shlex.quote(HF_TOKEN)} " if use_hf_auth else ""
     cmd = (
         f"{DOCKER} run --rm --network host --user 0:0 "
         f"-v {shlex.quote(model_dir)}:/dst "
