@@ -84,7 +84,27 @@ permissions:
   contents: write
 
 jobs:
+  schedule-gate:
+    runs-on: ubuntu-latest
+    outputs:
+      run_bench: ${{ steps.decide.outputs.run_bench }}
+    steps:
+      - id: decide
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          run_bench=true
+          skip_before=$(date -u -d '2026-08-07T00:00:00Z' +%s)
+          if [[ "$EVENT_NAME" == "schedule" && "$(date -u +%s)" -lt "$skip_before" ]]; then
+            run_bench=false
+            echo "Skipping this weekly benchmark during the planned datacenter outage."
+          fi
+          echo "run_bench=$run_bench" >> "$GITHUB_OUTPUT"
+
   bench:
+    needs: schedule-gate
+    if: ${{ needs.schedule-gate.outputs.run_bench == 'true' }}
     strategy:
       fail-fast: false
       matrix:
