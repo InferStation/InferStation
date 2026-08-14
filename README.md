@@ -31,6 +31,8 @@ verify every data point.
 ## Benchmark Methodology
 
 - Methodology: [`docs/methodology.md`](docs/methodology.md)
+- Pipeline design and collaboration contract:
+   [`docs/benchmark-pipeline-design.md`](docs/benchmark-pipeline-design.md)
 - GitHub runner workflow: [`.github/workflows/bench-batch.yml`](.github/workflows/bench-batch.yml)
 - Batch entrypoint: [`scripts/run-all.sh`](scripts/run-all.sh)
 - Result records and raw evidence are exposed through the site under `/runs`.
