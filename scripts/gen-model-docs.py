@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Generate per-model docs pages from harvested unit data."""
 import json, os, re, sys
+from pathlib import Path
 
 HARVEST = json.load(open("/tmp/harvest.json"))
-OUT_DIR = "/home/lkang/codes/InferStation/src/app/docs"
+OUT_DIR = Path(__file__).resolve().parents[1] / "src/app/docs"
 
 # Per-model curated metadata (kicker/tagline/badges/links/atGlance/overview only)
 META = {
@@ -18,8 +19,6 @@ META = {
     "model_dir_halo": "/models/Qwen3-4B",
     "model_prefix": "Qwen3-4B",
     "vllm_bf16_tag": "qwen3-4b-BF16",
-    "vllm_bf16_repo_dir": "/opt/inferstation/models/Qwen3-4B-BF16",
-    "vllm_bf16_dir_halo": "/home/amd/models/Qwen3-4B-BF16",
     "overview_extra": [("Total params","4B"),("Architecture","Dense decoder, GQA")],
   },
   "Qwen3-8B": {
@@ -33,8 +32,6 @@ META = {
     "model_dir_halo": "/models/Qwen3-8B",
     "model_prefix": "Qwen3-8B",
     "vllm_bf16_tag": "qwen3-8b-BF16",
-    "vllm_bf16_repo_dir": "/opt/inferstation/models/Qwen3-8B-BF16",
-    "vllm_bf16_dir_halo": "/home/amd/models/Qwen3-8B-BF16",
     "overview_extra": [("Total params","8B"),("Architecture","Dense decoder, GQA")],
   },
   "Qwen3-14B": {
@@ -48,8 +45,6 @@ META = {
     "model_dir_halo": "/models/Qwen3-14B",
     "model_prefix": "Qwen3-14B",
     "vllm_bf16_tag": "qwen3-14b-BF16",
-    "vllm_bf16_repo_dir": "/opt/inferstation/models/Qwen3-14B-BF16",
-    "vllm_bf16_dir_halo": "/home/amd/models/Qwen3-14B-BF16",
     "overview_extra": [("Total params","14B"),("Architecture","Dense decoder, GQA")],
   },
   "Qwen3-32B": {
@@ -63,8 +58,6 @@ META = {
     "model_dir_halo": "/models/Qwen3-32B",
     "model_prefix": "Qwen3-32B",
     "vllm_bf16_tag": "qwen3-32b-BF16",
-    "vllm_bf16_repo_dir": "/opt/inferstation/models/Qwen3-32B-BF16",
-    "vllm_bf16_dir_halo": "/home/amd/models/Qwen3-32B-BF16",
     "overview_extra": [("Total params","32B"),("Architecture","Dense decoder, GQA")],
   },
   "Qwen3-30B-A3B": {
@@ -78,8 +71,6 @@ META = {
     "model_dir_halo": "/models/Qwen3-30B-A3B",
     "model_prefix": "Qwen3-30B-A3B",
     "vllm_bf16_tag": "qwen3-30b-a3b-BF16",
-    "vllm_bf16_repo_dir": "/opt/inferstation/models/Qwen3-30B-A3B-BF16",
-    "vllm_bf16_dir_halo": "/home/amd/models/Qwen3-30B-A3B-BF16",
     "overview_extra": [("Total / Active params","30B / ~3B"),("Architecture","MoE decoder")],
   },
   "Qwen3.6-27B": {
@@ -94,8 +85,6 @@ META = {
     "model_prefix": "Qwen3.6-27B",
     "spark_flat": True,
     "vllm_bf16_tag": "qwen3.6-27b-BF16",
-    "vllm_bf16_repo_dir": "/opt/inferstation/models/Qwen3.6-27B-BF16",
-    "vllm_bf16_dir_halo": "/home/amd/models/Qwen3.6-27B-BF16",
     "overview_extra": [("Total params","27B"),("Architecture","Dense Qwen3.6 (next-gen)")],
   },
   "Gemma-4-26B-A4B-it": {
@@ -111,8 +100,6 @@ META = {
     "spark_flat": True,
     "halo_prefix_lower": True,
     "vllm_bf16_tag": "gemma-4-26b-a4b-it-BF16",
-    "vllm_bf16_repo_dir": "/opt/inferstation/models/gemma-4-26B-A4B-it-BF16",
-    "vllm_bf16_dir_halo": "/home/amd/models/gemma-4-26B-A4B-it-BF16",
     "overview_extra": [("Total / Active params","26B / ~4B"),("Architecture","MoE decoder")],
   },
   "Llama-3.3-70B-Instruct": {
@@ -140,152 +127,36 @@ def quant_family(q):
     return "Standard"
 
 def build_repro_blocks(m, meta):
-    blocks = []
-    samples = m["cmd_samples"]
-    pfx = meta["model_prefix"]
-    spark_flat = meta.get("spark_flat", False)
-    spark_dir = meta["model_dir_spark"]
-    halo_dir = meta["model_dir_halo"]
+    model_slug = meta["slug"]
+    return [("Repository planner", f"""# Preview the exact scenarios before dispatching a runner.
+python3 scripts/bench-batch.py \\
+  --filter='<host-profile>:{model_slug}:<quantization>' \\
+  --scope=all --dry-run
 
-    # llamacpp-cuda @ spark
-    if "llamacpp-cuda@spark2-shanghai" in samples:
-        q = samples["llamacpp-cuda@spark2-shanghai"]["quant"]
-        path = (f"{spark_dir}/{pfx}-{q}.gguf") if not spark_flat else f"{spark_dir}/{pfx}-{q}.gguf"
-        path = path.replace("//","/")
-        blocks.append(("llama.cpp · CUDA — host dgx-spark-01 (ssh alias: spark2)",
-f"""# binary: /home/amd/llama-cuda-bench/llama.cpp/build/bin/llama-batched-bench  (commit cfe9838d)
-# wrapper: /usr/local/bin/hb-llama-batched-bench  (resolves PATH)
-# example quant from the live unit registry: {q}
-
-ssh spark2 'HB_LLAMA_BIN_DIRS=/home/amd/llama-cuda-bench/llama.cpp/build/bin \\\\
-  llama-batched-bench \\\\
-    -m {path} \\\\
-    -ngl 999 -npp 512 -ntg 128 -npl 1,4,16,32 \\\\
-    --output-format jsonl'"""))
-
-    # llamacpp-vulkan @ spark
-    if "llamacpp-vulkan@spark2-shanghai" in samples:
-        q = samples["llamacpp-vulkan@spark2-shanghai"]["quant"]
-        path = f"{spark_dir}/{pfx}-{q}.gguf".replace("//","/")
-        blocks.append(("llama.cpp · Vulkan — host dgx-spark-01",
-f"""# binary: /home/amd/llama-vk-bench/llama.cpp/build-vk/bin/llama-batched-bench  (commit cfe9838d)
-# Critical: VK_DRIVER_FILES must point at NVIDIA ICD; the default loader picks mesa
-# freedreno ICD on aarch64 and selects the wrong device.
-
-ssh spark2 'VK_DRIVER_FILES=/usr/share/vulkan/icd.d/nvidia_icd.json \\\\
-  HB_LLAMA_BIN_DIRS=/home/amd/llama-vk-bench/llama.cpp/build-vk/bin \\\\
-  llama-batched-bench \\\\
-    -m {path} \\\\
-    -ngl 999 -npp 512 -ntg 128 -npl 1,4,16,32 \\\\
-    --output-format jsonl'"""))
-
-    # llamacpp-hip @ halo
-    if "llamacpp-hip@halo6-shanghai" in samples:
-        q = samples["llamacpp-hip@halo6-shanghai"]["quant"]
-        path = f"{halo_dir}/{pfx}-{q}.gguf".replace("//","/")
-        blocks.append(("llama.cpp · HIP/ROCm — host ryzen-ai-max-395-03 (ssh alias: halo6)",
-f"""# image: rocm/vllm:rocm7.12.0_gfx1151_minimax_m25_patched
-# binary inside image: /work/llama.cpp/build-hip-fa/bin/llama-batched-bench  (commit bbeb89d)
-# /work bind-mounted from /home/amd/qwen36-bench on the host
-# example quant: {q}
-
-ssh halo6 'sudo docker run --rm \\\\
-  --device=/dev/kfd --device=/dev/dri \\\\
-  --group-add 44 --group-add 992 \\\\
-  --security-opt seccomp=unconfined --ipc=host --net host \\\\
-  -v /home/amd/qwen36-bench:/work:ro \\\\
-  -v /home/amd/models:/models:ro \\\\
-  -v /tmp:/tmp \\\\
-  -e HSA_OVERRIDE_GFX_VERSION=11.5.1 \\\\
-  --entrypoint /work/llama.cpp/build-hip-fa/bin/llama-batched-bench \\\\
-  rocm/vllm:rocm7.12.0_gfx1151_minimax_m25_patched \\\\
-    -m {path} \\\\
-    -ngl 999 -npp 512 -ntg 128 -npl 1,4,16,32 \\\\
-    --output-format jsonl'"""))
-
-    # llamacpp-vulkan @ halo
-    if "llamacpp-vulkan@halo6-shanghai" in samples:
-        q = samples["llamacpp-vulkan@halo6-shanghai"]["quant"]
-        path = f"{halo_dir}/{pfx}-{q}.gguf".replace("//","/")
-        blocks.append(("llama.cpp · Vulkan — host ryzen-ai-max-395-03",
-f"""# image: rocm/vllm:rocm7.12.0_gfx1151_vulkan  (base image + libvulkan1 + mesa-vulkan-drivers)
-# binary: /work/llama.cpp/build-vk/bin/llama-batched-bench  (commit bbeb89d)
-# RADV picks Radeon 8060S (gfx1151) automatically; no VK_DRIVER_FILES needed.
-
-ssh halo6 'sudo docker run --rm \\\\
-  --device=/dev/kfd --device=/dev/dri \\\\
-  --group-add 44 --group-add 992 \\\\
-  --security-opt seccomp=unconfined --ipc=host --net host \\\\
-  -v /home/amd/qwen36-bench:/work:ro \\\\
-  -v /home/amd/models:/models:ro \\\\
-  -v /tmp:/tmp \\\\
-  -e HSA_OVERRIDE_GFX_VERSION=11.5.1 \\\\
-  --entrypoint /work/llama.cpp/build-vk/bin/llama-batched-bench \\\\
-  rocm/vllm:rocm7.12.0_gfx1151_vulkan \\\\
-    -m {path} \\\\
-    -ngl 999 -npp 512 -ntg 128 -npl 1,4,16,32 \\\\
-    --output-format jsonl'"""))
-
-    # vllm
-    has_vllm = any(k.startswith("vllm@") for k in samples)
-    if has_vllm and meta.get("vllm_bf16_tag"):
-        tag = meta["vllm_bf16_tag"]
-        halo_dir_bf = meta.get("vllm_bf16_dir_halo","/home/amd/models/BF16")
-        spark_dir_bf = meta.get("vllm_bf16_repo_dir","/opt/inferstation/models/BF16")
-        bits = []
-        if "vllm@halo6-shanghai" in samples:
-            bits.append(f"""# Halo (ROCm 7.12.0):
-ssh halo6 'sudo docker run --rm \\\\
-  --device=/dev/kfd --device=/dev/dri \\\\
-  --group-add 44 --group-add 992 \\\\
-  --security-opt seccomp=unconfined --ipc=host --net host \\\\
-  -v {halo_dir_bf}:/model:ro \\\\
-  -v /tmp:/tmp \\\\
-  -e HSA_OVERRIDE_GFX_VERSION=11.5.1 \\\\
-  rocm/vllm:rocm7.12.0_gfx1151_minimax_m25_patched \\\\
-  vllm bench throughput \\\\
-    --model /model --dtype bfloat16 \\\\
-    --max-model-len 2304 --max-num-seqs 1 \\\\
-    --gpu-memory-utilization 0.85 \\\\
-    --dataset-name random --input-len 512 --output-len 128 \\\\
-    --num-prompts 32 \\\\
-    --output-json /tmp/vllm-bench-{tag}.json'""")
-        if "vllm@spark2-shanghai" in samples:
-            bits.append(f"""# Spark (CUDA 13, host-installed vllm — image: nvcr.io/nvidia/vllm:26.03-py3):
-ssh spark2 'vllm bench throughput \\\\
-  --model {spark_dir_bf} --dtype bfloat16 \\\\
-  --max-model-len 2304 --max-num-seqs 1 \\\\
-  --gpu-memory-utilization 0.85 \\\\
-  --dataset-name random --input-len 512 --output-len 128 \\\\
-  --num-prompts 32'""")
-        blocks.append((f"vLLM · BF16 safetensors ({meta['bf16_repo']})", "\n\n".join(bits)))
-    return blocks
+# Execute the reviewed plan through the bench-batch GitHub Actions workflow.
+# Each published JSON records the exact command, image digest, and Actions log.""")]
 
 def build_engine_rows(samples):
     rows = []
-    if "llamacpp-cuda@spark2-shanghai" in samples:
-        rows.append(("llama.cpp", ("CUDA","emerald"), "dgx-spark-01",
-            'host binary @ <span className="whitespace-nowrap">/home/amd/llama-cuda-bench/llama.cpp/build/bin/</span><br/>wrapper: <span className="whitespace-nowrap">/usr/local/bin/hb-llama-batched-bench</span>',
+    backends = {key.split("@", 1)[0] for key in samples}
+    if "llamacpp-cuda" in backends:
+        rows.append(("llama.cpp", ("CUDA","emerald"), "NVIDIA DGX Spark",
+            'container image and immutable digest recorded in each run',
             'cfe9838d (2026-04-21)<br/>-DGGML_CUDA=ON -DGGML_NATIVE=ON'))
-    if "llamacpp-vulkan@spark2-shanghai" in samples:
-        rows.append(("llama.cpp", ("Vulkan",None), "dgx-spark-01",
-            'host binary @ <span className="whitespace-nowrap">/home/amd/llama-vk-bench/llama.cpp/build-vk/bin/</span><br/>via <span className="whitespace-nowrap">hb-llama-batched-bench</span> + VK_DRIVER_FILES override',
+    if "llamacpp-vulkan" in backends:
+        rows.append(("llama.cpp", ("Vulkan",None), "NVIDIA DGX Spark / AMD Strix Halo",
+            'container image and immutable digest recorded in each run',
             'cfe9838d (2026-04-21)<br/>-DGGML_VULKAN=ON'))
-    if "llamacpp-hip@halo6-shanghai" in samples:
-        rows.append(("llama.cpp", ("HIP/ROCm","amber"), "ryzen-ai-max-395-03",
-            'docker <span className="whitespace-nowrap">rocm/vllm:rocm7.12.0_gfx1151_minimax_m25_patched</span><br/>binary <span className="whitespace-nowrap">/work/llama.cpp/build-hip-fa/bin/</span>',
+    if "llamacpp-hip" in backends:
+        rows.append(("llama.cpp", ("HIP/ROCm","amber"), "AMD Strix Halo",
+            'container image and immutable digest recorded in each run',
             'bbeb89d (2026-05-05)<br/>-DGGML_HIP=ON -DAMDGPU_TARGETS=gfx1151<br/>-DGGML_HIP_GRAPHS=ON -DGGML_CUDA_FA=ON'))
-    if "llamacpp-vulkan@halo6-shanghai" in samples:
-        rows.append(("llama.cpp", ("Vulkan",None), "ryzen-ai-max-395-03",
-            'docker <span className="whitespace-nowrap">rocm/vllm:rocm7.12.0_gfx1151_vulkan</span><br/>binary <span className="whitespace-nowrap">/work/llama.cpp/build-vk/bin/</span>',
-            'bbeb89d (2026-05-05)<br/>-DGGML_VULKAN=ON'))
-    if "vllm@halo6-shanghai" in samples:
-        rows.append(("vLLM", ("ROCm","amber"), "ryzen-ai-max-395-03",
-            'docker <span className="whitespace-nowrap">rocm/vllm:rocm7.12.0_gfx1151_minimax_m25_patched</span>',
+    if "vllm" in backends:
+        rows.append(("vLLM", ("ROCm","amber"), "AMD Strix Halo",
+            'container image and immutable digest recorded in each run',
             'vllm 0.16.1.dev10+g11515110f.d20260323<br/>torch 2.9.1+rocm7.12.0rc1<br/>ROCm 7.12.60610-2bd1678d3d'))
-    if "vllm@spark2-shanghai" in samples:
-        rows.append(("vLLM", ("CUDA","emerald"), "dgx-spark-01",
-            'host-installed <span className="font-mono">/usr/local/bin/vllm</span><br/>(reference image: nvcr.io/nvidia/vllm:26.03-py3)',
+        rows.append(("vLLM", ("CUDA","emerald"), "NVIDIA DGX Spark",
+            'container image and immutable digest recorded in each run',
             'CUDA 13.x · driver 580.82.09'))
     return rows
 
@@ -293,8 +164,9 @@ def emit_page(model_name, m, meta):
     samples = m["cmd_samples"]
     hosts = set()
     for k in samples:
-        if "spark2" in k: hosts.add("spark")
-        if "halo6"  in k: hosts.add("halo")
+        backend = k.split("@", 1)[0]
+        if backend in {"llamacpp-cuda", "vllm"}: hosts.add("spark")
+        if backend in {"llamacpp-hip", "vllm"}: hosts.add("halo")
 
     badges_js = ", ".join(
         f'{{label:"{lbl}"' + (f',tone:"{t}"' if t else '') + '}'
@@ -362,7 +234,7 @@ def emit_page(model_name, m, meta):
     if meta.get("vllm_bf16_tag"):
         weights_bf16_js = (
             'weightsBF16={{repo:"' + meta["bf16_repo"] +
-            '", note:"Used by vLLM. Pre-downloaded on each host into /opt/inferstation/models (Spark) or /home/amd/models (Halo)."}}\n  '
+        '", note:"Used by vLLM. Download from the public model repository before running the benchmark."}}\n  '
         )
 
     tsx = f'''/* AUTO-GENERATED — edit scripts/gen-model-docs.py and re-run, do not hand-edit. */

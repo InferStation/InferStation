@@ -261,7 +261,7 @@ export default function Qwen3635BA3BDoc() {
             <div className="flex flex-col gap-4">
               <Card>
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <div className="font-semibold">dgx-spark-01 — NVIDIA DGX Spark</div>
+                  <div className="font-semibold">NVIDIA DGX Spark</div>
                   <Badge tone="emerald">GB10 · 128 GB unified</Badge>
                 </div>
                 <div className="mt-4 grid grid-cols-1 gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
@@ -271,8 +271,6 @@ export default function Qwen3635BA3BDoc() {
                     ["OS / kernel", "Ubuntu 24.04.3 LTS aarch64 · 6.11.0-1014-nvidia"],
                     ["NVIDIA driver", "580.82.09 (DGX Spark Open driver)"],
                     ["Vulkan ICD", "/usr/share/vulkan/icd.d/nvidia_icd.json (required: mesa freedreno ICD hijacks otherwise)"],
-                    ["SSH alias (dispatcher)", "spark2"],
-                    ["Models dir", "/opt/inferstation/models (bind-mounted as /models)"],
                   ].map(([k, v]) => (
                     <div key={k}>
                       <dt className="text-[11px] uppercase tracking-wide text-zinc-500">{k}</dt>
@@ -283,7 +281,7 @@ export default function Qwen3635BA3BDoc() {
               </Card>
               <Card>
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <div className="font-semibold">ryzen-ai-max-395-03 — AMD Ryzen AI Max+ 395 (Strix Halo)</div>
+                  <div className="font-semibold">AMD Ryzen AI Max+ 395 (Strix Halo)</div>
                   <Badge tone="amber">Radeon 8060S · 128 GB unified</Badge>
                 </div>
                 <div className="mt-4 grid grid-cols-1 gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
@@ -293,8 +291,6 @@ export default function Qwen3635BA3BDoc() {
                     ["OS / kernel", "Ubuntu 24.04.4 LTS x86_64 · 6.17.0-1020-oem"],
                     ["ROCm", "7.12.0 (rocm/vllm image)"],
                     ["HIP override", "HSA_OVERRIDE_GFX_VERSION=11.5.1 (gfx1151 emulating gfx1150)"],
-                    ["SSH alias (dispatcher)", "halo6"],
-                    ["Models dir", "/home/amd/models (bind-mounted as /models)"],
                   ].map(([k, v]) => (
                     <div key={k}>
                       <dt className="text-[11px] uppercase tracking-wide text-zinc-500">{k}</dt>
@@ -321,46 +317,44 @@ export default function Qwen3635BA3BDoc() {
                 <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
                   <tr>
                     <td className="px-4 py-2.5">llama.cpp <Badge tone="emerald">CUDA</Badge></td>
-                    <td className="px-4 py-2.5 font-mono text-[12px]">dgx-spark-01</td>
-                    <td className="px-4 py-2.5 font-mono text-[12px]">host binary @ <span className="whitespace-nowrap">/home/amd/llama-cuda-bench/llama.cpp/build/bin/</span><br/>wrapper: <span className="whitespace-nowrap">/usr/local/bin/hb-llama-batched-bench</span></td>
+                    <td className="px-4 py-2.5 font-mono text-[12px]">NVIDIA DGX Spark</td>
+                    <td className="px-4 py-2.5 font-mono text-[12px]">Runtime artifact and immutable digest recorded in each run</td>
                     <td className="px-4 py-2.5 font-mono text-[12px]">cfe9838d (2026-04-21)<br/>-DGGML_CUDA=ON -DGGML_NATIVE=ON</td>
                   </tr>
                   <tr>
                     <td className="px-4 py-2.5">llama.cpp <Badge>Vulkan</Badge></td>
-                    <td className="px-4 py-2.5 font-mono text-[12px]">dgx-spark-01</td>
-                    <td className="px-4 py-2.5 font-mono text-[12px]">host binary @ <span className="whitespace-nowrap">/home/amd/llama-vk-bench/llama.cpp/build-vk/bin/</span><br/>via <span className="whitespace-nowrap">hb-llama-batched-bench</span> with VK_DRIVER_FILES override</td>
+                    <td className="px-4 py-2.5 font-mono text-[12px]">NVIDIA DGX Spark</td>
+                    <td className="px-4 py-2.5 font-mono text-[12px]">Runtime artifact and immutable digest recorded in each run</td>
                     <td className="px-4 py-2.5 font-mono text-[12px]">cfe9838d (2026-04-21)<br/>-DGGML_VULKAN=ON</td>
                   </tr>
                   <tr>
                     <td className="px-4 py-2.5">llama.cpp <Badge tone="amber">HIP/ROCm</Badge></td>
-                    <td className="px-4 py-2.5 font-mono text-[12px]">ryzen-ai-max-395-03</td>
-                    <td className="px-4 py-2.5 font-mono text-[12px]">docker <span className="whitespace-nowrap">rocm/vllm:rocm7.12.0_gfx1151_minimax_m25_patched</span><br/>binary <span className="whitespace-nowrap">/work/llama.cpp/build-hip-fa/bin/</span><br/>(host: /home/amd/qwen36-bench)</td>
+                    <td className="px-4 py-2.5 font-mono text-[12px]">AMD Strix Halo</td>
+                    <td className="px-4 py-2.5 font-mono text-[12px]">Container image and immutable digest recorded in each run</td>
                     <td className="px-4 py-2.5 font-mono text-[12px]">bbeb89d (2026-05-05)<br/>-DGGML_HIP=ON -DAMDGPU_TARGETS=gfx1151<br/>-DGGML_HIP_GRAPHS=ON -DGGML_CUDA_FA=ON</td>
                   </tr>
                   <tr>
                     <td className="px-4 py-2.5">llama.cpp <Badge>Vulkan</Badge></td>
-                    <td className="px-4 py-2.5 font-mono text-[12px]">ryzen-ai-max-395-03</td>
-                    <td className="px-4 py-2.5 font-mono text-[12px]">docker <span className="whitespace-nowrap">rocm/vllm:rocm7.12.0_gfx1151_vulkan</span><br/>(base + libvulkan1 + mesa-vulkan-drivers)<br/>binary <span className="whitespace-nowrap">/work/llama.cpp/build-vk/bin/</span></td>
+                    <td className="px-4 py-2.5 font-mono text-[12px]">AMD Strix Halo</td>
+                    <td className="px-4 py-2.5 font-mono text-[12px]">Container image and immutable digest recorded in each run</td>
                     <td className="px-4 py-2.5 font-mono text-[12px]">bbeb89d (2026-05-05)<br/>-DGGML_VULKAN=ON</td>
                   </tr>
                   <tr>
                     <td className="px-4 py-2.5">vLLM <Badge tone="amber">ROCm</Badge></td>
-                    <td className="px-4 py-2.5 font-mono text-[12px]">ryzen-ai-max-395-03</td>
+                    <td className="px-4 py-2.5 font-mono text-[12px]">AMD Strix Halo</td>
                     <td className="px-4 py-2.5 font-mono text-[12px]">docker <span className="whitespace-nowrap">rocm/vllm:rocm7.12.0_gfx1151_minimax_m25_patched</span></td>
                     <td className="px-4 py-2.5 font-mono text-[12px]">vllm 0.16.1.dev10+g11515110f.d20260323<br/>torch 2.9.1+rocm7.12.0rc1<br/>ROCm 7.12.60610-2bd1678d3d</td>
                   </tr>
                   <tr>
                     <td className="px-4 py-2.5">vLLM <Badge tone="emerald">CUDA</Badge></td>
-                    <td className="px-4 py-2.5 font-mono text-[12px]">dgx-spark-01</td>
-                    <td className="px-4 py-2.5 font-mono text-[12px]">host-installed <span className="font-mono">/usr/local/bin/vllm</span><br/>(reference image: nvcr.io/nvidia/vllm:26.03-py3)</td>
+                    <td className="px-4 py-2.5 font-mono text-[12px]">NVIDIA DGX Spark</td>
+                    <td className="px-4 py-2.5 font-mono text-[12px]">Container image and immutable digest recorded in each run</td>
                     <td className="px-4 py-2.5 font-mono text-[12px]">CUDA 13.x · driver 580.82.09</td>
                   </tr>
                 </tbody>
               </table>
             </Card>
             <p className="mt-3 text-xs text-zinc-500">
-              <span className="font-mono">hb-llama-*</span> is a thin wrapper that resolves to the right binary on each host
-              (see <span className="font-mono">/usr/local/bin/hb-llama</span> on Spark, <span className="font-mono">hb-llama-batched-bench</span> on Halo).
               Engine slugs in <span className="font-mono">/runs</span>: <span className="font-mono">llamacpp-cuda · llamacpp-vulkan · llamacpp-hip · vllm</span>.
             </p>
           </Section>
@@ -369,101 +363,17 @@ export default function Qwen3635BA3BDoc() {
           <Section id="reproduce" label="How To Reproduce">
             <div className="flex flex-col gap-4">
               <p className="text-xs text-zinc-500">
-                Verbatim commands captured from the published benchmark records. The command below is the exact invocation used for reproduction.
-                Models are pre-downloaded with <span className="font-mono">hf download unsloth/Qwen3.6-35B-A3B-GGUF &lt;file&gt;.gguf</span> into the host&apos;s models dir.
+                Preview the repository-owned plan before dispatching a runner. Each published record contains the exact runtime command,
+                immutable image digest, source revision, and Actions log needed for reproduction.
               </p>
               <CopyBlock
-                title="llama.cpp · CUDA — host dgx-spark-01 (ssh alias: spark2)"
-                code={`# binary: /home/amd/llama-cuda-bench/llama.cpp/build/bin/llama-batched-bench  (commit cfe9838d)
-# wrapper: /usr/local/bin/hb-llama-batched-bench  (sets LD_LIBRARY_PATH)
-# model file lives at /opt/inferstation/models/Qwen3.6-35B-A3B-UD-Q4_K_M.gguf
-# but the wrapper rewrites paths via /models -> /opt/inferstation/models
+                title="Repository planner"
+                code={`python3 scripts/bench-batch.py \
+  --filter='<host-profile>:qwen3.6-35b-a3b:<quantization>' \
+  --scope=all --dry-run
 
-ssh spark2 'HB_LLAMA_BIN_DIRS=/home/amd/llama-cuda-bench/llama.cpp/build/bin \\
-  llama-batched-bench \\
-    -m /models/Qwen3.6-35B-A3B-UD-Q4_K_M.gguf \\
-    -ngl 999 -npp 512 -ntg 128 -npl 1,4,16,32 \\
-    --output-format jsonl'`}
-              />
-              <CopyBlock
-                title="llama.cpp · Vulkan — host dgx-spark-01"
-                code={`# binary: /home/amd/llama-vk-bench/llama.cpp/build-vk/bin/llama-batched-bench  (commit cfe9838d)
-# Critical: VK_DRIVER_FILES must point at NVIDIA ICD; the default loader picks mesa
-# freedreno ICD on aarch64 and selects the wrong device.
-
-ssh spark2 'VK_DRIVER_FILES=/usr/share/vulkan/icd.d/nvidia_icd.json \\
-  HB_LLAMA_BIN_DIRS=/home/amd/llama-vk-bench/llama.cpp/build-vk/bin \\
-  llama-batched-bench \\
-    -m /models/Qwen3.6-35B-A3B-UD-Q4_K_M.gguf \\
-    -ngl 999 -npp 512 -ntg 128 -npl 1,4,16,32 \\
-    --output-format jsonl'`}
-              />
-              <CopyBlock
-                title="llama.cpp · HIP/ROCm — host ryzen-ai-max-395-03 (ssh alias: halo6)"
-                code={`# image: rocm/vllm:rocm7.12.0_gfx1151_minimax_m25_patched
-# binary inside image: /work/llama.cpp/build-hip-fa/bin/llama-batched-bench  (commit bbeb89d)
-# /work is bind-mounted from /home/amd/qwen36-bench on the host
-
-ssh halo6 'sudo docker run --rm \\
-  --device=/dev/kfd --device=/dev/dri \\
-  --group-add 44 --group-add 992 \\
-  --security-opt seccomp=unconfined --ipc=host --net host \\
-  -v /home/amd/qwen36-bench:/work:ro \\
-  -v /home/amd/models:/models:ro \\
-  -v /tmp:/tmp \\
-  -e HSA_OVERRIDE_GFX_VERSION=11.5.1 \\
-  --entrypoint /work/llama.cpp/build-hip-fa/bin/llama-batched-bench \\
-  rocm/vllm:rocm7.12.0_gfx1151_minimax_m25_patched \\
-    -m /models/Qwen3.6-35B-A3B/Qwen3.6-35B-A3B-UD-Q4_K_M.gguf \\
-    -ngl 999 -npp 512 -ntg 128 -npl 1,4,16,32 \\
-    --output-format jsonl'`}
-              />
-              <CopyBlock
-                title="llama.cpp · Vulkan — host ryzen-ai-max-395-03"
-                code={`# image: rocm/vllm:rocm7.12.0_gfx1151_vulkan  (base image + libvulkan1 + mesa-vulkan-drivers)
-# binary: /work/llama.cpp/build-vk/bin/llama-batched-bench  (commit bbeb89d)
-# RADV picks Radeon 8060S (gfx1151) automatically; no VK_DRIVER_FILES needed.
-
-ssh halo6 'sudo docker run --rm \\
-  --device=/dev/kfd --device=/dev/dri \\
-  --group-add 44 --group-add 992 \\
-  --security-opt seccomp=unconfined --ipc=host --net host \\
-  -v /home/amd/qwen36-bench:/work:ro \\
-  -v /home/amd/models:/models:ro \\
-  -v /tmp:/tmp \\
-  -e HSA_OVERRIDE_GFX_VERSION=11.5.1 \\
-  --entrypoint /work/llama.cpp/build-vk/bin/llama-batched-bench \\
-  rocm/vllm:rocm7.12.0_gfx1151_vulkan \\
-    -m /models/Qwen3.6-35B-A3B/Qwen3.6-35B-A3B-UD-Q4_K_M.gguf \\
-    -ngl 999 -npp 512 -ntg 128 -npl 1,4,16,32 \\
-    --output-format jsonl'`}
-              />
-              <CopyBlock
-                title="vLLM · BF16 safetensors (Qwen/Qwen3.6-35B-A3B)"
-                code={`# Halo (ROCm 7.12.0):
-ssh halo6 'sudo docker run --rm \\
-  --device=/dev/kfd --device=/dev/dri \\
-  --group-add 44 --group-add 992 \\
-  --security-opt seccomp=unconfined --ipc=host --net host \\
-  -v /home/amd/models/Qwen3.6-35B-A3B-BF16:/model:ro \\
-  -v /tmp:/tmp \\
-  -e HSA_OVERRIDE_GFX_VERSION=11.5.1 \\
-  rocm/vllm:rocm7.12.0_gfx1151_minimax_m25_patched \\
-  vllm bench throughput \\
-    --model /model --dtype bfloat16 \\
-    --max-model-len 2304 --max-num-seqs 1 \\
-    --gpu-memory-utilization 0.85 \\
-    --dataset-name random --input-len 512 --output-len 128 \\
-    --num-prompts 32 \\
-    --output-json /tmp/vllm-bench-qwen3.6-35b-a3b-BF16.json'
-
-# Spark (CUDA 13, host-installed vllm):
-ssh spark2 'vllm bench throughput \\
-  --model /opt/inferstation/models/Qwen3.6-35B-A3B-BF16 --dtype bfloat16 \\
-  --max-model-len 2304 --max-num-seqs 1 \\
-  --gpu-memory-utilization 0.85 \\
-  --dataset-name random --input-len 512 --output-len 128 \\
-  --num-prompts 32'`}
+# Execute the reviewed plan through the bench-batch GitHub Actions workflow.
+# Inspect the resulting JSON under data/runs/ for the exact runtime command.`}
               />
               <p className="text-xs text-zinc-500">
                 <span className="font-mono">-npl 1,4,16,32</span> sweeps four concurrency levels in one llama-batched-bench run;

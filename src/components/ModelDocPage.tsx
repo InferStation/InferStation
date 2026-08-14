@@ -21,7 +21,7 @@ export interface ModelDocProps {
   engineRows: {
     engine: string;
     badge?: { label: string; tone?: Tone };
-    host: "dgx-spark-01" | "ryzen-ai-max-395-03";
+    host: string;
     imageHtml: ReactNode;
     versionHtml: ReactNode;
   }[];
@@ -77,8 +77,6 @@ const SPARK_INFO: [string, string][] = [
   ["OS / kernel", "Ubuntu 24.04.3 LTS aarch64 · 6.11.0-1014-nvidia"],
   ["NVIDIA driver", "580.82.09 (DGX Spark Open driver)"],
   ["Vulkan ICD", "/usr/share/vulkan/icd.d/nvidia_icd.json (set VK_DRIVER_FILES)"],
-  ["SSH alias", "spark2"],
-  ["Models dir", "/opt/inferstation/models  (bind-mounted as /models)"],
 ];
 
 const HALO_INFO: [string, string][] = [
@@ -87,8 +85,6 @@ const HALO_INFO: [string, string][] = [
   ["OS / kernel", "Ubuntu 24.04.4 LTS x86_64 · 6.17.0-1020-oem"],
   ["ROCm", "7.12.0 (rocm/vllm image)"],
   ["HIP override", "HSA_OVERRIDE_GFX_VERSION=11.5.1"],
-  ["SSH alias", "halo6"],
-  ["Models dir", "/home/amd/models  (bind-mounted as /models)"],
 ];
 
 export function ModelDocPage(p: ModelDocProps) {
@@ -208,7 +204,7 @@ export function ModelDocPage(p: ModelDocProps) {
               {p.hosts.includes("spark") && (
                 <Card>
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <div className="font-semibold">dgx-spark-01 — NVIDIA DGX Spark</div>
+                    <div className="font-semibold">NVIDIA DGX Spark</div>
                     <Badge tone="emerald">GB10 · 128 GB unified</Badge>
                   </div>
                   <div className="mt-4 grid grid-cols-1 gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
@@ -224,7 +220,7 @@ export function ModelDocPage(p: ModelDocProps) {
               {p.hosts.includes("halo") && (
                 <Card>
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <div className="font-semibold">ryzen-ai-max-395-03 — AMD Ryzen AI Max+ 395 (Strix Halo)</div>
+                    <div className="font-semibold">AMD Ryzen AI Max+ 395 (Strix Halo)</div>
                     <Badge tone="amber">Radeon 8060S · 128 GB unified</Badge>
                   </div>
                   <div className="mt-4 grid grid-cols-1 gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
@@ -275,7 +271,8 @@ export function ModelDocPage(p: ModelDocProps) {
           <Section id="reproduce" label="How To Reproduce">
             <div className="flex flex-col gap-4">
               <p className="text-xs text-zinc-500">
-                Verbatim commands captured from the published benchmark records. The command below is the exact invocation used for reproduction.
+                Use the repository planner to select a scenario. The resulting run record carries the exact runtime command,
+                immutable image digest, source revision, and Actions log needed for reproduction.
               </p>
               {p.reproduce.map((r) => (
                 <CopyBlock key={r.title} title={r.title} code={r.code} />

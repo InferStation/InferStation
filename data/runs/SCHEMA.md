@@ -7,8 +7,8 @@ One JSON file per run, under `data/runs/<YYYY-MM-DD>/<host>-<model-slug>-<engine
   "schema_version": 0,
   "run_date": "2026-05-14",
   "host": {
-    "slug": "halo3-shanghai",
-    "name": "GMKtec EVO-X2 (Strix Halo)",
+    "slug": "strix-halo-reference",
+    "name": "Strix Halo reference system",
     "vendor": "AMD",
     "chip": "Ryzen AI Max+ 395",
     "vram_gb": 128,
@@ -40,7 +40,7 @@ One JSON file per run, under `data/runs/<YYYY-MM-DD>/<host>-<model-slug>-<engine
   "scenario": "single-user-chat",
   "usability_tag": "ok",
   "log_url": "https://example.com/path/to/raw.log",
-  "source_url": "https://github.com/JoursBleu/InferStation/blob/main/data/runs/2026-05-14/halo3-shanghai-qwen3-30b-a3b-llamacpp-hip.json",
+  "source_url": "https://github.com/InferStation/InferStation/blob/main/data/runs/2026-05-14/strix-halo-reference-qwen3-30b-a3b-llamacpp-hip.json",
   "notes": ""
 }
 ```
