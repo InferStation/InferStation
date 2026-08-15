@@ -353,10 +353,10 @@ export default function Home() {
             Browse raw runs
           </Link>
           <Link
-            href="/benchmark"
+            href="/accuracy"
             className="rounded-md border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-indigo-700 hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/30 dark:text-indigo-300 dark:hover:bg-indigo-950/60"
           >
-            Benchmark summary
+            Accuracy results
           </Link>
         </div>
       </section>

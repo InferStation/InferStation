@@ -1,4 +1,4 @@
-# Accuracy benchmark design
+# Accuracy evaluation design
 
 Status: implementation baseline
 Last updated: 2026-08-15
@@ -14,14 +14,14 @@ InferStation has two independent measurement areas:
 
 - **Performance** measures latency and throughput on known hardware and serving
   configurations.
-- **Benchmark** measures model quality under immutable dataset and protocol
+- **Accuracy** measures model quality under immutable dataset and protocol
   versions.
 
-The first Benchmark release provides:
+The first Accuracy release provides:
 
-1. `/benchmark`: a public, static accuracy coverage summary aligned with the
+1. `/accuracy`: a public, static accuracy coverage summary aligned with the
    configurations already visible in Performance.
-2. `/benchmark/run`: an internal control page that evaluates any reachable
+2. `/accuracy/run`: an internal control page that evaluates any reachable
    OpenAI-compatible model API.
 3. `services/llm-eval-hub`: the repository-owned backend that registers model
    endpoints, executes datasets, scores responses, and retains operational
@@ -33,28 +33,29 @@ accuracy result is published automatically.
 
 ## 2. Information architecture
 
-The primary navigation groups all existing functionality without changing its
-route or data source:
+The primary navigation separates the site overview from its two measurement
+areas without changing their data sources:
 
 ```text
+Overview          /
+
 Performance
-  Overview       /
   Summary        /summary
   Charts         /charts
   Compare        /compare
   Runs           /runs
   History        /history
 
-Benchmark
-  Summary        /benchmark
-  Run benchmark  /benchmark/run
+Accuracy
+  Results         /accuracy
+  Run evaluation  /accuracy/run
 
 Docs             /docs
 ```
 
-`/accuracy` remains a compatibility alias for `/benchmark`. Existing
-Performance routes, JSON, filters, charts, run details, and history remain
-unchanged.
+The former `/benchmark` and `/benchmark/run` routes remain compatibility
+aliases. Existing Performance routes, JSON, filters, charts, run details, and
+history remain unchanged.
 
 ## 3. Repository structure
 
@@ -76,9 +77,9 @@ submodule, generated snapshot, or separately deployed repository.
 
 ```mermaid
 flowchart LR
-  P["Performance JSON"] --> S["Benchmark Summary"]
+  P["Performance JSON"] --> S["Accuracy Results"]
   E["Reviewed data/evaluations JSON"] --> S
-  R["Run benchmark page"] --> H["LLM Eval Hub web/API"]
+  R["Run evaluation page"] --> H["LLM Eval Hub web/API"]
   H --> Q["Redis / Celery worker"]
   H --> D[(PostgreSQL)]
   Q --> M["OpenAI-compatible model APIs"]
@@ -93,7 +94,7 @@ The frontend and backend are separate deployment units:
 - PostgreSQL, Redis, and artifacts use dedicated persistent volumes.
 - Static deployment never copies, deletes, or owns backend state.
 
-## 5. Benchmark Summary
+## 5. Accuracy Results
 
 The Summary is static and must remain usable when Eval Hub is offline.
 
@@ -203,7 +204,7 @@ latency and throughput with Eval Hub idle and under load.
 
 ## 10. Invariants
 
-- Never modify or delete `data/runs` from Benchmark code or backend jobs.
+- Never modify or delete `data/runs` from Accuracy frontend or backend jobs.
 - Never deploy backend files or state under the static `site/` directory.
 - Never run `docker compose down -v` during normal operations.
 - Never regenerate `SECRET_ENCRYPTION_KEY` for an existing deployment.

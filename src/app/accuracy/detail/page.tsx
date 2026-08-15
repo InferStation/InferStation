@@ -47,8 +47,8 @@ function DetailContent() {
     <div className="mx-auto w-full max-w-6xl px-6 py-10 sm:py-12">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs uppercase tracking-[0.16em] text-zinc-500">
-          <Link href="/benchmark" className="hover:text-indigo-600 dark:hover:text-indigo-400">
-            Benchmark
+          <Link href="/accuracy" className="hover:text-indigo-600 dark:hover:text-indigo-400">
+            Accuracy
           </Link>{" "}
           / {run.run_date}
         </p>

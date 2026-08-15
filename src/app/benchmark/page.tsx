@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import BenchmarkSummary from "@/components/BenchmarkSummary";
+import AccuracySummary from "@/components/AccuracySummary";
 
 export const metadata: Metadata = {
-  title: "Benchmark — InferStation",
+  title: "Accuracy — InferStation",
   description: "Performance-aligned accuracy coverage from versioned LLM Eval Hub protocols.",
 };
 
-export default function BenchmarkPage() {
-  return <BenchmarkSummary />;
+export default function LegacyAccuracyPage() {
+  return <AccuracySummary />;
 }

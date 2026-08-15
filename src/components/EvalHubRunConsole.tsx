@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import BenchmarkNav from "@/components/BenchmarkNav";
+import AccuracyNav from "@/components/AccuracyNav";
 import {
   createEvalHubIdempotencyKey,
   EvalHubClient,
@@ -197,7 +197,7 @@ export default function EvalHubRunConsole() {
 
   return (
     <div className="mx-auto w-full max-w-6xl px-6 py-9 sm:py-12">
-      <BenchmarkNav active="run" />
+      <AccuracyNav active="run" />
       <header className="mt-6">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-700 dark:text-indigo-300">Live evaluation</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">Run any OpenAI-compatible model through Eval Hub.</h1>
@@ -261,7 +261,7 @@ export default function EvalHubRunConsole() {
         </div>
         <div className="mt-5 flex flex-wrap items-center gap-3">
           <button type="button" onClick={validate} disabled={!canValidate || busy !== null} className={secondaryButtonClass}>{busy === "validate" ? "Validating…" : "Validate run"}</button>
-          <ActionButton onClick={startRun} disabled={!validation?.valid || busy !== null || Boolean(run && !isEvalHubRunTerminal(run.status))}>{busy === "run" ? "Submitting…" : "Start benchmark"}</ActionButton>
+          <ActionButton onClick={startRun} disabled={!validation?.valid || busy !== null || Boolean(run && !isEvalHubRunTerminal(run.status))}>{busy === "run" ? "Submitting…" : "Start evaluation"}</ActionButton>
           {validation ? <span className="text-xs text-zinc-500">{validation.sample_count.toLocaleString()} requests · effective concurrency {validation.effective_concurrency}</span> : null}
         </div>
         {validation?.warnings.map((warning) => <div key={warning} className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-300">{warning}</div>)}

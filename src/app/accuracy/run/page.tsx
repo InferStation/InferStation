@@ -7,6 +7,6 @@ export const metadata: Metadata = {
     "Evaluate an arbitrary OpenAI-compatible model service through LLM Eval Hub.",
 };
 
-export default function LegacyRunAccuracyEvaluationPage() {
+export default function RunAccuracyEvaluationPage() {
   return <EvalHubRunConsole />;
 }

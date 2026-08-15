@@ -111,8 +111,8 @@ pnpm build
 rsync -a --delete out/ /home/lkang/inferstation/site/
 ```
 
-Before `rsync`, record the Git SHA and verify that `out/benchmark/index.html`
-and `out/benchmark/run/index.html` exist. On the first deployment of a new
+Before `rsync`, record the Git SHA and verify that `out/accuracy/index.html`
+and `out/accuracy/run/index.html` exist. On the first deployment of a new
 revision, retain one copy of the current static site under
 `/home/lkang/inferstation/site-backups/` before replacement. Do not copy the
 repository root or backend directories into `site/`.
@@ -128,8 +128,8 @@ curl -fsS http://127.0.0.1:18080/ >/dev/null
 Also verify:
 
 - Performance Overview, Summary, Charts, Compare, Runs, and History still load;
-- Benchmark Summary shows Preview or reviewed results as expected;
-- Run benchmark connects to `http://10.170.38.102:18080/api/v1`;
+- Accuracy Results shows Preview or reviewed results as expected;
+- Run evaluation connects to `http://10.170.38.102:18080/api/v1`;
 - the dataset list includes the clearly labeled ten-row smoke pack;
 - `data/runs` and Performance manifest counts are unchanged by the feature;
 - the backend containers respect CPU/memory limits; and

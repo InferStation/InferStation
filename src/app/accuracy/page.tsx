@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import BenchmarkSummary from "@/components/BenchmarkSummary";
+import AccuracySummary from "@/components/AccuracySummary";
 
 export const metadata: Metadata = {
   title: "Accuracy — InferStation",
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function AccuracyPage() {
-  return <BenchmarkSummary />;
+  return <AccuracySummary />;
 }

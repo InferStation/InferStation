@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
-type MenuName = "performance" | "benchmark";
+type MenuName = "performance" | "accuracy";
 
 const menuLinkClassName =
   "rounded px-2.5 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-900";
@@ -12,7 +12,7 @@ export default function HeaderNav() {
   const [openMenu, setOpenMenu] = useState<MenuName | null>(null);
   const navRef = useRef<HTMLUListElement>(null);
   const performanceButtonRef = useRef<HTMLButtonElement>(null);
-  const benchmarkButtonRef = useRef<HTMLButtonElement>(null);
+  const accuracyButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     function handlePointerDown(event: PointerEvent) {
@@ -29,7 +29,7 @@ export default function HeaderNav() {
       const buttonRef =
         openMenu === "performance"
           ? performanceButtonRef
-          : benchmarkButtonRef;
+          : accuracyButtonRef;
 
       setOpenMenu(null);
       buttonRef.current?.focus();
@@ -57,6 +57,15 @@ export default function HeaderNav() {
       ref={navRef}
       className="flex flex-wrap items-center justify-end gap-x-5 gap-y-2 text-sm text-zinc-600 dark:text-zinc-400"
     >
+      <li>
+        <Link
+          href="/"
+          className="font-medium hover:text-zinc-900 dark:hover:text-zinc-100"
+          onClick={closeMenu}
+        >
+          Overview
+        </Link>
+      </li>
       <li className="relative">
         <button
           ref={performanceButtonRef}
@@ -76,9 +85,6 @@ export default function HeaderNav() {
             id="performance-menu"
             className="absolute right-0 z-50 mt-2 grid min-w-40 gap-1 rounded-lg border border-zinc-200 bg-white p-2 text-sm shadow-xl dark:border-zinc-800 dark:bg-zinc-950"
           >
-            <Link href="/" className={menuLinkClassName} onClick={closeMenu}>
-              Overview
-            </Link>
             <Link
               href="/summary"
               className={menuLinkClassName}
@@ -119,36 +125,36 @@ export default function HeaderNav() {
       </li>
       <li className="relative">
         <button
-          ref={benchmarkButtonRef}
+          ref={accuracyButtonRef}
           type="button"
-          aria-expanded={openMenu === "benchmark"}
-          aria-controls="benchmark-menu"
+          aria-expanded={openMenu === "accuracy"}
+          aria-controls="accuracy-menu"
           className="cursor-pointer font-medium text-indigo-700 hover:text-indigo-500 dark:text-indigo-300 dark:hover:text-indigo-200"
-          onClick={() => toggleMenu("benchmark")}
+          onClick={() => toggleMenu("accuracy")}
         >
-          Benchmark{" "}
+          Accuracy{" "}
           <span aria-hidden="true" className="ml-1 text-[10px]">
             ▾
           </span>
         </button>
-        {openMenu === "benchmark" ? (
+        {openMenu === "accuracy" ? (
           <div
-            id="benchmark-menu"
+            id="accuracy-menu"
             className="absolute right-0 z-50 mt-2 grid min-w-44 gap-1 rounded-lg border border-zinc-200 bg-white p-2 text-sm shadow-xl dark:border-zinc-800 dark:bg-zinc-950"
           >
             <Link
-              href="/benchmark"
+              href="/accuracy"
               className={menuLinkClassName}
               onClick={closeMenu}
             >
-              Summary
+              Results
             </Link>
             <Link
-              href="/benchmark/run"
+              href="/accuracy/run"
               className={menuLinkClassName}
               onClick={closeMenu}
             >
-              Run benchmark
+              Run evaluation
             </Link>
           </div>
         ) : null}

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import BenchmarkNav from "@/components/BenchmarkNav";
+import AccuracyNav from "@/components/AccuracyNav";
 import {
   buildBenchmarkCoverage,
   type BenchmarkCoverageRow,
@@ -45,7 +45,7 @@ function StateBadge({ state }: { state: BenchmarkCoverageRow["state"] }) {
   );
 }
 
-export default function BenchmarkSummary() {
+export default function AccuracySummary() {
   const [performanceRuns, setPerformanceRuns] = useState<Awaited<ReturnType<typeof fetchAllRuns>> | null>(null);
   const [evaluations, setEvaluations] = useState<EvaluationRunSummary[] | null>(null);
   const [isMock, setIsMock] = useState(false);
@@ -126,10 +126,10 @@ export default function BenchmarkSummary() {
   const visibleRows = showAll ? filtered : filtered.slice(0, 150);
 
   if (error) {
-    return <StateMessage tone="error">Failed to load Benchmark data: {error}</StateMessage>;
+    return <StateMessage tone="error">Failed to load Accuracy data: {error}</StateMessage>;
   }
   if (!performanceRuns || !evaluations) {
-    return <StateMessage>Loading Performance coverage and Benchmark results…</StateMessage>;
+    return <StateMessage>Loading Performance coverage and Accuracy results…</StateMessage>;
   }
 
   const published = rows.filter((row) => row.state === "published").length;
@@ -139,9 +139,9 @@ export default function BenchmarkSummary() {
   return (
     <div className="mx-auto w-full max-w-7xl px-6 py-9 sm:py-12">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <BenchmarkNav active="summary" />
+        <AccuracyNav active="summary" />
         <Link
-          href="/benchmark/run"
+          href="/accuracy/run"
           className="rounded-md bg-zinc-900 px-3.5 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
         >
           Run an evaluation →
@@ -150,7 +150,7 @@ export default function BenchmarkSummary() {
 
       <header className="mt-6 overflow-hidden rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-cyan-50 px-6 py-8 dark:border-indigo-950 dark:from-indigo-950/40 dark:via-zinc-950 dark:to-cyan-950/30 sm:px-8">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-700 dark:text-indigo-300">
-          Benchmark summary
+          Accuracy results
         </p>
         <h1 className="mt-3 max-w-3xl text-3xl font-semibold tracking-tight sm:text-4xl">
           Quality coverage for every meaningful serving configuration.

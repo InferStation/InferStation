@@ -72,10 +72,10 @@ pnpm dev
 4. Run `pnpm manifest:evaluations`. Invalid records fail validation; examples
    and drafts are validated but never published.
 
-The website exposes reviewed accuracy results at `/benchmark` and an internal
-Eval Hub launcher at `/benchmark/run`, without changing the existing
-Performance manifest or routes. `/accuracy` is retained as a compatibility
-alias for the summary.
+The website exposes reviewed accuracy results at `/accuracy` and an internal
+Eval Hub launcher at `/accuracy/run`, without changing the existing
+Performance manifest or routes. The former `/benchmark` routes remain available
+for compatibility.
 
 ## Independence
 
