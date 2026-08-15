@@ -170,6 +170,13 @@ rerunning the model. The result view presents:
 - API errors, parse errors, and successful-request p50/p95 latency; and
 - expandable raw aggregate fields for diagnosis.
 
+On desktop, history and result use an asymmetric master-detail layout: the
+scrollable history rail receives about 30% of the width and the result receives
+about 70%. On smaller screens they stack vertically, with a bounded history
+height so the result remains nearby. Selecting a summary updates the result
+identity immediately and shows a loading state while persisted metrics are
+fetched.
+
 Scores must be interpreted together with their denominator and error counts.
 Latency is operational context, not quality. Smoke results always carry a
 warning that they validate the pipeline and cannot support model comparisons.

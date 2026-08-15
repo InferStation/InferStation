@@ -63,6 +63,7 @@ export default function EvalHubRunConsole() {
   const [recentRuns, setRecentRuns] = useState<EvalHubRun[]>([]);
   const [historyRun, setHistoryRun] = useState<EvalHubRun | null>(null);
   const [historyMetrics, setHistoryMetrics] = useState<EvalHubRunMetrics | null>(null);
+  const [historyLoadingId, setHistoryLoadingId] = useState("");
   const [busy, setBusy] = useState<BusyAction>("connect");
   const [error, setError] = useState("");
   const idempotencyKey = useRef("");
@@ -121,6 +122,7 @@ export default function EvalHubRunConsole() {
     setRecentRuns([]);
     setHistoryRun(null);
     setHistoryMetrics(null);
+    setHistoryLoadingId("");
     clearRegisteredEndpoint();
   }
 
@@ -276,12 +278,20 @@ export default function EvalHubRunConsole() {
       }
     });
 
-  const openHistoryRun = (summary: EvalHubRun) =>
-    perform("history", async () => {
-      const stored = await readStoredRun(client(), summary);
-      setHistoryRun(stored.storedRun);
-      setHistoryMetrics(stored.storedMetrics);
-    });
+  const openHistoryRun = async (summary: EvalHubRun) => {
+    setHistoryRun(summary);
+    setHistoryMetrics(null);
+    setHistoryLoadingId(summary.id);
+    try {
+      await perform("history", async () => {
+        const stored = await readStoredRun(client(), summary);
+        setHistoryRun(stored.storedRun);
+        setHistoryMetrics(stored.storedMetrics);
+      });
+    } finally {
+      setHistoryLoadingId("");
+    }
+  };
 
   const cancelRun = () =>
     perform("cancel", async () => {
@@ -506,42 +516,58 @@ export default function EvalHubRunConsole() {
         {!connectedBase ? <p className="mt-5 text-sm text-zinc-500">Connect to Eval Hub to load Live Run history.</p> : null}
         {connectedBase && recentRuns.length === 0 ? <p className="mt-5 rounded-xl border border-dashed border-zinc-300 px-4 py-5 text-sm text-zinc-500 dark:border-zinc-700">No run has been submitted from this page yet.</p> : null}
         {recentRuns.length ? (
-          <div className="mt-5 overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
-            <table className="w-full min-w-[760px] text-left text-sm">
-              <thead className="bg-zinc-50 text-[11px] uppercase tracking-wide text-zinc-500 dark:bg-zinc-900/60">
-                <tr><th className="px-4 py-3 font-medium">Run</th><th className="px-4 py-3 font-medium">Model</th><th className="px-4 py-3 font-medium">Datasets</th><th className="px-4 py-3 font-medium">Progress</th><th className="px-4 py-3 font-medium">Created</th><th className="px-4 py-3 font-medium"><span className="sr-only">Open</span></th></tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+          <div className="mt-5 grid items-start gap-5 lg:grid-cols-[minmax(280px,0.72fr)_minmax(0,1.65fr)] lg:gap-6">
+            <div className="min-w-0">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h3 className="text-sm font-semibold">Run history</h3>
+                <span className="text-xs text-zinc-500">{recentRuns.length} / {liveRunHistoryLimit}</span>
+              </div>
+              <ul className="max-h-[360px] space-y-2 overflow-y-auto pr-1 lg:max-h-[760px]" aria-label="Recent Live Runs">
                 {recentRuns.map((item) => {
                   const total = item.datasets.reduce((sum, dataset) => sum + dataset.total_samples, 0);
                   const completed = item.datasets.reduce((sum, dataset) => sum + dataset.completed_samples, 0);
+                  const selected = historyRun?.id === item.id;
                   return (
-                    <tr key={item.id} className={historyRun?.id === item.id ? "bg-sky-50/60 dark:bg-sky-950/20" : ""}>
-                      <td className="px-4 py-3"><div className="font-medium">{item.name}</div><RunStatus status={item.status} /></td>
-                      <td className="px-4 py-3"><span className="font-mono text-xs">{item.run_spec_json.model_name}</span></td>
-                      <td className="px-4 py-3"><div>{item.run_spec_json.datasets.length}</div><div className="mt-1 max-w-[240px] truncate text-xs text-zinc-500">{datasetNames(item).join(", ")}</div></td>
-                      <td className="px-4 py-3 font-mono text-xs tabular-nums">{completed.toLocaleString()} / {total.toLocaleString()}</td>
-                      <td className="px-4 py-3 text-xs text-zinc-500">{formatRunDate(item.created_at)}</td>
-                      <td className="px-4 py-3 text-right"><button type="button" onClick={() => openHistoryRun(item)} disabled={busy !== null} className={secondaryButtonClass}>{busy === "history" && historyRun?.id === item.id ? "Loading…" : "View results"}</button></td>
-                    </tr>
+                    <li key={item.id}>
+                      <button
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => void openHistoryRun(item)}
+                        disabled={busy !== null}
+                        className={`w-full rounded-xl border px-3.5 py-3 text-left transition-colors disabled:cursor-wait disabled:opacity-70 ${selected ? "border-sky-400 bg-sky-50/70 ring-1 ring-sky-200 dark:border-sky-700 dark:bg-sky-950/20 dark:ring-sky-900" : "border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:border-zinc-700 dark:hover:bg-zinc-900/50"}`}
+                      >
+                        <span className="flex items-start justify-between gap-3">
+                          <span className="min-w-0 truncate text-sm font-medium">{item.name}</span>
+                          <RunStatus status={item.status} />
+                        </span>
+                        <span className="mt-2 block truncate font-mono text-[11px] text-zinc-600 dark:text-zinc-400">{item.run_spec_json.model_name}</span>
+                        <span className="mt-1 block truncate text-xs text-zinc-500">{datasetNames(item).join(", ")}</span>
+                        <span className="mt-2 flex items-center justify-between gap-3 text-[11px] text-zinc-500">
+                          <span className="font-mono tabular-nums">{completed.toLocaleString()} / {total.toLocaleString()}</span>
+                          <span>{historyLoadingId === item.id ? "Loading…" : formatRunDate(item.created_at)}</span>
+                        </span>
+                      </button>
+                    </li>
                   );
                 })}
-              </tbody>
-            </table>
+              </ul>
+            </div>
+            <div className="min-w-0" aria-live="polite">
+              {historyRun ? <HistoryResult run={historyRun} metrics={historyMetrics} datasets={datasets} loading={historyLoadingId === historyRun.id} /> : <p className="rounded-xl border border-dashed border-zinc-300 px-5 py-12 text-center text-sm text-zinc-500 dark:border-zinc-700">Select a run to inspect its persisted result.</p>}
+            </div>
           </div>
         ) : null}
-        {historyRun ? <HistoryResult run={historyRun} metrics={historyMetrics} datasets={datasets} /> : null}
       </section>
     </div>
   );
 }
 
-function HistoryResult({ run, metrics, datasets }: { run: EvalHubRun; metrics: EvalHubRunMetrics | null; datasets: EvalHubDataset[] }) {
+function HistoryResult({ run, metrics, datasets, loading }: { run: EvalHubRun; metrics: EvalHubRunMetrics | null; datasets: EvalHubDataset[]; loading: boolean }) {
   const completed = run.datasets.reduce((sum, dataset) => sum + dataset.completed_samples, 0);
   const total = run.datasets.reduce((sum, dataset) => sum + dataset.total_samples, 0);
   const smokeOnly = run.run_spec_json.datasets.every((dataset) => dataset.manifest.metadata.name === "inferstation-accuracy-pipeline-smoke-10");
   return (
-    <div className="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-800">
+    <div className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div><p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">Selected stored result</p><h2 className="mt-1 text-lg font-semibold">{run.name}</h2><p className="mt-1 font-mono text-xs text-zinc-500">{run.id}</p></div>
         <RunStatus status={run.status} />
@@ -554,9 +580,10 @@ function HistoryResult({ run, metrics, datasets }: { run: EvalHubRun; metrics: E
       </dl>
       <div className="mt-4 rounded-xl bg-zinc-50 px-4 py-3 text-xs leading-5 text-zinc-600 dark:bg-zinc-900/60 dark:text-zinc-400"><strong className="text-zinc-900 dark:text-zinc-100">Dataset protocol:</strong> {run.run_spec_json.datasets.map((dataset) => `${dataset.manifest.metadata.display_name} · ${dataset.manifest.metadata.version} · ${dataset.manifest.protocol.id}`).join("; ")}</div>
       {run.error_message ? <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">{run.error_message}</p> : null}
-      {metrics ? <MetricsPanel metrics={metrics} datasets={datasets} run={run} /> : null}
-      {run.status === "SUCCEEDED" && !metrics ? <p className="mt-5 text-sm text-zinc-500">This run succeeded, but no aggregate metrics were returned.</p> : null}
-      {run.status !== "SUCCEEDED" ? <p className="mt-5 text-sm text-zinc-500">Aggregate scores are available only after a run succeeds. Progress and any terminal error remain visible above.</p> : null}
+      {loading ? <p className="mt-5 rounded-xl bg-zinc-50 px-4 py-5 text-sm text-zinc-500 dark:bg-zinc-900/60">Loading persisted run details and aggregate metrics…</p> : null}
+      {!loading && metrics ? <MetricsPanel metrics={metrics} datasets={datasets} run={run} /> : null}
+      {!loading && run.status === "SUCCEEDED" && !metrics ? <p className="mt-5 text-sm text-zinc-500">This run succeeded, but no aggregate metrics were returned.</p> : null}
+      {!loading && run.status !== "SUCCEEDED" ? <p className="mt-5 text-sm text-zinc-500">Aggregate scores are available only after a run succeeds. Progress and any terminal error remain visible above.</p> : null}
       <div className="mt-6 rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
         <h3 className="text-sm font-semibold">How to read this result</h3>
         <ul className="mt-3 space-y-2 text-xs leading-5 text-zinc-600 dark:text-zinc-400">
