@@ -52,6 +52,8 @@ def test_normalize_base_url_accepts_full_openai_endpoint_urls(endpoint_url: str)
 def test_probe_timeout_is_configurable_and_bounded() -> None:
     assert ProbeRequest().timeout_seconds == 60
     assert ProbeRequest(timeout_seconds=180).timeout_seconds == 180
+    assert ProbeRequest(model_name="current-name").model_name == "current-name"
+    assert ProbeRequest(model_id="legacy-name").model_name == "legacy-name"
     with pytest.raises(ValueError):
         ProbeRequest(timeout_seconds=301)
 

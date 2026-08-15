@@ -126,7 +126,7 @@ The Run page uses the documented Eval Hub HTTP API:
 ```text
 connect to Eval Hub
   -> register target URL, API model name, and target credential
-  -> probe OpenAI compatibility
+  -> probe that exact Chat Completions request
   -> select immutable dataset versions
   -> validate request and effective concurrency
   -> acquire the single global run slot
@@ -192,6 +192,15 @@ an OpenAI-compatible API base URL or a full `/chat/completions`, `/completions`,
 or `/models` endpoint and stores the normalized `/v1` base. Saving an existing
 endpoint name creates a new immutable revision instead of a duplicate endpoint.
 Run validation is unavailable until the endpoint probe is healthy.
+
+The URL, credential, and API model name are one explicit target tuple. The
+model name becomes the required `model` field in a minimal
+`POST /chat/completions` request. Save & probe tests only that exact call: Eval
+Hub does not call the provider's `/models` endpoint, infer other accessible
+models, or let the page switch to a different advertised model. The resulting
+capability record includes the probed model name. Changing any target field
+invalidates that proof and requires Save & probe again. Existing model registry
+rows and historical runs are retained and are not rewritten by this change.
 
 Changing an endpoint, model, dataset, or execution parameter invalidates the
 previous preflight and idempotency key.

@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 class EndpointCreate(BaseModel):
@@ -61,7 +61,12 @@ class EndpointModelRead(BaseModel):
 
 
 class ProbeRequest(BaseModel):
-    model_id: str | None = None
+    model_name: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=512,
+        validation_alias=AliasChoices("model_name", "model_id"),
+    )
     timeout_seconds: float = Field(default=60, ge=1, le=300)
 
 

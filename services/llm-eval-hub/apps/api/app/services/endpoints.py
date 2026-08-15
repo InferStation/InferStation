@@ -47,40 +47,30 @@ async def probe_openai_endpoint(
     transport: httpx.AsyncBaseTransport | None = None,
 ) -> dict[str, Any]:
     headers = {**auth_headers(auth_type, api_key), **sanitized_extra_headers(extra_headers)}
-    models: list[str] = []
-    models_error: str | None = None
     started = time.perf_counter()
+    model = requested_model.strip() if requested_model else ""
+    if not model:
+        return {
+            "status": "failed",
+            "models": [],
+            "capabilities": {
+                "models_list": False,
+                "chat_completions": False,
+            },
+            "latency_ms": (time.perf_counter() - started) * 1000,
+            "error_type": "request.model_required",
+            "error_message": "A target model name is required for the endpoint probe",
+        }
+
     async with httpx.AsyncClient(
         headers=headers,
         timeout=timeout_seconds,
         follow_redirects=False,
         transport=transport,
     ) as client:
-        try:
-            response = await client.get(f"{base_url}/models")
-            response.raise_for_status()
-            payload = response.json()
-            models = [str(item["id"]) for item in payload.get("data", []) if "id" in item]
-        except (httpx.HTTPError, ValueError, KeyError) as exc:
-            models_error = type(exc).__name__
-
-        model = requested_model or (models[0] if models else None)
-        if not model:
-            return {
-                "status": "failed",
-                "models": models,
-                "capabilities": {"models_list": False, "chat_completions": False},
-                "latency_ms": (time.perf_counter() - started) * 1000,
-                "error_type": "response.model_unavailable",
-                "error_message": "No model ID discovered; add a model manually or pass model_id",
-            }
-
         payload = {
             "model": model,
             "messages": [{"role": "user", "content": "Only answer OK"}],
-            "temperature": 0,
-            "max_tokens": 4,
-            "stream": False,
         }
         try:
             response = await client.post(f"{base_url}/chat/completions", json=payload)
@@ -91,10 +81,11 @@ async def probe_openai_endpoint(
                 raise ValueError("Response content is not a string")
             return {
                 "status": "healthy",
-                "models": models,
+                "models": [model],
                 "capabilities": {
-                    "models_list": models_error is None,
+                    "models_list": False,
                     "chat_completions": True,
+                    "probed_model": model,
                     "usage": isinstance(body.get("usage"), dict),
                     "stream": "unknown",
                     "seed": "unknown",
@@ -118,10 +109,11 @@ async def probe_openai_endpoint(
             error_message = "Endpoint returned an incompatible chat response"
         return {
             "status": "failed",
-            "models": models,
+            "models": [model],
             "capabilities": {
-                "models_list": models_error is None,
+                "models_list": False,
                 "chat_completions": False,
+                "probed_model": model,
             },
             "latency_ms": (time.perf_counter() - started) * 1000,
             "error_type": error_type,

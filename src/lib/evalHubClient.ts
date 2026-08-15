@@ -250,10 +250,10 @@ export class EvalHubClient {
     });
   }
 
-  probeEndpoint(endpointId: string, modelId: string, timeoutSeconds = 60): Promise<EvalHubProbe> {
+  probeEndpoint(endpointId: string, modelName: string, timeoutSeconds = 60): Promise<EvalHubProbe> {
     return this.request(`/endpoints/${encodeURIComponent(endpointId)}/probe`, {
       method: "POST",
-      body: JSON.stringify({ model_id: modelId, timeout_seconds: timeoutSeconds }),
+      body: JSON.stringify({ model_name: modelName, timeout_seconds: timeoutSeconds }),
     });
   }
 

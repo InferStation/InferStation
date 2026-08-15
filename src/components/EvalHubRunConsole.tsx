@@ -10,7 +10,6 @@ import {
   type EvalHubAuthType,
   type EvalHubDataset,
   type EvalHubEndpoint,
-  type EvalHubModel,
   type EvalHubProbe,
   type EvalHubRun,
   type EvalHubRunCreate,
@@ -45,7 +44,6 @@ export default function EvalHubRunConsole() {
   const [authType, setAuthType] = useState<EvalHubAuthType>("bearer");
   const [endpoint, setEndpoint] = useState<EvalHubEndpoint | null>(null);
   const [probe, setProbe] = useState<EvalHubProbe | null>(null);
-  const [models, setModels] = useState<EvalHubModel[]>([]);
   const [modelId, setModelId] = useState("");
   const [selectedVersions, setSelectedVersions] = useState<string[]>([]);
   const [runName, setRunName] = useState(`inferstation-${new Date().toISOString().slice(0, 10)}`);
@@ -108,7 +106,6 @@ export default function EvalHubRunConsole() {
   function clearRegisteredEndpoint() {
     setEndpoint(null);
     setProbe(null);
-    setModels([]);
     setModelId("");
     invalidateValidation();
   }
@@ -192,16 +189,16 @@ export default function EvalHubRunConsole() {
       clearRegisteredEndpoint();
     });
 
-  async function probeAndLoadModels(api: EvalHubClient, configured: EvalHubEndpoint) {
+  async function probeTargetModel(api: EvalHubClient, configured: EvalHubEndpoint) {
     const checked = await api.probeEndpoint(configured.id, targetModel, timeoutSeconds);
     setProbe(checked);
-    const nextModels = await api.listModels(configured.id);
-    setModels(nextModels);
-    setModelId(
-      nextModels.find((model) => model.model_name === targetModel)?.id
-        ?? nextModels[0]?.id
-        ?? "",
-    );
+    const registeredModel = (await api.listModels(configured.id))
+      .find((model) => model.model_name === targetModel);
+    if (!registeredModel) {
+      setModelId("");
+      throw new Error(`Eval Hub did not retain the target model ${targetModel}.`);
+    }
+    setModelId(registeredModel.id);
     invalidateValidation();
   }
 
@@ -231,13 +228,13 @@ export default function EvalHubRunConsole() {
       setEndpoint(configured);
       setTargetUrl(configured.base_url);
       setTargetKey("");
-      await probeAndLoadModels(api, configured);
+      await probeTargetModel(api, configured);
     });
 
   const reprobeEndpoint = () =>
     perform("probe", async () => {
       if (!endpoint) return;
-      await probeAndLoadModels(client(), endpoint);
+      await probeTargetModel(client(), endpoint);
     });
 
   function selectSmokeDataset() {
@@ -407,7 +404,7 @@ export default function EvalHubRunConsole() {
           {endpoint ? <span className="text-xs text-zinc-500">Endpoint {endpoint.id.slice(0, 8)} · {probe?.status ?? endpoint.status}{probe?.latency_ms != null ? ` · ${Math.round(probe.latency_ms)} ms` : ""}</span> : null}
         </div>
         {probe?.status === "failed" ? <p className="mt-3 text-xs text-red-600 dark:text-red-400">Probe failed: {probe.error_message ?? probe.error_type ?? "the endpoint did not return a compatible chat completion"}.</p> : null}
-        {models.length ? <div className="mt-4 max-w-xl"><Field label="Confirmed endpoint model"><select value={modelId} onChange={(event) => { setModelId(event.target.value); invalidateValidation(); }} className={inputClass}>{models.map((model) => <option key={model.id} value={model.id}>{model.model_name}</option>)}</select></Field></div> : null}
+        {probe?.status === "healthy" && modelId ? <div role="status" className="mt-4 max-w-xl rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs leading-5 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300"><strong className="font-semibold">Verified target model</strong><span className="mx-2 text-emerald-400">·</span><code>{targetModel}</code><span className="mt-1 block text-emerald-700/80 dark:text-emerald-300/80">Eval Hub sent one minimal Chat Completions request for this exact model. It did not discover or select other models from the provider.</span></div> : null}
       </section>
 
       <section className="mt-5 rounded-2xl border border-zinc-200 p-5 dark:border-zinc-800 sm:p-6">

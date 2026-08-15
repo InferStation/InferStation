@@ -264,7 +264,7 @@ async def probe_endpoint(
         base_url = await validate_endpoint_url(endpoint.base_url, settings)
     except EndpointPolicyError as exc:
         raise _endpoint_policy_error(exc) from exc
-    requested_model = payload.model_id or db.scalar(
+    requested_model = payload.model_name or db.scalar(
         select(Model.model_name)
         .where(Model.endpoint_id == endpoint.id, Model.enabled.is_(True))
         .order_by(Model.model_name)
@@ -288,26 +288,17 @@ async def probe_endpoint(
     )
     db.add(capability)
     endpoint.status = result["status"]
-    for model_name in result["models"]:
-        existing = db.scalar(
-            select(Model).where(Model.endpoint_id == endpoint.id, Model.model_name == model_name)
-        )
-        if existing is None:
-            db.add(
-                Model(
-                    endpoint_id=endpoint.id,
-                    model_name=model_name,
-                    display_name=model_name,
-                    source="discovered",
-                )
-            )
     record_audit(
         db,
         actor=actor.username,
         action="endpoint.probe",
         resource_type="endpoint",
         resource_id=endpoint.id,
-        metadata={"status": result["status"], "error_type": result.get("error_type")},
+        metadata={
+            "status": result["status"],
+            "error_type": result.get("error_type"),
+            "model_name": requested_model,
+        },
     )
     db.commit()
     return ProbeResponse(**result)

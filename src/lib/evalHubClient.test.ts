@@ -164,7 +164,7 @@ describe("EvalHubClient", () => {
 
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(JSON.parse(String(init.body))).toEqual({
-      model_id: "slow-model",
+      model_name: "slow-model",
       timeout_seconds: 180,
     });
   });
