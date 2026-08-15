@@ -55,8 +55,8 @@ export default function EvalHubRunConsole() {
   const [seed, setSeed] = useState(42);
   const [concurrency, setConcurrency] = useState(1);
   const [qps, setQps] = useState(1);
-  const [timeoutSeconds, setTimeoutSeconds] = useState(180);
-  const [maxRetries, setMaxRetries] = useState(1);
+  const [timeoutSeconds, setTimeoutSeconds] = useState(300);
+  const [maxRetries, setMaxRetries] = useState(2);
   const [validation, setValidation] = useState<EvalHubValidation | null>(null);
   const [run, setRun] = useState<EvalHubRun | null>(null);
   const [metrics, setMetrics] = useState<EvalHubRunMetrics | null>(null);
@@ -435,18 +435,33 @@ export default function EvalHubRunConsole() {
       </section>
 
       <section className="mt-5 rounded-2xl border border-zinc-200 p-5 dark:border-zinc-800 sm:p-6">
-        <StepHeading number="4" title="Preflight and run" note="Conservative defaults protect the shared RTX4090 host; Eval Hub may lower effective concurrency further." />
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StepHeading number="4" title="Preflight and run" note="These fields map directly to Eval Hub's RunCreate contract. Accuracy defaults favor deterministic answers and complete requests while keeping the shared host lightly loaded." />
+        <div className="mt-5 max-w-xl">
           <Field label="Run name"><input value={runName} onChange={(event) => { setRunName(event.target.value); invalidateValidation(); }} className={inputClass} /></Field>
-          <NumberField label="Temperature" value={temperature} setValue={setTemperature} min={0} max={2} step={0.1} onChanged={invalidateValidation} />
-          <NumberField label="Top P" value={topP} setValue={setTopP} min={0.01} max={1} step={0.01} onChanged={invalidateValidation} />
-          <NumberField label="Max tokens" value={maxTokens} setValue={setMaxTokens} min={1} max={32768} onChanged={invalidateValidation} />
-          <NumberField label="Seed" value={seed} setValue={setSeed} min={0} onChanged={invalidateValidation} />
-          <NumberField label="Concurrency" value={concurrency} setValue={setConcurrency} min={1} max={4} onChanged={invalidateValidation} />
-          <NumberField label="QPS" value={qps} setValue={setQps} min={0.1} max={10} step={0.1} onChanged={invalidateValidation} />
-          <NumberField label="Timeout seconds" value={timeoutSeconds} setValue={setTimeoutSeconds} min={1} max={3600} onChanged={invalidateValidation} />
-          <NumberField label="Max retries" value={maxRetries} setValue={setMaxRetries} min={0} max={10} onChanged={invalidateValidation} />
         </div>
+        <div className="mt-5 grid gap-4 lg:grid-cols-2">
+          <fieldset className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
+            <legend className="px-1 text-sm font-semibold">Answer generation</legend>
+            <p className="mt-1 text-xs leading-5 text-zinc-500">A zero temperature, unrestricted Top P, and fixed seed make repeated accuracy runs as deterministic as the model API allows.</p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <NumberField label="Temperature" value={temperature} setValue={setTemperature} min={0} max={2} step={0.1} onChanged={invalidateValidation} />
+              <NumberField label="Top P" value={topP} setValue={setTopP} min={0.01} max={1} step={0.01} onChanged={invalidateValidation} />
+              <NumberField label="Max output tokens" value={maxTokens} setValue={setMaxTokens} min={1} max={32768} onChanged={invalidateValidation} />
+              <NumberField label="Seed" value={seed} setValue={setSeed} min={0} onChanged={invalidateValidation} />
+            </div>
+          </fieldset>
+          <fieldset className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
+            <legend className="px-1 text-sm font-semibold">Execution reliability</legend>
+            <p className="mt-1 text-xs leading-5 text-zinc-500">One request per second protects the host. A 300-second timeout and two transient retries reduce missing samples without changing scoring.</p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <NumberField label="Concurrency" value={concurrency} setValue={setConcurrency} min={1} max={4} onChanged={invalidateValidation} />
+              <NumberField label="QPS" value={qps} setValue={setQps} min={0.1} max={10} step={0.1} onChanged={invalidateValidation} />
+              <NumberField label="Timeout seconds" value={timeoutSeconds} setValue={setTimeoutSeconds} min={1} max={3600} onChanged={invalidateValidation} />
+              <NumberField label="Max retries" value={maxRetries} setValue={setMaxRetries} min={0} max={10} onChanged={invalidateValidation} />
+            </div>
+          </fieldset>
+        </div>
+        <p className="mt-3 text-xs leading-5 text-zinc-500">Eval Hub currently sends all answer-generation fields to the target API as configured. Provider-specific fallback for unsupported fields belongs in Eval Hub and is intentionally outside this first working path.</p>
         <div className="mt-5 flex flex-wrap items-center gap-3">
           <button type="button" onClick={validate} disabled={!canValidate || busy !== null} className={secondaryButtonClass}>{busy === "validate" ? "Validating…" : "Validate run"}</button>
           <ActionButton onClick={startRun} disabled={!validation?.valid || busy !== null || runIsActive}>{busy === "run" ? "Submitting…" : runIsActive ? "Queue occupied" : "Start evaluation"}</ActionButton>

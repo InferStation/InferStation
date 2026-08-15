@@ -189,6 +189,18 @@ Run validation is unavailable until the endpoint probe is healthy.
 Changing an endpoint, model, dataset, or execution parameter invalidates the
 previous preflight and idempotency key.
 
+The Run page maps its preflight fields directly to Eval Hub's `RunCreate`
+contract. Accuracy-oriented defaults use temperature 0, Top P 1, max output 32,
+and seed 42 for deterministic generation. Execution defaults use concurrency 1,
+QPS 1, a 300-second request timeout, and two transient retries. Execution
+settings improve completion reliability and protect the shared host; they do
+not change the scoring protocol. Eval Hub may lower effective concurrency to
+the endpoint or deployment limit.
+
+These are run-level overrides sent to every selected dataset. Capability-aware
+omission of unsupported provider fields, and per-dataset inference overrides,
+remain Eval Hub backend work rather than frontend guessing.
+
 Arbitrary public model services are supported over HTTPS when
 `ALLOW_PUBLIC_HTTPS_ENDPOINTS=true`. Private endpoints must be inside an
 explicit allowed CIDR. Loopback, link-local, metadata, multicast, embedded
