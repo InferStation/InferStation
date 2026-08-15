@@ -20,7 +20,7 @@ import {
 const defaultApiBase =
   process.env.NEXT_PUBLIC_EVAL_HUB_API_BASE || "http://10.170.38.102:18080/api/v1";
 
-type BusyAction = "connect" | "endpoint" | "validate" | "run" | "cancel" | null;
+type BusyAction = "connect" | "endpoint" | "probe" | "validate" | "run" | "cancel" | null;
 
 export default function EvalHubRunConsole() {
   const [apiBase, setApiBase] = useState(defaultApiBase);
@@ -42,16 +42,36 @@ export default function EvalHubRunConsole() {
   const [topP, setTopP] = useState(1);
   const [maxTokens, setMaxTokens] = useState(32);
   const [seed, setSeed] = useState(42);
-  const [concurrency, setConcurrency] = useState(2);
-  const [qps, setQps] = useState(2);
-  const [timeoutSeconds, setTimeoutSeconds] = useState(60);
-  const [maxRetries, setMaxRetries] = useState(2);
+  const [concurrency, setConcurrency] = useState(1);
+  const [qps, setQps] = useState(1);
+  const [timeoutSeconds, setTimeoutSeconds] = useState(180);
+  const [maxRetries, setMaxRetries] = useState(1);
   const [validation, setValidation] = useState<EvalHubValidation | null>(null);
   const [run, setRun] = useState<EvalHubRun | null>(null);
   const [metrics, setMetrics] = useState<EvalHubRunMetrics | null>(null);
-  const [busy, setBusy] = useState<BusyAction>(null);
+  const [busy, setBusy] = useState<BusyAction>("connect");
   const [error, setError] = useState("");
   const idempotencyKey = useRef("");
+
+  useEffect(() => {
+    let disposed = false;
+    const api = new EvalHubClient(defaultApiBase, "");
+    api.listDatasets()
+      .then((nextDatasets) => {
+        if (disposed) return;
+        setDatasets(nextDatasets);
+        setConnectedBase(api.apiBase);
+      })
+      .catch((caught) => {
+        if (!disposed) setError(caught instanceof Error ? caught.message : String(caught));
+      })
+      .finally(() => {
+        if (!disposed) setBusy(null);
+      });
+    return () => {
+      disposed = true;
+    };
+  }, []);
 
   function invalidateValidation() {
     setValidation(null);
@@ -78,6 +98,10 @@ export default function EvalHubRunConsole() {
     for (const dataset of datasets) for (const version of dataset.versions) map.set(version.id, version);
     return map;
   }, [datasets]);
+  const datasetVersionCount = datasets.reduce((sum, item) => sum + item.versions.length, 0);
+  const smokeVersionIds = datasets
+    .filter((dataset) => dataset.name === "inferstation-accuracy-pipeline-smoke-10")
+    .flatMap((dataset) => dataset.versions.map((version) => version.id));
 
   const client = () => new EvalHubClient(apiBase, adminKey);
   const payload = (): EvalHubRunCreate => ({
@@ -120,28 +144,63 @@ export default function EvalHubRunConsole() {
       clearRegisteredEndpoint();
     });
 
+  async function probeAndLoadModels(api: EvalHubClient, configured: EvalHubEndpoint) {
+    const checked = await api.probeEndpoint(configured.id, targetModel, timeoutSeconds);
+    setProbe(checked);
+    const nextModels = await api.listModels(configured.id);
+    setModels(nextModels);
+    setModelId(
+      nextModels.find((model) => model.model_name === targetModel)?.id
+        ?? nextModels[0]?.id
+        ?? "",
+    );
+    invalidateValidation();
+  }
+
   const registerEndpoint = () =>
     perform("endpoint", async () => {
       const api = client();
-      const created = await api.createEndpoint({
+      const endpointConfig = {
         name: endpointName,
         base_url: targetUrl,
-        model_name: targetModel,
         auth_type: authType,
         api_key: authType === "none" ? undefined : targetKey,
         extra_headers: {},
         concurrency_limit: Math.max(1, concurrency),
         qps_limit: Math.max(0.1, qps),
-      });
-      setEndpoint(created);
+      };
+      const existing = (await api.listEndpoints()).find((item) => item.name === endpointName);
+      let configured: EvalHubEndpoint;
+      if (existing) {
+        configured = await api.updateEndpoint(existing.id, endpointConfig);
+        const existingModels = await api.listModels(existing.id);
+        if (!existingModels.some((model) => model.model_name === targetModel)) {
+          await api.addModel(existing.id, targetModel);
+        }
+      } else {
+        configured = await api.createEndpoint({ ...endpointConfig, model_name: targetModel });
+      }
+      setEndpoint(configured);
+      setTargetUrl(configured.base_url);
       setTargetKey("");
-      const checked = await api.probeEndpoint(created.id, targetModel);
-      setProbe(checked);
-      const nextModels = await api.listModels(created.id);
-      setModels(nextModels);
-      setModelId(nextModels.find((model) => model.model_name === targetModel)?.id ?? nextModels[0]?.id ?? "");
-      invalidateValidation();
+      await probeAndLoadModels(api, configured);
     });
+
+  const reprobeEndpoint = () =>
+    perform("probe", async () => {
+      if (!endpoint) return;
+      await probeAndLoadModels(client(), endpoint);
+    });
+
+  function selectSmokeDataset() {
+    setSelectedVersions(smokeVersionIds);
+    invalidateValidation();
+  }
+
+  function clearDatasets() {
+    setSelectedVersions([]);
+    invalidateValidation();
+  }
 
   const validate = () =>
     perform("validate", async () => {
@@ -193,7 +252,13 @@ export default function EvalHubRunConsole() {
   const totalSamples = run?.datasets.reduce((sum, item) => sum + item.total_samples, 0) ?? 0;
   const completedSamples = run?.datasets.reduce((sum, item) => sum + item.completed_samples, 0) ?? 0;
   const canRegister = Boolean(connectedBase && endpointName && targetUrl && targetModel && (authType === "none" || targetKey));
-  const canValidate = Boolean(endpoint && modelId && selectedVersions.length && runName);
+  const canValidate = Boolean(
+    endpoint
+      && probe?.status === "healthy"
+      && modelId
+      && selectedVersions.length
+      && runName,
+  );
 
   return (
     <div className="mx-auto w-full max-w-6xl px-6 py-9 sm:py-12">
@@ -209,41 +274,67 @@ export default function EvalHubRunConsole() {
       {error ? <div role="alert" className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">{error}</div> : null}
 
       <section className="mt-7 rounded-2xl border border-zinc-200 p-5 dark:border-zinc-800 sm:p-6">
-        <StepHeading number="1" title="Connect to LLM Eval Hub" note="The internal RTX4090 deployment currently has control-plane authentication disabled." />
+        <StepHeading number="1" title="Connect to LLM Eval Hub" note="The production service connects automatically. Change this URL only when testing another Eval Hub deployment." />
         <div className="mt-5 grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
           <Field label="Eval Hub API URL"><input value={apiBase} onChange={(event) => { setApiBase(event.target.value); disconnectEvalHub(); }} className={inputClass} placeholder="http://host:18080/api/v1" /></Field>
-          <ActionButton onClick={connect} disabled={!apiBase || busy !== null}>{busy === "connect" ? "Connecting…" : "Connect"}</ActionButton>
+          <ActionButton onClick={connect} disabled={!apiBase || busy !== null}>{busy === "connect" ? "Loading datasets…" : connectedBase ? "Reload datasets" : "Connect"}</ActionButton>
         </div>
-        {connectedBase ? <p className="mt-3 text-xs text-emerald-700 dark:text-emerald-400">Connected to {connectedBase} · {datasets.reduce((sum, item) => sum + item.versions.length, 0)} dataset versions</p> : null}
+        {connectedBase ? <p className="mt-3 text-xs text-emerald-700 dark:text-emerald-400">Connected to {connectedBase} · {datasets.length} datasets · {datasetVersionCount} versions</p> : null}
       </section>
 
       <section className="mt-5 rounded-2xl border border-zinc-200 p-5 dark:border-zinc-800 sm:p-6">
-        <StepHeading number="2" title="Register the model service" note="The target API key is sent once to Eval Hub and cleared after registration." />
+        <StepHeading number="2" title="Configure the model service" note="Paste either an OpenAI API base URL or the full /chat/completions URL. Reusing an endpoint name safely updates its configuration." />
         <div className="mt-5 grid gap-4 md:grid-cols-2">
           <Field label="Endpoint name"><input value={endpointName} onChange={(event) => { setEndpointName(event.target.value); clearRegisteredEndpoint(); }} className={inputClass} /></Field>
-          <Field label="OpenAI-compatible URL"><input value={targetUrl} onChange={(event) => { setTargetUrl(event.target.value); clearRegisteredEndpoint(); }} className={inputClass} placeholder="http://model-host:8000/v1" /></Field>
+          <Field label="OpenAI-compatible API URL"><input type="url" value={targetUrl} onChange={(event) => { setTargetUrl(event.target.value); clearRegisteredEndpoint(); }} className={inputClass} placeholder="https://provider.example/v1 or …/chat/completions" spellCheck={false} /></Field>
           <Field label="API model name"><input value={targetModel} onChange={(event) => { setTargetModel(event.target.value); clearRegisteredEndpoint(); }} className={inputClass} placeholder="served-model-name" /></Field>
           <div className="grid grid-cols-[0.8fr_1.2fr] gap-3">
             <Field label="Authentication"><select value={authType} onChange={(event) => { setAuthType(event.target.value as EvalHubAuthType); clearRegisteredEndpoint(); }} className={inputClass}><option value="bearer">Bearer</option><option value="api-key-header">API-key header</option><option value="none">None</option></select></Field>
             <Field label="Target API key"><input type="password" autoComplete="off" disabled={authType === "none"} value={targetKey} onChange={(event) => { setTargetKey(event.target.value); clearRegisteredEndpoint(); }} className={inputClass} placeholder={authType === "none" ? "Not required" : "Cleared after registration"} /></Field>
           </div>
         </div>
+        <p className="mt-3 text-xs leading-5 text-zinc-500">The target credential is encrypted by Eval Hub, never written to InferStation JSON, and cleared from this browser form immediately after the endpoint is saved.</p>
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <ActionButton onClick={registerEndpoint} disabled={!canRegister || busy !== null}>{busy === "endpoint" ? "Registering and probing…" : "Register & probe"}</ActionButton>
+          <ActionButton onClick={registerEndpoint} disabled={!canRegister || busy !== null}>{busy === "endpoint" ? "Saving and probing…" : "Save & probe"}</ActionButton>
+          {endpoint && probe?.status !== "healthy" ? <button type="button" onClick={reprobeEndpoint} disabled={busy !== null} className={secondaryButtonClass}>{busy === "probe" ? "Probing…" : "Retry probe"}</button> : null}
           {endpoint ? <span className="text-xs text-zinc-500">Endpoint {endpoint.id.slice(0, 8)} · {probe?.status ?? endpoint.status}{probe?.latency_ms != null ? ` · ${Math.round(probe.latency_ms)} ms` : ""}</span> : null}
         </div>
+        {probe?.status === "failed" ? <p className="mt-3 text-xs text-red-600 dark:text-red-400">Probe failed: {probe.error_message ?? probe.error_type ?? "the endpoint did not return a compatible chat completion"}.</p> : null}
         {models.length ? <div className="mt-4 max-w-xl"><Field label="Confirmed endpoint model"><select value={modelId} onChange={(event) => { setModelId(event.target.value); invalidateValidation(); }} className={inputClass}>{models.map((model) => <option key={model.id} value={model.id}>{model.model_name}</option>)}</select></Field></div> : null}
       </section>
 
       <section className="mt-5 rounded-2xl border border-zinc-200 p-5 dark:border-zinc-800 sm:p-6">
-        <StepHeading number="3" title="Choose immutable datasets" note="MMLU Lite and Full overlap; select one, not both." />
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <StepHeading number="3" title="Choose immutable datasets" note="Start with the 10-row smoke pack for connectivity. MMLU Lite and Full overlap; select one, not both." />
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={selectSmokeDataset} disabled={!smokeVersionIds.length || busy !== null} className={secondaryButtonClass}>Select 10-row smoke test</button>
+            <button type="button" onClick={clearDatasets} disabled={!selectedVersions.length || busy !== null} className={secondaryButtonClass}>Clear</button>
+          </div>
+        </div>
         <div className="mt-5 grid gap-3 md:grid-cols-2">
+          {!connectedBase && busy === "connect" ? <DatasetMessage>Loading registered datasets from Eval Hub…</DatasetMessage> : null}
+          {!connectedBase && busy !== "connect" ? <DatasetMessage>Connect to Eval Hub to load its registered dataset versions.</DatasetMessage> : null}
           {datasets.flatMap((dataset) => dataset.versions.map((version) => {
             const checked = selectedVersions.includes(version.id);
-            return <label key={version.id} className={`flex cursor-pointer gap-3 rounded-xl border p-4 ${checked ? "border-sky-400 bg-sky-50/60 dark:border-sky-700 dark:bg-sky-950/20" : "border-zinc-200 dark:border-zinc-800"}`}><input type="checkbox" checked={checked} onChange={() => { setSelectedVersions((current) => current.includes(version.id) ? current.filter((id) => id !== version.id) : [...current, version.id]); invalidateValidation(); }} className="mt-1" /><span className="min-w-0"><strong className="block text-sm">{dataset.display_name} · {version.version}</strong><span className="mt-1 block text-xs text-zinc-500">{version.row_count.toLocaleString()} samples · {version.manifest_json.protocol.id}</span><code className="mt-2 block truncate text-[10px] text-zinc-400">{version.checksum}</code></span></label>;
+            const isSmoke = dataset.name === "inferstation-accuracy-pipeline-smoke-10";
+            return (
+              <label key={version.id} className={`flex cursor-pointer gap-3 rounded-xl border p-4 ${checked ? "border-sky-400 bg-sky-50/60 dark:border-sky-700 dark:bg-sky-950/20" : "border-zinc-200 dark:border-zinc-800"}`}>
+                <input type="checkbox" checked={checked} onChange={() => { setSelectedVersions((current) => current.includes(version.id) ? current.filter((id) => id !== version.id) : [...current, version.id]); invalidateValidation(); }} className="mt-1" />
+                <span className="min-w-0">
+                  <span className="flex flex-wrap items-center gap-2">
+                    <strong className="text-sm">{dataset.display_name} · {version.version}</strong>
+                    {isSmoke ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">Test only</span> : null}
+                  </span>
+                  <span className="mt-1 block text-xs leading-5 text-zinc-500">{dataset.description}</span>
+                  <span className="mt-2 block text-xs text-zinc-500">{version.row_count.toLocaleString()} samples · {version.manifest_json.protocol.id}</span>
+                  <code className="mt-2 block truncate text-[10px] text-zinc-400">{version.checksum}</code>
+                </span>
+              </label>
+            );
           }))}
           {connectedBase && datasets.length === 0 ? <p className="text-sm text-zinc-500">No dataset versions are registered in Eval Hub.</p> : null}
         </div>
+        {selectedVersions.length ? <p className="mt-3 text-xs text-zinc-500">{selectedVersions.length} dataset version{selectedVersions.length === 1 ? "" : "s"} selected.</p> : null}
       </section>
 
       <section className="mt-5 rounded-2xl border border-zinc-200 p-5 dark:border-zinc-800 sm:p-6">
@@ -264,6 +355,7 @@ export default function EvalHubRunConsole() {
           <ActionButton onClick={startRun} disabled={!validation?.valid || busy !== null || Boolean(run && !isEvalHubRunTerminal(run.status))}>{busy === "run" ? "Submitting…" : "Start evaluation"}</ActionButton>
           {validation ? <span className="text-xs text-zinc-500">{validation.sample_count.toLocaleString()} requests · effective concurrency {validation.effective_concurrency}</span> : null}
         </div>
+        {endpoint && probe?.status !== "healthy" ? <p className="mt-3 text-xs text-zinc-500">A healthy endpoint probe is required before run validation.</p> : null}
         {validation?.warnings.map((warning) => <div key={warning} className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-300">{warning}</div>)}
       </section>
 
@@ -284,6 +376,14 @@ export default function EvalHubRunConsole() {
 function MetricsPanel({ metrics, datasets }: { metrics: EvalHubRunMetrics; datasets: EvalHubDataset[] }) {
   const versions = new Map(datasets.flatMap((dataset) => dataset.versions.map((version) => [version.id, { dataset, version }] as const)));
   return <div className="mt-6"><h2 className="text-sm font-semibold">Aggregate metrics</h2><div className="mt-3 grid gap-3 md:grid-cols-2">{metrics.datasets.map((result) => { const item = versions.get(result.dataset_version_id); return <article key={result.run_dataset_id} className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800"><div className="text-sm font-semibold">{item?.dataset.display_name ?? result.protocol_id}</div><div className="mt-1 text-[11px] text-zinc-500">{result.protocol_id}</div><dl className="mt-4 space-y-2">{Object.entries(result.metrics).map(([name, value]) => <div key={name} className="flex items-center justify-between gap-3 text-sm"><dt className="text-zinc-500">{name}</dt><dd className="font-mono font-semibold tabular-nums">{value == null ? "—" : value.toFixed(4)}</dd></div>)}</dl></article>; })}</div></div>;
+}
+
+function DatasetMessage({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="rounded-xl border border-dashed border-zinc-300 px-4 py-6 text-sm text-zinc-500 dark:border-zinc-700">
+      {children}
+    </p>
+  );
 }
 
 const inputClass = "h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm outline-none placeholder:text-zinc-400 focus:border-sky-500 disabled:cursor-not-allowed disabled:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-950 dark:disabled:bg-zinc-900";

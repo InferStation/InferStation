@@ -84,6 +84,54 @@ describe("EvalHubClient", () => {
     expect(JSON.parse(String(init.body))).toEqual(payload);
   });
 
+  it("updates an existing endpoint without putting its credential in the URL", async () => {
+    const endpoint = { id: "endpoint-1", name: "provider" };
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(endpoint), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await new EvalHubClient("http://eval.internal", "").updateEndpoint("endpoint-1", {
+      name: "provider",
+      base_url: "https://provider.example/v1",
+      auth_type: "bearer",
+      api_key: "target-runtime-only",
+      extra_headers: {},
+      concurrency_limit: 2,
+      qps_limit: 1,
+    });
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("http://eval.internal/api/v1/endpoints/endpoint-1");
+    expect(url).not.toContain("target-runtime-only");
+    expect(JSON.parse(String(init.body)).api_key).toBe("target-runtime-only");
+  });
+
+  it("passes a bounded model timeout to the endpoint probe", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ status: "healthy", models: [] }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await new EvalHubClient("http://eval.internal", "").probeEndpoint(
+      "endpoint-1",
+      "slow-model",
+      180,
+    );
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(String(init.body))).toEqual({
+      model_id: "slow-model",
+      timeout_seconds: 180,
+    });
+  });
+
   it("turns upstream JSON failures into typed errors", async () => {
     vi.stubGlobal(
       "fetch",

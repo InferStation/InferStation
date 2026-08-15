@@ -49,6 +49,10 @@ def normalize_base_url(url: str, *, allow_insecure_http: bool) -> str:
     except ValueError as exc:
         raise EndpointPolicyError("Endpoint URL contains an invalid port") from exc
     path = parsed.path.rstrip("/")
+    for endpoint_suffix in ("/chat/completions", "/completions", "/models"):
+        if path.endswith(endpoint_suffix):
+            path = path[: -len(endpoint_suffix)].rstrip("/")
+            break
     if not path.endswith("/v1"):
         path = f"{path}/v1" if path else "/v1"
     netloc = f"[{hostname}]" if ":" in hostname else hostname

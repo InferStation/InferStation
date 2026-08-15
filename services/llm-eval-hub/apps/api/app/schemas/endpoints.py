@@ -62,6 +62,7 @@ class EndpointModelRead(BaseModel):
 
 class ProbeRequest(BaseModel):
     model_id: str | None = None
+    timeout_seconds: float = Field(default=60, ge=1, le=300)
 
 
 class ProbeResponse(BaseModel):

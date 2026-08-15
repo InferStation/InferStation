@@ -140,6 +140,12 @@ after endpoint registration. The internal RTX4090 deployment currently disables
 the Eval Hub control-plane key with an explicit setting; the backend retains the
 ability to re-enable it before exposure to an untrusted network.
 
+The production page loads registered datasets automatically. It accepts either
+an OpenAI-compatible API base URL or a full `/chat/completions`, `/completions`,
+or `/models` endpoint and stores the normalized `/v1` base. Saving an existing
+endpoint name creates a new immutable revision instead of a duplicate endpoint.
+Run validation is unavailable until the endpoint probe is healthy.
+
 Changing an endpoint, model, dataset, or execution parameter invalidates the
 previous preflight and idempotency key.
 

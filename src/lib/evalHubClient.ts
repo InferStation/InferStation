@@ -13,6 +13,16 @@ export interface EvalHubEndpoint {
   qps_limit: number;
 }
 
+export interface EvalHubEndpointConfig {
+  name: string;
+  base_url: string;
+  auth_type: EvalHubAuthType;
+  api_key?: string;
+  extra_headers: Record<string, string>;
+  concurrency_limit: number;
+  qps_limit: number;
+}
+
 export interface EvalHubModel {
   id: string;
   endpoint_id: string;
@@ -222,28 +232,39 @@ export class EvalHubClient {
     return this.request("/datasets");
   }
 
-  createEndpoint(payload: {
-    name: string;
-    base_url: string;
+  listEndpoints(): Promise<EvalHubEndpoint[]> {
+    return this.request("/endpoints");
+  }
+
+  createEndpoint(payload: EvalHubEndpointConfig & {
     model_name: string;
-    auth_type: EvalHubAuthType;
-    api_key?: string;
-    extra_headers: Record<string, string>;
-    concurrency_limit: number;
-    qps_limit: number;
   }): Promise<EvalHubEndpoint> {
     return this.request("/endpoints", { method: "POST", body: JSON.stringify(payload) });
   }
 
-  probeEndpoint(endpointId: string, modelId: string): Promise<EvalHubProbe> {
+  updateEndpoint(endpointId: string, payload: EvalHubEndpointConfig): Promise<EvalHubEndpoint> {
+    return this.request(`/endpoints/${encodeURIComponent(endpointId)}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  probeEndpoint(endpointId: string, modelId: string, timeoutSeconds = 60): Promise<EvalHubProbe> {
     return this.request(`/endpoints/${encodeURIComponent(endpointId)}/probe`, {
       method: "POST",
-      body: JSON.stringify({ model_id: modelId }),
+      body: JSON.stringify({ model_id: modelId, timeout_seconds: timeoutSeconds }),
     });
   }
 
   listModels(endpointId: string): Promise<EvalHubModel[]> {
     return this.request(`/endpoints/${encodeURIComponent(endpointId)}/models`);
+  }
+
+  addModel(endpointId: string, modelName: string): Promise<EvalHubModel> {
+    return this.request(`/endpoints/${encodeURIComponent(endpointId)}/models`, {
+      method: "POST",
+      body: JSON.stringify({ model_name: modelName, display_name: modelName }),
+    });
   }
 
   validateRun(payload: EvalHubRunCreate): Promise<EvalHubValidation> {

@@ -7,6 +7,7 @@ import pytest
 from apps.api.app.core import network
 from apps.api.app.core.network import EndpointPolicyError, normalize_base_url, validate_endpoint_url
 from apps.api.app.core.settings import Settings
+from apps.api.app.schemas.endpoints import ProbeRequest
 from apps.api.app.services.endpoints import sanitized_extra_headers
 
 
@@ -32,6 +33,27 @@ def test_normalize_base_url_canonicalizes_host_and_ipv6() -> None:
     assert normalize_base_url(
         "http://[2001:db8::1]:8000", allow_insecure_http=True
     ) == "http://[2001:db8::1]:8000/v1"
+
+
+@pytest.mark.parametrize(
+    "endpoint_url",
+    [
+        "https://provider.example/api/v1/chat/completions",
+        "https://provider.example/api/v1/completions/",
+        "https://provider.example/api/v1/models",
+    ],
+)
+def test_normalize_base_url_accepts_full_openai_endpoint_urls(endpoint_url: str) -> None:
+    assert normalize_base_url(endpoint_url, allow_insecure_http=True) == (
+        "https://provider.example/api/v1"
+    )
+
+
+def test_probe_timeout_is_configurable_and_bounded() -> None:
+    assert ProbeRequest().timeout_seconds == 60
+    assert ProbeRequest(timeout_seconds=180).timeout_seconds == 180
+    with pytest.raises(ValueError):
+        ProbeRequest(timeout_seconds=301)
 
 
 @pytest.mark.asyncio

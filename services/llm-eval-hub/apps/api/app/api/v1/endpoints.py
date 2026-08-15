@@ -276,6 +276,7 @@ async def probe_endpoint(
         api_key=SecretCipher().decrypt(revision.secret_ciphertext),
         extra_headers=revision.config_json.get("extra_headers", {}),
         requested_model=requested_model,
+        timeout_seconds=payload.timeout_seconds,
     )
     capability = EndpointCapability(
         revision_id=revision.id,
