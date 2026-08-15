@@ -276,16 +276,21 @@ export class EvalHubClient {
     return this.request("/runs", {
       method: "POST",
       body: JSON.stringify(payload),
-      headers: { "Idempotency-Key": idempotencyKey },
+      headers: {
+        "Idempotency-Key": idempotencyKey,
+        "X-EvalHub-Run-Origin": "inferstation-live-run",
+      },
     });
   }
 
-  listRuns({ activeOnly = false, limit = 50 }: {
+  listRuns({ activeOnly = false, liveOnly = false, limit = 50 }: {
     activeOnly?: boolean;
+    liveOnly?: boolean;
     limit?: number;
   } = {}): Promise<EvalHubRun[]> {
     const query = new URLSearchParams({ limit: String(limit) });
     if (activeOnly) query.set("active", "true");
+    if (liveOnly) query.set("live", "true");
     return this.request(`/runs?${query.toString()}`);
   }
 

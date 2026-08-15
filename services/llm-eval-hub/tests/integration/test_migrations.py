@@ -18,6 +18,7 @@ EXPECTED_TABLES = {
     "endpoint_revisions",
     "endpoints",
     "models",
+    "live_run_history",
     "protocols",
     "request_attempts",
     "run_datasets",
@@ -43,7 +44,7 @@ def test_initial_migration_is_repeatable_and_matches_metadata() -> None:
         with database_engine.connect() as connection:
             assert set(inspect(connection).get_table_names()) == EXPECTED_TABLES
             revision = connection.scalar(text("SELECT version_num FROM alembic_version"))
-            assert revision == "20260811_0002"
+            assert revision == "20260815_0003"
         database_engine.dispose()
 
         run_alembic(rendered_url, "downgrade", "base")

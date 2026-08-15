@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import pytest
 from fastapi import HTTPException
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, func, select
 from sqlalchemy.orm import Session
 
-from apps.api.app.api.v1.runs import create_run, list_runs
+from apps.api.app.api.v1.runs import LIVE_RUN_ORIGIN, create_run, list_runs
 from apps.api.app.core.auth import Actor
 from apps.api.app.core.settings import Settings
 from apps.api.app.db.models import (
@@ -14,7 +14,9 @@ from apps.api.app.db.models import (
     DatasetVersion,
     Endpoint,
     EndpointRevision,
+    LiveRunHistoryEntry,
     Model,
+    Run,
 )
 from apps.api.app.schemas.runs import RunCreate
 
@@ -106,12 +108,66 @@ def test_create_run_enforces_one_active_slot_and_keeps_idempotency() -> None:
             "status": "QUEUED",
         }
 
-        active = list_runs(run_status=None, active_only=True, limit=10, _=actor, db=db)
+        active = list_runs(
+            run_status=None,
+            active_only=True,
+            live_only=False,
+            limit=10,
+            _=actor,
+            db=db,
+        )
         assert [run.id for run in active] == [first.id]
 
         first.status = "SUCCEEDED"
         db.commit()
         second = create_run(payload, actor, db, settings, "request-2")
         assert second.id != first.id
+
+    engine.dispose()
+
+
+def test_live_run_history_keeps_only_50_page_entries_without_deleting_runs() -> None:
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    settings = Settings(app_env="test", database_url="sqlite+pysqlite:///:memory:")
+    actor = Actor(username="test-operator", role="admin")
+
+    with Session(engine, expire_on_commit=False) as db:
+        payload = _seed_resources(db)
+        generic = create_run(payload, actor, db, settings, "generic-request", None)
+        generic.status = "SUCCEEDED"
+        db.commit()
+
+        live_run_ids: list[str] = []
+        for index in range(51):
+            run = create_run(
+                payload,
+                actor,
+                db,
+                settings,
+                f"live-request-{index}",
+                LIVE_RUN_ORIGIN,
+            )
+            live_run_ids.append(run.id)
+            run.status = "SUCCEEDED"
+            db.commit()
+
+        history_ids = list(db.scalars(select(LiveRunHistoryEntry.run_id)))
+        assert len(history_ids) == 50
+        assert generic.id not in history_ids
+        assert live_run_ids[0] not in history_ids
+        assert set(live_run_ids[1:]) == set(history_ids)
+        assert db.scalar(select(func.count(Run.id))) == 52
+
+        recent = list_runs(
+            run_status=None,
+            active_only=False,
+            live_only=True,
+            limit=200,
+            _=actor,
+            db=db,
+        )
+        assert len(recent) == 50
+        assert {run.id for run in recent} == set(live_run_ids[1:])
 
     engine.dispose()

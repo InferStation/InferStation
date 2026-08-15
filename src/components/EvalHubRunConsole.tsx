@@ -21,7 +21,17 @@ import {
 const defaultApiBase =
   process.env.NEXT_PUBLIC_EVAL_HUB_API_BASE || "http://10.170.38.102:18080/api/v1";
 
-type BusyAction = "connect" | "endpoint" | "probe" | "validate" | "run" | "cancel" | null;
+type BusyAction = "connect" | "endpoint" | "probe" | "validate" | "run" | "cancel" | "history" | null;
+
+const liveRunHistoryLimit = 50;
+
+async function readStoredRun(api: EvalHubClient, summary: EvalHubRun) {
+  const storedRun = await api.getRun(summary.id);
+  const storedMetrics = storedRun.status === "SUCCEEDED"
+    ? await api.getRunMetrics(storedRun.id)
+    : null;
+  return { storedRun, storedMetrics };
+}
 
 export default function EvalHubRunConsole() {
   const [apiBase, setApiBase] = useState(defaultApiBase);
@@ -50,6 +60,9 @@ export default function EvalHubRunConsole() {
   const [validation, setValidation] = useState<EvalHubValidation | null>(null);
   const [run, setRun] = useState<EvalHubRun | null>(null);
   const [metrics, setMetrics] = useState<EvalHubRunMetrics | null>(null);
+  const [recentRuns, setRecentRuns] = useState<EvalHubRun[]>([]);
+  const [historyRun, setHistoryRun] = useState<EvalHubRun | null>(null);
+  const [historyMetrics, setHistoryMetrics] = useState<EvalHubRunMetrics | null>(null);
   const [busy, setBusy] = useState<BusyAction>("connect");
   const [error, setError] = useState("");
   const idempotencyKey = useRef("");
@@ -57,12 +70,23 @@ export default function EvalHubRunConsole() {
   useEffect(() => {
     let disposed = false;
     const api = new EvalHubClient(defaultApiBase, "");
-    Promise.all([api.listDatasets(), api.listRuns({ activeOnly: true, limit: 1 })])
-      .then(([nextDatasets, activeRuns]) => {
+    Promise.all([
+      api.listDatasets(),
+      api.listRuns({ activeOnly: true, limit: 1 }),
+      api.listRuns({ liveOnly: true, limit: liveRunHistoryLimit }),
+    ])
+      .then(async ([nextDatasets, activeRuns, storedRuns]) => {
         if (disposed) return;
         setDatasets(nextDatasets);
         setRun(activeRuns[0] ?? null);
+        setRecentRuns(storedRuns);
         setConnectedBase(api.apiBase);
+        if (storedRuns[0]) {
+          const stored = await readStoredRun(api, storedRuns[0]);
+          if (disposed) return;
+          setHistoryRun(stored.storedRun);
+          setHistoryMetrics(stored.storedMetrics);
+        }
       })
       .catch((caught) => {
         if (!disposed) setError(caught instanceof Error ? caught.message : String(caught));
@@ -94,6 +118,9 @@ export default function EvalHubRunConsole() {
     setSelectedVersions([]);
     setRun(null);
     setMetrics(null);
+    setRecentRuns([]);
+    setHistoryRun(null);
+    setHistoryMetrics(null);
     clearRegisteredEndpoint();
   }
 
@@ -141,13 +168,23 @@ export default function EvalHubRunConsole() {
   const connect = () =>
     perform("connect", async () => {
       const api = client();
-      const [nextDatasets, activeRuns] = await Promise.all([
+      const [nextDatasets, activeRuns, storedRuns] = await Promise.all([
         api.listDatasets(),
         api.listRuns({ activeOnly: true, limit: 1 }),
+        api.listRuns({ liveOnly: true, limit: liveRunHistoryLimit }),
       ]);
       setDatasets(nextDatasets);
       setRun(activeRuns[0] ?? null);
       setMetrics(null);
+      setRecentRuns(storedRuns);
+      if (storedRuns[0]) {
+        const stored = await readStoredRun(api, storedRuns[0]);
+        setHistoryRun(stored.storedRun);
+        setHistoryMetrics(stored.storedMetrics);
+      } else {
+        setHistoryRun(null);
+        setHistoryMetrics(null);
+      }
       setConnectedBase(api.apiBase);
       setSelectedVersions([]);
       clearRegisteredEndpoint();
@@ -226,6 +263,7 @@ export default function EvalHubRunConsole() {
         const created = await api.createRun(payload(), idempotencyKey.current);
         setRun(created);
         setMetrics(null);
+        setRecentRuns((current) => [created, ...current.filter((item) => item.id !== created.id)].slice(0, liveRunHistoryLimit));
       } catch (caught) {
         if (caught instanceof EvalHubApiError && caught.status === 409) {
           const activeRuns = await api.listRuns({ activeOnly: true, limit: 1 });
@@ -238,10 +276,24 @@ export default function EvalHubRunConsole() {
       }
     });
 
+  const openHistoryRun = (summary: EvalHubRun) =>
+    perform("history", async () => {
+      const stored = await readStoredRun(client(), summary);
+      setHistoryRun(stored.storedRun);
+      setHistoryMetrics(stored.storedMetrics);
+    });
+
   const cancelRun = () =>
     perform("cancel", async () => {
       if (!run) return;
-      setRun(await client().cancelRun(run.id));
+      const api = client();
+      const cancelled = await api.cancelRun(run.id);
+      setRun(cancelled);
+      setRecentRuns((current) => current.map((item) => item.id === cancelled.id ? cancelled : item));
+      if (isEvalHubRunTerminal(cancelled.status)) {
+        setHistoryRun(cancelled);
+        setHistoryMetrics(null);
+      }
     });
 
   const runId = run?.id;
@@ -264,8 +316,19 @@ export default function EvalHubRunConsole() {
         const next = await api.getRun(runId);
         if (disposed) return;
         setRun(next);
+        setRecentRuns((current) => current.map((item) => item.id === next.id ? next : item));
+        let completedMetrics: EvalHubRunMetrics | null = null;
         if (isEvalHubRunTerminal(next.status) && next.status === "SUCCEEDED") {
-          setMetrics(await api.getRunMetrics(next.id));
+          completedMetrics = await api.getRunMetrics(next.id);
+          if (disposed) return;
+          setMetrics(completedMetrics);
+        }
+        if (isEvalHubRunTerminal(next.status)) {
+          const storedRuns = await api.listRuns({ liveOnly: true, limit: liveRunHistoryLimit });
+          if (disposed) return;
+          setRecentRuns(storedRuns);
+          setHistoryRun(next);
+          setHistoryMetrics(completedMetrics);
         }
       } catch (caught) {
         if (!disposed) setError(caught instanceof Error ? caught.message : String(caught));
@@ -411,17 +474,176 @@ export default function EvalHubRunConsole() {
             <div className="mt-2 flex flex-wrap justify-between gap-2 text-xs text-zinc-500"><span>{completedSamples.toLocaleString()} / {totalSamples.toLocaleString()} samples · {progressPercent.toFixed(0)}%</span><span className="font-mono">{run.protocol_fingerprint.slice(0, 20)}…</span></div>
             {runIsActive ? <div className="mt-4"><button type="button" onClick={cancelRun} disabled={busy !== null} className={secondaryButtonClass}>{busy === "cancel" ? "Cancelling…" : "Cancel run"}</button></div> : null}
             {run.error_message ? <p className="mt-4 text-sm text-red-600">{run.error_message}</p> : null}
-            {metrics ? <MetricsPanel metrics={metrics} datasets={datasets} /> : null}
+            {metrics ? <MetricsPanel metrics={metrics} datasets={datasets} run={run} /> : null}
           </div>
         ) : null}
+      </section>
+
+      <section className="mt-5 rounded-2xl border border-zinc-200 p-5 dark:border-zinc-800 sm:p-6">
+        <StepHeading
+          number="6"
+          title="Recent Live Runs"
+          note="Reload a completed result after refresh and compare it with the exact model, dataset protocol, and error counts used for that run."
+        />
+        <div className="mt-4 rounded-xl border border-sky-200 bg-sky-50/60 px-4 py-3 text-xs leading-5 text-sky-900 dark:border-sky-900 dark:bg-sky-950/20 dark:text-sky-200">
+          This page lists its {liveRunHistoryLimit} most recent submissions. When a newer run pushes the oldest entry out of this list, Eval Hub keeps the underlying run, samples, and metrics; only the page history index is bounded.
+        </div>
+        {!connectedBase ? <p className="mt-5 text-sm text-zinc-500">Connect to Eval Hub to load Live Run history.</p> : null}
+        {connectedBase && recentRuns.length === 0 ? <p className="mt-5 rounded-xl border border-dashed border-zinc-300 px-4 py-5 text-sm text-zinc-500 dark:border-zinc-700">No run has been submitted from this page yet.</p> : null}
+        {recentRuns.length ? (
+          <div className="mt-5 overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
+            <table className="w-full min-w-[760px] text-left text-sm">
+              <thead className="bg-zinc-50 text-[11px] uppercase tracking-wide text-zinc-500 dark:bg-zinc-900/60">
+                <tr><th className="px-4 py-3 font-medium">Run</th><th className="px-4 py-3 font-medium">Model</th><th className="px-4 py-3 font-medium">Datasets</th><th className="px-4 py-3 font-medium">Progress</th><th className="px-4 py-3 font-medium">Created</th><th className="px-4 py-3 font-medium"><span className="sr-only">Open</span></th></tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                {recentRuns.map((item) => {
+                  const total = item.datasets.reduce((sum, dataset) => sum + dataset.total_samples, 0);
+                  const completed = item.datasets.reduce((sum, dataset) => sum + dataset.completed_samples, 0);
+                  return (
+                    <tr key={item.id} className={historyRun?.id === item.id ? "bg-sky-50/60 dark:bg-sky-950/20" : ""}>
+                      <td className="px-4 py-3"><div className="font-medium">{item.name}</div><RunStatus status={item.status} /></td>
+                      <td className="px-4 py-3"><span className="font-mono text-xs">{item.run_spec_json.model_name}</span></td>
+                      <td className="px-4 py-3"><div>{item.run_spec_json.datasets.length}</div><div className="mt-1 max-w-[240px] truncate text-xs text-zinc-500">{datasetNames(item).join(", ")}</div></td>
+                      <td className="px-4 py-3 font-mono text-xs tabular-nums">{completed.toLocaleString()} / {total.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-xs text-zinc-500">{formatRunDate(item.created_at)}</td>
+                      <td className="px-4 py-3 text-right"><button type="button" onClick={() => openHistoryRun(item)} disabled={busy !== null} className={secondaryButtonClass}>{busy === "history" && historyRun?.id === item.id ? "Loading…" : "View results"}</button></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+        {historyRun ? <HistoryResult run={historyRun} metrics={historyMetrics} datasets={datasets} /> : null}
       </section>
     </div>
   );
 }
 
-function MetricsPanel({ metrics, datasets }: { metrics: EvalHubRunMetrics; datasets: EvalHubDataset[] }) {
+function HistoryResult({ run, metrics, datasets }: { run: EvalHubRun; metrics: EvalHubRunMetrics | null; datasets: EvalHubDataset[] }) {
+  const completed = run.datasets.reduce((sum, dataset) => sum + dataset.completed_samples, 0);
+  const total = run.datasets.reduce((sum, dataset) => sum + dataset.total_samples, 0);
+  const smokeOnly = run.run_spec_json.datasets.every((dataset) => dataset.manifest.metadata.name === "inferstation-accuracy-pipeline-smoke-10");
+  return (
+    <div className="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-800">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div><p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">Selected stored result</p><h2 className="mt-1 text-lg font-semibold">{run.name}</h2><p className="mt-1 font-mono text-xs text-zinc-500">{run.id}</p></div>
+        <RunStatus status={run.status} />
+      </div>
+      <dl className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <ResultFact label="Model" value={run.run_spec_json.model_name} mono />
+        <ResultFact label="Samples" value={`${completed.toLocaleString()} / ${total.toLocaleString()}`} />
+        <ResultFact label="Created" value={formatRunDate(run.created_at)} />
+        <ResultFact label="Completed" value={formatRunDate(run.completed_at)} />
+      </dl>
+      <div className="mt-4 rounded-xl bg-zinc-50 px-4 py-3 text-xs leading-5 text-zinc-600 dark:bg-zinc-900/60 dark:text-zinc-400"><strong className="text-zinc-900 dark:text-zinc-100">Dataset protocol:</strong> {run.run_spec_json.datasets.map((dataset) => `${dataset.manifest.metadata.display_name} · ${dataset.manifest.metadata.version} · ${dataset.manifest.protocol.id}`).join("; ")}</div>
+      {run.error_message ? <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">{run.error_message}</p> : null}
+      {metrics ? <MetricsPanel metrics={metrics} datasets={datasets} run={run} /> : null}
+      {run.status === "SUCCEEDED" && !metrics ? <p className="mt-5 text-sm text-zinc-500">This run succeeded, but no aggregate metrics were returned.</p> : null}
+      {run.status !== "SUCCEEDED" ? <p className="mt-5 text-sm text-zinc-500">Aggregate scores are available only after a run succeeds. Progress and any terminal error remain visible above.</p> : null}
+      <div className="mt-6 rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
+        <h3 className="text-sm font-semibold">How to read this result</h3>
+        <ul className="mt-3 space-y-2 text-xs leading-5 text-zinc-600 dark:text-zinc-400">
+          <li><strong className="text-zinc-900 dark:text-zinc-100">Primary score</strong> is the dataset protocol&apos;s quality metric. Read its numerator and denominator together; a score without its evaluated population is incomplete.</li>
+          <li><strong className="text-zinc-900 dark:text-zinc-100">API and parse errors</strong> show delivery or formatting failures. Compare them with the denominator policy before interpreting model quality.</li>
+          <li><strong className="text-zinc-900 dark:text-zinc-100">Latency</strong> describes service behavior during this run; it is context, not an accuracy metric.</li>
+          {smokeOnly ? <li className="font-medium text-amber-700 dark:text-amber-300">This is the synthetic smoke dataset. It proves the pipeline works, but must not be used to compare or publish model accuracy.</li> : null}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+function MetricsPanel({ metrics, datasets, run }: { metrics: EvalHubRunMetrics; datasets: EvalHubDataset[]; run: EvalHubRun }) {
   const versions = new Map(datasets.flatMap((dataset) => dataset.versions.map((version) => [version.id, { dataset, version }] as const)));
-  return <div className="mt-6"><h2 className="text-sm font-semibold">Aggregate metrics</h2><div className="mt-3 grid gap-3 md:grid-cols-2">{metrics.datasets.map((result) => { const item = versions.get(result.dataset_version_id); return <article key={result.run_dataset_id} className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800"><div className="text-sm font-semibold">{item?.dataset.display_name ?? result.protocol_id}</div><div className="mt-1 text-[11px] text-zinc-500">{result.protocol_id}</div><dl className="mt-4 space-y-2">{Object.entries(result.metrics).map(([name, value]) => <div key={name} className="flex items-center justify-between gap-3 text-sm"><dt className="text-zinc-500">{name}</dt><dd className="font-mono font-semibold tabular-nums">{value == null ? "—" : value.toFixed(4)}</dd></div>)}</dl></article>; })}</div></div>;
+  const storedVersions = new Map(run.run_spec_json.datasets.map((dataset) => [dataset.dataset_version_id, dataset] as const));
+  return (
+    <div className="mt-6">
+      <h2 className="text-sm font-semibold">Aggregate metrics</h2>
+      <div className="mt-3 grid gap-3 md:grid-cols-2">
+        {metrics.datasets.map((result) => {
+          const item = versions.get(result.dataset_version_id);
+          const stored = storedVersions.get(result.dataset_version_id);
+          const primaryMetric = item?.version.manifest_json.protocol.scorer.primary_metric ?? stored?.manifest.protocol.scorer.primary_metric ?? "accuracy";
+          const primaryValue = result.metrics[primaryMetric];
+          const numerator = result.metrics[`${primaryMetric}_numerator`];
+          const denominator = result.metrics[`${primaryMetric}_denominator`] ?? result.denominators[primaryMetric];
+          const apiErrors = result.metrics.api_errors;
+          const parseErrors = result.metrics.parse_errors;
+          return (
+            <article key={result.run_dataset_id} className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
+              <div className="text-sm font-semibold">{item?.dataset.display_name ?? stored?.manifest.metadata.display_name ?? result.protocol_id}</div>
+              <div className="mt-1 text-[11px] text-zinc-500">{result.protocol_id}</div>
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <MetricFact label={humanMetricName(primaryMetric)} value={formatMetric(primaryMetric, primaryValue)} prominent />
+                <MetricFact label="Correct / denominator" value={numerator == null && denominator == null ? "—" : `${formatCount(numerator)} / ${formatCount(denominator)}`} />
+                <MetricFact label="API errors" value={formatCount(apiErrors)} warning={Boolean(apiErrors)} />
+                <MetricFact label="Parse errors" value={formatCount(parseErrors)} warning={Boolean(parseErrors)} />
+                <MetricFact label="Success latency p50" value={formatMilliseconds(result.metrics.latency_success_p50_ms)} />
+                <MetricFact label="Success latency p95" value={formatMilliseconds(result.metrics.latency_success_p95_ms)} />
+              </div>
+              <details className="mt-4 text-xs text-zinc-500"><summary className="cursor-pointer font-medium">All aggregate fields</summary><dl className="mt-3 space-y-2">{Object.entries(result.metrics).map(([name, value]) => <div key={name} className="flex items-center justify-between gap-3"><dt>{name}</dt><dd className="font-mono tabular-nums">{value == null ? "—" : value.toFixed(4)}</dd></div>)}</dl></details>
+            </article>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function RunStatus({ status }: { status: string }) {
+  const terminalClass = status === "SUCCEEDED"
+    ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+    : status === "FAILED" || status === "CANCELLED"
+      ? "bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-300"
+      : "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300";
+  return <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 font-mono text-[10px] font-semibold ${terminalClass}`}>{status}</span>;
+}
+
+function ResultFact({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+  return <div className="rounded-xl bg-zinc-50 px-4 py-3 dark:bg-zinc-900/60"><dt className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">{label}</dt><dd className={`mt-1 truncate text-sm font-medium ${mono ? "font-mono" : ""}`}>{value}</dd></div>;
+}
+
+function MetricFact({ label, value, prominent = false, warning = false }: { label: string; value: string; prominent?: boolean; warning?: boolean }) {
+  return <div className="rounded-lg bg-zinc-50 px-3 py-2.5 dark:bg-zinc-900/60"><div className="text-[10px] uppercase tracking-wide text-zinc-500">{label}</div><div className={`mt-1 font-mono font-semibold tabular-nums ${prominent ? "text-xl text-sky-700 dark:text-sky-300" : warning ? "text-amber-700 dark:text-amber-300" : "text-sm"}`}>{value}</div></div>;
+}
+
+function datasetNames(run: EvalHubRun): string[] {
+  return run.run_spec_json.datasets.map((dataset) => dataset.manifest.metadata.display_name);
+}
+
+function formatRunDate(value: string | null): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function humanMetricName(value: string): string {
+  return value.replaceAll("_", " ").replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function formatMetric(name: string, value: number | null | undefined): string {
+  if (value == null) return "—";
+  if (name === "accuracy" || name.endsWith("_rate") || name.endsWith("_match")) {
+    return `${(value * 100).toFixed(2)}%`;
+  }
+  return value.toFixed(4);
+}
+
+function formatCount(value: number | null | undefined): string {
+  return value == null ? "—" : Math.round(value).toLocaleString();
+}
+
+function formatMilliseconds(value: number | null | undefined): string {
+  return value == null ? "—" : `${Math.round(value).toLocaleString()} ms`;
 }
 
 function DatasetMessage({ children }: { children: React.ReactNode }) {

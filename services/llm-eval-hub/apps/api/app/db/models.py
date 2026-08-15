@@ -194,6 +194,17 @@ class Run(Base, TimestampMixin):
     )
 
 
+class LiveRunHistoryEntry(Base):
+    __tablename__ = "live_run_history"
+
+    run_id: Mapped[str] = mapped_column(
+        ForeignKey("runs.id", ondelete="CASCADE"), primary_key=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, index=True
+    )
+
+
 class RunDataset(Base):
     __tablename__ = "run_datasets"
     __table_args__ = (

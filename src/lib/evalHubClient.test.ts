@@ -80,6 +80,7 @@ describe("EvalHubClient", () => {
     const headers = new Headers(init.headers);
     expect(url).toBe("http://eval.internal/api/v1/runs");
     expect(headers.get("Idempotency-Key")).toBe("idempotency-1");
+    expect(headers.get("X-EvalHub-Run-Origin")).toBe("inferstation-live-run");
     expect(headers.get("Content-Type")).toBe("application/json");
     expect(JSON.parse(String(init.body))).toEqual(payload);
   });
@@ -100,6 +101,24 @@ describe("EvalHubClient", () => {
 
     const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("http://eval.internal/api/v1/runs?limit=1&active=true");
+  });
+
+  it("loads only the 50 most recent runs submitted from the Live Run page", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await new EvalHubClient("http://eval.internal", "").listRuns({
+      liveOnly: true,
+      limit: 50,
+    });
+
+    const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("http://eval.internal/api/v1/runs?limit=50&live=true");
   });
 
   it("updates an existing endpoint without putting its credential in the URL", async () => {

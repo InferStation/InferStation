@@ -22,6 +22,7 @@ from apps.api.app.db.models import (
     Endpoint,
     EndpointCapability,
     EndpointRevision,
+    LiveRunHistoryEntry,
     Model,
     Run,
     RunDataset,
@@ -44,6 +45,8 @@ router = APIRouter(prefix="/runs", tags=["runs"])
 TERMINAL_STATUSES = {"SUCCEEDED", "FAILED", "CANCELLED"}
 ACTIVE_RUN_STATUSES = {"QUEUED", "PREPARING", "RUNNING", "AGGREGATING", "CANCELLING"}
 SINGLE_RUN_ADVISORY_LOCK_ID = 2026081501
+LIVE_RUN_ORIGIN = "inferstation-live-run"
+LIVE_RUN_HISTORY_LIMIT = 50
 TRANSIENT_ERROR_TYPES = {
     "transport.dns",
     "transport.connect",
@@ -82,6 +85,27 @@ def _raise_if_run_slot_occupied(db: Session, *, exclude_run_id: str | None = Non
                 "run_id": active.id,
                 "status": active.status,
             },
+        )
+
+
+def _record_live_run_history(db: Session, run_id: str) -> None:
+    db.add(LiveRunHistoryEntry(run_id=run_id))
+    db.flush()
+    stale_run_ids = list(
+        db.scalars(
+            select(LiveRunHistoryEntry.run_id)
+            .order_by(
+                LiveRunHistoryEntry.created_at.desc(),
+                LiveRunHistoryEntry.run_id.desc(),
+            )
+            .offset(LIVE_RUN_HISTORY_LIMIT)
+        )
+    )
+    if stale_run_ids:
+        db.execute(
+            delete(LiveRunHistoryEntry).where(
+                LiveRunHistoryEntry.run_id.in_(stale_run_ids)
+            )
         )
 
 
@@ -182,8 +206,13 @@ def create_run(
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+    run_origin: Literal["inferstation-live-run"] | None = Header(
+        default=None,
+        alias="X-EvalHub-Run-Origin",
+    ),
 ) -> Run:
     _acquire_single_run_slot(db)
+    is_live_run = run_origin == LIVE_RUN_ORIGIN
     if idempotency_key:
         existing = db.scalar(select(Run).where(Run.idempotency_key == idempotency_key))
         if existing:
@@ -241,13 +270,18 @@ def create_run(
                 total_samples=version.row_count,
             )
         )
+    if is_live_run:
+        _record_live_run_history(db, run.id)
     record_audit(
         db,
         actor=actor.username,
         action="run.create",
         resource_type="run",
         resource_id=run.id,
-        metadata={"fingerprint": run.protocol_fingerprint},
+        metadata={
+            "fingerprint": run.protocol_fingerprint,
+            "origin": LIVE_RUN_ORIGIN if is_live_run else "api",
+        },
     )
     db.commit()
     run = db.scalar(select(Run).where(Run.id == run.id).options(selectinload(Run.datasets)))
@@ -263,6 +297,7 @@ def create_run(
 def list_runs(
     run_status: str | None = Query(default=None, alias="status"),
     active_only: bool = Query(default=False, alias="active"),
+    live_only: bool = Query(default=False, alias="live"),
     limit: int = Query(default=50, ge=1, le=200),
     _: Actor = Depends(require_actor),
     db: Session = Depends(get_db),
@@ -272,6 +307,8 @@ def list_runs(
         statement = statement.where(Run.status == run_status)
     if active_only:
         statement = statement.where(Run.status.in_(ACTIVE_RUN_STATUSES))
+    if live_only:
+        statement = statement.join(LiveRunHistoryEntry)
     return list(db.scalars(statement.limit(limit)).unique())
 
 

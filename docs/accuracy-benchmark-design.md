@@ -147,6 +147,33 @@ after a refresh. Its queue panel always shows the one task slot, queued/running
 state, sample counts, and percentage progress. A queued run has position 1 of 1;
 the slot becomes available only when the run succeeds, fails, or is cancelled.
 
+### Live Run history
+
+Every run submitted by `/accuracy/run` carries
+`X-EvalHub-Run-Origin: inferstation-live-run`. In the same transaction that
+creates the run, Eval Hub adds its ID to the dedicated `live_run_history` SQL
+table. `GET /api/v1/runs?live=true&limit=50` returns only this page-owned
+history; runs created by other API or administrative workflows are excluded.
+
+The index retains the latest 50 entries. Adding entry 51 removes only the
+oldest row from `live_run_history`: the underlying `runs`, `run_datasets`,
+`sample_executions`, scores, and metrics remain untouched. The UI states this
+boundary explicitly.
+
+On initial load and manual reconnect, the page loads all 50 summaries, selects
+the newest entry, reloads its persisted run details, and fetches aggregate
+metrics for a successful run. A user can select any listed entry without
+rerunning the model. The result view presents:
+
+- status, model, timestamps, sample progress, dataset version, and protocol;
+- the primary score with its numerator and denominator;
+- API errors, parse errors, and successful-request p50/p95 latency; and
+- expandable raw aggregate fields for diagnosis.
+
+Scores must be interpreted together with their denominator and error counts.
+Latency is operational context, not quality. Smoke results always carry a
+warning that they validate the pipeline and cannot support model comparisons.
+
 The target API key is a runtime input. The page does not place it in a URL,
 browser storage, Git, logs, or exported JSON, and clears it from form state
 after endpoint registration. The internal RTX4090 deployment currently disables
