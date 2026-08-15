@@ -1,0 +1,75 @@
+{
+  "assumptions": {
+    "max_retries": 2,
+    "mock_state_reset": true,
+    "on_api_error": "exclude_and_report",
+    "on_parse_error": "count_as_incorrect",
+    "timeout_seconds": 0.05
+  },
+  "data_checksum_sha256": "0f978c167ef0f77a37897d238327253b027227d02ef7e445ccd5a1e094f5eae3",
+  "dataset": "mvp-faults-v1",
+  "expected_by_fault_type": {
+    "empty": {
+      "api_errors": 15,
+      "attempts_total": 15,
+      "successful": 0
+    },
+    "http_401": {
+      "api_errors": 15,
+      "attempts_total": 15,
+      "successful": 0
+    },
+    "http_429": {
+      "api_errors": 10,
+      "attempts_total": 45,
+      "successful": 5
+    },
+    "http_500": {
+      "api_errors": 10,
+      "attempts_total": 45,
+      "successful": 5
+    },
+    "invalid_json": {
+      "api_errors": 15,
+      "attempts_total": 15,
+      "successful": 0
+    },
+    "parse_error": {
+      "api_errors": 0,
+      "parse_errors": 15,
+      "successful": 0
+    },
+    "schema_mismatch": {
+      "api_errors": 15,
+      "attempts_total": 15,
+      "successful": 0
+    },
+    "timeout": {
+      "api_errors": 15,
+      "attempts_total": 45,
+      "successful": 0
+    }
+  },
+  "fault_distribution": {
+    "empty": 15,
+    "http_401": 15,
+    "http_429": 15,
+    "http_500": 15,
+    "invalid_json": 15,
+    "parse_error": 15,
+    "schema_mismatch": 15,
+    "timeout": 15
+  },
+  "generator_version": "1",
+  "metrics": {
+    "accuracy": 0.4,
+    "accuracy_denominator": 25,
+    "accuracy_numerator": 10,
+    "api_errors": 95,
+    "parse_errors": 15,
+    "scored_samples": 10,
+    "total_samples": 120,
+    "valid_responses": 10
+  },
+  "seed": 20260811
+}

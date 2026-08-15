@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "InferStation — LLM Inference Reference Station",
   description:
-    "Independent, reproducible LLM inference performance data for desktop and workstation hardware: Strix Halo, DGX Spark, and more.",
+    "Independent, reproducible LLM inference performance and accuracy data for local hardware and online APIs.",
 };
 
 export default function RootLayout({
@@ -32,35 +32,36 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
         <header className="border-b border-zinc-200 dark:border-zinc-800">
-          <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+          <nav className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-4">
             <Link href="/" className="font-semibold tracking-tight">
               InferStation
             </Link>
-            <ul className="flex items-center gap-6 text-sm text-zinc-600 dark:text-zinc-400">
-              <li>
-                <Link href="/summary" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-                  Summary
-                </Link>
+            <ul className="flex flex-wrap items-center justify-end gap-x-5 gap-y-2 text-sm text-zinc-600 dark:text-zinc-400">
+              <li className="relative">
+                <details className="group">
+                  <summary className="cursor-pointer list-none font-medium hover:text-zinc-900 dark:hover:text-zinc-100">
+                    Performance <span aria-hidden="true" className="ml-1 text-[10px]">▾</span>
+                  </summary>
+                  <div className="absolute right-0 z-50 mt-2 grid min-w-40 gap-1 rounded-lg border border-zinc-200 bg-white p-2 text-sm shadow-xl dark:border-zinc-800 dark:bg-zinc-950">
+                    <Link href="/" className="rounded px-2.5 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-900">Overview</Link>
+                    <Link href="/summary" className="rounded px-2.5 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-900">Summary</Link>
+                    <Link href="/charts" className="rounded px-2.5 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-900">Charts</Link>
+                    <Link href="/compare" className="rounded px-2.5 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-900">Compare</Link>
+                    <Link href="/runs" className="rounded px-2.5 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-900">Runs</Link>
+                    <Link href="/history" className="rounded px-2.5 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-900">History</Link>
+                  </div>
+                </details>
               </li>
-              <li>
-                <Link href="/charts" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-                  Charts
-                </Link>
-              </li>
-              <li>
-                <Link href="/history" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-                  History
-                </Link>
-              </li>
-              <li>
-                <Link href="/compare" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-                  Compare
-                </Link>
-              </li>
-              <li>
-                <Link href="/runs" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-                  Runs
-                </Link>
+              <li className="relative">
+                <details className="group">
+                  <summary className="cursor-pointer list-none font-medium text-indigo-700 hover:text-indigo-500 dark:text-indigo-300 dark:hover:text-indigo-200">
+                    Benchmark <span aria-hidden="true" className="ml-1 text-[10px]">▾</span>
+                  </summary>
+                  <div className="absolute right-0 z-50 mt-2 grid min-w-44 gap-1 rounded-lg border border-zinc-200 bg-white p-2 text-sm shadow-xl dark:border-zinc-800 dark:bg-zinc-950">
+                    <Link href="/benchmark" className="rounded px-2.5 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-900">Summary</Link>
+                    <Link href="/benchmark/run" className="rounded px-2.5 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-900">Run benchmark</Link>
+                  </div>
+                </details>
               </li>
               <li>
                 <Link href="/docs" className="hover:text-zinc-900 dark:hover:text-zinc-100">

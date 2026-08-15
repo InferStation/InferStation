@@ -1,0 +1,105 @@
+api_version: eval-dataset/v1
+kind: Dataset
+metadata:
+  name: mmlu-lite-native
+  display_name: MMLU Lite Native Chat (570)
+  version: c30699e-native-chat-v1
+  description: MMLU all/test frozen from cais/mmlu@c30699e8. Deterministic mmlu-lite-v1-20260812 sample of 10 rows per each of 57 subjects. Zero-shot generated choice letters; not official loglikelihood MMLU.
+  language:
+  - en
+  license: MIT
+  owner: ai-platform
+  tags:
+  - benchmark
+  - native-chat
+  - generated-text
+  - frozen
+data:
+  format: jsonl
+  path: data/test.jsonl
+  split: test
+  checksum_sha256: b601ca6defc133cc36a2747879f47d797b0e3832f7c4bfd02b38f26d5f4d1e0c
+  id_field: id
+  input_fields:
+  - question
+  - subject_display
+  - choice_a
+  - choice_b
+  - choice_c
+  - choice_d
+  reference_field: answer
+  metadata_fields:
+  - subject
+  - domain
+  - source_index
+  - subject_index
+request:
+  mode: chat_completions
+  messages:
+  - role: system
+    content: 'Answer the multiple-choice question. Reply with exactly one letter: A, B, C, or D.'
+  - role: user
+    content: 'Subject: {{ subject_display }}
+
+
+      {{ question }}
+
+
+      A. {{ choice_a }}
+
+      B. {{ choice_b }}
+
+      C. {{ choice_c }}
+
+      D. {{ choice_d }}
+
+
+      Answer:'
+  parameters:
+    temperature: 0
+    max_tokens: 4
+  stop: []
+protocol:
+  id: mmlu-native-chat-0shot-lite-v1
+  task_type: multiple_choice_generation
+  prediction_source: generated_text
+  few_shot:
+    count: 0
+    selection: fixed
+    sample_ids: []
+  parser:
+    type: choice_letter
+    version: '1'
+    allowed:
+    - A
+    - B
+    - C
+    - D
+  scorer:
+    type: exact_choice
+    version: '1'
+    primary_metric: accuracy
+  denominator_policy: all_scoring_samples
+  on_api_error: exclude_and_report
+  on_parse_error: count_as_incorrect
+  subset_of: mmlu-full-native
+groups:
+- field: subject
+- field: domain
+validation:
+  required_fields:
+  - id
+  - question
+  - subject
+  - subject_display
+  - choice_a
+  - choice_b
+  - choice_c
+  - choice_d
+  - answer
+  - domain
+  - source_index
+  - subject_index
+  unique_by:
+  - id
+  allowed_values: {}

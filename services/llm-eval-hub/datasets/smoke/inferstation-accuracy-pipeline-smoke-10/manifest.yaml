@@ -1,0 +1,68 @@
+api_version: eval-dataset/v1
+kind: Dataset
+metadata:
+  name: inferstation-accuracy-pipeline-smoke-10
+  display_name: "SMOKE TEST ONLY — InferStation Accuracy Pipeline (10 synthetic samples)"
+  version: smoke-v1
+  description: "Synthetic, trivial questions for validating endpoint registration, queueing, parsing, scoring, and UI display. Never use this dataset to report or compare model accuracy."
+  language: [en]
+  license: CC0-1.0
+  owner: inferstation
+  tags: [smoke-test, synthetic, pipeline-validation, not-for-accuracy-reporting]
+
+data:
+  format: jsonl
+  path: data/test.jsonl
+  split: test
+  checksum_sha256: 7422a4c865cc6c1ea1e959c57b5bc290d76cf8218526b34e7fef553c6dcc9ee2
+  id_field: id
+  input_fields: [question, choice_a, choice_b, choice_c, choice_d]
+  reference_field: answer
+
+request:
+  mode: chat_completions
+  messages:
+    - role: system
+      content: "This is a connectivity smoke test. Answer with exactly one letter: A, B, C, or D."
+    - role: user
+      content: |-
+        {{ question }}
+
+        A. {{ choice_a }}
+        B. {{ choice_b }}
+        C. {{ choice_c }}
+        D. {{ choice_d }}
+
+        Answer:
+  parameters:
+    temperature: 0
+    max_tokens: 4
+  stop: []
+
+protocol:
+  id: inferstation-accuracy-pipeline-smoke-choice-v1
+  task_type: pipeline_smoke_multiple_choice
+  prediction_source: generated_text
+  few_shot:
+    count: 0
+    selection: fixed
+    sample_ids: []
+  parser:
+    type: choice_letter
+    version: "1"
+    allowed: [A, B, C, D]
+  scorer:
+    type: exact_choice
+    version: "1"
+    primary_metric: accuracy
+  denominator_policy: all_scoring_samples
+  on_api_error: exclude_and_report
+  on_parse_error: count_as_incorrect
+
+groups: []
+
+validation:
+  required_fields: [id, question, choice_a, choice_b, choice_c, choice_d, answer]
+  unique_by: [id]
+  allowed_values:
+    answer: [A, B, C, D]

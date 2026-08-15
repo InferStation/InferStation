@@ -1,0 +1,147 @@
+name: ${COMPOSE_PROJECT_NAME:-llm-eval-hub}
+
+x-backend: &backend
+  image: ${EVALHUB_API_IMAGE:-llm-eval-hub-api:local}
+  build:
+    context: .
+    dockerfile: apps/api/Dockerfile
+    target: runtime
+  environment:
+    APP_ENV: ${APP_ENV:-production}
+    LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    DATABASE_URL: postgresql+psycopg://evalhub:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/evalhub
+    REDIS_URL: redis://redis:6379/0
+    CELERY_BROKER_URL: redis://redis:6379/1
+    CELERY_RESULT_BACKEND: redis://redis:6379/2
+    ARTIFACT_ROOT: /var/lib/eval-hub/artifacts
+    ADMIN_API_KEY: ${ADMIN_API_KEY:?ADMIN_API_KEY is required}
+    SECRET_ENCRYPTION_KEY: ${SECRET_ENCRYPTION_KEY:?SECRET_ENCRYPTION_KEY is required}
+    ALLOWED_ENDPOINT_HOSTS: ${ALLOWED_ENDPOINT_HOSTS:-}
+    ALLOWED_ENDPOINT_CIDRS: ${ALLOWED_ENDPOINT_CIDRS:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
+    ALLOW_INSECURE_HTTP: ${ALLOW_INSECURE_HTTP:-false}
+    ALLOW_PUBLIC_HTTPS_ENDPOINTS: ${ALLOW_PUBLIC_HTTPS_ENDPOINTS:-false}
+    DEFAULT_CONCURRENCY: ${DEFAULT_CONCURRENCY:-4}
+    GLOBAL_MAX_CONCURRENCY: ${GLOBAL_MAX_CONCURRENCY:-16}
+    DEFAULT_QPS: ${DEFAULT_QPS:-5}
+    WEB_ORIGIN: ${WEB_ORIGIN:?WEB_ORIGIN is required}
+  volumes:
+    - artifact_data:/var/lib/eval-hub/artifacts
+  extra_hosts:
+    - host.docker.internal:host-gateway
+  restart: unless-stopped
+
+services:
+  artifact-init:
+    <<: *backend
+    user: "0:0"
+    command: >-
+      sh -c "mkdir -p /var/lib/eval-hub/artifacts/datasets &&
+      chown -R 1024:1024 /var/lib/eval-hub/artifacts"
+    restart: "no"
+
+  postgres:
+    image: ${POSTGRES_IMAGE:-postgres:16.9-alpine}
+    environment:
+      POSTGRES_DB: evalhub
+      POSTGRES_USER: evalhub
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evalhub -d evalhub"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  redis:
+    image: ${REDIS_IMAGE:-redis:7.4.5-alpine}
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  api:
+    <<: *backend
+    command: >-
+      sh -c "alembic upgrade head &&
+      uvicorn apps.api.app.main:app --host 0.0.0.0 --port 8000"
+    ports:
+      - "${API_BIND_ADDRESS:-127.0.0.1}:${API_PORT:-18000}:8000"
+    depends_on:
+      artifact-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  worker:
+    <<: *backend
+    command: >-
+      celery -A workers.celery_app worker -Q native
+      --concurrency=${WORKER_CONCURRENCY:-4} --loglevel=${LOG_LEVEL:-INFO}
+    depends_on:
+      api:
+        condition: service_healthy
+
+  web:
+    image: ${EVALHUB_WEB_IMAGE:-llm-eval-hub-web:local}
+    build:
+      context: apps/web
+      dockerfile: Dockerfile
+    ports:
+      - "${WEB_BIND_ADDRESS:-0.0.0.0}:${WEB_PORT:-18080}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  benchmark-register:
+    <<: *backend
+    command: >-
+      python scripts/register_benchmarks.py
+      --api-base http://api:8000/api/v1
+    depends_on:
+      api:
+        condition: service_healthy
+    profiles: [bootstrap]
+    restart: "no"
+
+  maintenance:
+    image: alpine:3.22
+    entrypoint: ["sh", "-c"]
+    command: ["true"]
+    volumes:
+      - artifact_data:/data:ro
+    profiles: [ops]
+    restart: "no"
+
+  artifact-restore:
+    image: alpine:3.22
+    entrypoint: ["sh", "-c"]
+    command: ["true"]
+    volumes:
+      - artifact_data:/restore
+    profiles: [ops]
+    restart: "no"
+
+volumes:
+  postgres_data:
+  redis_data:
+  artifact_data:

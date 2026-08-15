@@ -1,0 +1,12 @@
+{"id":"s-0001","question":"为什么信用卡被扣了两次？","label":"billing","category":"payment","difficulty":"easy"}
+{"id":"s-0002","question":"登录后一直显示 502。","label":"technical","category":"login","difficulty":"medium"}
+{"id":"s-0003","question":"怎样修改我的登录邮箱？","label":"account","category":"profile","difficulty":"easy"}
+{"id":"s-0004","question":"发票上的金额不对。","label":"billing","category":"invoice","difficulty":"medium"}
+{"id":"s-0005","question":"接口请求总是超时。","label":"technical","category":"api","difficulty":"easy"}
+{"id":"s-0006","question":"我的账号为什么被锁定？","label":"account","category":"security","difficulty":"medium"}
+{"id":"s-0007","question":"如何申请退款？","label":"billing","category":"refund","difficulty":"easy"}
+{"id":"s-0008","question":"页面加载后是一片空白。","label":"technical","category":"frontend","difficulty":"medium"}
+{"id":"s-0009","question":"如何添加团队成员？","label":"account","category":"organization","difficulty":"easy"}
+{"id":"s-0010","question":"套餐续费价格是多少？","label":"billing","category":"subscription","difficulty":"easy"}
+{"id":"s-0011","question":"上传文件时报内部错误。","label":"technical","category":"storage","difficulty":"medium"}
+{"id":"s-0012","question":"我想启用两步验证。","label":"account","category":"security","difficulty":"easy"}

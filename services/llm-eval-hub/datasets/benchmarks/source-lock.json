@@ -1,0 +1,50 @@
+{
+  "assertions": {
+    "gsm8k_rows": 1319,
+    "mmlu_full_rows": 14042,
+    "mmlu_lite_rows": 570,
+    "mmlu_lite_rows_per_subject": 10,
+    "mmlu_lite_seed": "mmlu-lite-v1-20260812",
+    "mmlu_subjects": 57
+  },
+  "datasets": {
+    "gsm8k-native": {
+      "data_sha256": "e713b08653f27143dca0bf0f1f1ee062d39ffef454b16ab52e7904622f4d4a53",
+      "manifest_sha256": "9c83113df8440f7d3ad7a350c2940e609c1502be74c68215359ab68b4417d94d",
+      "rows": 1319
+    },
+    "mmlu-full-native": {
+      "data_sha256": "d025717fd250f0a9eac990bd31f9bb709395a22bdf76077c90cdedb304ddfea6",
+      "manifest_sha256": "0c62e05064f32e12d8e7cf5f194a8ab51239cab3356e32d8731632fbc86f0d21",
+      "rows": 14042
+    },
+    "mmlu-lite-native": {
+      "data_sha256": "b601ca6defc133cc36a2747879f47d797b0e3832f7c4bfd02b38f26d5f4d1e0c",
+      "manifest_sha256": "d03713662a87b002ee22bbb971248b39aaa86fb796181b21aa09d04b78d0780a",
+      "rows": 570
+    }
+  },
+  "sources": {
+    "gsm8k": {
+      "files": {
+        "README.md": "a17e882503578c9e324560630e31017617714ee025c87cf4fea6fd916895f3c1",
+        "main/test-00000-of-00001.parquet": "ee7b8da9e381df27b9e3f7758a159ab2bdaa4dbaa910546cbbc47e0cb44e4f59"
+      },
+      "license": "MIT",
+      "repo": "openai/gsm8k",
+      "revision": "740312add88f781978c0658806c59bc2815b9866",
+      "url": "https://huggingface.co/datasets/openai/gsm8k"
+    },
+    "mmlu": {
+      "files": {
+        "README.md": "665eef35ecd8a89037c1e4f1e1a0d7fd4c154edc04c81cea5634ace2d3e96953",
+        "all/test-00000-of-00001.parquet": "74a41822ce7d3def56e1682f958469c04642a5336a5ce912fa375fdb90fb25d7"
+      },
+      "license": "MIT",
+      "repo": "cais/mmlu",
+      "revision": "c30699e8356da336a370243923dbaf21066bb9fe",
+      "url": "https://huggingface.co/datasets/cais/mmlu"
+    }
+  },
+  "transform_version": "1"
+}

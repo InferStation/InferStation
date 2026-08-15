@@ -1,0 +1,593 @@
+name: inferstation-llm-eval-hub
+
+x-gpu-boundary: &gpu-boundary
+  ROCR_VISIBLE_DEVICES: ${EVALHUB_GPU_DEVICES:-2,3}
+  HIP_VISIBLE_DEVICES: ${EVALHUB_GPU_DEVICES:-2,3}
+  CUDA_VISIBLE_DEVICES: ${EVALHUB_GPU_DEVICES:-2,3}
+  GPU_DEVICE_ORDINAL: ${EVALHUB_GPU_DEVICES:-2,3}
+
+x-backend: &backend
+  build:
+    context: .
+    dockerfile: apps/api/Dockerfile
+    target: runtime
+  env_file:
+    - path: .env
+      required: false
+  environment:
+    <<: *gpu-boundary
+    DATABASE_URL: postgresql+psycopg://evalhub:${POSTGRES_PASSWORD:-evalhub}@postgres:5432/evalhub
+    REDIS_URL: redis://redis:6379/0
+    CELERY_BROKER_URL: redis://redis:6379/1
+    CELERY_RESULT_BACKEND: redis://redis:6379/2
+    ARTIFACT_ROOT: /var/lib/eval-hub/artifacts
+    HF_HOME: /workspace/hf_cache
+    HF_HUB_CACHE: /workspace/hf_cache/hub
+    HF_DATASETS_CACHE: /workspace/hf_cache/datasets
+    HUGGINGFACE_HUB_CACHE: /workspace/hf_cache/hub
+    ADMIN_API_KEY: ${ADMIN_API_KEY:-inferstation-local-dev-key}
+    SECRET_ENCRYPTION_KEY: ${SECRET_ENCRYPTION_KEY:-}
+    ALLOWED_ENDPOINT_HOSTS: ${ALLOWED_ENDPOINT_HOSTS:-mock-openai,host.docker.internal,developer.amd.com.cn}
+    ALLOWED_ENDPOINT_CIDRS: ${ALLOWED_ENDPOINT_CIDRS:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
+    ALLOW_INSECURE_HTTP: ${ALLOW_INSECURE_HTTP:-true}
+    ALLOW_PUBLIC_HTTPS_ENDPOINTS: ${ALLOW_PUBLIC_HTTPS_ENDPOINTS:-false}
+    WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:18080}
+  volumes:
+    - ./artifacts:/var/lib/eval-hub/artifacts
+    - ./hf_cache:/workspace/hf_cache
+  extra_hosts:
+    - host.docker.internal:host-gateway
+
+services:
+  artifact-init:
+    <<: *backend
+    container_name: inferstation-evalhub-artifact-init
+    user: "0:0"
+    command: >-
+      sh -c "mkdir -p /var/lib/eval-hub/artifacts/datasets &&
+      chown 1024:1024 /var/lib/eval-hub/artifacts
+      /var/lib/eval-hub/artifacts/datasets"
+    restart: "no"
+
+  postgres:
+    image: postgres:16.9-alpine
+    container_name: inferstation-evalhub-postgres
+    environment:
+      POSTGRES_DB: evalhub
+      POSTGRES_USER: evalhub
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-evalhub}
+    volumes:
+      - inferstation_evalhub_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evalhub -d evalhub"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4.5-alpine
+    container_name: inferstation-evalhub-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - inferstation_evalhub_redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  api:
+    <<: *backend
+    container_name: inferstation-evalhub-api
+    command: >-
+      sh -c "alembic upgrade head &&
+      uvicorn apps.api.app.main:app --host 0.0.0.0 --port 8000"
+    ports:
+      - "18000:8000"
+    depends_on:
+      artifact-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  worker:
+    <<: *backend
+    container_name: inferstation-evalhub-worker
+    command: celery -A workers.celery_app worker -Q native --concurrency=4 --loglevel=INFO
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  mock-openai:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: runtime
+    container_name: inferstation-evalhub-mock-openai
+    command: uvicorn tests.fixtures.mock_openai:app --host 0.0.0.0 --port 8001
+    ports:
+      - "18001:8001"
+    restart: unless-stopped
+
+  e2e-mock-openai:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: runtime
+    container_name: inferstation-evalhub-e2e-mock-openai
+    command: uvicorn tests.fixtures.mock_openai:app --host 0.0.0.0 --port 8001
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/healthz')"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    profiles: [e2e]
+
+  e2e-api:
+    <<: *backend
+    image: inferstation-llm-eval-hub-e2e-api
+    container_name: inferstation-evalhub-e2e-api
+    env_file: []
+    command: >-
+      sh -c "alembic upgrade head &&
+      uvicorn apps.api.app.main:app --host 0.0.0.0 --port 8000"
+    environment:
+      <<: *gpu-boundary
+      APP_ENV: development
+      DATABASE_URL: postgresql+psycopg://evalhub:${POSTGRES_PASSWORD:-evalhub}@postgres:5432/evalhub_p1_12_e2e
+      REDIS_URL: redis://redis:6379/13
+      CELERY_BROKER_URL: redis://redis:6379/13
+      CELERY_RESULT_BACKEND: redis://redis:6379/13
+      ARTIFACT_ROOT: /var/lib/eval-hub/artifacts/e2e
+      HF_HOME: /workspace/hf_cache
+      HF_HUB_CACHE: /workspace/hf_cache/hub
+      HF_DATASETS_CACHE: /workspace/hf_cache/datasets
+      HUGGINGFACE_HUB_CACHE: /workspace/hf_cache/hub
+      ADMIN_API_KEY: inferstation-e2e-key
+      ALLOWED_ENDPOINT_HOSTS: e2e-mock-openai
+      ALLOWED_ENDPOINT_CIDRS: 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+      ALLOW_INSECURE_HTTP: "true"
+      WEB_ORIGIN: http://e2e-web
+    volumes:
+      - inferstation_evalhub_e2e_artifacts:/var/lib/eval-hub/artifacts
+      - ./hf_cache:/workspace/hf_cache
+    depends_on:
+      e2e-artifact-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      e2e-mock-openai:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]
+      interval: 2s
+      timeout: 3s
+      retries: 60
+    profiles: [e2e]
+
+  e2e-artifact-init:
+    image: inferstation-llm-eval-hub-e2e-api
+    container_name: inferstation-evalhub-e2e-artifact-init
+    user: "0:0"
+    command: >-
+      sh -c "mkdir -p /var/lib/eval-hub/artifacts/e2e &&
+      chown -R 1024:1024 /var/lib/eval-hub/artifacts"
+    volumes:
+      - inferstation_evalhub_e2e_artifacts:/var/lib/eval-hub/artifacts
+    profiles: [e2e]
+
+  e2e-worker:
+    <<: *backend
+    container_name: inferstation-evalhub-e2e-worker
+    env_file: []
+    command: celery -A workers.celery_app worker -Q native --concurrency=4 --loglevel=INFO
+    environment:
+      <<: *gpu-boundary
+      APP_ENV: development
+      DATABASE_URL: postgresql+psycopg://evalhub:${POSTGRES_PASSWORD:-evalhub}@postgres:5432/evalhub_p1_12_e2e
+      REDIS_URL: redis://redis:6379/13
+      CELERY_BROKER_URL: redis://redis:6379/13
+      CELERY_RESULT_BACKEND: redis://redis:6379/13
+      ARTIFACT_ROOT: /var/lib/eval-hub/artifacts/e2e
+      HF_HOME: /workspace/hf_cache
+      HF_HUB_CACHE: /workspace/hf_cache/hub
+      HF_DATASETS_CACHE: /workspace/hf_cache/datasets
+      HUGGINGFACE_HUB_CACHE: /workspace/hf_cache/hub
+      ADMIN_API_KEY: inferstation-e2e-key
+      ALLOWED_ENDPOINT_HOSTS: e2e-mock-openai
+      ALLOWED_ENDPOINT_CIDRS: 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+      ALLOW_INSECURE_HTTP: "true"
+      WEB_ORIGIN: http://e2e-web
+    volumes:
+      - inferstation_evalhub_e2e_artifacts:/var/lib/eval-hub/artifacts
+      - ./hf_cache:/workspace/hf_cache
+    depends_on:
+      e2e-api:
+        condition: service_healthy
+    profiles: [e2e]
+
+  e2e-web:
+    build:
+      context: apps/web
+      dockerfile: Dockerfile
+    container_name: inferstation-evalhub-e2e-web
+    volumes:
+      - ./tests/e2e/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      e2e-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    profiles: [e2e]
+
+  browser-e2e:
+    build:
+      context: .
+      dockerfile: tests/e2e/Dockerfile
+    container_name: inferstation-evalhub-browser-e2e
+    environment:
+      <<: *gpu-boundary
+      E2E_BASE_URL: http://e2e-web
+      E2E_API_KEY: inferstation-e2e-key
+      E2E_EVIDENCE_DIR: ${E2E_EVIDENCE_DIR:-/workspace/artifacts/e2e}
+      EVALHUB_GIT_SHA: ${EVALHUB_GIT_SHA:-working-tree}
+      EVALHUB_COMPOSE_CONFIG_SHA256: ${EVALHUB_COMPOSE_CONFIG_SHA256:-working-tree}
+      EVALHUB_GPU_DEVICES: ${EVALHUB_GPU_DEVICES:-2,3}
+      EVALHUB_GPU_UNIQUE_IDS: ${EVALHUB_GPU_UNIQUE_IDS:-unknown,unknown}
+    volumes:
+      - ./artifacts:/workspace/artifacts
+    depends_on:
+      e2e-mock-openai:
+        condition: service_healthy
+      e2e-api:
+        condition: service_healthy
+      e2e-worker:
+        condition: service_started
+      e2e-web:
+        condition: service_healthy
+    profiles: [e2e]
+
+  security-mock-openai:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: runtime
+    container_name: inferstation-evalhub-security-mock-openai
+    command: uvicorn tests.fixtures.mock_openai:app --host 0.0.0.0 --port 8001
+    environment:
+      <<: *gpu-boundary
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/healthz')"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    profiles: [security]
+
+  security-api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: runtime
+    container_name: inferstation-evalhub-security-api
+    env_file: []
+    command: >-
+      sh -c "alembic upgrade head &&
+      uvicorn apps.api.app.main:app --host 0.0.0.0 --port 8000"
+    environment:
+      <<: *gpu-boundary
+      APP_ENV: development
+      DATABASE_URL: postgresql+psycopg://evalhub:${POSTGRES_PASSWORD:-evalhub}@postgres:5432/evalhub_p1_13_security
+      REDIS_URL: redis://redis:6379/12
+      CELERY_BROKER_URL: redis://redis:6379/12
+      CELERY_RESULT_BACKEND: redis://redis:6379/12
+      ARTIFACT_ROOT: /tmp/evalhub-artifacts
+      ADMIN_API_KEY: p1-13-admin-test-key
+      SECRET_ENCRYPTION_KEY: MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=
+      ALLOWED_ENDPOINT_HOSTS: security-mock-openai,rebind.p1-13.invalid
+      ALLOWED_ENDPOINT_CIDRS: 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+      ALLOW_INSECURE_HTTP: "true"
+      WEB_ORIGIN: http://security-web.invalid
+    extra_hosts:
+      - "rebind.p1-13.invalid:127.0.0.1"
+      - "unauthorized.p1-13.invalid:198.51.100.10"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      security-mock-openai:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]
+      interval: 2s
+      timeout: 3s
+      retries: 60
+    profiles: [security]
+
+  security-worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: runtime
+    container_name: inferstation-evalhub-security-worker
+    env_file: []
+    command: celery -A workers.celery_app worker -Q native --concurrency=4 --loglevel=INFO
+    environment:
+      <<: *gpu-boundary
+      APP_ENV: development
+      DATABASE_URL: postgresql+psycopg://evalhub:${POSTGRES_PASSWORD:-evalhub}@postgres:5432/evalhub_p1_13_security
+      REDIS_URL: redis://redis:6379/12
+      CELERY_BROKER_URL: redis://redis:6379/12
+      CELERY_RESULT_BACKEND: redis://redis:6379/12
+      ARTIFACT_ROOT: /tmp/evalhub-artifacts
+      ADMIN_API_KEY: p1-13-admin-test-key
+      SECRET_ENCRYPTION_KEY: MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=
+      ALLOWED_ENDPOINT_HOSTS: security-mock-openai,rebind.p1-13.invalid
+      ALLOWED_ENDPOINT_CIDRS: 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+      ALLOW_INSECURE_HTTP: "true"
+      WEB_ORIGIN: http://security-web.invalid
+    extra_hosts:
+      - "rebind.p1-13.invalid:127.0.0.1"
+      - "unauthorized.p1-13.invalid:198.51.100.10"
+    depends_on:
+      security-api:
+        condition: service_healthy
+    profiles: [security]
+
+  security-experiment:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: test
+    container_name: inferstation-evalhub-security-experiment
+    command: python -m tests.experiments.run_security exercise
+    environment:
+      <<: *gpu-boundary
+      APP_ENV: test
+      DATABASE_URL: postgresql+psycopg://evalhub:${POSTGRES_PASSWORD:-evalhub}@postgres:5432/evalhub_p1_13_security
+      REDIS_URL: redis://redis:6379/12
+      CELERY_BROKER_URL: redis://redis:6379/12
+      CELERY_RESULT_BACKEND: redis://redis:6379/12
+      ADMIN_API_KEY: p1-13-admin-test-key
+      SECRET_ENCRYPTION_KEY: MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=
+      EVALHUB_SECURITY_API_URL: http://security-api:8000
+      EVALHUB_SECURITY_MOCK_URL: http://security-mock-openai:8001
+      EVALHUB_GIT_SHA: ${EVALHUB_GIT_SHA:-working-tree}
+      EVALHUB_COMPOSE_CONFIG_SHA256: ${EVALHUB_COMPOSE_CONFIG_SHA256:-working-tree}
+    volumes:
+      - ./artifacts:/workspace/artifacts
+    depends_on:
+      security-api:
+        condition: service_healthy
+    profiles: [security]
+
+  integration-tests:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: test
+    container_name: inferstation-evalhub-integration-tests
+    command: pytest -m integration
+    environment:
+      <<: *gpu-boundary
+      EVALHUB_TEST_DATABASE_SERVER_URL: >-
+        postgresql+psycopg://evalhub:${POSTGRES_PASSWORD:-evalhub}@postgres:5432/postgres
+      EVALHUB_TEST_REDIS_URL: redis://redis:6379/15
+      EVALHUB_TEST_MOCK_BASE_URL: http://mock-openai:8001/v1
+      REDIS_URL: redis://redis:6379/15
+      CELERY_BROKER_URL: redis://redis:6379/15
+      CELERY_RESULT_BACKEND: redis://redis:6379/15
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mock-openai:
+        condition: service_started
+    profiles: [test]
+
+  capacity-experiment:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: test
+    container_name: inferstation-evalhub-capacity-experiment
+    command: python -m tests.experiments.run_capacity
+    environment:
+      <<: *gpu-boundary
+      EVALHUB_TEST_DATABASE_SERVER_URL: >-
+        postgresql+psycopg://evalhub:${POSTGRES_PASSWORD:-evalhub}@postgres:5432/postgres
+      EVALHUB_TEST_REDIS_URL: redis://redis:6379/15
+      EVALHUB_TEST_MOCK_BASE_URL: http://mock-openai:8001/v1
+      EVALHUB_GIT_SHA: ${EVALHUB_GIT_SHA:-working-tree}
+      REDIS_URL: redis://redis:6379/15
+      CELERY_BROKER_URL: redis://redis:6379/15
+      CELERY_RESULT_BACKEND: redis://redis:6379/15
+    volumes:
+      - ./artifacts:/workspace/artifacts
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mock-openai:
+        condition: service_started
+    profiles: [experiment]
+
+  qps-experiment:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: test
+    container_name: inferstation-evalhub-qps-experiment
+    command: python -m tests.experiments.run_shared_qps
+    environment:
+      <<: *gpu-boundary
+      EVALHUB_TEST_DATABASE_SERVER_URL: >-
+        postgresql+psycopg://evalhub:${POSTGRES_PASSWORD:-evalhub}@postgres:5432/postgres
+      EVALHUB_TEST_REDIS_URL: redis://redis:6379/15
+      EVALHUB_TEST_MOCK_BASE_URL: http://mock-openai:8001/v1
+      EVALHUB_GIT_SHA: ${EVALHUB_GIT_SHA:-working-tree}
+      REDIS_URL: redis://redis:6379/15
+      CELERY_BROKER_URL: redis://redis:6379/15
+      CELERY_RESULT_BACKEND: redis://redis:6379/15
+    volumes:
+      - ./artifacts:/workspace/artifacts
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mock-openai:
+        condition: service_started
+    profiles: [experiment]
+
+  faults-experiment:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: test
+    container_name: inferstation-evalhub-faults-experiment
+    command: python -m tests.experiments.run_faults_retry
+    environment:
+      <<: *gpu-boundary
+      EVALHUB_TEST_DATABASE_SERVER_URL: >-
+        postgresql+psycopg://evalhub:${POSTGRES_PASSWORD:-evalhub}@postgres:5432/postgres
+      EVALHUB_TEST_REDIS_URL: redis://redis:6379/15
+      EVALHUB_TEST_MOCK_BASE_URL: http://mock-openai:8001/v1
+      EVALHUB_GIT_SHA: ${EVALHUB_GIT_SHA:-working-tree}
+      REDIS_URL: redis://redis:6379/15
+      CELERY_BROKER_URL: redis://redis:6379/15
+      CELERY_RESULT_BACKEND: redis://redis:6379/15
+    volumes:
+      - ./artifacts:/workspace/artifacts
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mock-openai:
+        condition: service_started
+    profiles: [experiment]
+
+  cancel-experiment:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: test
+    container_name: inferstation-evalhub-cancel-experiment
+    command: python -m tests.experiments.run_cancel
+    environment:
+      <<: *gpu-boundary
+      EVALHUB_TEST_DATABASE_SERVER_URL: >-
+        postgresql+psycopg://evalhub:${POSTGRES_PASSWORD:-evalhub}@postgres:5432/postgres
+      EVALHUB_TEST_REDIS_URL: redis://redis:6379/15
+      EVALHUB_TEST_MOCK_BASE_URL: http://mock-openai:8001/v1
+      EVALHUB_GIT_SHA: ${EVALHUB_GIT_SHA:-working-tree}
+      REDIS_URL: redis://redis:6379/15
+      CELERY_BROKER_URL: redis://redis:6379/15
+      CELERY_RESULT_BACKEND: redis://redis:6379/15
+    volumes:
+      - ./artifacts:/workspace/artifacts
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mock-openai:
+        condition: service_started
+    profiles: [experiment]
+
+  crash-experiment:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: test
+    container_name: inferstation-evalhub-crash-experiment
+    command: python -m tests.experiments.run_worker_crash
+    environment:
+      <<: *gpu-boundary
+      EVALHUB_TEST_DATABASE_SERVER_URL: >-
+        postgresql+psycopg://evalhub:${POSTGRES_PASSWORD:-evalhub}@postgres:5432/postgres
+      EVALHUB_TEST_MOCK_BASE_URL: http://mock-openai:8001/v1
+      EVALHUB_TEST_REDIS_URL: redis://redis:6379/14
+      EVALHUB_GIT_SHA: ${EVALHUB_GIT_SHA:-working-tree}
+      EVALHUB_COMPOSE_CONFIG_SHA256: ${EVALHUB_COMPOSE_CONFIG_SHA256:-working-tree}
+      APP_ENV: test
+      DATABASE_URL: >-
+        postgresql+psycopg://evalhub:${POSTGRES_PASSWORD:-evalhub}@postgres:5432/evalhub_p1_10_worker_crash
+      REDIS_URL: redis://redis:6379/14
+      CELERY_BROKER_URL: redis://redis:6379/14
+      CELERY_RESULT_BACKEND: redis://redis:6379/14
+    volumes:
+      - ./artifacts:/workspace/artifacts
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mock-openai:
+        condition: service_started
+    profiles: [experiment]
+
+  restart-restore-experiment:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: test
+    container_name: inferstation-evalhub-restart-restore-experiment
+    command: python -m tests.experiments.run_restart_restore
+    environment:
+      <<: *gpu-boundary
+      EVALHUB_TEST_DATABASE_SERVER_URL: >-
+        postgresql+psycopg://evalhub:${POSTGRES_PASSWORD:-evalhub}@postgres:5432/postgres
+      EVALHUB_RESTORE_DATABASE_NAME: evalhub_p1_11_restore
+      EVALHUB_GIT_SHA: ${EVALHUB_GIT_SHA:-working-tree}
+      EVALHUB_COMPOSE_CONFIG_SHA256: ${EVALHUB_COMPOSE_CONFIG_SHA256:-working-tree}
+      EVALHUB_GPU_DEVICES: ${EVALHUB_GPU_DEVICES:-2,3}
+      EVALHUB_GPU_UNIQUE_IDS: ${EVALHUB_GPU_UNIQUE_IDS:-unknown,unknown}
+      APP_ENV: test
+      DATABASE_URL: >-
+        postgresql+psycopg://evalhub:${POSTGRES_PASSWORD:-evalhub}@postgres:5432/evalhub
+    volumes:
+      - ./artifacts:/workspace/artifacts
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles: [experiment]
+
+  web:
+    build:
+      context: apps/web
+      dockerfile: Dockerfile
+    container_name: inferstation-evalhub-web
+    ports:
+      - "18080:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  inferstation_evalhub_pgdata:
+    name: inferstation_evalhub_pgdata
+  inferstation_evalhub_redisdata:
+    name: inferstation_evalhub_redisdata
+  inferstation_evalhub_e2e_artifacts:
+    name: inferstation_evalhub_e2e_artifacts

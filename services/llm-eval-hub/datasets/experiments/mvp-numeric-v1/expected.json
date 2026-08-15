@@ -1,0 +1,28 @@
+{
+  "assumptions": {
+    "absolute_tolerance": 0.01,
+    "mock_state_reset": true,
+    "on_parse_error": "count_as_incorrect",
+    "relative_tolerance": 0.001
+  },
+  "category_distribution": {
+    "exact": 80,
+    "invalid_numeric": 5,
+    "outside_tolerance": 5,
+    "within_tolerance": 10
+  },
+  "data_checksum_sha256": "82b3c58d974458e109a35f33bff9d9e11e5e2213bb5f5b36d504a9a06fbf963e",
+  "dataset": "mvp-numeric-v1",
+  "generator_version": "1",
+  "metrics": {
+    "api_errors": 0,
+    "numeric_match": 0.9,
+    "numeric_match_denominator": 100,
+    "numeric_match_numerator": 90,
+    "parse_errors": 5,
+    "scored_samples": 95,
+    "total_samples": 100,
+    "valid_responses": 95
+  },
+  "seed": 20260811
+}

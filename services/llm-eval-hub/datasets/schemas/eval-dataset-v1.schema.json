@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://internal.example/schemas/eval-dataset-v1.schema.json",
+  "title": "LLM Eval Hub Dataset Manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["api_version", "kind", "metadata", "data", "request", "protocol", "validation"],
+  "properties": {
+    "api_version": {"const": "eval-dataset/v1"},
+    "kind": {"const": "Dataset"},
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "display_name", "version", "license", "owner"],
+      "properties": {
+        "name": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,62}$"},
+        "display_name": {"type": "string", "minLength": 1},
+        "version": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"},
+        "description": {"type": "string"},
+        "language": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "license": {"type": "string", "minLength": 1},
+        "owner": {"type": "string", "minLength": 1},
+        "tags": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+      }
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["format", "path", "checksum_sha256", "id_field", "input_fields", "reference_field"],
+      "properties": {
+        "format": {"const": "jsonl"},
+        "path": {"type": "string", "minLength": 1},
+        "split": {"type": "string"},
+        "checksum_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "id_field": {"type": "string", "minLength": 1},
+        "input_fields": {"type": "array", "minItems": 1, "items": {"type": "string"}, "uniqueItems": true},
+        "reference_field": {"type": "string", "minLength": 1},
+        "metadata_fields": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+      }
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode"],
+      "properties": {
+        "mode": {"enum": ["chat_completions", "completions"]},
+        "messages": {
+          "type": ["array", "null"],
+          "items": {
+            "type": "object",
+            "required": ["role", "content"],
+            "properties": {"role": {"type": "string"}, "content": {"type": "string"}},
+            "additionalProperties": false
+          }
+        },
+        "prompt": {"type": ["string", "null"]},
+        "parameters": {"type": "object"},
+        "stop": {"type": "array", "items": {"type": "string"}}
+      },
+      "allOf": [
+        {"if": {"properties": {"mode": {"const": "chat_completions"}}}, "then": {"required": ["messages"]}},
+        {"if": {"properties": {"mode": {"const": "completions"}}}, "then": {"required": ["prompt"]}}
+      ]
+    },
+    "protocol": {
+      "type": "object",
+      "required": ["id", "task_type", "prediction_source", "parser", "scorer"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "task_type": {"type": "string", "minLength": 1},
+        "prediction_source": {"type": "string", "minLength": 1},
+        "few_shot": {"type": "object"},
+        "parser": {"type": "object", "required": ["type"]},
+        "scorer": {"type": "object", "required": ["type", "primary_metric"]},
+        "denominator_policy": {"enum": ["all_scoring_samples", "valid_responses_only"]},
+        "on_api_error": {"enum": ["exclude_and_report", "count_as_incorrect"]},
+        "on_parse_error": {"enum": ["exclude_and_report", "count_as_incorrect"]}
+      },
+      "additionalProperties": true
+    },
+    "groups": {
+      "type": "array",
+      "items": {"type": "object", "required": ["field"], "properties": {"field": {"type": "string"}}, "additionalProperties": false}
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required_fields"],
+      "properties": {
+        "required_fields": {"type": "array", "minItems": 1, "items": {"type": "string"}, "uniqueItems": true},
+        "unique_by": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "allowed_values": {"type": "object", "additionalProperties": {"type": "array"}}
+      }
+    }
+  }
+}

@@ -1,0 +1,66 @@
+api_version: eval-dataset/v1
+kind: Dataset
+metadata:
+  name: internal-support-intent
+  display_name: Internal Support Intent Golden
+  version: "2026.08.1"
+  description: 可手工核对的中文客服意图分类 golden dataset
+  language: [zh-CN]
+  license: proprietary
+  owner: ai-platform
+  tags: [classification, internal, golden]
+
+data:
+  format: jsonl
+  path: data/test.jsonl
+  split: test
+  checksum_sha256: 2988edfefa2c1fbfb4c532685811f608cd7ffcea5d6ef94cbb5a8e181c4ff1d8
+  id_field: id
+  input_fields: [question]
+  reference_field: label
+  metadata_fields: [category, difficulty]
+
+request:
+  mode: chat_completions
+  messages:
+    - role: system
+      content: 你是分类器。只能输出 billing、technical、account 之一。
+    - role: user
+      content: "{{ question }}"
+  parameters:
+    temperature: 0
+    max_tokens: 8
+    seed: 42
+  stop: []
+
+protocol:
+  id: intent-chat-greedy-v1
+  task_type: single_label_classification
+  prediction_source: generated_text
+  few_shot:
+    count: 0
+    selection: fixed
+    sample_ids: []
+  parser:
+    type: label_set
+    version: "1"
+    labels: [billing, technical, account]
+    normalize: [trim, unicode_nfkc, lowercase]
+  scorer:
+    type: classification
+    version: "1"
+    primary_metric: accuracy
+    metrics: [accuracy, macro_f1, micro_f1]
+  denominator_policy: all_scoring_samples
+  on_api_error: exclude_and_report
+  on_parse_error: count_as_incorrect
+
+groups:
+  - field: category
+  - field: difficulty
+
+validation:
+  required_fields: [id, question, label]
+  unique_by: [id]
+  allowed_values:
+    label: [billing, technical, account]

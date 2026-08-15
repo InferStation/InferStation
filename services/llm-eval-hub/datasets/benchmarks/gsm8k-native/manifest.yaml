@@ -1,0 +1,69 @@
+api_version: eval-dataset/v1
+kind: Dataset
+metadata:
+  name: gsm8k-native
+  display_name: GSM8K Native Chat (Test)
+  version: 740312a-native-chat-v1
+  description: GSM8K main test split frozen from openai/gsm8k@740312a. Zero-shot generated numeric answer; not the lm-evaluation-harness 5-shot protocol.
+  language:
+  - en
+  license: MIT
+  owner: ai-platform
+  tags:
+  - benchmark
+  - native-chat
+  - generated-text
+  - frozen
+data:
+  format: jsonl
+  path: data/test.jsonl
+  split: test
+  checksum_sha256: e713b08653f27143dca0bf0f1f1ee062d39ffef454b16ab52e7904622f4d4a53
+  id_field: id
+  input_fields:
+  - question
+  reference_field: answer
+  metadata_fields:
+  - source_index
+request:
+  mode: chat_completions
+  messages:
+  - role: system
+    content: Solve the problem. Reply with only the final numeric answer and no explanation.
+  - role: user
+    content: '{{ question }}'
+  parameters:
+    temperature: 0
+    max_tokens: 32
+  stop: []
+protocol:
+  id: gsm8k-native-chat-0shot-v1
+  task_type: numeric_answer
+  prediction_source: generated_text
+  few_shot:
+    count: 0
+    selection: fixed
+    sample_ids: []
+  parser:
+    type: numeric
+    version: '2'
+    selection: last
+  scorer:
+    type: numeric_match
+    version: '1'
+    primary_metric: numeric_match
+    absolute_tolerance: 0
+    relative_tolerance: 0
+  denominator_policy: all_scoring_samples
+  on_api_error: exclude_and_report
+  on_parse_error: count_as_incorrect
+groups: []
+validation:
+  required_fields:
+  - id
+  - question
+  - answer
+  - source_index
+  unique_by:
+  - id
+  allowed_values: {}

@@ -1,0 +1,10 @@
+{"id":"smoke-001","question":"What is 2 + 3?","choice_a":"4","choice_b":"5","choice_c":"6","choice_d":"7","answer":"B"}
+{"id":"smoke-002","question":"What is the capital of France?","choice_a":"Berlin","choice_b":"Madrid","choice_c":"Paris","choice_d":"Rome","answer":"C"}
+{"id":"smoke-003","question":"At what temperature does pure water freeze in degrees Celsius?","choice_a":"0","choice_b":"10","choice_c":"32","choice_d":"100","answer":"A"}
+{"id":"smoke-004","question":"Which word is the opposite of hot?","choice_a":"warm","choice_b":"cold","choice_c":"dry","choice_d":"bright","answer":"B"}
+{"id":"smoke-005","question":"What is 3 multiplied by 4?","choice_a":"7","choice_b":"10","choice_c":"12","choice_d":"14","answer":"C"}
+{"id":"smoke-006","question":"Which planet is commonly called the Red Planet?","choice_a":"Venus","choice_b":"Mars","choice_c":"Jupiter","choice_d":"Mercury","answer":"B"}
+{"id":"smoke-007","question":"What is 5 minus 2?","choice_a":"2","choice_b":"3","choice_c":"4","choice_d":"5","answer":"B"}
+{"id":"smoke-008","question":"What is the positive square root of 9?","choice_a":"2","choice_b":"3","choice_c":"4","choice_d":"9","answer":"B"}
+{"id":"smoke-009","question":"How many days are in a standard week?","choice_a":"5","choice_b":"6","choice_c":"7","choice_d":"8","answer":"C"}
+{"id":"smoke-010","question":"Which number is largest: 2, 7, 4, or 1?","choice_a":"1","choice_b":"2","choice_c":"4","choice_d":"7","answer":"D"}

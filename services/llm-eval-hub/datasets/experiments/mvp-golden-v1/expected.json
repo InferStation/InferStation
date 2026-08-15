@@ -1,0 +1,28 @@
+{
+  "assumptions": {
+    "max_retries": 2,
+    "mock_state_reset": true
+  },
+  "data_checksum_sha256": "598fec6d3a4e280bdcc6054adc397736f1f10e77f9998d1000dd96d67e5f79ef",
+  "dataset": "mvp-golden-v1",
+  "generator_version": "1",
+  "label_distribution": {
+    "account": 33,
+    "billing": 34,
+    "technical": 33
+  },
+  "metrics": {
+    "accuracy": 1.0,
+    "accuracy_denominator": 100,
+    "accuracy_numerator": 100,
+    "api_errors": 0,
+    "macro_f1": 1.0,
+    "micro_f1": 1.0,
+    "parse_errors": 0,
+    "scored_samples": 100,
+    "total_samples": 100,
+    "valid_responses": 100,
+    "weighted_f1": 1.0
+  },
+  "seed": 20260811
+}

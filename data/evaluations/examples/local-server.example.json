@@ -1,0 +1,179 @@
+{
+  "schema_version": 1,
+  "publication_status": "example",
+  "run_date": "2026-08-15",
+  "started_at": "2026-08-15T02:00:00Z",
+  "completed_at": "2026-08-15T02:18:42Z",
+  "status": "completed",
+  "model": {
+    "slug": "qwen3.6-35b-a3b",
+    "name": "Qwen3.6-35B-A3B",
+    "params_b": 35,
+    "source_url": "https://huggingface.co/unsloth/Qwen3.6-35B-A3B",
+    "revision": "replace-with-immutable-model-revision",
+    "quantization": "BF16",
+    "scheme": "W16A16"
+  },
+  "target": {
+    "type": "local_server",
+    "provider": "self-hosted",
+    "model_id": "inferstation-bench",
+    "endpoint_protocol": "openai-chat-completions",
+    "region": "shanghai",
+    "host": {
+      "slug": "rtx-4090-sh",
+      "name": "RTX 4090",
+      "vendor": "NVIDIA",
+      "chip": "AD102 (sm_89) x2",
+      "accelerator_count": 2,
+      "vram_gb": 96
+    },
+    "engine": {
+      "slug": "vllm",
+      "name": "vLLM",
+      "version": "g2dfaae752",
+      "commit": "2dfaae752",
+      "backend": "CUDA"
+    }
+  },
+  "producer": {
+    "name": "llm-eval-hub",
+    "version": "0.1.0",
+    "commit": "6c304e71a52652df55b391ede07aceaf9cf381e3",
+    "run_id": "synthetic-preview-run-local",
+    "run_fingerprint": "sha256:synthetic-evalhub-protocol-fingerprint-local"
+  },
+  "evaluation": {
+    "spec_id": "sha256:evalhub-native-chat-greedy-v1-synthetic",
+    "suite": {
+      "slug": "evalhub-native-core",
+      "name": "Eval Hub Native Core",
+      "version": "2026.08"
+    },
+    "harness": {
+      "name": "llm-eval-hub",
+      "version": "0.1.0",
+      "commit": "6c304e71a52652df55b391ede07aceaf9cf381e3"
+    },
+    "adapter": {
+      "name": "openai-compatible",
+      "version": "0.1.0",
+      "chat_template": "dataset-manifest",
+      "prompt_template_sha256": "sha256:synthetic-resolved-prompt-template"
+    },
+    "generation": {
+      "temperature": 0,
+      "top_p": 1,
+      "seed": 42,
+      "max_output_tokens": 32
+    },
+    "grader": null,
+    "command": "LLM Eval Hub synthetic example run; endpoint URL and credentials are intentionally omitted"
+  },
+  "summary": {
+    "score": null,
+    "score_label": "No composite score",
+    "normalization": "none",
+    "completed_tasks": 2,
+    "total_tasks": 2
+  },
+  "tasks": [
+    {
+      "dataset": {
+        "slug": "mmlu-lite-native",
+        "name": "MMLU Lite Native",
+        "version": "native-v1@6c304e7",
+        "split": "test",
+        "subset": null,
+        "category": "knowledge/reasoning",
+        "source_url": "https://github.com/AMD-AIM/llm-eval-hub/tree/6c304e71a52652df55b391ede07aceaf9cf381e3/datasets/benchmarks/mmlu-lite-native"
+      },
+      "dataset_checksum": "sha256:b601ca6defc133cc36a2747879f47d797b0e3832f7c4bfd02b38f26d5f4d1e0c",
+      "protocol": {
+        "id": "mmlu-native-chat-0shot-lite-v1",
+        "task_type": "multiple_choice_generation",
+        "denominator_policy": "all_scoring_samples",
+        "on_api_error": "exclude_and_report",
+        "on_parse_error": "count_as_incorrect"
+      },
+      "status": "completed",
+      "primary_metric": "accuracy",
+      "metrics": [
+        {
+          "name": "accuracy",
+          "label": "Native chat accuracy",
+          "value": 0.651,
+          "unit": "ratio",
+          "direction": "higher_is_better",
+          "n": 570,
+          "stderr": 0.02,
+          "ci95": [0.6118, 0.6902]
+        }
+      ],
+      "counters": {
+        "total_samples": 570,
+        "scored_samples": 570,
+        "api_errors": 0,
+        "parse_errors": 0,
+        "score_errors": 0
+      }
+    },
+    {
+      "dataset": {
+        "slug": "gsm8k-native",
+        "name": "GSM8K Native",
+        "version": "native-v1@6c304e7",
+        "split": "test",
+        "subset": null,
+        "category": "reasoning/math",
+        "source_url": "https://github.com/AMD-AIM/llm-eval-hub/tree/6c304e71a52652df55b391ede07aceaf9cf381e3/datasets/benchmarks/gsm8k-native"
+      },
+      "dataset_checksum": "sha256:e713b08653f27143dca0bf0f1f1ee062d39ffef454b16ab52e7904622f4d4a53",
+      "protocol": {
+        "id": "gsm8k-native-chat-0shot-v1",
+        "task_type": "numeric_answer",
+        "denominator_policy": "all_scoring_samples",
+        "on_api_error": "exclude_and_report",
+        "on_parse_error": "count_as_incorrect"
+      },
+      "status": "completed",
+      "primary_metric": "numeric_match",
+      "metrics": [
+        {
+          "name": "numeric_match",
+          "label": "Numeric exact match",
+          "value": 0.734,
+          "unit": "ratio",
+          "direction": "higher_is_better",
+          "n": 1319,
+          "stderr": 0.0122,
+          "ci95": [0.7101, 0.7579]
+        }
+      ],
+      "counters": {
+        "total_samples": 1319,
+        "scored_samples": 1319,
+        "api_errors": 0,
+        "parse_errors": 0,
+        "score_errors": 0
+      }
+    }
+  ],
+  "usage": {
+    "requests": 1889,
+    "input_tokens": 928400,
+    "output_tokens": 38200,
+    "billed_usd": null
+  },
+  "artifacts": {
+    "source_url": "",
+    "log_url": "",
+    "report_url": "",
+    "samples_url": "",
+    "samples_sha256": ""
+  },
+  "notes": "Synthetic Eval Hub-shaped preview only. Do not publish these scores.",
+  "raw_output": {
+    "note": "Synthetic fixture; real adapters may retain a small sanitized source response here"
+  }
+}

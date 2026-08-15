@@ -32,6 +32,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!services/llm-eval-hub/.env.example
+!services/llm-eval-hub/.env.deploy.example
 
 # vercel
 .vercel
@@ -41,8 +43,9 @@ yarn-error.log*
 
 # nested repo (built/pushed to its own gitea remote, not part of this repo)
 
-# generated per-run assets (rebuilt by scripts/build-manifest.mjs from data/runs)
+# generated per-run assets (rebuilt by scripts/build-manifest.mjs from source data)
 /public/data/raw/
+/public/data/evaluations/raw/
 
 # local scratch diagnostics
 /remote_diag.txt

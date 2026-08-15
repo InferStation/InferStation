@@ -1,0 +1,70 @@
+api_version: eval-dataset/v1
+kind: Dataset
+metadata:
+  name: mvp-numeric-v1
+  display_name: Mvp Numeric V1
+  version: 1.0.0
+  description: Deterministic MVP experiment fixture generated with seed 20260811.
+  language:
+  - zh-CN
+  license: proprietary
+  owner: ai-platform
+  tags:
+  - mvp
+  - experiment
+  - deterministic
+data:
+  format: jsonl
+  path: data/test.jsonl
+  split: test
+  checksum_sha256: 82b3c58d974458e109a35f33bff9d9e11e5e2213bb5f5b36d504a9a06fbf963e
+  id_field: id
+  input_fields:
+  - question
+  reference_field: expected
+  metadata_fields:
+  - category
+  - difficulty
+request:
+  mode: chat_completions
+  messages:
+  - role: system
+    content: 只输出最终数值，不要解释。
+  - role: user
+    content: '{{ question }}'
+  parameters:
+    temperature: 0
+    max_tokens: 8
+    seed: 20260811
+  stop: []
+protocol:
+  id: mvp-numeric-greedy-v1
+  task_type: numeric_answer
+  prediction_source: generated_text
+  few_shot:
+    count: 0
+    selection: fixed
+    sample_ids: []
+  parser:
+    type: numeric
+    version: '1'
+  scorer:
+    type: numeric_match
+    version: '1'
+    primary_metric: numeric_match
+    absolute_tolerance: 0.01
+    relative_tolerance: 0.001
+  denominator_policy: all_scoring_samples
+  on_api_error: exclude_and_report
+  on_parse_error: count_as_incorrect
+groups:
+- field: category
+- field: difficulty
+validation:
+  required_fields:
+  - id
+  - question
+  - expected
+  unique_by:
+  - id
+  allowed_values: {}

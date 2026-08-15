@@ -1,0 +1,104 @@
+api_version: eval-dataset/v1
+kind: Dataset
+metadata:
+  name: mmlu-full-native
+  display_name: MMLU Full Native Chat (14,042)
+  version: c30699e-native-chat-v1
+  description: MMLU all/test frozen from cais/mmlu@c30699e8. Complete 14,042-row test split across 57 subjects. Zero-shot generated choice letters; not official loglikelihood MMLU.
+  language:
+  - en
+  license: MIT
+  owner: ai-platform
+  tags:
+  - benchmark
+  - native-chat
+  - generated-text
+  - frozen
+data:
+  format: jsonl
+  path: data/test.jsonl
+  split: test
+  checksum_sha256: d025717fd250f0a9eac990bd31f9bb709395a22bdf76077c90cdedb304ddfea6
+  id_field: id
+  input_fields:
+  - question
+  - subject_display
+  - choice_a
+  - choice_b
+  - choice_c
+  - choice_d
+  reference_field: answer
+  metadata_fields:
+  - subject
+  - domain
+  - source_index
+  - subject_index
+request:
+  mode: chat_completions
+  messages:
+  - role: system
+    content: 'Answer the multiple-choice question. Reply with exactly one letter: A, B, C, or D.'
+  - role: user
+    content: 'Subject: {{ subject_display }}
+
+
+      {{ question }}
+
+
+      A. {{ choice_a }}
+
+      B. {{ choice_b }}
+
+      C. {{ choice_c }}
+
+      D. {{ choice_d }}
+
+
+      Answer:'
+  parameters:
+    temperature: 0
+    max_tokens: 4
+  stop: []
+protocol:
+  id: mmlu-native-chat-0shot-full-v1
+  task_type: multiple_choice_generation
+  prediction_source: generated_text
+  few_shot:
+    count: 0
+    selection: fixed
+    sample_ids: []
+  parser:
+    type: choice_letter
+    version: '1'
+    allowed:
+    - A
+    - B
+    - C
+    - D
+  scorer:
+    type: exact_choice
+    version: '1'
+    primary_metric: accuracy
+  denominator_policy: all_scoring_samples
+  on_api_error: exclude_and_report
+  on_parse_error: count_as_incorrect
+groups:
+- field: subject
+- field: domain
+validation:
+  required_fields:
+  - id
+  - question
+  - subject
+  - subject_display
+  - choice_a
+  - choice_b
+  - choice_c
+  - choice_d
+  - answer
+  - domain
+  - source_index
+  - subject_index
+  unique_by:
+  - id
+  allowed_values: {}

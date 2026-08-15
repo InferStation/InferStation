@@ -11,6 +11,7 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    "services/llm-eval-hub/**",
     "next-env.d.ts",
   ]),
 ]);

@@ -6,10 +6,12 @@
   "scripts": {
     "dev": "node scripts/build-manifest.mjs && next dev",
     "manifest": "node scripts/build-manifest.mjs",
+    "manifest:evaluations": "node scripts/build-manifest.mjs --evaluations-only",
     "prebuild": "node scripts/build-manifest.mjs",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run src"
   },
   "dependencies": {
     "next": "16.2.6",
@@ -24,6 +26,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.7"
   }
 }

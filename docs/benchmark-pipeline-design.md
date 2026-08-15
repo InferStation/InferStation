@@ -1,9 +1,13 @@
-# Benchmark pipeline design
+# Performance benchmark pipeline design
 
 This document describes the repository-owned pipeline that builds inference
 images, executes benchmarks, and publishes reproducible results. It is the
 shared contract for contributors changing recipes, runners, images, result
 records, or automation.
+
+This document covers latency and throughput measurement. The separate accuracy
+evaluation control plane and publication path are described in
+[`accuracy-benchmark-design.md`](accuracy-benchmark-design.md).
 
 The design is intentionally independent of any particular lab network or fleet
 manager. Machine addresses, login details, secret values, private mirrors, and

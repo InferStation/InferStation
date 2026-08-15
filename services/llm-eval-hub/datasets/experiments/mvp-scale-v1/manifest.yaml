@@ -1,0 +1,87 @@
+api_version: eval-dataset/v1
+kind: Dataset
+metadata:
+  name: mvp-scale-v1
+  display_name: Mvp Scale V1
+  version: 1.0.0
+  description: Deterministic MVP experiment fixture generated with seed 20260811.
+  language:
+  - zh-CN
+  license: proprietary
+  owner: ai-platform
+  tags:
+  - mvp
+  - experiment
+  - deterministic
+data:
+  format: jsonl
+  path: data/test.jsonl
+  split: test
+  checksum_sha256: 63812eaa49c92d1d5f2d81a28bd8f528640eec1e1b07247bfb79a5519235e712
+  id_field: id
+  input_fields:
+  - question
+  reference_field: label
+  metadata_fields:
+  - category
+  - difficulty
+  - edge_case
+request:
+  mode: chat_completions
+  messages:
+  - role: system
+    content: 你是分类器。只能输出 billing、technical、account 之一。
+  - role: user
+    content: '{{ question }}'
+  parameters:
+    temperature: 0
+    max_tokens: 8
+    seed: 20260811
+  stop: []
+protocol:
+  id: mvp-intent-chat-greedy-v1
+  task_type: single_label_classification
+  prediction_source: generated_text
+  few_shot:
+    count: 0
+    selection: fixed
+    sample_ids: []
+  parser:
+    type: label_set
+    version: '1'
+    labels:
+    - billing
+    - technical
+    - account
+    normalize:
+    - trim
+    - unicode_nfkc
+    - lowercase
+  scorer:
+    type: classification
+    version: '1'
+    primary_metric: accuracy
+    metrics:
+    - accuracy
+    - macro_f1
+    - micro_f1
+    - weighted_f1
+  denominator_policy: all_scoring_samples
+  on_api_error: exclude_and_report
+  on_parse_error: count_as_incorrect
+groups:
+- field: category
+- field: difficulty
+- field: edge_case
+validation:
+  required_fields:
+  - id
+  - question
+  - label
+  unique_by:
+  - id
+  allowed_values:
+    label:
+    - billing
+    - technical
+    - account

@@ -1,0 +1,1000 @@
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0448","label":"billing","question":"怎样变更当前套餐？（样本 448）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0649","label":"billing","question":"信用卡被重复扣款了。（样本 649）"}
+{"category":"account","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0903","label":"account","question":"登录帳號时收不到验证码。（样本 903）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0871","label":"billing","question":"如何申请退款？（样本 871）"}
+{"category":"account","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0642","label":"account","question":"在哪里开启两步验证？　（样本 642）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0754","label":"billing","question":"信用卡被重复扣款了。（样本 754）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0818","label":"technical","question":"请求频繁超时怎么办？（样本 818）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0851","label":"technical","question":"控制台页面无法加载。（样本 851）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0180","label":"account","question":"账号登录后立即退出。（样本 180）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0314","label":"technical","question":"批量接口返回未知错误。（样本 314）"}
+{"category":"technical","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0563","label":"technical","question":"请求频繁超时怎么办？（样本 563）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0711","label":"account","question":"如何修改账号邮箱？（样本 711）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0140","label":"technical","question":"上传文件时页面显示空白。（样本 140）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0284","label":"technical","question":"批量接口返回未知错误。（样本 284）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0950","label":"technical","question":"上传文件时页面显示空白。（样本 950）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0975","label":"account","question":"账号登录后立即退出。（样本 975）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0212","label":"technical","question":"接口一直返回 502 错误。（样本 212）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0255","label":"account","question":"账号登录后立即退出。（样本 255）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0385","label":"billing","question":"续费价格和页面显示的不一致。（样本 385）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0233","label":"technical","question":"请求频繁超时怎么办？（样本 233）"}
+{"category":"account","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0561","label":"account","question":"  如何修改账号邮箱？（样本 561）\t"}
+{"category":"billing","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0622","label":"billing","question":"在哪里下载本月发票？　（样本 622）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0726","label":"account","question":"如何修改账号邮箱？（样本 726）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0813","label":"account","question":"登录账号时收不到验证码。（样本 813）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0171","label":"account","question":"如何修改账号邮箱？（样本 171）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0134","label":"technical","question":"批量接口返回未知错误。（样本 134）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0636","label":"account","question":"如何修改账号邮箱？（样本 636）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0418","label":"billing","question":"怎样变更当前套餐？（样本 418）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0545","label":"technical","question":"上传文件时页面显示空白。（样本 545）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0870","label":"account","question":"账号登录后立即退出。（样本 870）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0719","label":"technical","question":"批量接口返回未知错误。（样本 719）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0519","label":"account","question":"怎样邀请新的团队成员？（样本 519）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0309","label":"account","question":"怎样邀请新的团队成员？（样本 309）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0072","label":"account","question":"在哪里开启两步验证？（样本 72）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0246","label":"account","question":"如何修改账号邮箱？（样本 246）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0552","label":"account","question":"在哪里开启两步验证？（样本 552）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0640","label":"billing","question":"续费价格和页面显示的不一致。（样本 640）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0408","label":"account","question":"登录账号时收不到验证码。（样本 408）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0259","label":"billing","question":"信用卡被重复扣款了。（样本 259）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0075","label":"account","question":"账号登录后立即退出。（样本 75）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0332","label":"technical","question":"接口一直返回 502 错误。（样本 332）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0534","label":"account","question":"怎样邀请新的团队成员？（样本 534）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0578","label":"technical","question":"请求频繁超时怎么办？（样本 578）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0330","label":"account","question":"账号登录后立即退出。（样本 330）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0727","label":"billing","question":"在哪里下载本月发票？（样本 727）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0411","label":"account","question":"如何修改账号邮箱？（样本 411）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0773","label":"technical","question":"请求频繁超时怎么办？（样本 773）"}
+{"category":"account","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0522","label":"account","question":"在哪里开启两步验证？　（样本 522）"}
+{"category":"billing","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0421","label":"billing","question":"  如何申请退款？（样本 421）\t"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0693","label":"account","question":"登录账号时收不到验证码。（样本 693）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0440","label":"technical","question":"上传文件时页面显示空白。（样本 440）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0452","label":"technical","question":"接口一直返回 502 错误。（样本 452）"}
+{"category":"technical","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0302","label":"technical","question":"接口一直返回 502 错误。（样本 302）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0239","label":"technical","question":"批量接口返回未知错误。（样本 239）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0204","label":"account","question":"怎样邀请新的团队成员？（样本 204）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0220","label":"billing","question":"续费价格和页面显示的不一致。（样本 220）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0907","label":"billing","question":"在哪里下载本月发票？（样本 907）"}
+{"category":"account","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0141","label":"account","question":"  如何修改账号邮箱？（样本 141）\t"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0472","label":"billing","question":"在哪里下载本月发票？（样本 472）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0471","label":"account","question":"如何修改账号邮箱？（样本 471）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0512","label":"technical","question":"接口一直返回 502 错误。（样本 512）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0355","label":"billing","question":"续费价格和页面显示的不一致。（样本 355）"}
+{"category":"technical","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0143","label":"technical","question":"请求频繁超时怎么办？（样本 143）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0930","label":"account","question":"账号登录后立即退出。（样本 930）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0034","label":"billing","question":"信用卡被重复扣款了。（样本 34）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0554","label":"technical","question":"批量接口返回未知错误。（样本 554）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0294","label":"account","question":"怎样邀请新的团队成员？（样本 294）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0279","label":"account","question":"怎样邀请新的团队成员？（样本 279）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0071","label":"technical","question":"控制台页面无法加载。（样本 71）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0004","label":"billing","question":"信用卡被重复扣款了。（样本 4）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0468","label":"account","question":"登录账号时收不到验证码。（样本 468）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0804","label":"account","question":"怎样邀请新的团队成员？（样本 804）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0270","label":"account","question":"账号登录后立即退出。（样本 270）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0757","label":"billing","question":"在哪里下载本月发票？（样本 757）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0436","label":"billing","question":"如何申请退款？（样本 436）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0939","label":"account","question":"怎样邀请新的团队成员？（样本 939）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0515","label":"technical","question":"上传文件时页面显示空白。（样本 515）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0614","label":"technical","question":"批量接口返回未知错误。（样本 614）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0170","label":"technical","question":"上传文件时页面显示空白。（样本 170）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0473","label":"technical","question":"请求频繁超时怎么办？（样本 473）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0596","label":"technical","question":"控制台页面无法加载。（样本 596）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0593","label":"technical","question":"请求频繁超时怎么办？（样本 593）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0394","label":"billing","question":"信用卡被重复扣款了。（样本 394）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0850","label":"billing","question":"续费价格和页面显示的不一致。（样本 850）"}
+{"category":"billing","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0682","label":"billing","question":"在哪里下载本月发票？　（样本 682）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0479","label":"technical","question":"批量接口返回未知错误。（样本 479）"}
+{"category":"account","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0963","label":"account","question":"登录帳號时收不到验证码。（样本 963）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0996","label":"account","question":"如何修改账号邮箱？（样本 996）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0698","label":"technical","question":"请求频繁超时怎么办？（样本 698）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0879","label":"account","question":"怎样邀请新的团队成员？（样本 879）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0865","label":"billing","question":"续费价格和页面显示的不一致。（样本 865）"}
+{"category":"technical","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0923","label":"technical","question":"请求频繁超时怎么办？（样本 923）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0049","label":"billing","question":"信用卡被重复扣款了。（样本 49）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0253","label":"billing","question":"怎样变更当前套餐？（样本 253）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0755","label":"technical","question":"上传文件时页面显示空白。（样本 755）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0966","label":"account","question":"如何修改账号邮箱？（样本 966）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0187","label":"billing","question":"在哪里下载本月发票？（样本 187）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0225","label":"account","question":"账号登录后立即退出。（样本 225）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0125","label":"technical","question":"上传文件时页面显示空白。（样本 125）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0904","label":"billing","question":"信用卡被重复扣款了。（样本 904）"}
+{"category":"account","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0621","label":"account","question":"  如何修改账号邮箱？（样本 621）\t"}
+{"category":"account","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0462","label":"account","question":"在哪里开启两步验证？　（样本 462）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0906","label":"account","question":"如何修改账号邮箱？（样本 906）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0827","label":"technical","question":"接口一直返回 502 错误。（样本 827）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0446","label":"technical","question":"控制台页面无法加载。（样本 446）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0312","label":"account","question":"在哪里开启两步验证？（样本 312）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0172","label":"billing","question":"在哪里下载本月发票？（样本 172）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0807","label":"account","question":"在哪里开启两步验证？（样本 807）"}
+{"category":"technical","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0782","label":"technical","question":"接口一直返回 502 错误。（样本 782）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0300","label":"account","question":"账号登录后立即退出。（样本 300）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0812","label":"technical","question":"接口一直返回 502 错误。（样本 812）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0127","label":"billing","question":"在哪里下载本月发票？（样本 127）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0193","label":"billing","question":"怎样变更当前套餐？（样本 193）"}
+{"category":"account","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0582","label":"account","question":"在哪里开启两步验证？　（样本 582）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0496","label":"billing","question":"如何申请退款？（样本 496）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0386","label":"technical","question":"控制台页面无法加载。（样本 386）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0470","label":"technical","question":"上传文件时页面显示空白。（样本 470）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0728","label":"technical","question":"请求频繁超时怎么办？（样本 728）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0860","label":"technical","question":"上传文件时页面显示空白。（样本 860）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0685","label":"billing","question":"续费价格和页面显示的不一致。（样本 685）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0969","label":"account","question":"怎样邀请新的团队成员？（样本 969）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0037","label":"billing","question":"在哪里下载本月发票？（样本 37）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0692","label":"technical","question":"接口一直返回 502 错误。（样本 692）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0454","label":"billing","question":"信用卡被重复扣款了。（样本 454）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0331","label":"billing","question":"如何申请退款？（样本 331）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0771","label":"account","question":"如何修改账号邮箱？（样本 771）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0632","label":"technical","question":"接口一直返回 502 错误。（样本 632）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0900","label":"account","question":"账号登录后立即退出。（样本 900）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0792","label":"account","question":"在哪里开启两步验证？（样本 792）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0174","label":"account","question":"怎样邀请新的团队成员？（样本 174）"}
+{"category":"account","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0663","label":"account","question":"登录帳號时收不到验证码。（样本 663）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0594","label":"account","question":"怎样邀请新的团队成员？（样本 594）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0353","label":"technical","question":"请求频繁超时怎么办？（样本 353）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0798","label":"account","question":"登录账号时收不到验证码。（样本 798）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0535","label":"billing","question":"续费价格和页面显示的不一致。（样本 535）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0132","label":"account","question":"在哪里开启两步验证？（样本 132）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0867","label":"account","question":"在哪里开启两步验证？（样本 867）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0800","label":"technical","question":"上传文件时页面显示空白。（样本 800）"}
+{"category":"technical","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0902","label":"technical","question":"接口一直返回 502 错误。（样本 902）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0306","label":"account","question":"如何修改账号邮箱？（样本 306）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0359","label":"technical","question":"批量接口返回未知错误。（样本 359）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0567","label":"account","question":"在哪里开启两步验证？（样本 567）"}
+{"category":"account","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0342","label":"account","question":"在哪里开启两步验证？　（样本 342）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0167","label":"technical","question":"接口一直返回 502 错误。（样本 167）"}
+{"category":"technical","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0242","label":"technical","question":"接口一直返回 502 错误。（样本 242）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0670","label":"billing","question":"续费价格和页面显示的不一致。（样本 670）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0475","label":"billing","question":"续费价格和页面显示的不一致。（样本 475）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0667","label":"billing","question":"在哪里下载本月发票？（样本 667）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0714","label":"account","question":"怎样邀请新的团队成员？（样本 714）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0348","label":"account","question":"登录账号时收不到验证码。（样本 348）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0715","label":"billing","question":"续费价格和页面显示的不一致。（样本 715）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0892","label":"billing","question":"在哪里下载本月发票？（样本 892）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0968","label":"technical","question":"请求频繁超时怎么办？（样本 968）"}
+{"category":"billing","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0181","label":"billing","question":"  如何申请退款？（样本 181）\t"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0110","label":"technical","question":"上传文件时页面显示空白。（样本 110）"}
+{"category":"account","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0363","label":"account","question":"登录帳號时收不到验证码。（样本 363）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0654","label":"account","question":"怎样邀请新的团队成员？（样本 654）"}
+{"category":"account","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0942","label":"account","question":"在哪里开启两步验证？　（样本 942）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0938","label":"technical","question":"请求频繁超时怎么办？（样本 938）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0054","label":"account","question":"怎样邀请新的团队成员？（样本 54）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0340","label":"billing","question":"续费价格和页面显示的不一致。（样本 340）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0107","label":"technical","question":"接口一直返回 502 错误。（样本 107）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0316","label":"billing","question":"如何申请退款？（样本 316）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0937","label":"billing","question":"在哪里下载本月发票？（样本 937）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0977","label":"technical","question":"接口一直返回 502 错误。（样本 977）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0431","label":"technical","question":"控制台页面无法加载。（样本 431）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0352","label":"billing","question":"在哪里下载本月发票？（样本 352）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0053","label":"technical","question":"请求频繁超时怎么办？（样本 53）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0410","label":"technical","question":"上传文件时页面显示空白。（样本 410）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0424","label":"billing","question":"信用卡被重复扣款了。（样本 424）"}
+{"category":"billing","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0343","label":"billing","question":"怎样变更当前套餐？（样本 343）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0297","label":"account","question":"在哪里开启两步验证？（样本 297）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0845","label":"technical","question":"上传文件时页面显示空白。（样本 845）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0917","label":"technical","question":"接口一直返回 502 错误。（样本 917）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0932","label":"technical","question":"接口一直返回 502 错误。（样本 932）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0337","label":"billing","question":"在哪里下载本月发票？（样本 337）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0256","label":"billing","question":"如何申请退款？（样本 256）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0589","label":"billing","question":"信用卡被重复扣款了。（样本 589）"}
+{"category":"account","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0783","label":"account","question":"登录帳號时收不到验证码。（样本 783）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0211","label":"billing","question":"如何申请退款？（样本 211）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0508","label":"billing","question":"怎样变更当前套餐？（样本 508）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0500","label":"technical","question":"上传文件时页面显示空白。（样本 500）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0495","label":"account","question":"账号登录后立即退出。（样本 495）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0307","label":"billing","question":"在哪里下载本月发票？（样本 307）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0690","label":"account","question":"账号登录后立即退出。（样本 690）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0334","label":"billing","question":"信用卡被重复扣款了。（样本 334）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0040","label":"billing","question":"续费价格和页面显示的不一致。（样本 40）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0404","label":"technical","question":"批量接口返回未知错误。（样本 404）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0965","label":"technical","question":"上传文件时页面显示空白。（样本 965）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0008","label":"technical","question":"请求频繁超时怎么办？（样本 8）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0006","label":"account","question":"如何修改账号邮箱？（样本 6）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0769","label":"billing","question":"信用卡被重复扣款了。（样本 769）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0849","label":"account","question":"怎样邀请新的团队成员？（样本 849）"}
+{"category":"billing","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0961","label":"billing","question":"  如何申请退款？（样本 961）\t"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0427","label":"billing","question":"在哪里下载本月发票？（样本 427）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0095","label":"technical","question":"上传文件时页面显示空白。（样本 95）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0111","label":"account","question":"如何修改账号邮箱？（样本 111）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0612","label":"account","question":"在哪里开启两步验证？（样本 612）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0052","label":"billing","question":"在哪里下载本月发票？（样本 52）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0056","label":"technical","question":"控制台页面无法加载。（样本 56）"}
+{"category":"technical","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0641","label":"technical","question":"  控制台页面无法加载。（样本 641）\t"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0934","label":"billing","question":"信用卡被重复扣款了。（样本 934）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0560","label":"technical","question":"上传文件时页面显示空白。（样本 560）"}
+{"category":"account","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0381","label":"account","question":"  如何修改账号邮箱？（样本 381）\t"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0639","label":"account","question":"怎样邀请新的团队成员？（样本 639）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0497","label":"technical","question":"接口一直返回 502 错误。（样本 497）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0333","label":"account","question":"登录账号时收不到验证码。（样本 333）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0271","label":"billing","question":"如何申请退款？（样本 271）"}
+{"category":"billing","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0382","label":"billing","question":"在哪里下载本月发票？　（样本 382）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0373","label":"billing","question":"怎样变更当前套餐？（样本 373）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0579","label":"account","question":"怎样邀请新的团队成员？（样本 579）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0785","label":"technical","question":"上传文件时页面显示空白。（样本 785）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0308","label":"technical","question":"请求频繁超时怎么办？（样本 308）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0524","label":"technical","question":"批量接口返回未知错误。（样本 524）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0537","label":"account","question":"在哪里开启两步验证？（样本 537）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0694","label":"billing","question":"信用卡被重复扣款了。（样本 694）"}
+{"category":"billing","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0202","label":"billing","question":"在哪里下载本月发票？　（样本 202）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0995","label":"technical","question":"上传文件时页面显示空白。（样本 995）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0478","label":"billing","question":"怎样变更当前套餐？（样本 478）"}
+{"category":"account","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0801","label":"account","question":"  如何修改账号邮箱？（样本 801）\t"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0069","label":"account","question":"怎样邀请新的团队成员？（样本 69）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0152","label":"technical","question":"接口一直返回 502 错误。（样本 152）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0994","label":"billing","question":"信用卡被重复扣款了。（样本 994）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0705","label":"account","question":"账号登录后立即退出。（样本 705）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0105","label":"account","question":"账号登录后立即退出。（样本 105）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0516","label":"account","question":"如何修改账号邮箱？（样本 516）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0430","label":"billing","question":"续费价格和页面显示的不一致。（样本 430）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0679","label":"billing","question":"信用卡被重复扣款了。（样本 679）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0124","label":"billing","question":"信用卡被重复扣款了。（样本 124）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0598","label":"billing","question":"怎样变更当前套餐？（样本 598）"}
+{"category":"technical","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0983","label":"technical","question":"请求频繁超时怎么办？（样本 983）"}
+{"category":"account","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0822","label":"account","question":"在哪里开启两步验证？　（样本 822）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0869","label":"technical","question":"批量接口返回未知错误。（样本 869）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0435","label":"account","question":"账号登录后立即退出。（样本 435）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0015","label":"account","question":"账号登录后立即退出。（样本 15）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0659","label":"technical","question":"批量接口返回未知错误。（样本 659）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0070","label":"billing","question":"续费价格和页面显示的不一致。（样本 70）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0453","label":"account","question":"登录账号时收不到验证码。（样本 453）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0746","label":"technical","question":"控制台页面无法加载。（样本 746）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0088","label":"billing","question":"怎样变更当前套餐？（样本 88）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0574","label":"billing","question":"信用卡被重复扣款了。（样本 574）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0090","label":"account","question":"账号登录后立即退出。（样本 90）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0657","label":"account","question":"在哪里开启两步验证？（样本 657）"}
+{"category":"billing","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0562","label":"billing","question":"在哪里下载本月发票？　（样本 562）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0700","label":"billing","question":"续费价格和页面显示的不一致。（样本 700）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0229","label":"billing","question":"信用卡被重复扣款了。（样本 229）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0905","label":"technical","question":"上传文件时页面显示空白。（样本 905）"}
+{"category":"account","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0102","label":"account","question":"在哪里开启两步验证？　（样本 102）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0920","label":"technical","question":"上传文件时页面显示空白。（样本 920）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0460","label":"billing","question":"续费价格和页面显示的不一致。（样本 460）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0734","label":"technical","question":"批量接口返回未知错误。（样本 734）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0100","label":"billing","question":"续费价格和页面显示的不一致。（样本 100）"}
+{"category":"technical","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0962","label":"technical","question":"接口一直返回 502 错误。（样本 962）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0118","label":"billing","question":"怎样变更当前套餐？（样本 118）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0011","label":"technical","question":"控制台页面无法加载。（样本 11）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0753","label":"account","question":"登录账号时收不到验证码。（样本 753）"}
+{"category":"billing","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0061","label":"billing","question":"  如何申请退款？（样本 61）\t"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0947","label":"technical","question":"接口一直返回 502 错误。（样本 947）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0852","label":"account","question":"在哪里开启两步验证？（样本 852）"}
+{"category":"technical","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0101","label":"technical","question":"  控制台页面无法加载。（样本 101）\t"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0280","label":"billing","question":"续费价格和页面显示的不一致。（样本 280）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0740","label":"technical","question":"上传文件时页面显示空白。（样本 740）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0568","label":"billing","question":"怎样变更当前套餐？（样本 568）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0808","label":"billing","question":"怎样变更当前套餐？（样本 808）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0887","label":"technical","question":"接口一直返回 502 错误。（样本 887）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0149","label":"technical","question":"批量接口返回未知错误。（样本 149）"}
+{"category":"account","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0603","label":"account","question":"登录帳號时收不到验证码。（样本 603）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0177","label":"account","question":"在哪里开启两步验证？（样本 177）"}
+{"category":"technical","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0041","label":"technical","question":"  控制台页面无法加载。（样本 41）\t"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0016","label":"billing","question":"如何申请退款？（样本 16）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0880","label":"billing","question":"续费价格和页面显示的不一致。（样本 880）"}
+{"category":"billing","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0802","label":"billing","question":"在哪里下载本月发票？　（样本 802）"}
+{"category":"billing","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0781","label":"billing","question":"  如何申请退款？（样本 781）\t"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0347","label":"technical","question":"接口一直返回 502 错误。（样本 347）"}
+{"category":"technical","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0443","label":"technical","question":"请求频繁超时怎么办？（样本 443）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0050","label":"technical","question":"上传文件时页面显示空白。（样本 50）"}
+{"category":"technical","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0422","label":"technical","question":"接口一直返回 502 错误。（样本 422）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0724","label":"billing","question":"信用卡被重复扣款了。（样本 724）"}
+{"category":"billing","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0022","label":"billing","question":"在哪里下载本月发票？　（样本 22）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0320","label":"technical","question":"上传文件时页面显示空白。（样本 320）"}
+{"category":"billing","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0481","label":"billing","question":"  如何申请退款？（样本 481）\t"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0630","label":"account","question":"账号登录后立即退出。（样本 630）"}
+{"category":"billing","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0901","label":"billing","question":"  如何申请退款？（样本 901）\t"}
+{"category":"account","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0921","label":"account","question":"  如何修改账号邮箱？（样本 921）\t"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0646","label":"billing","question":"如何申请退款？（样本 646）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0854","label":"technical","question":"批量接口返回未知错误。（样本 854）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0678","label":"account","question":"登录账号时收不到验证码。（样本 678）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0775","label":"billing","question":"续费价格和页面显示的不一致。（样本 775）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0184","label":"billing","question":"信用卡被重复扣款了。（样本 184）"}
+{"category":"account","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0261","label":"account","question":"  如何修改账号邮箱？（样本 261）\t"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0131","label":"technical","question":"控制台页面无法加载。（样本 131）"}
+{"category":"billing","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0601","label":"billing","question":"  如何申请退款？（样本 601）\t"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0806","label":"technical","question":"控制台页面无法加载。（样本 806）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0375","label":"account","question":"账号登录后立即退出。（样本 375）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0592","label":"billing","question":"在哪里下载本月发票？（样本 592）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0925","label":"billing","question":"续费价格和页面显示的不一致。（样本 925）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0540","label":"account","question":"账号登录后立即退出。（样本 540）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0065","label":"technical","question":"上传文件时页面显示空白。（样本 65）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0299","label":"technical","question":"批量接口返回未知错误。（样本 299）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0035","label":"technical","question":"上传文件时页面显示空白。（样本 35）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0318","label":"account","question":"登录账号时收不到验证码。（样本 318）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0251","label":"technical","question":"控制台页面无法加载。（样本 251）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0566","label":"technical","question":"控制台页面无法加载。（样本 566）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0068","label":"technical","question":"请求频繁超时怎么办？（样本 68）"}
+{"category":"technical","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0083","label":"technical","question":"请求频繁超时怎么办？（样本 83）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0289","label":"billing","question":"信用卡被重复扣款了。（样本 289）"}
+{"category":"account","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0723","label":"account","question":"登录帳號时收不到验证码。（样本 723）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0369","label":"account","question":"怎样邀请新的团队成员？（样本 369）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0696","label":"account","question":"如何修改账号邮箱？（样本 696）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0894","label":"account","question":"怎样邀请新的团队成员？（样本 894）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0655","label":"billing","question":"续费价格和页面显示的不一致。（样本 655）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0406","label":"billing","question":"如何申请退款？（样本 406）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0456","label":"account","question":"如何修改账号邮箱？（样本 456）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0780","label":"account","question":"账号登录后立即退出。（样本 780）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0128","label":"technical","question":"请求频繁超时怎么办？（样本 128）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0929","label":"technical","question":"批量接口返回未知错误。（样本 929）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0474","label":"account","question":"怎样邀请新的团队成员？（样本 474）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0252","label":"account","question":"在哪里开启两步验证？（样本 252）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0275","label":"technical","question":"上传文件时页面显示空白。（样本 275）"}
+{"category":"technical","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0203","label":"technical","question":"请求频繁超时怎么办？（样本 203）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0073","label":"billing","question":"怎样变更当前套餐？（样本 73）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0093","label":"account","question":"登录账号时收不到验证码。（样本 93）"}
+{"category":"technical","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0503","label":"technical","question":"请求频繁超时怎么办？（样本 503）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0859","label":"billing","question":"信用卡被重复扣款了。（样本 859）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0695","label":"technical","question":"上传文件时页面显示空白。（样本 695）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0313","label":"billing","question":"怎样变更当前套餐？（样本 313）"}
+{"category":"billing","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0463","label":"billing","question":"怎样变更当前套餐？（样本 463）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0918","label":"account","question":"登录账号时收不到验证码。（样本 918）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0587","label":"technical","question":"接口一直返回 502 错误。（样本 587）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0931","label":"billing","question":"如何申请退款？（样本 931）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0354","label":"account","question":"怎样邀请新的团队成员？（样本 354）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0213","label":"account","question":"登录账号时收不到验证码。（样本 213）"}
+{"category":"billing","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0361","label":"billing","question":"  如何申请退款？（样本 361）\t"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0794","label":"technical","question":"批量接口返回未知错误。（样本 794）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0648","label":"account","question":"登录账号时收不到验证码。（样本 648）"}
+{"category":"technical","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0623","label":"technical","question":"请求频繁超时怎么办？（样本 623）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0153","label":"account","question":"登录账号时收不到验证码。（样本 153）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0633","label":"account","question":"登录账号时收不到验证码。（样本 633）"}
+{"category":"billing","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0982","label":"billing","question":"在哪里下载本月发票？　（样本 982）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0098","label":"technical","question":"请求频繁超时怎么办？（样本 98）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0551","label":"technical","question":"控制台页面无法加载。（样本 551）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0748","label":"billing","question":"怎样变更当前套餐？（样本 748）"}
+{"category":"billing","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0001","label":"billing","question":"  如何申请退款？（样本 1）\t"}
+{"category":"billing","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0262","label":"billing","question":"在哪里下载本月发票？　（样本 262）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0616","label":"billing","question":"如何申请退款？（样本 616）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0494","label":"technical","question":"批量接口返回未知错误。（样本 494）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0047","label":"technical","question":"接口一直返回 502 错误。（样本 47）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0759","label":"account","question":"怎样邀请新的团队成员？（样本 759）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0738","label":"account","question":"登录账号时收不到验证码。（样本 738）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0417","label":"account","question":"在哪里开启两步验证？（样本 417）"}
+{"category":"account","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0741","label":"account","question":"  如何修改账号邮箱？（样本 741）\t"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0514","label":"billing","question":"信用卡被重复扣款了。（样本 514）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0272","label":"technical","question":"接口一直返回 502 错误。（样本 272）"}
+{"category":"billing","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0661","label":"billing","question":"  如何申请退款？（样本 661）\t"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0676","label":"billing","question":"如何申请退款？（样本 676）"}
+{"category":"billing","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0082","label":"billing","question":"在哪里下载本月发票？　（样本 82）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0625","label":"billing","question":"续费价格和页面显示的不一致。（样本 625）"}
+{"category":"account","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0162","label":"account","question":"在哪里开启两步验证？　（样本 162）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0634","label":"billing","question":"信用卡被重复扣款了。（样本 634）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0653","label":"technical","question":"请求频繁超时怎么办？（样本 653）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0955","label":"billing","question":"续费价格和页面显示的不一致。（样本 955）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0033","label":"account","question":"登录账号时收不到验证码。（样本 33）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0370","label":"billing","question":"续费价格和页面显示的不一致。（样本 370）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0831","label":"account","question":"如何修改账号邮箱？（样本 831）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0231","label":"account","question":"如何修改账号邮箱？（样本 231）"}
+{"category":"account","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0483","label":"account","question":"登录帳號时收不到验证码。（样本 483）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0713","label":"technical","question":"请求频繁超时怎么办？（样本 713）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0745","label":"billing","question":"续费价格和页面显示的不一致。（样本 745）"}
+{"category":"billing","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0703","label":"billing","question":"怎样变更当前套餐？（样本 703）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0949","label":"billing","question":"信用卡被重复扣款了。（样本 949）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0624","label":"account","question":"怎样邀请新的团队成员？（样本 624）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0067","label":"billing","question":"在哪里下载本月发票？（样本 67）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0398","label":"technical","question":"请求频繁超时怎么办？（样本 398）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0550","label":"billing","question":"续费价格和页面显示的不一致。（样本 550）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0286","label":"billing","question":"如何申请退款？（样本 286）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0677","label":"technical","question":"接口一直返回 502 错误。（样本 677）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0990","label":"account","question":"账号登录后立即退出。（样本 990）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0019","label":"billing","question":"信用卡被重复扣款了。（样本 19）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0076","label":"billing","question":"如何申请退款？（样本 76）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0304","label":"billing","question":"信用卡被重复扣款了。（样本 304）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0730","label":"billing","question":"续费价格和页面显示的不一致。（样本 730）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0608","label":"technical","question":"请求频繁超时怎么办？（样本 608）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0988","label":"billing","question":"怎样变更当前套餐？（样本 988）"}
+{"category":"technical","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0002","label":"technical","question":"接口一直返回 502 错误。（样本 2）"}
+{"category":"account","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0003","label":"account","question":"登录帳號时收不到验证码。（样本 3）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0109","label":"billing","question":"信用卡被重复扣款了。（样本 109）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0770","label":"technical","question":"上传文件时页面显示空白。（样本 770）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0064","label":"billing","question":"信用卡被重复扣款了。（样本 64）"}
+{"category":"account","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0321","label":"account","question":"  如何修改账号邮箱？（样本 321）\t"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0097","label":"billing","question":"在哪里下载本月发票？（样本 97）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0339","label":"account","question":"怎样邀请新的团队成员？（样本 339）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0089","label":"technical","question":"批量接口返回未知错误。（样本 89）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0546","label":"account","question":"如何修改账号邮箱？（样本 546）"}
+{"category":"technical","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0881","label":"technical","question":"  控制台页面无法加载。（样本 881）\t"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0160","label":"billing","question":"续费价格和页面显示的不一致。（样本 160）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0992","label":"technical","question":"接口一直返回 502 错误。（样本 992）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0627","label":"account","question":"在哪里开启两步验证？（样本 627）"}
+{"category":"account","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0843","label":"account","question":"登录帳號时收不到验证码。（样本 843）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0450","label":"account","question":"账号登录后立即退出。（样本 450）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0310","label":"billing","question":"续费价格和页面显示的不一致。（样本 310）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0873","label":"account","question":"登录账号时收不到验证码。（样本 873）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0357","label":"account","question":"在哪里开启两步验证？（样本 357）"}
+{"category":"billing","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0643","label":"billing","question":"怎样变更当前套餐？（样本 643）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0805","label":"billing","question":"续费价格和页面显示的不一致。（样本 805）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0244","label":"billing","question":"信用卡被重复扣款了。（样本 244）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0708","label":"account","question":"登录账号时收不到验证码。（样本 708）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0651","label":"account","question":"如何修改账号邮箱？（样本 651）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0828","label":"account","question":"登录账号时收不到验证码。（样本 828）"}
+{"category":"billing","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0583","label":"billing","question":"怎样变更当前套餐？（样本 583）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0814","label":"billing","question":"信用卡被重复扣款了。（样本 814）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0247","label":"billing","question":"在哪里下载本月发票？（样本 247）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0240","label":"account","question":"账号登录后立即退出。（样本 240）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0898","label":"billing","question":"怎样变更当前套餐？（样本 898）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0877","label":"billing","question":"在哪里下载本月发票？（样本 877）"}
+{"category":"account","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0702","label":"account","question":"在哪里开启两步验证？　（样本 702）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0129","label":"account","question":"怎样邀请新的团队成员？（样本 129）"}
+{"category":"account","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0762","label":"account","question":"在哪里开启两步验证？　（样本 762）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0913","label":"billing","question":"怎样变更当前套餐？（样本 913）"}
+{"category":"billing","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0223","label":"billing","question":"怎样变更当前套餐？（样本 223）"}
+{"category":"account","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0081","label":"account","question":"  如何修改账号邮箱？（样本 81）\t"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0952","label":"billing","question":"在哪里下载本月发票？（样本 952）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0790","label":"billing","question":"续费价格和页面显示的不一致。（样本 790）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0607","label":"billing","question":"在哪里下载本月发票？（样本 607）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0750","label":"account","question":"账号登录后立即退出。（样本 750）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0778","label":"billing","question":"怎样变更当前套餐？（样本 778）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0957","label":"account","question":"在哪里开启两步验证？（样本 957）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0752","label":"technical","question":"接口一直返回 502 错误。（样本 752）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0379","label":"billing","question":"信用卡被重复扣款了。（样本 379）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0249","label":"account","question":"怎样邀请新的团队成员？（样本 249）"}
+{"category":"technical","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0362","label":"technical","question":"接口一直返回 502 错误。（样本 362）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0045","label":"account","question":"账号登录后立即退出。（样本 45）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0926","label":"technical","question":"控制台页面无法加载。（样本 926）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0388","label":"billing","question":"怎样变更当前套餐？（样本 388）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0539","label":"technical","question":"批量接口返回未知错误。（样本 539）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0893","label":"technical","question":"请求频繁超时怎么办？（样本 893）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0737","label":"technical","question":"接口一直返回 502 错误。（样本 737）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0324","label":"account","question":"怎样邀请新的团队成员？（样本 324）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0645","label":"account","question":"账号登录后立即退出。（样本 645）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0915","label":"account","question":"账号登录后立即退出。（样本 915）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0973","label":"billing","question":"怎样变更当前套餐？（样本 973）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0885","label":"account","question":"账号登录后立即退出。（样本 885）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0600","label":"account","question":"账号登录后立即退出。（样本 600）"}
+{"category":"technical","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0821","label":"technical","question":"  控制台页面无法加载。（样本 821）\t"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0971","label":"technical","question":"控制台页面无法加载。（样本 971）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0444","label":"account","question":"怎样邀请新的团队成员？（样本 444）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0405","label":"account","question":"账号登录后立即退出。（样本 405）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0205","label":"billing","question":"续费价格和页面显示的不一致。（样本 205）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0615","label":"account","question":"账号登录后立即退出。（样本 615）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0428","label":"technical","question":"请求频繁超时怎么办？（样本 428）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0447","label":"account","question":"在哪里开启两步验证？（样本 447）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0295","label":"billing","question":"续费价格和页面显示的不一致。（样本 295）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0744","label":"account","question":"怎样邀请新的团队成员？（样本 744）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0096","label":"account","question":"如何修改账号邮箱？（样本 96）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0573","label":"account","question":"登录账号时收不到验证码。（样本 573）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0935","label":"technical","question":"上传文件时页面显示空白。（样本 935）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0505","label":"billing","question":"续费价格和页面显示的不一致。（样本 505）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0511","label":"billing","question":"如何申请退款？（样本 511）"}
+{"category":"technical","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0161","label":"technical","question":"  控制台页面无法加载。（样本 161）\t"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0658","label":"billing","question":"怎样变更当前套餐？（样本 658）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0784","label":"billing","question":"信用卡被重复扣款了。（样本 784）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0604","label":"billing","question":"信用卡被重复扣款了。（样本 604）"}
+{"category":"account","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0042","label":"account","question":"在哪里开启两步验证？　（样本 42）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0999","label":"account","question":"怎样邀请新的团队成员？（样本 999）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0668","label":"technical","question":"请求频繁超时怎么办？（样本 668）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0855","label":"account","question":"账号登录后立即退出。（样本 855）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0038","label":"technical","question":"请求频繁超时怎么办？（样本 38）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0412","label":"billing","question":"在哪里下载本月发票？（样本 412）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0786","label":"account","question":"如何修改账号邮箱？（样本 786）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0735","label":"account","question":"账号登录后立即退出。（样本 735）"}
+{"category":"account","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0981","label":"account","question":"  如何修改账号邮箱？（样本 981）\t"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0250","label":"billing","question":"续费价格和页面显示的不一致。（样本 250）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0647","label":"technical","question":"接口一直返回 502 错误。（样本 647）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0993","label":"account","question":"登录账号时收不到验证码。（样本 993）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0329","label":"technical","question":"批量接口返回未知错误。（样本 329）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0951","label":"account","question":"如何修改账号邮箱？（样本 951）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0458","label":"technical","question":"请求频繁超时怎么办？（样本 458）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0057","label":"account","question":"在哪里开启两步验证？（样本 57）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0338","label":"technical","question":"请求频繁超时怎么办？（样本 338）"}
+{"category":"billing","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0322","label":"billing","question":"在哪里下载本月发票？　（样本 322）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0264","label":"account","question":"怎样邀请新的团队成员？（样本 264）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0691","label":"billing","question":"如何申请退款？（样本 691）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0084","label":"account","question":"怎样邀请新的团队成员？（样本 84）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0466","label":"billing","question":"如何申请退款？（样本 466）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0572","label":"technical","question":"接口一直返回 502 错误。（样本 572）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0148","label":"billing","question":"怎样变更当前套餐？（样本 148）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0020","label":"technical","question":"上传文件时页面显示空白。（样本 20）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0387","label":"account","question":"在哪里开启两步验证？（样本 387）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0380","label":"technical","question":"上传文件时页面显示空白。（样本 380）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0439","label":"billing","question":"信用卡被重复扣款了。（样本 439）"}
+{"category":"technical","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0521","label":"technical","question":"  控制台页面无法加载。（样本 521）\t"}
+{"category":"account","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0861","label":"account","question":"  如何修改账号邮箱？（样本 861）\t"}
+{"category":"technical","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0662","label":"technical","question":"接口一直返回 502 错误。（样本 662）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0372","label":"account","question":"在哪里开启两步验证？（样本 372）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0335","label":"technical","question":"上传文件时页面显示空白。（样本 335）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0214","label":"billing","question":"信用卡被重复扣款了。（样本 214）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0856","label":"billing","question":"如何申请退款？（样本 856）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0575","label":"technical","question":"上传文件时页面显示空白。（样本 575）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0958","label":"billing","question":"怎样变更当前套餐？（样本 958）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0739","label":"billing","question":"信用卡被重复扣款了。（样本 739）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0059","label":"technical","question":"批量接口返回未知错误。（样本 59）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0959","label":"technical","question":"批量接口返回未知错误。（样本 959）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0169","label":"billing","question":"信用卡被重复扣款了。（样本 169）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0558","label":"account","question":"登录账号时收不到验证码。（样本 558）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0864","label":"account","question":"怎样邀请新的团队成员？（样本 864）"}
+{"category":"account","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0303","label":"account","question":"登录帳號时收不到验证码。（样本 303）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0278","label":"technical","question":"请求频繁超时怎么办？（样本 278）"}
+{"category":"technical","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0842","label":"technical","question":"接口一直返回 502 错误。（样本 842）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0810","label":"account","question":"账号登录后立即退出。（样本 810）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0878","label":"technical","question":"请求频繁超时怎么办？（样本 878）"}
+{"category":"billing","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0121","label":"billing","question":"  如何申请退款？（样本 121）\t"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0154","label":"billing","question":"信用卡被重复扣款了。（样本 154）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0980","label":"technical","question":"上传文件时页面显示空白。（样本 980）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0254","label":"technical","question":"批量接口返回未知错误。（样本 254）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0772","label":"billing","question":"在哪里下载本月发票？（样本 772）"}
+{"category":"technical","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0581","label":"technical","question":"  控制台页面无法加载。（样本 581）\t"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0150","label":"account","question":"账号登录后立即退出。（样本 150）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0344","label":"technical","question":"批量接口返回未知错误。（样本 344）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0235","label":"billing","question":"续费价格和页面显示的不一致。（样本 235）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0732","label":"account","question":"在哪里开启两步验证？（样本 732）"}
+{"category":"account","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0201","label":"account","question":"  如何修改账号邮箱？（样本 201）\t"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0492","label":"account","question":"在哪里开启两步验证？（样本 492）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0028","label":"billing","question":"怎样变更当前套餐？（样本 28）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0984","label":"account","question":"怎样邀请新的团队成员？（样本 984）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0530","label":"technical","question":"上传文件时页面显示空白。（样本 530）"}
+{"category":"technical","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0023","label":"technical","question":"请求频繁超时怎么办？（样本 23）"}
+{"category":"billing","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0301","label":"billing","question":"  如何申请退款？（样本 301）\t"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0911","label":"technical","question":"控制台页面无法加载。（样本 911）"}
+{"category":"technical","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0221","label":"technical","question":"  控制台页面无法加载。（样本 221）\t"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0816","label":"account","question":"如何修改账号邮箱？（样本 816）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0933","label":"account","question":"登录账号时收不到验证码。（样本 933）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0086","label":"technical","question":"控制台页面无法加载。（样本 86）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0378","label":"account","question":"登录账号时收不到验证码。（样本 378）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0356","label":"technical","question":"控制台页面无法加载。（样本 356）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0191","label":"technical","question":"控制台页面无法加载。（样本 191）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0924","label":"account","question":"怎样邀请新的团队成员？（样本 924）"}
+{"category":"billing","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0163","label":"billing","question":"怎样变更当前套餐？（样本 163）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0672","label":"account","question":"在哪里开启两步验证？（样本 672）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0976","label":"billing","question":"如何申请退款？（样本 976）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0858","label":"account","question":"登录账号时收不到验证码。（样本 858）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0165","label":"account","question":"账号登录后立即退出。（样本 165）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0368","label":"technical","question":"请求频繁超时怎么办？（样本 368）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0077","label":"technical","question":"接口一直返回 502 错误。（样本 77）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0157","label":"billing","question":"在哪里下载本月发票？（样本 157）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0652","label":"billing","question":"在哪里下载本月发票？（样本 652）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0119","label":"technical","question":"批量接口返回未知错误。（样本 119）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0046","label":"billing","question":"如何申请退款？（样本 46）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0005","label":"technical","question":"上传文件时页面显示空白。（样本 5）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0964","label":"billing","question":"信用卡被重复扣款了。（样本 964）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0027","label":"account","question":"在哪里开启两步验证？（样本 27）"}
+{"category":"billing","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0922","label":"billing","question":"在哪里下载本月发票？　（样本 922）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0292","label":"billing","question":"在哪里下载本月发票？（样本 292）"}
+{"category":"technical","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0602","label":"technical","question":"接口一直返回 502 错误。（样本 602）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0192","label":"account","question":"在哪里开启两步验证？（样本 192）"}
+{"category":"billing","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0283","label":"billing","question":"怎样变更当前套餐？（样本 283）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0533","label":"technical","question":"请求频繁超时怎么办？（样本 533）"}
+{"category":"billing","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0943","label":"billing","question":"怎样变更当前套餐？（样本 943）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0680","label":"technical","question":"上传文件时页面显示空白。（样本 680）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0365","label":"technical","question":"上传文件时页面显示空白。（样本 365）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0469","label":"billing","question":"信用卡被重复扣款了。（样本 469）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0237","label":"account","question":"在哪里开启两步验证？（样本 237）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0979","label":"billing","question":"信用卡被重复扣款了。（样本 979）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0269","label":"technical","question":"批量接口返回未知错误。（样本 269）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0420","label":"account","question":"账号登录后立即退出。（样本 420）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0106","label":"billing","question":"如何申请退款？（样本 106）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0553","label":"billing","question":"怎样变更当前套餐？（样本 553）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0776","label":"technical","question":"控制台页面无法加载。（样本 776）"}
+{"category":"account","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0222","label":"account","question":"在哪里开启两步验证？　（样本 222）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0978","label":"account","question":"登录账号时收不到验证码。（样本 978）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0175","label":"billing","question":"续费价格和页面显示的不一致。（样本 175）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0766","label":"billing","question":"如何申请退款？（样本 766）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0909","label":"account","question":"怎样邀请新的团队成员？（样本 909）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0875","label":"technical","question":"上传文件时页面显示空白。（样本 875）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0872","label":"technical","question":"接口一直返回 502 错误。（样本 872）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0349","label":"billing","question":"信用卡被重复扣款了。（样本 349）"}
+{"category":"account","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0402","label":"account","question":"在哪里开启两步验证？　（样本 402）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0226","label":"billing","question":"如何申请退款？（样本 226）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0217","label":"billing","question":"在哪里下载本月发票？（样本 217）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0397","label":"billing","question":"在哪里下载本月发票？（样本 397）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0268","label":"billing","question":"怎样变更当前套餐？（样本 268）"}
+{"category":"account","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0423","label":"account","question":"登录帳號时收不到验证码。（样本 423）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0146","label":"technical","question":"控制台页面无法加载。（样本 146）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0891","label":"account","question":"如何修改账号邮箱？（样本 891）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0066","label":"account","question":"如何修改账号邮箱？（样本 66）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0465","label":"account","question":"账号登录后立即退出。（样本 465）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0544","label":"billing","question":"信用卡被重复扣款了。（样本 544）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0767","label":"technical","question":"接口一直返回 502 错误。（样本 767）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0848","label":"technical","question":"请求频繁超时怎么办？（样本 848）"}
+{"category":"billing","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0763","label":"billing","question":"怎样变更当前套餐？（样本 763）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0210","label":"account","question":"账号登录后立即退出。（样本 210）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0419","label":"technical","question":"批量接口返回未知错误。（样本 419）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0099","label":"account","question":"怎样邀请新的团队成员？（样本 99）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0609","label":"account","question":"怎样邀请新的团队成员？（样本 609）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0824","label":"technical","question":"批量接口返回未知错误。（样本 824）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0665","label":"technical","question":"上传文件时页面显示空白。（样本 665）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0208","label":"billing","question":"怎样变更当前套餐？（样本 208）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0531","label":"account","question":"如何修改账号邮箱？（样本 531）"}
+{"category":"account","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0501","label":"account","question":"  如何修改账号邮箱？（样本 501）\t"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0092","label":"technical","question":"接口一直返回 502 错误。（样本 92）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0599","label":"technical","question":"批量接口返回未知错误。（样本 599）"}
+{"category":"technical","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0722","label":"technical","question":"接口一直返回 502 错误。（样本 722）"}
+{"category":"technical","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0863","label":"technical","question":"请求频繁超时怎么办？（样本 863）"}
+{"category":"account","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0243","label":"account","question":"登录帳號时收不到验证码。（样本 243）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0526","label":"billing","question":"如何申请退款？（样本 526）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0577","label":"billing","question":"在哪里下载本月发票？（样本 577）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0749","label":"technical","question":"批量接口返回未知错误。（样本 749）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0219","label":"account","question":"怎样邀请新的团队成员？（样本 219）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0266","label":"technical","question":"控制台页面无法加载。（样本 266）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0393","label":"account","question":"登录账号时收不到验证码。（样本 393）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0108","label":"account","question":"登录账号时收不到验证码。（样本 108）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0048","label":"account","question":"登录账号时收不到验证码。（样本 48）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0571","label":"billing","question":"如何申请退款？（样本 571）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0120","label":"account","question":"账号登录后立即退出。（样本 120）"}
+{"category":"technical","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0761","label":"technical","question":"  控制台页面无法加载。（样本 761）\t"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0429","label":"account","question":"怎样邀请新的团队成员？（样本 429）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0660","label":"account","question":"账号登录后立即退出。（样本 660）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0117","label":"account","question":"在哪里开启两步验证？（样本 117）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0733","label":"billing","question":"怎样变更当前套餐？（样本 733）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0459","label":"account","question":"怎样邀请新的团队成员？（样本 459）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0718","label":"billing","question":"怎样变更当前套餐？（样本 718）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0611","label":"technical","question":"控制台页面无法加载。（样本 611）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0257","label":"technical","question":"接口一直返回 502 错误。（样本 257）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0591","label":"account","question":"如何修改账号邮箱？（样本 591）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0605","label":"technical","question":"上传文件时页面显示空白。（样本 605）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0265","label":"billing","question":"续费价格和页面显示的不一致。（样本 265）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0797","label":"technical","question":"接口一直返回 502 错误。（样本 797）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0145","label":"billing","question":"续费价格和页面显示的不一致。（样本 145）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0216","label":"account","question":"如何修改账号邮箱？（样本 216）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0967","label":"billing","question":"在哪里下载本月发票？（样本 967）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0232","label":"billing","question":"在哪里下载本月发票？（样本 232）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0857","label":"technical","question":"接口一直返回 502 错误。（样本 857）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0371","label":"technical","question":"控制台页面无法加载。（样本 371）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0729","label":"account","question":"怎样邀请新的团队成员？（样本 729）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0195","label":"account","question":"账号登录后立即退出。（样本 195）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0400","label":"billing","question":"续费价格和页面显示的不一致。（样本 400）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0155","label":"technical","question":"上传文件时页面显示空白。（样本 155）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0956","label":"technical","question":"控制台页面无法加载。（样本 956）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0787","label":"billing","question":"在哪里下载本月发票？（样本 787）"}
+{"category":"technical","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0383","label":"technical","question":"请求频繁超时怎么办？（样本 383）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0675","label":"account","question":"账号登录后立即退出。（样本 675）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0336","label":"account","question":"如何修改账号邮箱？（样本 336）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0736","label":"billing","question":"如何申请退款？（样本 736）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0650","label":"technical","question":"上传文件时页面显示空白。（样本 650）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0815","label":"technical","question":"上传文件时页面显示空白。（样本 815）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0024","label":"account","question":"怎样邀请新的团队成员？（样本 24）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0350","label":"technical","question":"上传文件时页面显示空白。（样本 350）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0991","label":"billing","question":"如何申请退款？（样本 991）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0525","label":"account","question":"账号登录后立即退出。（样本 525）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0029","label":"technical","question":"批量接口返回未知错误。（样本 29）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0277","label":"billing","question":"在哪里下载本月发票？（样本 277）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0455","label":"technical","question":"上传文件时页面显示空白。（样本 455）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0413","label":"technical","question":"请求频繁超时怎么办？（样本 413）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0946","label":"billing","question":"如何申请退款？（样本 946）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0113","label":"technical","question":"请求频繁超时怎么办？（样本 113）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0936","label":"account","question":"如何修改账号邮箱？（样本 936）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0876","label":"account","question":"如何修改账号邮箱？（样本 876）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0699","label":"account","question":"怎样邀请新的团队成员？（样本 699）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0010","label":"billing","question":"续费价格和页面显示的不一致。（样本 10）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0432","label":"account","question":"在哪里开启两步验证？（样本 432）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0830","label":"technical","question":"上传文件时页面显示空白。（样本 830）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0276","label":"account","question":"如何修改账号邮箱？（样本 276）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0673","label":"billing","question":"怎样变更当前套餐？（样本 673）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0989","label":"technical","question":"批量接口返回未知错误。（样本 989）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0477","label":"account","question":"在哪里开启两步验证？（样本 477）"}
+{"category":"account","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0063","label":"account","question":"登录帳號时收不到验证码。（样本 63）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0889","label":"billing","question":"信用卡被重复扣款了。（样本 889）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0025","label":"billing","question":"续费价格和页面显示的不一致。（样本 25）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0597","label":"account","question":"在哪里开启两步验证？（样本 597）"}
+{"category":"technical","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0743","label":"technical","question":"请求频繁超时怎么办？（样本 743）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0809","label":"technical","question":"批量接口返回未知错误。（样本 809）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0899","label":"technical","question":"批量接口返回未知错误。（样本 899）"}
+{"category":"technical","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0542","label":"technical","question":"接口一直返回 502 错误。（样本 542）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0197","label":"technical","question":"接口一直返回 502 错误。（样本 197）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0998","label":"technical","question":"请求频繁超时怎么办？（样本 998）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0569","label":"technical","question":"批量接口返回未知错误。（样本 569）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0055","label":"billing","question":"续费价格和页面显示的不一致。（样本 55）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0940","label":"billing","question":"续费价格和页面显示的不一致。（样本 940）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0890","label":"technical","question":"上传文件时页面显示空白。（样本 890）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0012","label":"account","question":"在哪里开启两步验证？（样本 12）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0389","label":"technical","question":"批量接口返回未知错误。（样本 389）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0238","label":"billing","question":"怎样变更当前套餐？（样本 238）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0747","label":"account","question":"在哪里开启两步验证？（样本 747）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0228","label":"account","question":"登录账号时收不到验证码。（样本 228）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0135","label":"account","question":"账号登录后立即退出。（样本 135）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0919","label":"billing","question":"信用卡被重复扣款了。（样本 919）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0697","label":"billing","question":"在哪里下载本月发票？（样本 697）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0997","label":"billing","question":"在哪里下载本月发票？（样本 997）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0618","label":"account","question":"登录账号时收不到验证码。（样本 618）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0916","label":"billing","question":"如何申请退款？（样本 916）"}
+{"category":"billing","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0721","label":"billing","question":"  如何申请退款？（样本 721）\t"}
+{"category":"technical","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0281","label":"technical","question":"  控制台页面无法加载。（样本 281）\t"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0451","label":"billing","question":"如何申请退款？（样本 451）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0130","label":"billing","question":"续费价格和页面显示的不一致。（样本 130）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0547","label":"billing","question":"在哪里下载本月发票？（样本 547）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0912","label":"account","question":"在哪里开启两步验证？（样本 912）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0637","label":"billing","question":"在哪里下载本月发票？（样本 637）"}
+{"category":"account","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0282","label":"account","question":"在哪里开启两步验证？　（样本 282）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0532","label":"billing","question":"在哪里下载本月发票？（样本 532）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0556","label":"billing","question":"如何申请退款？（样本 556）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0384","label":"account","question":"怎样邀请新的团队成员？（样本 384）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0236","label":"technical","question":"控制台页面无法加载。（样本 236）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0374","label":"technical","question":"批量接口返回未知错误。（样本 374）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0847","label":"billing","question":"在哪里下载本月发票？（样本 847）"}
+{"category":"billing","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0103","label":"billing","question":"怎样变更当前套餐？（样本 103）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0948","label":"account","question":"登录账号时收不到验证码。（样本 948）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0315","label":"account","question":"账号登录后立即退出。（样本 315）"}
+{"category":"billing","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0502","label":"billing","question":"在哪里下载本月发票？　（样本 502）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0317","label":"technical","question":"接口一直返回 502 错误。（样本 317）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0588","label":"account","question":"登录账号时收不到验证码。（样本 588）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0945","label":"account","question":"账号登录后立即退出。（样本 945）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0725","label":"technical","question":"上传文件时页面显示空白。（样本 725）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0853","label":"billing","question":"怎样变更当前套餐？（样本 853）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0206","label":"technical","question":"控制台页面无法加载。（样本 206）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0707","label":"technical","question":"接口一直返回 502 错误。（样本 707）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0366","label":"account","question":"如何修改账号邮箱？（样本 366）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0173","label":"technical","question":"请求频繁超时怎么办？（样本 173）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0176","label":"technical","question":"控制台页面无法加载。（样本 176）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0777","label":"account","question":"在哪里开启两步验证？（样本 777）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0425","label":"technical","question":"上传文件时页面显示空白。（样本 425）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0779","label":"technical","question":"批量接口返回未知错误。（样本 779）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0499","label":"billing","question":"信用卡被重复扣款了。（样本 499）"}
+{"category":"billing","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0442","label":"billing","question":"在哪里下载本月发票？　（样本 442）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0159","label":"account","question":"怎样邀请新的团队成员？（样本 159）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0684","label":"account","question":"怎样邀请新的团队成员？（样本 684）"}
+{"category":"account","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0441","label":"account","question":"  如何修改账号邮箱？（样本 441）\t"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0985","label":"billing","question":"续费价格和页面显示的不一致。（样本 985）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0687","label":"account","question":"在哪里开启两步验证？（样本 687）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0030","label":"account","question":"账号登录后立即退出。（样本 30）"}
+{"category":"billing","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0862","label":"billing","question":"在哪里下载本月发票？　（样本 862）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0509","label":"technical","question":"批量接口返回未知错误。（样本 509）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0234","label":"account","question":"怎样邀请新的团队成员？（样本 234）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0486","label":"account","question":"如何修改账号邮箱？（样本 486）"}
+{"category":"billing","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0883","label":"billing","question":"怎样变更当前套餐？（样本 883）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0351","label":"account","question":"如何修改账号邮箱？（样本 351）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0325","label":"billing","question":"续费价格和页面显示的不一致。（样本 325）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0666","label":"account","question":"如何修改账号邮箱？（样本 666）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0147","label":"account","question":"在哪里开启两步验证？（样本 147）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0489","label":"account","question":"怎样邀请新的团队成员？（样本 489）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0433","label":"billing","question":"怎样变更当前套餐？（样本 433）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0036","label":"account","question":"如何修改账号邮箱？（样本 36）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0833","label":"technical","question":"请求频繁超时怎么办？（样本 833）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0186","label":"account","question":"如何修改账号邮箱？（样本 186）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0116","label":"technical","question":"控制台页面无法加载。（样本 116）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0832","label":"billing","question":"在哪里下载本月发票？（样本 832）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0207","label":"account","question":"在哪里开启两步验证？（样本 207）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0580","label":"billing","question":"续费价格和页面显示的不一致。（样本 580）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0144","label":"account","question":"怎样邀请新的团队成员？（样本 144）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0895","label":"billing","question":"续费价格和页面显示的不一致。（样本 895）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0712","label":"billing","question":"在哪里下载本月发票？（样本 712）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0060","label":"account","question":"账号登录后立即退出。（样本 60）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0151","label":"billing","question":"如何申请退款？（样本 151）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0179","label":"technical","question":"批量接口返回未知错误。（样本 179）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0158","label":"technical","question":"请求频繁超时怎么办？（样本 158）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0811","label":"billing","question":"如何申请退款？（样本 811）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0716","label":"technical","question":"控制台页面无法加载。（样本 716）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0415","label":"billing","question":"续费价格和页面显示的不一致。（样本 415）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0791","label":"technical","question":"控制台页面无法加载。（样本 791）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0817","label":"billing","question":"在哪里下载本月发票？（样本 817）"}
+{"category":"account","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0183","label":"account","question":"登录帳號时收不到验证码。（样本 183）"}
+{"category":"billing","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0742","label":"billing","question":"在哪里下载本月发票？　（样本 742）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0613","label":"billing","question":"怎样变更当前套餐？（样本 613）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0669","label":"account","question":"怎样邀请新的团队成员？（样本 669）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0829","label":"billing","question":"信用卡被重复扣款了。（样本 829）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0538","label":"billing","question":"怎样变更当前套餐？（样本 538）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0555","label":"account","question":"账号登录后立即退出。（样本 555）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0626","label":"technical","question":"控制台页面无法加载。（样本 626）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0840","label":"account","question":"账号登录后立即退出。（样本 840）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0518","label":"technical","question":"请求频繁超时怎么办？（样本 518）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0273","label":"account","question":"登录账号时收不到验证码。（样本 273）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0360","label":"account","question":"账号登录后立即退出。（样本 360）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0377","label":"technical","question":"接口一直返回 502 错误。（样本 377）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0009","label":"account","question":"怎样邀请新的团队成员？（样本 9）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0189","label":"account","question":"怎样邀请新的团队成员？（样本 189）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0328","label":"billing","question":"怎样变更当前套餐？（样本 328）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0298","label":"billing","question":"怎样变更当前套餐？（样本 298）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0288","label":"account","question":"登录账号时收不到验证码。（样本 288）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0834","label":"account","question":"怎样邀请新的团队成员？（样本 834）"}
+{"category":"billing","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0142","label":"billing","question":"在哪里下载本月发票？　（样本 142）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0091","label":"billing","question":"如何申请退款？（样本 91）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0774","label":"account","question":"怎样邀请新的团队成员？（样本 774）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0795","label":"account","question":"账号登录后立即退出。（样本 795）"}
+{"category":"technical","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0701","label":"technical","question":"  控制台页面无法加载。（样本 701）\t"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0974","label":"technical","question":"批量接口返回未知错误。（样本 974）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0085","label":"billing","question":"续费价格和页面显示的不一致。（样本 85）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0586","label":"billing","question":"如何申请退款？（样本 586）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0839","label":"technical","question":"批量接口返回未知错误。（样本 839）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0789","label":"account","question":"怎样邀请新的团队成员？（样本 789）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0198","label":"account","question":"登录账号时收不到验证码。（样本 198）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0291","label":"account","question":"如何修改账号邮箱？（样本 291）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0104","label":"technical","question":"批量接口返回未知错误。（样本 104）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0838","label":"billing","question":"怎样变更当前套餐？（样本 838）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0094","label":"billing","question":"信用卡被重复扣款了。（样本 94）"}
+{"category":"technical","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0182","label":"technical","question":"接口一直返回 502 错误。（样本 182）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0396","label":"account","question":"如何修改账号邮箱？（样本 396）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0620","label":"technical","question":"上传文件时页面显示空白。（样本 620）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0166","label":"billing","question":"如何申请退款？（样本 166）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0528","label":"account","question":"登录账号时收不到验证码。（样本 528）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0954","label":"account","question":"怎样邀请新的团队成员？（样本 954）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0137","label":"technical","question":"接口一直返回 502 错误。（样本 137）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0078","label":"account","question":"登录账号时收不到验证码。（样本 78）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0407","label":"technical","question":"接口一直返回 502 错误。（样本 407）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0844","label":"billing","question":"信用卡被重复扣款了。（样本 844）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0671","label":"technical","question":"控制台页面无法加载。（样本 671）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0358","label":"billing","question":"怎样变更当前套餐？（样本 358）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0638","label":"technical","question":"请求频繁超时怎么办？（样本 638）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0826","label":"billing","question":"如何申请退款？（样本 826）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0367","label":"billing","question":"在哪里下载本月发票？（样本 367）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0631","label":"billing","question":"如何申请退款？（样本 631）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0836","label":"technical","question":"控制台页面无法加载。（样本 836）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0548","label":"technical","question":"请求频繁超时怎么办？（样本 548）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0156","label":"account","question":"如何修改账号邮箱？（样本 156）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0768","label":"account","question":"登录账号时收不到验证码。（样本 768）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0194","label":"technical","question":"批量接口返回未知错误。（样本 194）"}
+{"category":"billing","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0241","label":"billing","question":"  如何申请退款？（样本 241）\t"}
+{"category":"billing","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0823","label":"billing","question":"怎样变更当前套餐？（样本 823）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0168","label":"account","question":"登录账号时收不到验证码。（样本 168）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0200","label":"technical","question":"上传文件时页面显示空白。（样本 200）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0706","label":"billing","question":"如何申请退款？（样本 706）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0590","label":"technical","question":"上传文件时页面显示空白。（样本 590）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0138","label":"account","question":"登录账号时收不到验证码。（样本 138）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0557","label":"technical","question":"接口一直返回 502 错误。（样本 557）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0491","label":"technical","question":"控制台页面无法加载。（样本 491）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0480","label":"account","question":"账号登录后立即退出。（样本 480）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0437","label":"technical","question":"接口一直返回 502 错误。（样本 437）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0112","label":"billing","question":"在哪里下载本月发票？（样本 112）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0564","label":"account","question":"怎样邀请新的团队成员？（样本 564）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0007","label":"billing","question":"在哪里下载本月发票？（样本 7）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0290","label":"technical","question":"上传文件时页面显示空白。（样本 290）"}
+{"category":"technical","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0263","label":"technical","question":"请求频繁超时怎么办？（样本 263）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0756","label":"account","question":"如何修改账号邮箱？（样本 756）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0760","label":"billing","question":"续费价格和页面显示的不一致。（样本 760）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0656","label":"technical","question":"控制台页面无法加载。（样本 656）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0584","label":"technical","question":"批量接口返回未知错误。（样本 584）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0510","label":"account","question":"账号登录后立即退出。（样本 510）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0392","label":"technical","question":"接口一直返回 502 错误。（样本 392）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0058","label":"billing","question":"怎样变更当前套餐？（样本 58）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0285","label":"account","question":"账号登录后立即退出。（样本 285）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0504","label":"account","question":"怎样邀请新的团队成员？（样本 504）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0296","label":"technical","question":"控制台页面无法加载。（样本 296）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0438","label":"account","question":"登录账号时收不到验证码。（样本 438）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0884","label":"technical","question":"批量接口返回未知错误。（样本 884）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0928","label":"billing","question":"怎样变更当前套餐？（样本 928）"}
+{"category":"technical","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0062","label":"technical","question":"接口一直返回 502 错误。（样本 62）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0595","label":"billing","question":"续费价格和页面显示的不一致。（样本 595）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0414","label":"account","question":"怎样邀请新的团队成员？（样本 414）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0319","label":"billing","question":"信用卡被重复扣款了。（样本 319）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0868","label":"billing","question":"怎样变更当前套餐？（样本 868）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0395","label":"technical","question":"上传文件时页面显示空白。（样本 395）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0549","label":"account","question":"怎样邀请新的团队成员？（样本 549）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0529","label":"billing","question":"信用卡被重复扣款了。（样本 529）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0710","label":"technical","question":"上传文件时页面显示空白。（样本 710）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0260","label":"technical","question":"上传文件时页面显示空白。（样本 260）"}
+{"category":"account","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0882","label":"account","question":"在哪里开启两步验证？　（样本 882）"}
+{"category":"technical","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0122","label":"technical","question":"接口一直返回 502 错误。（样本 122）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0664","label":"billing","question":"信用卡被重复扣款了。（样本 664）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0074","label":"technical","question":"批量接口返回未知错误。（样本 74）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0886","label":"billing","question":"如何申请退款？（样本 886）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0914","label":"technical","question":"批量接口返回未知错误。（样本 914）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0897","label":"account","question":"在哪里开启两步验证？（样本 897）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0820","label":"billing","question":"续费价格和页面显示的不一致。（样本 820）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0910","label":"billing","question":"续费价格和页面显示的不一致。（样本 910）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0758","label":"technical","question":"请求频繁超时怎么办？（样本 758）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0493","label":"billing","question":"怎样变更当前套餐？（样本 493）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0536","label":"technical","question":"控制台页面无法加载。（样本 536）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0218","label":"technical","question":"请求频繁超时怎么办？（样本 218）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0445","label":"billing","question":"续费价格和页面显示的不一致。（样本 445）"}
+{"category":"technical","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0683","label":"technical","question":"请求频繁超时怎么办？（样本 683）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0178","label":"billing","question":"怎样变更当前套餐？（样本 178）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0874","label":"billing","question":"信用卡被重复扣款了。（样本 874）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0717","label":"account","question":"在哪里开启两步验证？（样本 717）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0835","label":"billing","question":"续费价格和页面显示的不一致。（样本 835）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0476","label":"technical","question":"控制台页面无法加载。（样本 476）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0585","label":"account","question":"账号登录后立即退出。（样本 585）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0467","label":"technical","question":"接口一直返回 502 错误。（样本 467）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0927","label":"account","question":"在哪里开启两步验证？（样本 927）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0485","label":"technical","question":"上传文件时页面显示空白。（样本 485）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0039","label":"account","question":"怎样邀请新的团队成员？（样本 39）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0311","label":"technical","question":"控制台页面无法加载。（样本 311）"}
+{"category":"technical","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0401","label":"technical","question":"  控制台页面无法加载。（样本 401）\t"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0888","label":"account","question":"登录账号时收不到验证码。（样本 888）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0628","label":"billing","question":"怎样变更当前套餐？（样本 628）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0031","label":"billing","question":"如何申请退款？（样本 31）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0619","label":"billing","question":"信用卡被重复扣款了。（样本 619）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0972","label":"account","question":"在哪里开启两步验证？（样本 972）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0190","label":"billing","question":"续费价格和页面显示的不一致。（样本 190）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0391","label":"billing","question":"如何申请退款？（样本 391）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0819","label":"account","question":"怎样邀请新的团队成员？（样本 819）"}
+{"category":"technical","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0323","label":"technical","question":"请求频繁超时怎么办？（样本 323）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0765","label":"account","question":"账号登录后立即退出。（样本 765）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0686","label":"technical","question":"控制台页面无法加载。（样本 686）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0032","label":"technical","question":"接口一直返回 502 错误。（样本 32）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0248","label":"technical","question":"请求频繁超时怎么办？（样本 248）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0960","label":"account","question":"账号登录后立即退出。（样本 960）"}
+{"category":"account","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0021","label":"account","question":"  如何修改账号邮箱？（样本 21）\t"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0506","label":"technical","question":"控制台页面无法加载。（样本 506）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0793","label":"billing","question":"怎样变更当前套餐？（样本 793）"}
+{"category":"account","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0123","label":"account","question":"登录帳號时收不到验证码。（样本 123）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0635","label":"technical","question":"上传文件时页面显示空白。（样本 635）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0484","label":"billing","question":"信用卡被重复扣款了。（样本 484）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0796","label":"billing","question":"如何申请退款？（样本 796）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0051","label":"account","question":"如何修改账号邮箱？（样本 51）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0606","label":"account","question":"如何修改账号邮箱？（样本 606）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0953","label":"technical","question":"请求频繁超时怎么办？（样本 953）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0610","label":"billing","question":"续费价格和页面显示的不一致。（样本 610）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0565","label":"billing","question":"续费价格和页面显示的不一致。（样本 565）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0080","label":"technical","question":"上传文件时页面显示空白。（样本 80）"}
+{"category":"technical","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0461","label":"technical","question":"  控制台页面无法加载。（样本 461）\t"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0825","label":"account","question":"账号登录后立即退出。（样本 825）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0704","label":"technical","question":"批量接口返回未知错误。（样本 704）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0196","label":"billing","question":"如何申请退款？（样本 196）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0164","label":"technical","question":"批量接口返回未知错误。（样本 164）"}
+{"category":"account","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0543","label":"account","question":"登录帳號时收不到验证码。（样本 543）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0013","label":"billing","question":"怎样变更当前套餐？（样本 13）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0513","label":"account","question":"登录账号时收不到验证码。（样本 513）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0709","label":"billing","question":"信用卡被重复扣款了。（样本 709）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0986","label":"technical","question":"控制台页面无法加载。（样本 986）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0987","label":"account","question":"在哪里开启两步验证？（样本 987）"}
+{"category":"technical","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0941","label":"technical","question":"  控制台页面无法加载。（样本 941）\t"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0751","label":"billing","question":"如何申请退款？（样本 751）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0258","label":"account","question":"登录账号时收不到验证码。（样本 258）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0629","label":"technical","question":"批量接口返回未知错误。（样本 629）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0188","label":"technical","question":"请求频繁超时怎么办？（样本 188）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0799","label":"billing","question":"信用卡被重复扣款了。（样本 799）"}
+{"category":"technical","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0341","label":"technical","question":"  控制台页面无法加载。（样本 341）\t"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0517","label":"billing","question":"在哪里下载本月发票？（样本 517）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0376","label":"billing","question":"如何申请退款？（样本 376）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0136","label":"billing","question":"如何申请退款？（样本 136）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0114","label":"account","question":"怎样邀请新的团队成员？（样本 114）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0689","label":"technical","question":"批量接口返回未知错误。（样本 689）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0896","label":"technical","question":"控制台页面无法加载。（样本 896）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0245","label":"technical","question":"上传文件时页面显示空白。（样本 245）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0416","label":"technical","question":"控制台页面无法加载。（样本 416）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0674","label":"technical","question":"批量接口返回未知错误。（样本 674）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0576","label":"account","question":"如何修改账号邮箱？（样本 576）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0788","label":"technical","question":"请求频繁超时怎么办？（样本 788）"}
+{"category":"billing","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0403","label":"billing","question":"怎样变更当前套餐？（样本 403）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0409","label":"billing","question":"信用卡被重复扣款了。（样本 409）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0185","label":"technical","question":"上传文件时页面显示空白。（样本 185）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0507","label":"account","question":"在哪里开启两步验证？（样本 507）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0267","label":"account","question":"在哪里开启两步验证？（样本 267）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0944","label":"technical","question":"批量接口返回未知错误。（样本 944）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0044","label":"technical","question":"批量接口返回未知错误。（样本 44）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0764","label":"technical","question":"批量接口返回未知错误。（样本 764）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0115","label":"billing","question":"续费价格和页面显示的不一致。（样本 115）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0570","label":"account","question":"账号登录后立即退出。（样本 570）"}
+{"category":"technical","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0803","label":"technical","question":"请求频繁超时怎么办？（样本 803）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0079","label":"billing","question":"信用卡被重复扣款了。（样本 79）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0326","label":"technical","question":"控制台页面无法加载。（样本 326）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0498","label":"account","question":"登录账号时收不到验证码。（样本 498）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0449","label":"technical","question":"批量接口返回未知错误。（样本 449）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0399","label":"account","question":"怎样邀请新的团队成员？（样本 399）"}
+{"category":"billing","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0043","label":"billing","question":"怎样变更当前套餐？（样本 43）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0014","label":"technical","question":"批量接口返回未知错误。（样本 14）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0559","label":"billing","question":"信用卡被重复扣款了。（样本 559）"}
+{"category":"billing","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0541","label":"billing","question":"  如何申请退款？（样本 541）\t"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0866","label":"technical","question":"控制台页面无法加载。（样本 866）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0464","label":"technical","question":"批量接口返回未知错误。（样本 464）"}
+{"category":"billing","difficulty":"edge","edge_case":"traditional_unicode","id":"mvp-scale-v1-0523","label":"billing","question":"怎样变更当前套餐？（样本 523）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0209","label":"technical","question":"批量接口返回未知错误。（样本 209）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0133","label":"billing","question":"怎样变更当前套餐？（样本 133）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0720","label":"account","question":"账号登录后立即退出。（样本 720）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0908","label":"technical","question":"请求频繁超时怎么办？（样本 908）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0087","label":"account","question":"在哪里开启两步验证？（样本 87）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0434","label":"technical","question":"批量接口返回未知错误。（样本 434）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0390","label":"account","question":"账号登录后立即退出。（样本 390）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0520","label":"billing","question":"续费价格和页面显示的不一致。（样本 520）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0426","label":"account","question":"如何修改账号邮箱？（样本 426）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0287","label":"technical","question":"接口一直返回 502 错误。（样本 287）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0488","label":"technical","question":"请求频繁超时怎么办？（样本 488）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0305","label":"technical","question":"上传文件时页面显示空白。（样本 305）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0224","label":"technical","question":"批量接口返回未知错误。（样本 224）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-1000","label":"billing","question":"续费价格和页面显示的不一致。（样本 1000）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0457","label":"billing","question":"在哪里下载本月发票？（样本 457）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0644","label":"technical","question":"批量接口返回未知错误。（样本 644）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0199","label":"billing","question":"信用卡被重复扣款了。（样本 199）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0227","label":"technical","question":"接口一直返回 502 错误。（样本 227）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0970","label":"billing","question":"续费价格和页面显示的不一致。（样本 970）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0617","label":"technical","question":"接口一直返回 502 错误。（样本 617）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0215","label":"technical","question":"上传文件时页面显示空白。（样本 215）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0731","label":"technical","question":"控制台页面无法加载。（样本 731）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0327","label":"account","question":"在哪里开启两步验证？（样本 327）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0527","label":"technical","question":"接口一直返回 502 错误。（样本 527）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0293","label":"technical","question":"请求频繁超时怎么办？（样本 293）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0026","label":"technical","question":"控制台页面无法加载。（样本 26）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0837","label":"account","question":"在哪里开启两步验证？（样本 837）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0346","label":"billing","question":"如何申请退款？（样本 346）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0230","label":"technical","question":"上传文件时页面显示空白。（样本 230）"}
+{"category":"billing","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0841","label":"billing","question":"  如何申请退款？（样本 841）\t"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0490","label":"billing","question":"续费价格和页面显示的不一致。（样本 490）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0126","label":"account","question":"如何修改账号邮箱？（样本 126）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0487","label":"billing","question":"在哪里下载本月发票？（样本 487）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0018","label":"account","question":"登录账号时收不到验证码。（样本 18）"}
+{"category":"technical","difficulty":"edge","edge_case":"ideographic_space","id":"mvp-scale-v1-0482","label":"technical","question":"接口一直返回 502 错误。（样本 482）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0274","label":"billing","question":"信用卡被重复扣款了。（样本 274）"}
+{"category":"account","difficulty":"edge","edge_case":"surrounding_whitespace","id":"mvp-scale-v1-0681","label":"account","question":"  如何修改账号邮箱？（样本 681）\t"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0345","label":"account","question":"账号登录后立即退出。（样本 345）"}
+{"category":"account","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0846","label":"account","question":"如何修改账号邮箱？（样本 846）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0364","label":"billing","question":"信用卡被重复扣款了。（样本 364）"}
+{"category":"technical","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0017","label":"technical","question":"接口一直返回 502 错误。（样本 17）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0139","label":"billing","question":"信用卡被重复扣款了。（样本 139）"}
+{"category":"billing","difficulty":"standard","edge_case":"standard","id":"mvp-scale-v1-0688","label":"billing","question":"怎样变更当前套餐？（样本 688）"}
