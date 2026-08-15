@@ -22,6 +22,11 @@ import {
   formatProtocolComponent,
   humanMetricName,
 } from "@/lib/evalHubMetrics";
+import {
+  evalHubProgressPercent,
+  formatEvalHubProgressPercent,
+  getEvalHubDatasetProgress,
+} from "@/lib/evalHubRunProgress";
 
 const defaultApiBase =
   process.env.NEXT_PUBLIC_EVAL_HUB_API_BASE || "http://10.170.38.102:18080/api/v1";
@@ -358,9 +363,8 @@ export default function EvalHubRunConsole() {
   const totalSamples = run?.datasets.reduce((sum, item) => sum + item.total_samples, 0) ?? 0;
   const completedSamples = run?.datasets.reduce((sum, item) => sum + item.completed_samples, 0) ?? 0;
   const runIsActive = Boolean(run && !isEvalHubRunTerminal(run.status));
-  const progressPercent = totalSamples
-    ? Math.min(100, completedSamples / totalSamples * 100)
-    : 0;
+  const progressPercent = evalHubProgressPercent(completedSamples, totalSamples);
+  const datasetProgress = run ? getEvalHubDatasetProgress(run) : [];
   const canRegister = Boolean(connectedBase && endpointName && targetUrl && targetModel && (authType === "none" || targetKey));
   const canValidate = Boolean(
     endpoint
@@ -498,8 +502,26 @@ export default function EvalHubRunConsole() {
               <div><strong className="text-sm">{run.name}</strong><p className="mt-1 text-xs text-zinc-500">{run.status === "QUEUED" ? "Queued · position 1 of 1 · waiting for the worker" : runIsActive ? "Running in the only task slot" : "Last observed run · task slot released"}</p></div>
               <span className="rounded-full bg-zinc-100 px-3 py-1 font-mono text-xs font-semibold dark:bg-zinc-900">{run.status}</span>
             </div>
-            <div className="mt-5 h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-900"><div className="h-full rounded-full bg-sky-500 transition-all" style={{ width: `${progressPercent}%` }} /></div>
-            <div className="mt-2 flex flex-wrap justify-between gap-2 text-xs text-zinc-500"><span>{completedSamples.toLocaleString()} / {totalSamples.toLocaleString()} samples · {progressPercent.toFixed(0)}%</span><span className="font-mono">{run.protocol_fingerprint.slice(0, 20)}…</span></div>
+            <div className="mt-5 flex items-center justify-between gap-3 text-xs text-zinc-500"><span className="font-medium text-zinc-700 dark:text-zinc-300">Overall progress</span><span>{datasetProgress.length} dataset{datasetProgress.length === 1 ? "" : "s"}</span></div>
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-900"><div className="h-full rounded-full bg-sky-500 transition-all" style={{ width: `${progressPercent}%` }} /></div>
+            <div className="mt-2 flex flex-wrap justify-between gap-2 text-xs text-zinc-500"><span>{completedSamples.toLocaleString()} / {totalSamples.toLocaleString()} samples · {formatEvalHubProgressPercent(progressPercent)}</span><span className="font-mono">{run.protocol_fingerprint.slice(0, 20)}…</span></div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {datasetProgress.map((dataset, index) => (
+                <div key={dataset.id} className="rounded-xl border border-zinc-200 p-3.5 dark:border-zinc-800">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">Dataset {index + 1} of {datasetProgress.length}</p>
+                      <p className="mt-1 truncate text-xs font-semibold" title={dataset.displayName}>{dataset.displayName}</p>
+                      <p className="mt-1 text-[11px] text-zinc-500">{dataset.version}</p>
+                    </div>
+                    <RunStatus status={dataset.status} />
+                  </div>
+                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-900"><div className="h-full rounded-full bg-sky-500 transition-all" style={{ width: `${dataset.percent}%` }} /></div>
+                  <p className="mt-2 text-[11px] text-zinc-500"><span className="font-mono tabular-nums">{dataset.completedSamples.toLocaleString()} / {dataset.totalSamples.toLocaleString()}</span> samples · {formatEvalHubProgressPercent(dataset.percent)}</p>
+                </div>
+              ))}
+            </div>
+            {datasetProgress.length > 1 ? <p className="mt-3 text-xs leading-5 text-zinc-500">Each dataset is tracked and scored independently. Eval Hub persists the separate scores after every dataset in this run finishes; InferStation does not calculate a combined score.</p> : null}
             {runIsActive ? <div className="mt-4"><button type="button" onClick={cancelRun} disabled={busy !== null} className={secondaryButtonClass}>{busy === "cancel" ? "Cancelling…" : "Cancel run"}</button></div> : null}
             {run.error_message ? <p className="mt-4 text-sm text-red-600">{run.error_message}</p> : null}
             {metrics ? <MetricsPanel metrics={metrics} datasets={datasets} run={run} /> : null}
@@ -568,7 +590,6 @@ export default function EvalHubRunConsole() {
 function HistoryResult({ run, metrics, datasets, loading }: { run: EvalHubRun; metrics: EvalHubRunMetrics | null; datasets: EvalHubDataset[]; loading: boolean }) {
   const completed = run.datasets.reduce((sum, dataset) => sum + dataset.completed_samples, 0);
   const total = run.datasets.reduce((sum, dataset) => sum + dataset.total_samples, 0);
-  const smokeOnly = run.run_spec_json.datasets.every((dataset) => dataset.manifest.metadata.name === "inferstation-accuracy-pipeline-smoke-10");
   return (
     <div className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -582,7 +603,6 @@ function HistoryResult({ run, metrics, datasets, loading }: { run: EvalHubRun; m
         <ResultFact label="Completed" value={formatRunDate(run.completed_at)} />
       </dl>
       <div className="mt-4 rounded-xl bg-zinc-50 px-4 py-3 text-xs leading-5 text-zinc-600 dark:bg-zinc-900/60 dark:text-zinc-400"><strong className="text-zinc-900 dark:text-zinc-100">Dataset protocol:</strong> {run.run_spec_json.datasets.map((dataset) => `${dataset.manifest.metadata.display_name} · ${dataset.manifest.metadata.version} · ${dataset.manifest.protocol.id}`).join("; ")}</div>
-      {smokeOnly ? <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200"><strong>Pipeline score — not model accuracy.</strong> This synthetic ten-sample pack is intentionally trivial. Its score verifies request, parsing, scoring, persistence, and UI wiring only; it must not be used to compare models.</div> : null}
       {run.error_message ? <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">{run.error_message}</p> : null}
       {loading ? <p className="mt-5 rounded-xl bg-zinc-50 px-4 py-5 text-sm text-zinc-500 dark:bg-zinc-900/60">Loading persisted run details and aggregate metrics…</p> : null}
       {!loading && metrics ? <MetricsPanel metrics={metrics} datasets={datasets} run={run} /> : null}
@@ -606,15 +626,16 @@ function MetricsPanel({ metrics, datasets, run }: { metrics: EvalHubRunMetrics; 
   return (
     <div className="mt-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><h2 className="text-sm font-semibold">Eval Hub scoring results</h2><p className="mt-1 text-xs text-zinc-500">Quality metrics come from the persisted Eval Hub aggregate; scoring rules come from the frozen dataset manifest.</p></div>
-        <span className="rounded-full bg-sky-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-sky-700 ring-1 ring-inset ring-sky-200 dark:bg-sky-950/30 dark:text-sky-300 dark:ring-sky-900">Protocol-scored</span>
+        <div><h2 className="text-sm font-semibold">Eval Hub scoring results</h2><p className="mt-1 text-xs text-zinc-500">Each dataset has its own protocol and score. InferStation displays the persisted aggregates separately and never calculates a cross-dataset average.</p></div>
+        <span className="rounded-full bg-sky-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-sky-700 ring-1 ring-inset ring-sky-200 dark:bg-sky-950/30 dark:text-sky-300 dark:ring-sky-900">{metrics.datasets.length} dataset result{metrics.datasets.length === 1 ? "" : "s"}</span>
       </div>
       <div className="mt-3 space-y-4">
-        {metrics.datasets.map((result) => {
+        {metrics.datasets.map((result, resultIndex) => {
           const item = versions.get(result.dataset_version_id);
           const stored = storedVersions.get(result.dataset_version_id);
           const manifest = stored?.manifest ?? item?.version.manifest_json;
           const protocol = manifest?.protocol;
+          const isSmoke = manifest?.metadata.name === "inferstation-accuracy-pipeline-smoke-10";
           const primaryMetric = protocol?.scorer.primary_metric ?? "accuracy";
           const primaryValue = result.metrics[primaryMetric];
           const numerator = result.metrics[`${primaryMetric}_numerator`];
@@ -626,9 +647,11 @@ function MetricsPanel({ metrics, datasets, run }: { metrics: EvalHubRunMetrics; 
           return (
             <article key={result.run_dataset_id} className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800 sm:p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
-                <div><div className="text-sm font-semibold">{stored?.manifest.metadata.display_name ?? item?.dataset.display_name ?? result.protocol_id}</div><div className="mt-1 text-[11px] text-zinc-500">{manifest?.metadata.version ?? "Stored version"} · {result.protocol_id}</div></div>
+                <div><p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">Dataset result {resultIndex + 1} of {metrics.datasets.length}</p><div className="mt-1 text-sm font-semibold">{stored?.manifest.metadata.display_name ?? item?.dataset.display_name ?? result.protocol_id}</div><div className="mt-1 text-[11px] text-zinc-500">{manifest?.metadata.version ?? "Stored version"} · {result.protocol_id}</div></div>
                 <code className="rounded-md bg-zinc-100 px-2 py-1 text-[10px] text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">{primaryMetric}</code>
               </div>
+
+              {isSmoke ? <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200"><strong>Pipeline score — not model accuracy.</strong> This synthetic ten-sample pack verifies request, parsing, scoring, persistence, and UI wiring only; it must not be used to compare models.</div> : null}
 
               <div className="mt-4 grid gap-3 rounded-xl border border-sky-200 bg-sky-50/50 p-3 dark:border-sky-900 dark:bg-sky-950/20 sm:grid-cols-[1.15fr_1fr]">
                 <MetricFact label={`Primary metric · ${humanMetricName(primaryMetric)}`} value={formatMetric(primaryMetric, primaryValue)} prominent />
@@ -692,8 +715,10 @@ function RunStatus({ status }: { status: string }) {
     ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
     : status === "FAILED" || status === "CANCELLED"
       ? "bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-300"
+      : status === "SAMPLES COMPLETE"
+        ? "bg-sky-100 text-sky-800 dark:bg-sky-950/40 dark:text-sky-300"
       : "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300";
-  return <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 font-mono text-[10px] font-semibold ${terminalClass}`}>{status}</span>;
+  return <span className={`mt-1 inline-flex whitespace-nowrap rounded-full px-2 py-0.5 font-mono text-[10px] font-semibold ${terminalClass}`}>{status}</span>;
 }
 
 function ResultFact({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {

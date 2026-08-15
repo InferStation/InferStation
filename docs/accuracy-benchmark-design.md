@@ -143,9 +143,16 @@ after page refreshes; disabling the button in one browser is only a usability
 measure. One run may still contain multiple immutable dataset versions.
 
 The Run page reloads the active task on connection and continues polling it
-after a refresh. Its queue panel always shows the one task slot, queued/running
-state, sample counts, and percentage progress. A queued run has position 1 of 1;
-the slot becomes available only when the run succeeds, fails, or is cancelled.
+after a refresh. Its queue panel shows the one task slot, overall progress, and
+a separate status, sample count, and progress bar for every selected dataset.
+A queued run has position 1 of 1; the slot becomes available only when the run
+succeeds, fails, or is cancelled.
+
+Eval Hub aggregates and persists metrics only after all selected datasets in
+the run reach a terminal sample state. The result view then renders one
+independent result card per dataset, using that dataset's frozen protocol and
+primary metric. It never averages or otherwise combines scores across datasets.
+A smoke dataset inside a mixed run retains its own non-reportable warning.
 
 ### Live Run history
 
