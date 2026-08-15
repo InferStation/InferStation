@@ -12,7 +12,7 @@ interface ModelDoc {
   quantCount: number;
 }
 
-const BOTH_HOSTS = ["dgx-spark-01 (NVIDIA GB10, 128 GB)", "ryzen-ai-max-395-03 (AMD Strix Halo, 128 GB)"];
+const BOTH_HOSTS = ["NVIDIA DGX Spark (GB10, 128 GB)", "AMD Strix Halo (128 GB)"];
 const ENG_LLAMA4 = ["llama.cpp CUDA", "llama.cpp Vulkan", "llama.cpp HIP/ROCm"];
 const ENG_FULL   = [...ENG_LLAMA4, "vLLM"];
 
