@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     celery_result_backend: str = "redis://localhost:6379/2"
     artifact_root: Path = Path("artifacts")
     admin_api_key: str = "inferstation-local-dev-key"
+    require_admin_api_key: bool = True
     secret_encryption_key: str = ""
     allowed_endpoint_hosts: Annotated[list[str], NoDecode] = Field(
         default_factory=lambda: ["mock-openai", "host.docker.internal"]

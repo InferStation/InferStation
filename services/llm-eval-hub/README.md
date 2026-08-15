@@ -79,6 +79,8 @@ same checksum and manifest or registration fails.
 
 ## Endpoint policy
 
+- `REQUIRE_ADMIN_API_KEY=false` is permitted only for the current trusted
+  internal deployment; the default remains authenticated.
 - Private HTTP endpoints require `ALLOW_INSECURE_HTTP=true` and an allowed CIDR.
 - Arbitrary public HTTPS endpoints require
   `ALLOW_PUBLIC_HTTPS_ENDPOINTS=true`.

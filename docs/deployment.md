@@ -65,7 +65,9 @@ overwrite an existing environment and generates all three secrets locally:
 
 Preserve this file and `SECRET_ENCRYPTION_KEY` across every upgrade. The
 committed template enables arbitrary public HTTPS targets, trusted private
-CIDRs, worker concurrency 2, global concurrency 4, and QPS 2.
+CIDRs, worker concurrency 2, global concurrency 4, and QPS 2. It also sets
+`REQUIRE_ADMIN_API_KEY=false` for the current trusted internal network. Set it
+to `true` before exposing the service outside that boundary.
 
 Validate the merged Compose configuration before starting it:
 

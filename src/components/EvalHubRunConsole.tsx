@@ -24,7 +24,7 @@ type BusyAction = "connect" | "endpoint" | "validate" | "run" | "cancel" | null;
 
 export default function EvalHubRunConsole() {
   const [apiBase, setApiBase] = useState(defaultApiBase);
-  const [adminKey, setAdminKey] = useState("");
+  const adminKey = "";
   const [datasets, setDatasets] = useState<EvalHubDataset[]>([]);
   const [connectedBase, setConnectedBase] = useState("");
   const [endpointName, setEndpointName] = useState("inferstation-ad-hoc");
@@ -209,11 +209,10 @@ export default function EvalHubRunConsole() {
       {error ? <div role="alert" className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">{error}</div> : null}
 
       <section className="mt-7 rounded-2xl border border-zinc-200 p-5 dark:border-zinc-800 sm:p-6">
-        <StepHeading number="1" title="Connect to LLM Eval Hub" note="The shared admin key is required by upstream but is kept only in this page's memory." />
-        <div className="mt-5 grid gap-4 md:grid-cols-[1.4fr_1fr_auto] md:items-end">
+        <StepHeading number="1" title="Connect to LLM Eval Hub" note="The internal RTX4090 deployment currently has control-plane authentication disabled." />
+        <div className="mt-5 grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
           <Field label="Eval Hub API URL"><input value={apiBase} onChange={(event) => { setApiBase(event.target.value); disconnectEvalHub(); }} className={inputClass} placeholder="http://host:18080/api/v1" /></Field>
-          <Field label="Eval Hub admin key"><input type="password" autoComplete="off" value={adminKey} onChange={(event) => { setAdminKey(event.target.value); disconnectEvalHub(); }} className={inputClass} placeholder="Runtime only" /></Field>
-          <ActionButton onClick={connect} disabled={!apiBase || !adminKey || busy !== null}>{busy === "connect" ? "Connecting…" : "Connect"}</ActionButton>
+          <ActionButton onClick={connect} disabled={!apiBase || busy !== null}>{busy === "connect" ? "Connecting…" : "Connect"}</ActionButton>
         </div>
         {connectedBase ? <p className="mt-3 text-xs text-emerald-700 dark:text-emerald-400">Connected to {connectedBase} · {datasets.reduce((sum, item) => sum + item.versions.length, 0)} dataset versions</p> : null}
       </section>

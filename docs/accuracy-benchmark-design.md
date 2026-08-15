@@ -133,9 +133,11 @@ connect to Eval Hub
   -> display metrics or errors
 ```
 
-The Eval Hub administrator key and target API key are runtime inputs. The page
-does not place either value in a URL, browser storage, Git, logs, or exported
-JSON. The target key is cleared from form state after endpoint registration.
+The target API key is a runtime input. The page does not place it in a URL,
+browser storage, Git, logs, or exported JSON, and clears it from form state
+after endpoint registration. The internal RTX4090 deployment currently disables
+the Eval Hub control-plane key with an explicit setting; the backend retains the
+ability to re-enable it before exposure to an untrusted network.
 
 Changing an endpoint, model, dataset, or execution parameter invalidates the
 previous preflight and idempotency key.

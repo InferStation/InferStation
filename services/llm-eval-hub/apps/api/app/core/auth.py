@@ -16,6 +16,9 @@ def require_actor(
     request: Request,
     settings: Settings = Depends(get_settings),
 ) -> Actor:
+    if not settings.require_admin_api_key:
+        return Actor(username="internal-operator", role="admin")
+
     api_key = request.headers.get("x-api-key")
     authorization = request.headers.get("authorization", "")
     if not api_key and authorization.lower().startswith("bearer "):

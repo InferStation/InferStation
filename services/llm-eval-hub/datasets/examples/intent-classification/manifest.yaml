@@ -14,7 +14,7 @@ data:
   format: jsonl
   path: data/test.jsonl
   split: test
-  checksum_sha256: 2988edfefa2c1fbfb4c532685811f608cd7ffcea5d6ef94cbb5a8e181c4ff1d8
+  checksum_sha256: 38e754a499bd93660247baa3863b003074efd84c262366f1f7d67a6bd2422a53
   id_field: id
   input_fields: [question]
   reference_field: label
