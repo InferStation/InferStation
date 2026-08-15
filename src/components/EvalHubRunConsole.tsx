@@ -16,6 +16,12 @@ import {
   type EvalHubRunMetrics,
   type EvalHubValidation,
 } from "@/lib/evalHubClient";
+import {
+  formatEvalMetric as formatMetric,
+  formatEvalPolicy as formatPolicy,
+  formatProtocolComponent,
+  humanMetricName,
+} from "@/lib/evalHubMetrics";
 
 const defaultApiBase =
   process.env.NEXT_PUBLIC_EVAL_HUB_API_BASE || "http://10.170.38.102:18080/api/v1";
@@ -576,6 +582,7 @@ function HistoryResult({ run, metrics, datasets, loading }: { run: EvalHubRun; m
         <ResultFact label="Completed" value={formatRunDate(run.completed_at)} />
       </dl>
       <div className="mt-4 rounded-xl bg-zinc-50 px-4 py-3 text-xs leading-5 text-zinc-600 dark:bg-zinc-900/60 dark:text-zinc-400"><strong className="text-zinc-900 dark:text-zinc-100">Dataset protocol:</strong> {run.run_spec_json.datasets.map((dataset) => `${dataset.manifest.metadata.display_name} · ${dataset.manifest.metadata.version} · ${dataset.manifest.protocol.id}`).join("; ")}</div>
+      {smokeOnly ? <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200"><strong>Pipeline score — not model accuracy.</strong> This synthetic ten-sample pack is intentionally trivial. Its score verifies request, parsing, scoring, persistence, and UI wiring only; it must not be used to compare models.</div> : null}
       {run.error_message ? <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">{run.error_message}</p> : null}
       {loading ? <p className="mt-5 rounded-xl bg-zinc-50 px-4 py-5 text-sm text-zinc-500 dark:bg-zinc-900/60">Loading persisted run details and aggregate metrics…</p> : null}
       {!loading && metrics ? <MetricsPanel metrics={metrics} datasets={datasets} run={run} /> : null}
@@ -587,7 +594,6 @@ function HistoryResult({ run, metrics, datasets, loading }: { run: EvalHubRun; m
           <li><strong className="text-zinc-900 dark:text-zinc-100">Primary score</strong> is the dataset protocol&apos;s quality metric. Read its numerator and denominator together; a score without its evaluated population is incomplete.</li>
           <li><strong className="text-zinc-900 dark:text-zinc-100">API and parse errors</strong> show delivery or formatting failures. Compare them with the denominator policy before interpreting model quality.</li>
           <li><strong className="text-zinc-900 dark:text-zinc-100">Latency</strong> describes service behavior during this run; it is context, not an accuracy metric.</li>
-          {smokeOnly ? <li className="font-medium text-amber-700 dark:text-amber-300">This is the synthetic smoke dataset. It proves the pipeline works, but must not be used to compare or publish model accuracy.</li> : null}
         </ul>
       </div>
     </div>
@@ -599,36 +605,86 @@ function MetricsPanel({ metrics, datasets, run }: { metrics: EvalHubRunMetrics; 
   const storedVersions = new Map(run.run_spec_json.datasets.map((dataset) => [dataset.dataset_version_id, dataset] as const));
   return (
     <div className="mt-6">
-      <h2 className="text-sm font-semibold">Aggregate metrics</h2>
-      <div className="mt-3 grid gap-3 md:grid-cols-2">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div><h2 className="text-sm font-semibold">Eval Hub scoring results</h2><p className="mt-1 text-xs text-zinc-500">Quality metrics come from the persisted Eval Hub aggregate; scoring rules come from the frozen dataset manifest.</p></div>
+        <span className="rounded-full bg-sky-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-sky-700 ring-1 ring-inset ring-sky-200 dark:bg-sky-950/30 dark:text-sky-300 dark:ring-sky-900">Protocol-scored</span>
+      </div>
+      <div className="mt-3 space-y-4">
         {metrics.datasets.map((result) => {
           const item = versions.get(result.dataset_version_id);
           const stored = storedVersions.get(result.dataset_version_id);
-          const primaryMetric = item?.version.manifest_json.protocol.scorer.primary_metric ?? stored?.manifest.protocol.scorer.primary_metric ?? "accuracy";
+          const manifest = stored?.manifest ?? item?.version.manifest_json;
+          const protocol = manifest?.protocol;
+          const primaryMetric = protocol?.scorer.primary_metric ?? "accuracy";
           const primaryValue = result.metrics[primaryMetric];
           const numerator = result.metrics[`${primaryMetric}_numerator`];
           const denominator = result.metrics[`${primaryMetric}_denominator`] ?? result.denominators[primaryMetric];
           const apiErrors = result.metrics.api_errors;
           const parseErrors = result.metrics.parse_errors;
+          const secondaryQualityMetrics = ["macro_f1", "micro_f1", "weighted_f1"]
+            .filter((name) => result.metrics[name] != null);
           return (
-            <article key={result.run_dataset_id} className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
-              <div className="text-sm font-semibold">{item?.dataset.display_name ?? stored?.manifest.metadata.display_name ?? result.protocol_id}</div>
-              <div className="mt-1 text-[11px] text-zinc-500">{result.protocol_id}</div>
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                <MetricFact label={humanMetricName(primaryMetric)} value={formatMetric(primaryMetric, primaryValue)} prominent />
-                <MetricFact label="Correct / denominator" value={numerator == null && denominator == null ? "—" : `${formatCount(numerator)} / ${formatCount(denominator)}`} />
-                <MetricFact label="API errors" value={formatCount(apiErrors)} warning={Boolean(apiErrors)} />
-                <MetricFact label="Parse errors" value={formatCount(parseErrors)} warning={Boolean(parseErrors)} />
-                <MetricFact label="Success latency p50" value={formatMilliseconds(result.metrics.latency_success_p50_ms)} />
-                <MetricFact label="Success latency p95" value={formatMilliseconds(result.metrics.latency_success_p95_ms)} />
+            <article key={result.run_dataset_id} className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800 sm:p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div><div className="text-sm font-semibold">{stored?.manifest.metadata.display_name ?? item?.dataset.display_name ?? result.protocol_id}</div><div className="mt-1 text-[11px] text-zinc-500">{manifest?.metadata.version ?? "Stored version"} · {result.protocol_id}</div></div>
+                <code className="rounded-md bg-zinc-100 px-2 py-1 text-[10px] text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">{primaryMetric}</code>
               </div>
-              <details className="mt-4 text-xs text-zinc-500"><summary className="cursor-pointer font-medium">All aggregate fields</summary><dl className="mt-3 space-y-2">{Object.entries(result.metrics).map(([name, value]) => <div key={name} className="flex items-center justify-between gap-3"><dt>{name}</dt><dd className="font-mono tabular-nums">{value == null ? "—" : value.toFixed(4)}</dd></div>)}</dl></details>
+
+              <div className="mt-4 grid gap-3 rounded-xl border border-sky-200 bg-sky-50/50 p-3 dark:border-sky-900 dark:bg-sky-950/20 sm:grid-cols-[1.15fr_1fr]">
+                <MetricFact label={`Primary metric · ${humanMetricName(primaryMetric)}`} value={formatMetric(primaryMetric, primaryValue)} prominent />
+                <MetricFact label="Numerator / denominator" value={numerator == null && denominator == null ? "—" : `${formatCount(numerator)} / ${formatCount(denominator)}`} />
+              </div>
+
+              <dl className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                <ProtocolFact label="Scorer" value={formatProtocolComponent(protocol?.scorer)} />
+                <ProtocolFact label="Parser" value={formatProtocolComponent(protocol?.parser)} />
+                <ProtocolFact label="Task type" value={protocol?.task_type ?? "—"} mono />
+                <ProtocolFact label="Denominator policy" value={formatPolicy(protocol?.denominator_policy)} />
+                <ProtocolFact label="API error policy" value={formatPolicy(protocol?.on_api_error)} />
+                <ProtocolFact label="Parse error policy" value={formatPolicy(protocol?.on_parse_error)} />
+              </dl>
+
+              <div className="mt-4">
+                <h3 className="text-xs font-semibold">Quality population and errors</h3>
+                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                  <MetricFact label="Total samples" value={formatCount(result.metrics.total_samples)} />
+                  <MetricFact label="Valid responses" value={formatCount(result.metrics.valid_responses)} />
+                  <MetricFact label="Scored samples" value={formatCount(result.metrics.scored_samples)} />
+                  <MetricFact label="Score errors" value={formatCount(result.metrics.score_errors)} warning={Boolean(result.metrics.score_errors)} />
+                  <MetricFact label="API errors" value={`${formatCount(apiErrors)} · ${formatMetric("api_error_rate", result.metrics.api_error_rate)}`} warning={Boolean(apiErrors)} />
+                  <MetricFact label="Parse errors" value={`${formatCount(parseErrors)} · ${formatMetric("parse_error_rate", result.metrics.parse_error_rate)}`} warning={Boolean(parseErrors)} />
+                  {secondaryQualityMetrics.map((name) => <MetricFact key={name} label={humanMetricName(name)} value={formatMetric(name, result.metrics[name])} />)}
+                </div>
+              </div>
+
+              {result.groups.length ? <details className="mt-4 rounded-xl border border-zinc-200 text-xs dark:border-zinc-800"><summary className="cursor-pointer px-4 py-3 font-medium">Grouped quality metrics · {result.groups.length} groups</summary><div className="max-h-[420px] overflow-auto border-t border-zinc-200 dark:border-zinc-800"><table className="min-w-full text-left"><thead className="sticky top-0 bg-zinc-50 text-[10px] uppercase tracking-wide text-zinc-500 dark:bg-zinc-900"><tr><th className="px-3 py-2">Group</th><th className="px-3 py-2">Value</th><th className="px-3 py-2">{humanMetricName(primaryMetric)}</th><th className="px-3 py-2">Numerator / denominator</th><th className="px-3 py-2">API / parse errors</th></tr></thead><tbody>{result.groups.map((group) => {
+                const groupNumerator = group.metrics[`${primaryMetric}_numerator`];
+                const groupDenominator = group.metrics[`${primaryMetric}_denominator`] ?? group.denominators[primaryMetric];
+                return <tr key={`${group.group_key}:${group.group_value}`} className="border-t border-zinc-100 dark:border-zinc-900"><td className="px-3 py-2 font-mono text-[11px]">{group.group_key}</td><td className="px-3 py-2">{group.group_value}</td><td className="px-3 py-2 font-mono font-semibold tabular-nums">{formatMetric(primaryMetric, group.metrics[primaryMetric])}</td><td className="px-3 py-2 font-mono tabular-nums">{formatCount(groupNumerator)} / {formatCount(groupDenominator)}</td><td className="px-3 py-2 font-mono tabular-nums">{formatCount(group.metrics.api_errors)} / {formatCount(group.metrics.parse_errors)}</td></tr>;
+              })}</tbody></table></div></details> : null}
+
+              <div className="mt-4">
+                <h3 className="text-xs font-semibold">Execution diagnostics <span className="font-normal text-zinc-500">· not quality metrics</span></h3>
+                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <MetricFact label="Success latency p50" value={formatMilliseconds(result.metrics.latency_success_p50_ms)} />
+                  <MetricFact label="Success latency p95" value={formatMilliseconds(result.metrics.latency_success_p95_ms)} />
+                  <MetricFact label="Prompt tokens" value={formatCount(result.metrics.prompt_tokens)} />
+                  <MetricFact label="Completion tokens" value={formatCount(result.metrics.completion_tokens)} />
+                </div>
+              </div>
+
+              <p className="mt-4 text-[11px] leading-5 text-zinc-500">Source: Eval Hub persisted <code>/runs/{run.id}/metrics</code>. Metric identity and scoring policies are read from this run&apos;s frozen dataset manifest, not inferred by InferStation.</p>
+              <details className="mt-3 text-xs text-zinc-500"><summary className="cursor-pointer font-medium">All raw aggregate fields</summary><dl className="mt-3 space-y-2">{Object.entries(result.metrics).map(([name, value]) => <div key={name} className="flex items-center justify-between gap-3"><dt>{name}</dt><dd className="font-mono tabular-nums">{value == null ? "—" : value.toFixed(4)}</dd></div>)}</dl></details>
             </article>
           );
         })}
       </div>
     </div>
   );
+}
+
+function ProtocolFact({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+  return <div className="rounded-lg bg-zinc-50 px-3 py-2.5 dark:bg-zinc-900/60"><dt className="text-[10px] uppercase tracking-wide text-zinc-500">{label}</dt><dd className={`mt-1 text-xs font-medium ${mono ? "font-mono" : ""}`}>{value}</dd></div>;
 }
 
 function RunStatus({ status }: { status: string }) {
@@ -663,18 +719,6 @@ function formatRunDate(value: string | null): string {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
-}
-
-function humanMetricName(value: string): string {
-  return value.replaceAll("_", " ").replace(/\b\w/g, (character) => character.toUpperCase());
-}
-
-function formatMetric(name: string, value: number | null | undefined): string {
-  if (value == null) return "—";
-  if (name === "accuracy" || name.endsWith("_rate") || name.endsWith("_match")) {
-    return `${(value * 100).toFixed(2)}%`;
-  }
-  return value.toFixed(4);
 }
 
 function formatCount(value: number | null | undefined): string {

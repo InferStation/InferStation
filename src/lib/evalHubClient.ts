@@ -32,6 +32,30 @@ export interface EvalHubModel {
   source: string;
 }
 
+export interface EvalHubProtocol {
+  id: string;
+  task_type: string;
+  subset_of?: string;
+  parser?: {
+    type: string;
+    version?: string;
+    allowed?: string[];
+    labels?: Array<string | number>;
+    [key: string]: unknown;
+  };
+  scorer: {
+    type?: string;
+    version?: string;
+    primary_metric: string;
+    absolute_tolerance?: number;
+    relative_tolerance?: number;
+    [key: string]: unknown;
+  };
+  denominator_policy?: string;
+  on_api_error?: string;
+  on_parse_error?: string;
+}
+
 export interface EvalHubProbe {
   status: string;
   models: string[];
@@ -49,12 +73,7 @@ export interface EvalHubDatasetVersion {
   row_count: number;
   manifest_json: {
     metadata: { name: string; display_name: string; version: string };
-    protocol: {
-      id: string;
-      task_type: string;
-      subset_of?: string;
-      scorer: { primary_metric: string };
-    };
+    protocol: EvalHubProtocol;
   };
 }
 

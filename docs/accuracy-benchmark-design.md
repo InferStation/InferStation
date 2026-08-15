@@ -166,9 +166,20 @@ metrics for a successful run. A user can select any listed entry without
 rerunning the model. The result view presents:
 
 - status, model, timestamps, sample progress, dataset version, and protocol;
-- the primary score with its numerator and denominator;
-- API errors, parse errors, and successful-request p50/p95 latency; and
+- the manifest-declared primary score with its numerator and denominator;
+- the frozen scorer, parser, denominator policy, and API/parse error policies;
+- API errors, parse errors, and successful-request p50/p95 latency;
+- every grouped quality aggregate returned by Eval Hub, such as MMLU subject
+  and domain groups; and
 - expandable raw aggregate fields for diagnosis.
+
+InferStation never recalculates a Live Run score in the browser. The metric
+name and scoring contract come from the dataset manifest snapshot stored in the
+run, while values, denominators, error counters, and groups come from Eval
+Hub's persisted `/runs/{run_id}/metrics` response. Frontend formatting may turn
+a ratio into a percentage, but must not rename, combine, or substitute the
+backend metric. Execution latency and token counts are displayed separately
+and explicitly labeled as diagnostics rather than quality metrics.
 
 On desktop, history and result use an asymmetric master-detail layout: the
 scrollable history rail receives about 30% of the width and the result receives
@@ -179,7 +190,8 @@ fetched.
 
 Scores must be interpreted together with their denominator and error counts.
 Latency is operational context, not quality. Smoke results always carry a
-warning that they validate the pipeline and cannot support model comparisons.
+prominent warning above the score that they validate the pipeline and cannot
+support model comparisons.
 
 The target API key is a runtime input. The page does not place it in a URL,
 browser storage, Git, logs, or exported JSON, and clears it from form state
