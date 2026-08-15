@@ -47,7 +47,7 @@ function DetailContent() {
     <div className="mx-auto w-full max-w-6xl px-6 py-10 sm:py-12">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs uppercase tracking-[0.16em] text-zinc-500">
-          <Link href="/accuracy" className="hover:text-indigo-600 dark:hover:text-indigo-400">
+          <Link href="/accuracy" className="hover:text-sky-700 dark:hover:text-sky-300">
             Accuracy
           </Link>{" "}
           / {run.run_date}
@@ -67,7 +67,7 @@ function DetailContent() {
 
       <header className="mt-4 grid gap-6 lg:grid-cols-[1fr_auto] lg:items-end">
         <div>
-          <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400">
+          <p className="text-sm font-medium text-sky-700 dark:text-sky-300">
             {suite.name} · {suite.version}
           </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -82,8 +82,8 @@ function DetailContent() {
             {run.model.scheme ? ` / ${run.model.scheme}` : ""}
           </p>
         </div>
-        <div className="rounded-xl border border-indigo-200 bg-indigo-50 px-6 py-4 text-right dark:border-indigo-900 dark:bg-indigo-950/30">
-          <div className="text-[11px] uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
+        <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-6 py-4 text-right dark:border-zinc-800 dark:bg-zinc-900/30">
+          <div className="text-[11px] uppercase tracking-wide text-zinc-500">
             Composite score
           </div>
           <div className="mt-1 font-mono text-4xl font-semibold tabular-nums">
@@ -251,7 +251,7 @@ function DetailContent() {
                 href={href}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs hover:border-indigo-300 hover:text-indigo-600 dark:border-zinc-700 dark:hover:border-indigo-700 dark:hover:text-indigo-400"
+                className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs hover:border-sky-300 hover:text-sky-700 dark:border-zinc-700 dark:hover:border-sky-700 dark:hover:text-sky-300"
               >
                 {label}
               </a>

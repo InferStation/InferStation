@@ -199,7 +199,7 @@ export default function EvalHubRunConsole() {
     <div className="mx-auto w-full max-w-6xl px-6 py-9 sm:py-12">
       <AccuracyNav active="run" />
       <header className="mt-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-700 dark:text-indigo-300">Live evaluation</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-300">Live evaluation</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">Run any OpenAI-compatible model through Eval Hub.</h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-600 dark:text-zinc-400">
           Register a reachable model API, select immutable datasets, preflight the request, and follow the asynchronous run. Nothing is published to Git automatically.
@@ -240,7 +240,7 @@ export default function EvalHubRunConsole() {
         <div className="mt-5 grid gap-3 md:grid-cols-2">
           {datasets.flatMap((dataset) => dataset.versions.map((version) => {
             const checked = selectedVersions.includes(version.id);
-            return <label key={version.id} className={`flex cursor-pointer gap-3 rounded-xl border p-4 ${checked ? "border-indigo-400 bg-indigo-50/60 dark:border-indigo-700 dark:bg-indigo-950/20" : "border-zinc-200 dark:border-zinc-800"}`}><input type="checkbox" checked={checked} onChange={() => { setSelectedVersions((current) => current.includes(version.id) ? current.filter((id) => id !== version.id) : [...current, version.id]); invalidateValidation(); }} className="mt-1" /><span className="min-w-0"><strong className="block text-sm">{dataset.display_name} · {version.version}</strong><span className="mt-1 block text-xs text-zinc-500">{version.row_count.toLocaleString()} samples · {version.manifest_json.protocol.id}</span><code className="mt-2 block truncate text-[10px] text-zinc-400">{version.checksum}</code></span></label>;
+            return <label key={version.id} className={`flex cursor-pointer gap-3 rounded-xl border p-4 ${checked ? "border-sky-400 bg-sky-50/60 dark:border-sky-700 dark:bg-sky-950/20" : "border-zinc-200 dark:border-zinc-800"}`}><input type="checkbox" checked={checked} onChange={() => { setSelectedVersions((current) => current.includes(version.id) ? current.filter((id) => id !== version.id) : [...current, version.id]); invalidateValidation(); }} className="mt-1" /><span className="min-w-0"><strong className="block text-sm">{dataset.display_name} · {version.version}</strong><span className="mt-1 block text-xs text-zinc-500">{version.row_count.toLocaleString()} samples · {version.manifest_json.protocol.id}</span><code className="mt-2 block truncate text-[10px] text-zinc-400">{version.checksum}</code></span></label>;
           }))}
           {connectedBase && datasets.length === 0 ? <p className="text-sm text-zinc-500">No dataset versions are registered in Eval Hub.</p> : null}
         </div>
@@ -270,7 +270,7 @@ export default function EvalHubRunConsole() {
       {run ? (
         <section className="mt-5 rounded-2xl border border-zinc-200 p-5 dark:border-zinc-800 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4"><StepHeading number="5" title="Run progress" note={`Eval Hub run ${run.id}`} /><span className="rounded-full bg-zinc-100 px-3 py-1 font-mono text-xs font-semibold dark:bg-zinc-900">{run.status}</span></div>
-          <div className="mt-5 h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-900"><div className="h-full rounded-full bg-indigo-500 transition-all" style={{ width: `${totalSamples ? Math.min(100, completedSamples / totalSamples * 100) : 0}%` }} /></div>
+          <div className="mt-5 h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-900"><div className="h-full rounded-full bg-sky-500 transition-all" style={{ width: `${totalSamples ? Math.min(100, completedSamples / totalSamples * 100) : 0}%` }} /></div>
           <div className="mt-2 flex flex-wrap justify-between gap-2 text-xs text-zinc-500"><span>{completedSamples.toLocaleString()} / {totalSamples.toLocaleString()} samples</span><span className="font-mono">{run.protocol_fingerprint.slice(0, 20)}…</span></div>
           {!isEvalHubRunTerminal(run.status) ? <div className="mt-4"><button type="button" onClick={cancelRun} disabled={busy !== null} className={secondaryButtonClass}>{busy === "cancel" ? "Cancelling…" : "Cancel run"}</button></div> : null}
           {run.error_message ? <p className="mt-4 text-sm text-red-600">{run.error_message}</p> : null}
@@ -286,11 +286,11 @@ function MetricsPanel({ metrics, datasets }: { metrics: EvalHubRunMetrics; datas
   return <div className="mt-6"><h2 className="text-sm font-semibold">Aggregate metrics</h2><div className="mt-3 grid gap-3 md:grid-cols-2">{metrics.datasets.map((result) => { const item = versions.get(result.dataset_version_id); return <article key={result.run_dataset_id} className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800"><div className="text-sm font-semibold">{item?.dataset.display_name ?? result.protocol_id}</div><div className="mt-1 text-[11px] text-zinc-500">{result.protocol_id}</div><dl className="mt-4 space-y-2">{Object.entries(result.metrics).map(([name, value]) => <div key={name} className="flex items-center justify-between gap-3 text-sm"><dt className="text-zinc-500">{name}</dt><dd className="font-mono font-semibold tabular-nums">{value == null ? "—" : value.toFixed(4)}</dd></div>)}</dl></article>; })}</div></div>;
 }
 
-const inputClass = "h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm outline-none placeholder:text-zinc-400 focus:border-indigo-500 disabled:cursor-not-allowed disabled:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-950 dark:disabled:bg-zinc-900";
+const inputClass = "h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm outline-none placeholder:text-zinc-400 focus:border-sky-500 disabled:cursor-not-allowed disabled:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-950 dark:disabled:bg-zinc-900";
 const secondaryButtonClass = "rounded-md border border-zinc-300 px-3.5 py-2 text-sm font-medium hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-900";
 
 function StepHeading({ number, title, note }: { number: string; title: string; note: string }) {
-  return <div className="flex gap-3"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-100 font-mono text-xs font-semibold text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">{number}</span><div><h2 className="font-semibold">{title}</h2><p className="mt-1 text-xs leading-5 text-zinc-500">{note}</p></div></div>;
+  return <div className="flex gap-3"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-50 font-mono text-xs font-semibold text-sky-700 ring-1 ring-inset ring-sky-200 dark:bg-sky-950/30 dark:text-sky-300 dark:ring-sky-900">{number}</span><div><h2 className="font-semibold">{title}</h2><p className="mt-1 text-xs leading-5 text-zinc-500">{note}</p></div></div>;
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -302,5 +302,5 @@ function NumberField({ label, value, setValue, onChanged, min, max, step = 1 }: 
 }
 
 function ActionButton({ children, onClick, disabled }: { children: React.ReactNode; onClick: () => void; disabled: boolean }) {
-  return <button type="button" onClick={onClick} disabled={disabled} className="rounded-md bg-indigo-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50">{children}</button>;
+  return <button type="button" onClick={onClick} disabled={disabled} className="rounded-md bg-zinc-900 px-3.5 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">{children}</button>;
 }

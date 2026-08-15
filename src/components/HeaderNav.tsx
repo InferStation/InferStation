@@ -129,7 +129,7 @@ export default function HeaderNav() {
           type="button"
           aria-expanded={openMenu === "accuracy"}
           aria-controls="accuracy-menu"
-          className="cursor-pointer font-medium text-indigo-700 hover:text-indigo-500 dark:text-indigo-300 dark:hover:text-indigo-200"
+          className="cursor-pointer font-medium hover:text-zinc-900 dark:hover:text-zinc-100"
           onClick={() => toggleMenu("accuracy")}
         >
           Accuracy{" "}

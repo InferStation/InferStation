@@ -148,8 +148,8 @@ export default function AccuracySummary() {
         </Link>
       </div>
 
-      <header className="mt-6 overflow-hidden rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-cyan-50 px-6 py-8 dark:border-indigo-950 dark:from-indigo-950/40 dark:via-zinc-950 dark:to-cyan-950/30 sm:px-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-700 dark:text-indigo-300">
+      <header className="mt-6 overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50/70 px-6 py-8 dark:border-zinc-800 dark:bg-zinc-900/30 sm:px-8">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-300">
           Accuracy results
         </p>
         <h1 className="mt-3 max-w-3xl text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -164,11 +164,11 @@ export default function AccuracySummary() {
             href={SCHEMA_URL}
             target="_blank"
             rel="noreferrer"
-            className="rounded-md border border-indigo-200 bg-white/80 px-3 py-1.5 hover:bg-white dark:border-indigo-800 dark:bg-zinc-950/70"
+            className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-950 dark:hover:bg-zinc-900"
           >
             Data schema
           </a>
-          <span className="rounded-md border border-indigo-200 bg-white/50 px-3 py-1.5 text-zinc-600 dark:border-indigo-900 dark:bg-zinc-950/40 dark:text-zinc-400">
+          <span className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400">
             No composite ranking
           </span>
         </div>
@@ -262,7 +262,7 @@ export default function AccuracySummary() {
             </thead>
             <tbody>
               {visibleRows.map((row) => (
-                <tr key={row.key} className="border-b border-zinc-100 last:border-0 hover:bg-indigo-50/30 dark:border-zinc-900 dark:hover:bg-indigo-950/10">
+                <tr key={row.key} className="border-b border-zinc-100 last:border-0 hover:bg-zinc-50 dark:border-zinc-900 dark:hover:bg-zinc-900/50">
                   <td className="px-4 py-3">
                     <div className="font-semibold">{row.model.name}</div>
                     <div className="mt-1 font-mono text-[11px] text-zinc-500">{row.model.quantization}{row.model.scheme ? ` · ${row.model.scheme}` : ""}</div>
@@ -287,7 +287,7 @@ export default function AccuracySummary() {
                   <td className="px-3 py-3 text-right"><StateBadge state={row.state} /></td>
                   <td className="px-4 py-3 text-right">
                     {row.evaluation ? (
-                      <a href={sourceUrl(row.evaluation.source_path)} target="_blank" rel="noreferrer" className="text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-400">
+                      <a href={sourceUrl(row.evaluation.source_path)} target="_blank" rel="noreferrer" className="text-xs font-medium text-sky-700 hover:underline dark:text-sky-300">
                         {isMock ? "Mock JSON" : row.evaluation.run_date}
                       </a>
                     ) : (
@@ -312,7 +312,7 @@ export default function AccuracySummary() {
   );
 }
 
-const controlClass = "h-9 w-full rounded-md border border-zinc-300 bg-white px-2.5 text-sm outline-none focus:border-indigo-500 dark:border-zinc-700 dark:bg-zinc-950";
+const controlClass = "h-9 w-full rounded-md border border-zinc-300 bg-white px-2.5 text-sm outline-none focus:border-sky-500 dark:border-zinc-700 dark:bg-zinc-950";
 
 function Filter({ label, children }: { label: string; children: React.ReactNode }) {
   return <label className="space-y-1.5"><span className="block text-[11px] font-medium uppercase tracking-wide text-zinc-500">{label}</span>{children}</label>;

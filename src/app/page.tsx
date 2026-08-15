@@ -354,7 +354,7 @@ export default function Home() {
           </Link>
           <Link
             href="/accuracy"
-            className="rounded-md border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-indigo-700 hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/30 dark:text-indigo-300 dark:hover:bg-indigo-950/60"
+            className="rounded-md border border-zinc-300 px-3 py-1.5 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
           >
             Accuracy results
           </Link>
