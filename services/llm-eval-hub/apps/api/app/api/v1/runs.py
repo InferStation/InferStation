@@ -42,6 +42,8 @@ from packages.eval_engine.fingerprint import protocol_fingerprint
 
 router = APIRouter(prefix="/runs", tags=["runs"])
 TERMINAL_STATUSES = {"SUCCEEDED", "FAILED", "CANCELLED"}
+ACTIVE_RUN_STATUSES = {"QUEUED", "PREPARING", "RUNNING", "AGGREGATING", "CANCELLING"}
+SINGLE_RUN_ADVISORY_LOCK_ID = 2026081501
 TRANSIENT_ERROR_TYPES = {
     "transport.dns",
     "transport.connect",
@@ -49,6 +51,38 @@ TRANSIENT_ERROR_TYPES = {
     "transport.timeout",
     "http.429",
 }
+
+
+def _acquire_single_run_slot(db: Session) -> None:
+    """Serialize active-run checks in PostgreSQL for the lifetime of the transaction."""
+    if db.get_bind().dialect.name == "postgresql":
+        db.execute(select(func.pg_advisory_xact_lock(SINGLE_RUN_ADVISORY_LOCK_ID)))
+
+
+def _find_active_run(db: Session, *, exclude_run_id: str | None = None) -> Run | None:
+    statement = (
+        select(Run)
+        .where(Run.status.in_(ACTIVE_RUN_STATUSES))
+        .order_by(Run.created_at.asc())
+        .limit(1)
+    )
+    if exclude_run_id:
+        statement = statement.where(Run.id != exclude_run_id)
+    return db.scalar(statement)
+
+
+def _raise_if_run_slot_occupied(db: Session, *, exclude_run_id: str | None = None) -> None:
+    active = _find_active_run(db, exclude_run_id=exclude_run_id)
+    if active is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "ACTIVE_RUN_EXISTS",
+                "message": "Another evaluation is already queued or running",
+                "run_id": active.id,
+                "status": active.status,
+            },
+        )
 
 
 def _is_transient_error(error_type: str | None) -> bool:
@@ -149,10 +183,12 @@ def create_run(
     settings: Settings = Depends(get_settings),
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ) -> Run:
+    _acquire_single_run_slot(db)
     if idempotency_key:
         existing = db.scalar(select(Run).where(Run.idempotency_key == idempotency_key))
         if existing:
             return existing
+    _raise_if_run_slot_occupied(db)
     endpoint, revision, model, versions = _load_resources(db, payload)
     capability = db.scalar(
         select(EndpointCapability)
@@ -226,6 +262,7 @@ def create_run(
 @router.get("", response_model=list[RunRead])
 def list_runs(
     run_status: str | None = Query(default=None, alias="status"),
+    active_only: bool = Query(default=False, alias="active"),
     limit: int = Query(default=50, ge=1, le=200),
     _: Actor = Depends(require_actor),
     db: Session = Depends(get_db),
@@ -233,6 +270,8 @@ def list_runs(
     statement = select(Run).options(selectinload(Run.datasets)).order_by(Run.created_at.desc())
     if run_status:
         statement = statement.where(Run.status == run_status)
+    if active_only:
+        statement = statement.where(Run.status.in_(ACTIVE_RUN_STATUSES))
     return list(db.scalars(statement.limit(limit)).unique())
 
 
@@ -285,11 +324,13 @@ def retry_run_failures(
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> Run:
+    _acquire_single_run_slot(db)
     run = db.scalar(select(Run).where(Run.id == run_id).options(selectinload(Run.datasets)))
     if run is None:
         raise HTTPException(status_code=404, detail={"code": "RUN_NOT_FOUND"})
     if run.status not in TERMINAL_STATUSES:
         raise HTTPException(status_code=409, detail={"code": "RUN_NOT_TERMINAL"})
+    _raise_if_run_slot_occupied(db, exclude_run_id=run.id)
 
     executions = db.scalars(
         select(SampleExecution)

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import AccuracyNav from "@/components/AccuracyNav";
 import {
   createEvalHubIdempotencyKey,
+  EvalHubApiError,
   EvalHubClient,
   isEvalHubRunTerminal,
   type EvalHubAuthType,
@@ -56,10 +57,11 @@ export default function EvalHubRunConsole() {
   useEffect(() => {
     let disposed = false;
     const api = new EvalHubClient(defaultApiBase, "");
-    api.listDatasets()
-      .then((nextDatasets) => {
+    Promise.all([api.listDatasets(), api.listRuns({ activeOnly: true, limit: 1 })])
+      .then(([nextDatasets, activeRuns]) => {
         if (disposed) return;
         setDatasets(nextDatasets);
+        setRun(activeRuns[0] ?? null);
         setConnectedBase(api.apiBase);
       })
       .catch((caught) => {
@@ -90,6 +92,8 @@ export default function EvalHubRunConsole() {
     setConnectedBase("");
     setDatasets([]);
     setSelectedVersions([]);
+    setRun(null);
+    setMetrics(null);
     clearRegisteredEndpoint();
   }
 
@@ -137,8 +141,13 @@ export default function EvalHubRunConsole() {
   const connect = () =>
     perform("connect", async () => {
       const api = client();
-      const nextDatasets = await api.listDatasets();
+      const [nextDatasets, activeRuns] = await Promise.all([
+        api.listDatasets(),
+        api.listRuns({ activeOnly: true, limit: 1 }),
+      ]);
       setDatasets(nextDatasets);
+      setRun(activeRuns[0] ?? null);
+      setMetrics(null);
       setConnectedBase(api.apiBase);
       setSelectedVersions([]);
       clearRegisteredEndpoint();
@@ -212,9 +221,21 @@ export default function EvalHubRunConsole() {
   const startRun = () =>
     perform("run", async () => {
       if (!idempotencyKey.current) idempotencyKey.current = createEvalHubIdempotencyKey();
-      const created = await client().createRun(payload(), idempotencyKey.current);
-      setRun(created);
-      setMetrics(null);
+      const api = client();
+      try {
+        const created = await api.createRun(payload(), idempotencyKey.current);
+        setRun(created);
+        setMetrics(null);
+      } catch (caught) {
+        if (caught instanceof EvalHubApiError && caught.status === 409) {
+          const activeRuns = await api.listRuns({ activeOnly: true, limit: 1 });
+          if (activeRuns[0]) {
+            setRun(activeRuns[0]);
+            setMetrics(null);
+          }
+        }
+        throw caught;
+      }
     });
 
   const cancelRun = () =>
@@ -227,15 +248,24 @@ export default function EvalHubRunConsole() {
   const runStatus = run?.status;
 
   useEffect(() => {
-    if (!runId || !runStatus || isEvalHubRunTerminal(runStatus)) return;
+    if (!connectedBase) return;
     let disposed = false;
+    const api = new EvalHubClient(connectedBase, adminKey);
     const poll = async () => {
       try {
-        const next = await new EvalHubClient(apiBase, adminKey).getRun(runId);
+        if (!runId || !runStatus || isEvalHubRunTerminal(runStatus)) {
+          const activeRuns = await api.listRuns({ activeOnly: true, limit: 1 });
+          if (!disposed && activeRuns[0]) {
+            setRun(activeRuns[0]);
+            setMetrics(null);
+          }
+          return;
+        }
+        const next = await api.getRun(runId);
         if (disposed) return;
         setRun(next);
         if (isEvalHubRunTerminal(next.status) && next.status === "SUCCEEDED") {
-          setMetrics(await new EvalHubClient(apiBase, adminKey).getRunMetrics(next.id));
+          setMetrics(await api.getRunMetrics(next.id));
         }
       } catch (caught) {
         if (!disposed) setError(caught instanceof Error ? caught.message : String(caught));
@@ -247,10 +277,14 @@ export default function EvalHubRunConsole() {
       disposed = true;
       window.clearInterval(timer);
     };
-  }, [adminKey, apiBase, runId, runStatus]);
+  }, [adminKey, connectedBase, runId, runStatus]);
 
   const totalSamples = run?.datasets.reduce((sum, item) => sum + item.total_samples, 0) ?? 0;
   const completedSamples = run?.datasets.reduce((sum, item) => sum + item.completed_samples, 0) ?? 0;
+  const runIsActive = Boolean(run && !isEvalHubRunTerminal(run.status));
+  const progressPercent = totalSamples
+    ? Math.min(100, completedSamples / totalSamples * 100)
+    : 0;
   const canRegister = Boolean(connectedBase && endpointName && targetUrl && targetModel && (authType === "none" || targetKey));
   const canValidate = Boolean(
     endpoint
@@ -352,23 +386,35 @@ export default function EvalHubRunConsole() {
         </div>
         <div className="mt-5 flex flex-wrap items-center gap-3">
           <button type="button" onClick={validate} disabled={!canValidate || busy !== null} className={secondaryButtonClass}>{busy === "validate" ? "Validating…" : "Validate run"}</button>
-          <ActionButton onClick={startRun} disabled={!validation?.valid || busy !== null || Boolean(run && !isEvalHubRunTerminal(run.status))}>{busy === "run" ? "Submitting…" : "Start evaluation"}</ActionButton>
+          <ActionButton onClick={startRun} disabled={!validation?.valid || busy !== null || runIsActive}>{busy === "run" ? "Submitting…" : runIsActive ? "Queue occupied" : "Start evaluation"}</ActionButton>
           {validation ? <span className="text-xs text-zinc-500">{validation.sample_count.toLocaleString()} requests · effective concurrency {validation.effective_concurrency}</span> : null}
         </div>
         {endpoint && probe?.status !== "healthy" ? <p className="mt-3 text-xs text-zinc-500">A healthy endpoint probe is required before run validation.</p> : null}
         {validation?.warnings.map((warning) => <div key={warning} className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-300">{warning}</div>)}
       </section>
 
-      {run ? (
-        <section className="mt-5 rounded-2xl border border-zinc-200 p-5 dark:border-zinc-800 sm:p-6">
-          <div className="flex flex-wrap items-start justify-between gap-4"><StepHeading number="5" title="Run progress" note={`Eval Hub run ${run.id}`} /><span className="rounded-full bg-zinc-100 px-3 py-1 font-mono text-xs font-semibold dark:bg-zinc-900">{run.status}</span></div>
-          <div className="mt-5 h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-900"><div className="h-full rounded-full bg-sky-500 transition-all" style={{ width: `${totalSamples ? Math.min(100, completedSamples / totalSamples * 100) : 0}%` }} /></div>
-          <div className="mt-2 flex flex-wrap justify-between gap-2 text-xs text-zinc-500"><span>{completedSamples.toLocaleString()} / {totalSamples.toLocaleString()} samples</span><span className="font-mono">{run.protocol_fingerprint.slice(0, 20)}…</span></div>
-          {!isEvalHubRunTerminal(run.status) ? <div className="mt-4"><button type="button" onClick={cancelRun} disabled={busy !== null} className={secondaryButtonClass}>{busy === "cancel" ? "Cancelling…" : "Cancel run"}</button></div> : null}
-          {run.error_message ? <p className="mt-4 text-sm text-red-600">{run.error_message}</p> : null}
-          {metrics ? <MetricsPanel metrics={metrics} datasets={datasets} /> : null}
-        </section>
-      ) : null}
+      <section className="mt-5 rounded-2xl border border-zinc-200 p-5 dark:border-zinc-800 sm:p-6" aria-live="polite">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <StepHeading number="5" title="Single-run queue and progress" note="Eval Hub exposes one global task slot. A task may contain several datasets, but another task cannot enter the queue until this one is terminal." />
+          <span className={`rounded-full px-3 py-1 font-mono text-xs font-semibold ${runIsActive ? "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300" : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"}`}>
+            {runIsActive ? "1 / 1 occupied" : "0 / 1 available"}
+          </span>
+        </div>
+        {!run ? <p className="mt-5 rounded-xl border border-dashed border-zinc-300 px-4 py-5 text-sm text-zinc-500 dark:border-zinc-700">{connectedBase ? "Queue empty. One evaluation may be submitted." : "Connect to Eval Hub to load its queue."}</p> : null}
+        {run ? (
+          <div className="mt-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div><strong className="text-sm">{run.name}</strong><p className="mt-1 text-xs text-zinc-500">{run.status === "QUEUED" ? "Queued · position 1 of 1 · waiting for the worker" : runIsActive ? "Running in the only task slot" : "Last observed run · task slot released"}</p></div>
+              <span className="rounded-full bg-zinc-100 px-3 py-1 font-mono text-xs font-semibold dark:bg-zinc-900">{run.status}</span>
+            </div>
+            <div className="mt-5 h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-900"><div className="h-full rounded-full bg-sky-500 transition-all" style={{ width: `${progressPercent}%` }} /></div>
+            <div className="mt-2 flex flex-wrap justify-between gap-2 text-xs text-zinc-500"><span>{completedSamples.toLocaleString()} / {totalSamples.toLocaleString()} samples · {progressPercent.toFixed(0)}%</span><span className="font-mono">{run.protocol_fingerprint.slice(0, 20)}…</span></div>
+            {runIsActive ? <div className="mt-4"><button type="button" onClick={cancelRun} disabled={busy !== null} className={secondaryButtonClass}>{busy === "cancel" ? "Cancelling…" : "Cancel run"}</button></div> : null}
+            {run.error_message ? <p className="mt-4 text-sm text-red-600">{run.error_message}</p> : null}
+            {metrics ? <MetricsPanel metrics={metrics} datasets={datasets} /> : null}
+          </div>
+        ) : null}
+      </section>
     </div>
   );
 }

@@ -84,6 +84,24 @@ describe("EvalHubClient", () => {
     expect(JSON.parse(String(init.body))).toEqual(payload);
   });
 
+  it("loads only the active single-run queue slot", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await new EvalHubClient("http://eval.internal", "").listRuns({
+      activeOnly: true,
+      limit: 1,
+    });
+
+    const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("http://eval.internal/api/v1/runs?limit=1&active=true");
+  });
+
   it("updates an existing endpoint without putting its credential in the URL", async () => {
     const endpoint = { id: "endpoint-1", name: "provider" };
     const fetchMock = vi.fn().mockResolvedValue(

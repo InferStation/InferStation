@@ -18,6 +18,7 @@ data:
   id_field: id
   input_fields: [question, choice_a, choice_b, choice_c, choice_d]
   reference_field: answer
+  metadata_fields: []
 
 request:
   mode: chat_completions

@@ -129,10 +129,23 @@ connect to Eval Hub
   -> probe OpenAI compatibility
   -> select immutable dataset versions
   -> validate request and effective concurrency
+  -> acquire the single global run slot
   -> create run with an idempotency key
-  -> poll progress
+  -> display queue state and poll sample progress
   -> display metrics or errors
 ```
+
+Eval Hub permits exactly one non-terminal run across the deployment. The API
+serializes submissions with a PostgreSQL transaction advisory lock and rejects
+a second task with HTTP 409 while the first is queued, preparing, running,
+aggregating, or cancelling. This backend invariant applies across browsers and
+after page refreshes; disabling the button in one browser is only a usability
+measure. One run may still contain multiple immutable dataset versions.
+
+The Run page reloads the active task on connection and continues polling it
+after a refresh. Its queue panel always shows the one task slot, queued/running
+state, sample counts, and percentage progress. A queued run has position 1 of 1;
+the slot becomes available only when the run succeeds, fails, or is cancelled.
 
 The target API key is a runtime input. The page does not place it in a URL,
 browser storage, Git, logs, or exported JSON, and clears it from form state
@@ -204,9 +217,10 @@ worker CPU quota         2 cores
 total steady CPU quota   4 cores
 ```
 
-Only one full evaluation should run at a time initially. The ten-row smoke pack
-is the required first test. Raise limits only after comparing GPU benchmark
-latency and throughput with Eval Hub idle and under load.
+The single-active-run API invariant applies to smoke and full evaluations. The
+ten-row smoke pack is the required first test; it should use concurrency 1 and
+QPS 1. Raise per-run limits only after comparing GPU benchmark latency and
+throughput with Eval Hub idle and under load.
 
 ## 10. Invariants
 
@@ -216,4 +230,5 @@ latency and throughput with Eval Hub idle and under load.
 - Never regenerate `SECRET_ENCRYPTION_KEY` for an existing deployment.
 - Never overwrite a published evaluation path.
 - Never publish the smoke dataset as evidence of model quality.
+- Never bypass the single active Live Run slot with direct worker submission.
 - Never introduce an accuracy schedule without a separate decision.

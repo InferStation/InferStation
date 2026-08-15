@@ -95,6 +95,7 @@ export interface EvalHubRun {
   };
   started_at: string | null;
   completed_at: string | null;
+  created_at: string;
   error_message: string | null;
   datasets: EvalHubRunDataset[];
 }
@@ -277,6 +278,15 @@ export class EvalHubClient {
       body: JSON.stringify(payload),
       headers: { "Idempotency-Key": idempotencyKey },
     });
+  }
+
+  listRuns({ activeOnly = false, limit = 50 }: {
+    activeOnly?: boolean;
+    limit?: number;
+  } = {}): Promise<EvalHubRun[]> {
+    const query = new URLSearchParams({ limit: String(limit) });
+    if (activeOnly) query.set("active", "true");
+    return this.request(`/runs?${query.toString()}`);
   }
 
   getRun(runId: string): Promise<EvalHubRun> {
