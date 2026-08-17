@@ -9,5 +9,6 @@
   "source_image": "ghcr.io/ggml-org/llama.cpp:full-vulkan",
   "mirror_host": "4090",
   "expected_size_mb": 1100,
-  "description": "Upstream ggml-org official Vulkan llama.cpp build, mirrored on the 4090 box (x86_64). Runs on NVIDIA RTX 4090 via CDI (--device nvidia.com/gpu=all) and VK_DRIVER_FILES=/etc/vulkan/icd.d/nvidia_icd.json. Same upstream image as llama-vulkan-halo/spark; Vulkan is vendor-agnostic."
+  "description": "Upstream ggml-org official Vulkan llama.cpp build, mirrored on the 4090 box (x86_64). Runs on NVIDIA RTX 4090 via CDI (--device nvidia.com/gpu=all) and VK_DRIVER_FILES=/etc/vulkan/icd.d/nvidia_icd.json. Same upstream image as llama-vulkan-halo/spark; Vulkan is vendor-agnostic.",
+  "model_tools": true
 }

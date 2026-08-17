@@ -17,5 +17,6 @@
     "WHEEL_IMAGE": "ghcr.io/inferstation/vllm-wheel-r9700:main-gfx1201-v2-staging"
   },
   "expected_size_mb": 3400,
-  "description": "vLLM runtime image for AMD Radeon AI PRO R9700/gfx1201 assembled from vllm-rocm-r9700-main-wheel. Uses the same daily pytorch-rocm-r9700 base as the wheel builder to keep Python/ABI aligned, filters wheel constraints to ROCm/PyTorch ABI pins, then installs the prebuilt wheel and validates torch/vLLM import."
+  "description": "vLLM runtime image for AMD Radeon AI PRO R9700/gfx1201 assembled from vllm-rocm-r9700-main-wheel. Uses the same daily pytorch-rocm-r9700 base as the wheel builder to keep Python/ABI aligned, filters wheel constraints to ROCm/PyTorch ABI pins, then installs the prebuilt wheel and validates torch/vLLM import.",
+  "model_tools": true
 }

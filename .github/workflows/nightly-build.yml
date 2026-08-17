@@ -176,8 +176,8 @@ jobs:
           chmod +x build.sh daily.sh prune.sh
           ./daily.sh r9700
 
-  # spark NVIDIA images now MIRROR official upstream (verified on GB10/sm121), so
-  # cicd (x86) produces the arm64 image via `docker pull --platform`. No arm64 runner.
+  # Spark NVIDIA images mirror official upstream images. CICD imports the arm64
+  # manifest, then a native Spark runner adds the shared HF + ModelScope tools.
   build-spark:
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.tracks == 'all' || inputs.tracks == 'spark' }}
     runs-on: [self-hosted, cicd]
@@ -189,6 +189,8 @@ jobs:
         working-directory: dockerfiles
         env:
           TRIGGER: ${{ github.event_name }}
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
+          GHCR_USER: AlisaLi0
         run: |
           set -e
           chmod +x build.sh daily.sh prune.sh

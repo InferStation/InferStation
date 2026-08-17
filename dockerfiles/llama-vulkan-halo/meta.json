@@ -9,5 +9,6 @@
   "source_image": "ghcr.io/ggml-org/llama.cpp:full-vulkan-b5350",
   "mirror_host": "halo5",
   "expected_size_mb": 1100,
-  "description": "Upstream ggml-org official Vulkan build. Works on AMD via mesa RADV."
+  "description": "Upstream ggml-org official Vulkan build. Works on AMD via mesa RADV.",
+  "model_tools": true
 }

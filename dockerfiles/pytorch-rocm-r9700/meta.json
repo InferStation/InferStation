@@ -16,5 +16,6 @@
     "PYTORCH_ROCM_ARCH": "gfx1201"
   },
   "expected_size_mb": 3000,
-  "description": "Daily PyTorch/ROCm base for AMD Radeon AI PRO R9700 / RDNA4 / gfx1201. Built from ROCm/vLLM thin CI base, installs rocm[devel,libraries] + torch + torchvision from v2-staging/gfx120X-all, runs rocm-sdk init, and exports /opt/rocm-pytorch-constraints.txt for downstream vLLM builds."
+  "description": "Daily PyTorch/ROCm base for AMD Radeon AI PRO R9700 / RDNA4 / gfx1201. Built from ROCm/vLLM thin CI base, installs rocm[devel,libraries] + torch + torchvision from v2-staging/gfx120X-all, runs rocm-sdk init, and exports /opt/rocm-pytorch-constraints.txt for downstream vLLM builds.",
+  "model_tools": true
 }

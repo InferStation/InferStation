@@ -16,5 +16,6 @@
     "PYTORCH_ROCM_ARCH": "gfx1100"
   },
   "expected_size_mb": 3000,
-  "description": "Daily PyTorch/ROCm base for AMD Radeon W7900 / RDNA3 / gfx1100 family. Built from ROCm/vLLM thin CI base, installs rocm[devel,libraries] + torch + torchvision from v2-staging/gfx110X-all, runs rocm-sdk init, and exports /opt/rocm-pytorch-constraints.txt for downstream vLLM builds."
+  "description": "Daily PyTorch/ROCm base for AMD Radeon W7900 / RDNA3 / gfx1100 family. Built from ROCm/vLLM thin CI base, installs rocm[devel,libraries] + torch + torchvision from v2-staging/gfx110X-all, runs rocm-sdk init, and exports /opt/rocm-pytorch-constraints.txt for downstream vLLM builds.",
+  "model_tools": true
 }

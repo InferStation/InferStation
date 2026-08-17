@@ -18,5 +18,6 @@
     "ROCM_INDEX_URL": "https://rocm.nightlies.amd.com/v2-staging/gfx110X-all/"
   },
   "expected_size_mb": 5200,
-  "description": "vLLM runtime image for AMD Radeon W7900 / RDNA3 / gfx1100 assembled from vllm-rocm-w7900-main-wheel. Uses the same daily pytorch-rocm-w7900 base as the wheel builder, filters wheel constraints to ROCm/PyTorch ABI pins, then installs the prebuilt wheel and validates torch/vLLM import."
+  "description": "vLLM runtime image for AMD Radeon W7900 / RDNA3 / gfx1100 assembled from vllm-rocm-w7900-main-wheel. Uses the same daily pytorch-rocm-w7900 base as the wheel builder, filters wheel constraints to ROCm/PyTorch ABI pins, then installs the prebuilt wheel and validates torch/vLLM import.",
+  "model_tools": true
 }

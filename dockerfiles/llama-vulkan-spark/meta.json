@@ -9,5 +9,7 @@
   "source_image": "ghcr.io/ggml-org/llama.cpp:full-vulkan",
   "mirror_host": "spark1",
   "expected_size_mb": 3300,
-  "description": "Upstream ggml-org official Vulkan build, multi-arch manifest. Mirrored on arm64 host (spark2) so docker pull selects the linux/arm64 variant. Runs on NVIDIA GB10 via the libnvidia-egl-vulkan driver bind-mounted by /usr/local/bin/hb-llama. Upstream is daily-rolling (cron 04:12 UTC)."
+  "description": "Upstream ggml-org official Vulkan build, multi-arch manifest. Mirrored on arm64 host (spark2) so docker pull selects the linux/arm64 variant. Runs on NVIDIA GB10 via the libnvidia-egl-vulkan driver bind-mounted by /usr/local/bin/hb-llama. Upstream is daily-rolling (cron 04:12 UTC).",
+  "model_tools": true,
+  "package_host": "spark1"
 }

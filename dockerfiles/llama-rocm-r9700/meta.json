@@ -16,5 +16,6 @@
     "ROCM_VERSION": "7.2"
   },
   "expected_size_mb": 8000,
-  "description": "llama.cpp HIP/ROCm built from upstream master for AMD Radeon AI PRO R9700 (gfx1201, x86_64). Builds + runs on the 9700x8 box. ROCm 7.2-complete base (rocm 7.2.0) matches 9700x8 driver 7.2.3."
+  "description": "llama.cpp HIP/ROCm built from upstream master for AMD Radeon AI PRO R9700 (gfx1201, x86_64). Builds + runs on the 9700x8 box. ROCm 7.2-complete base (rocm 7.2.0) matches 9700x8 driver 7.2.3.",
+  "model_tools": true
 }

@@ -16,5 +16,6 @@
     "ROCM_VERSION": "7.2.1"
   },
   "expected_size_mb": 8000,
-  "description": "llama.cpp HIP/ROCm built from upstream master. Strix Halo (gfx1151) only -> small + fast build. Replaces previous mirror of rocm/llama.cpp:b6652 which was stuck at 2025-11-04 and lacked qwen35 support."
+  "description": "llama.cpp HIP/ROCm built from upstream master. Strix Halo (gfx1151) only -> small + fast build. Replaces previous mirror of rocm/llama.cpp:b6652 which was stuck at 2025-11-04 and lacked qwen35 support.",
+  "model_tools": true
 }

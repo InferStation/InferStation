@@ -17,5 +17,7 @@
     "CUDA_ARCH": "121"
   },
   "expected_size_mb": 2500,
-  "description": "llama.cpp built natively for NVIDIA DGX Spark (GB10, sm_121) on aarch64."
+  "description": "llama.cpp built natively for NVIDIA DGX Spark (GB10, sm_121) on aarch64.",
+  "model_tools": true,
+  "package_host": "spark1"
 }

@@ -27,7 +27,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # (rewritten to ghcr via INFERSTATION_REGISTRY in CI). Harbor retired 2026-06-24.
 REGISTRY="ghcr.io/inferstation"
 
-SSH_LOCAL="ssh -F /home/lkang/.ssh/config -i /home/lkang/.ssh/id_rsa"
+SSH_LOCAL="ssh -F /home/lkang/.ssh/config -i /home/lkang/.ssh/id_rsa -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=25"
 
 list_profiles() {
   find "$SCRIPT_DIR" -mindepth 2 -maxdepth 2 -name meta.json | sort | \
@@ -36,18 +36,53 @@ list_profiles() {
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 
+package_model_tools() {
+  local profile="$1" meta="$2" artifact_host="$3" registry="$4" tag="$5"
+  local push="$6" no_latest="$7"; shift 7
+  local also_tags=("$@")
+  local enabled; enabled=$(jq -r '.model_tools // false' "$meta")
+  [[ "$enabled" == "true" ]] || return 0
+
+  local package_host; package_host=$(jq -r '.package_host // ""' "$meta")
+  [[ -n "$package_host" ]] || package_host="$artifact_host"
+  if [[ "$push" != "1" && "$package_host" != "$artifact_host" ]]; then
+    die "model-tools packaging for $profile needs pushed image when artifact_host=$artifact_host package_host=$package_host"
+  fi
+
+  if [[ "$push" == "1" && "$package_host" != "$artifact_host" ]]; then
+    [[ -n "${GHCR_PAT:-}" ]] || die "GHCR_PAT is required to package $profile on remote host $package_host"
+    local registry_host="${registry%%/*}"
+    printf '%s\n' "$GHCR_PAT" | run_on "$package_host" \
+      "docker login ${registry_host} -u ${GHCR_USER:-AlisaLi0} --password-stdin >/dev/null"
+  fi
+
+  local remote_dir="/tmp/inferstation-model-tools-package"
+  echo "→ package HF + ModelScope tools on ${package_host}"
+  tar -C "$SCRIPT_DIR" -czf - model-tools package-model-tools.sh | \
+    run_on "$package_host" "rm -rf ${remote_dir} && mkdir -p ${remote_dir} && tar -C ${remote_dir} -xzf -"
+
+  local args=(--tag "$tag")
+  [[ "$push" == "1" ]] || args+=(--no-push)
+  [[ "$no_latest" == "1" ]] || args+=(--latest)
+  local alias
+  for alias in "${also_tags[@]}"; do args+=(--also-tag "$alias"); done
+  args+=("$registry")
+
+  local args_q
+  printf -v args_q '%q ' "${args[@]}"
+  run_on "$package_host" "cd ${remote_dir} && chmod +x package-model-tools.sh && ./package-model-tools.sh ${args_q}"
+}
+
 run_on() {
   local host="$1"; shift
   local cmd="$*"
   case "$host" in
     halo[0-9]*|spark[0-9]*)
-      # remote spark/halo hosts run docker as root → prefix sudo for any docker
-      # call.  nested ssh through amd@10.161.176.110.  We must pass `cmd` through
-      # TWO shell expansions, so quote it once with printf %q before the
-      # outer ssh so that && / pipes / spaces survive the relay.
+      # Spark/Halo hosts are direct aliases in the CI user's SSH config. Docker
+      # runs through passwordless sudo on those hosts.
       local sudoed
       sudoed=$(echo "$cmd" | sed -E 's/(^|[^[:alnum:]_-])docker /\1sudo docker /g')
-      $SSH_LOCAL amd@10.161.176.110 "ssh $host $(printf '%q' "$sudoed")"
+      $SSH_LOCAL "$host" "$sudoed"
       ;;
     9700|9700x8|4090)
       # 9700 / 9700x8 / 4090 run docker as root via passwordless sudo, reached
@@ -249,7 +284,7 @@ build_profile() {
     esac
   done
 
-  local kind name registry tag plat
+  local kind name registry tag plat artifact_host=""
   kind=$(jq -r .kind "$meta")
   name=$(jq -r .name "$meta")
   registry=$(jq -r .registry "$meta")
@@ -271,6 +306,7 @@ build_profile() {
     build)
       local build_host dockerfile
       resolve_host "$(jq -r .build_host "$meta")"; build_host="$RESOLVED_HOST"
+      artifact_host="$build_host"
       dockerfile=$(jq -r '.dockerfile // "Dockerfile"' "$meta")
 
       if [[ "$fail_if_exists" == "1" ]]; then
@@ -350,6 +386,7 @@ build_profile() {
     mirror)
       local mirror_host source_image
       resolve_host "$(jq -r .mirror_host "$meta")"; mirror_host="$RESOLVED_HOST"
+      artifact_host="$mirror_host"
       source_image=$(jq -r .source_image "$meta")
       if [[ "$fail_if_exists" == "1" ]]; then
         local protected_tag
@@ -400,6 +437,9 @@ build_profile() {
       die "unknown kind: $kind"
       ;;
   esac
+
+  package_model_tools "$profile" "$meta" "$artifact_host" "$registry" "$tag" \
+    "$push" "$no_latest" "${also_tags[@]}"
 
   # release the build-host lock now so queued builds proceed; the EXIT trap is
   # only a safety net (e.g. for `all` mode or an error mid-build).
