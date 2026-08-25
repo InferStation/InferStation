@@ -31,7 +31,7 @@ models:
     quants:
       BF16:
         format: hf-snapshot
-        archive_url: http://10.161.176.38/inferstation-models/minicpm5-2.6b-0426-step24000.tar
+        archive_url: http://10.170.38.92/inferstation-models/minicpm5-2.6b-0426-step24000.tar
         archive_sha256: d1434735e0c34f70e3fa6e84bdacacadf8b2d9a650dd842c7fb8258c6befa70a
         local_paths:
           ryzen-ai-max-395-03: /opt/inferstation/models/MiniCPM5-2.6B-0426_job_327123_step_24000_fusion_think_512k
@@ -60,7 +60,7 @@ models:
       UD-IQ4_XS:    { filename: "Qwen3.6-35B-A3B-UD-IQ4_XS.gguf" }
       UD-Q2_K_XL:
         filename: "Qwen3.6-35B-A3B-UD-Q2_K_XL.gguf"
-        download_url: http://10.161.176.38/inferstation-models/Qwen3.6-35B-A3B-UD-Q2_K_XL.gguf
+        download_url: http://10.170.38.92/inferstation-models/Qwen3.6-35B-A3B-UD-Q2_K_XL.gguf
       UD-Q3_K_S:    { filename: "Qwen3.6-35B-A3B-UD-Q3_K_S.gguf" }
       UD-Q3_K_XL:   { filename: "Qwen3.6-35B-A3B-UD-Q3_K_XL.gguf" }
       UD-Q4_K_S:    { filename: "Qwen3.6-35B-A3B-UD-Q4_K_S.gguf" }
@@ -144,7 +144,7 @@ models:
       UD-Q6_K_XL:  { filename: "Qwen3.6-27B-UD-Q6_K_XL.gguf" }
       UD-Q8_K_XL:
         filename: "Qwen3.6-27B-UD-Q8_K_XL.gguf"
-        download_url: http://10.161.176.38/inferstation-models/Qwen3.6-27B-UD-Q8_K_XL.gguf
+        download_url: http://10.170.38.92/inferstation-models/Qwen3.6-27B-UD-Q8_K_XL.gguf
       # vLLM-compatible HF snapshot (BF16 safetensors).
       BF16:
         format: hf-snapshot
