@@ -1022,7 +1022,10 @@ def stddev(values: list[float]) -> float | None:
 def run_serve_client(base_url: str, model_name: str, *, concurrency: int, input_len: int, output_len: int) -> dict:
     # Historical serve-stream runs used 8 prompts for c1/c4, 16 for c16, 32 for c32.
     num_prompts = max(8, concurrency)
-    timeout_s = int(os.environ.get("BENCH_REQUEST_TIMEOUT", "1800"))
+    # Slow Halo C32 Vulkan cases have measured p99 TTFT near 2,900 seconds.
+    # Keep one request timeout above that legitimate envelope; whole units still
+    # have a bounded retry and the Actions job has its own outer timeout.
+    timeout_s = int(os.environ.get("BENCH_REQUEST_TIMEOUT", "3600"))
 
     for warmup_id in range(2):
         stream_completion(

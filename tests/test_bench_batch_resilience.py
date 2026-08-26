@@ -18,6 +18,12 @@ SPEC.loader.exec_module(bench_batch)
 
 
 class RetryTests(unittest.TestCase):
+    def test_default_request_timeout_covers_historical_slow_c32(self):
+        source = SCRIPT.read_text()
+        self.assertIn(
+            'os.environ.get("BENCH_REQUEST_TIMEOUT", "3600")', source
+        )
+
     def test_retry_command_retries_then_succeeds(self):
         failure = subprocess.CalledProcessError(1, "docker pull image")
         with mock.patch.object(

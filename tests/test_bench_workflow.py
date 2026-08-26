@@ -81,6 +81,18 @@ class WorkflowMatrixTests(unittest.TestCase):
         )
         self.assertIn('|| -n "$BENCH_RUNNER_LABEL"', step["run"])
 
+    def test_default_request_timeout_is_one_hour(self):
+        inputs = self.workflow[True]["workflow_dispatch"]["inputs"]
+        self.assertEqual(inputs["request_timeout"]["default"], "3600")
+        step = next(
+            step for step in self.workflow["jobs"]["bench"]["steps"]
+            if step.get("name") == "Run bench-batch directly"
+        )
+        self.assertEqual(
+            step["env"]["BENCH_REQUEST_TIMEOUT"],
+            "${{ inputs.request_timeout || '3600' }}",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

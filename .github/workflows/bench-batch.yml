@@ -74,7 +74,7 @@ on:
       request_timeout:
         description: 'Per-request timeout in seconds for long high-concurrency recovery runs.'
         type: string
-        default: '1800'
+        default: '3600'
       runner_label:
         description: 'Optional exact physical runner label for targeted recovery.'
         type: string
@@ -163,7 +163,7 @@ jobs:
           BENCH_RESUME_EXISTING: ${{ inputs.resume_existing || 'date' }}
           BENCH_RUN_DATE: ${{ inputs.run_date || '' }}
           BENCH_GPU_DEVICE: ${{ inputs.gpu_device || '' }}
-          BENCH_REQUEST_TIMEOUT: ${{ inputs.request_timeout || '1800' }}
+          BENCH_REQUEST_TIMEOUT: ${{ inputs.request_timeout || '3600' }}
           BENCH_PUSH_BATCH_SIZE: ${{ inputs.push_batch_size || '20' }}
           BENCH_RESULT_HOST: ${{ matrix.result_host || '' }}
           BENCH_CLEANUP_ALL_MODELS: true
