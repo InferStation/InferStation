@@ -88,10 +88,14 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       run_bench: ${{ steps.decide.outputs.run_bench }}
+      matrix: ${{ steps.decide.outputs.matrix }}
     steps:
+      - uses: actions/checkout@v4
       - id: decide
         env:
           EVENT_NAME: ${{ github.event_name }}
+          BENCH_TARGET: ${{ inputs.target || 'all' }}
+          BENCH_RUNNER_LABEL: ${{ inputs.runner_label || '' }}
         run: |
           set -euo pipefail
           run_bench=true
@@ -100,47 +104,16 @@ jobs:
             run_bench=false
             echo "Skipping this weekly benchmark during the planned datacenter outage."
           fi
+          matrix=$(python3 scripts/bench-matrix.py)
           echo "run_bench=$run_bench" >> "$GITHUB_OUTPUT"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
 
   bench:
     needs: schedule-gate
     if: ${{ needs.schedule-gate.outputs.run_bench == 'true' }}
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - target: halo
-            label: inferstation-halo3
-            host: ryzen-ai-max-395-03
-            shard_index: 0
-            shard_count: 2
-          - target: halo
-            label: inferstation-halo4
-            host: ryzen-ai-max-395-03
-            result_host: ryzen-ai-max-395-04
-            shard_index: 1
-            shard_count: 2
-          - target: spark
-            label: inferstation-spark2
-            host: dgx-spark-01
-            result_host: dgx-spark-02
-            shard_index: 0
-            shard_count: 2
-          - target: spark
-            label: inferstation-spark1
-            host: dgx-spark-01
-            shard_index: 1
-            shard_count: 2
-          - target: nv4090
-            label: inferstation-nv4090-weekly
-            host: rtx-4090-sh
-            shard_index: 0
-            shard_count: 1
-          - target: r9700
-            label: inferstation-r9700-weekly
-            host: radeon-r9700-sh
-            shard_index: 0
-            shard_count: 1
+      matrix: ${{ fromJSON(needs.schedule-gate.outputs.matrix) }}
     runs-on:
       - self-hosted
       - inferstation-bench
@@ -237,7 +210,7 @@ jobs:
             args+=("--filter=${{ matrix.host }}")
           fi
           args+=("--scope=$BENCH_SCOPE")
-          if [[ "${{ inputs.unsharded || false }}" == "true" ]]; then
+          if [[ "${{ inputs.unsharded || false }}" == "true" || -n "$BENCH_RUNNER_LABEL" ]]; then
             args+=("--shard-index=0" "--shard-count=1")
           else
             args+=("--shard-index=${{ matrix.shard_index }}" "--shard-count=${{ matrix.shard_count }}")
