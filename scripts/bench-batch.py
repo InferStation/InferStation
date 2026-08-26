@@ -141,6 +141,10 @@ DOCKER = os.environ.get("BENCH_DOCKER") or (
     if subprocess.run("docker version >/dev/null 2>&1", shell=True).returncode != 0
     else "docker"
 )
+PULL_ATTEMPTS = max(1, int(os.environ.get("BENCH_PULL_ATTEMPTS", "4")))
+DOWNLOAD_ATTEMPTS = max(1, int(os.environ.get("BENCH_DOWNLOAD_ATTEMPTS", "4")))
+UNIT_ATTEMPTS = max(1, int(os.environ.get("BENCH_UNIT_ATTEMPTS", "2")))
+RETRY_DELAY_SECONDS = max(0, int(os.environ.get("BENCH_RETRY_DELAY_SECONDS", "10")))
 SERVE_CONCURRENCIES = [1, 4, 16, 32]
 SERVE_MAX_CONCURRENCY = max(SERVE_CONCURRENCIES)
 
@@ -351,13 +355,46 @@ def scope_base_runs(expanded_runs: list[dict], scope: str, flt: str) -> list[dic
     return expanded_runs
 
 
-def sh(cmd: str, *, capture: bool = False, check: bool = True) -> str:
-    print(f"$ {cmd}", flush=True)
+def sh(
+    cmd: str,
+    *,
+    capture: bool = False,
+    check: bool = True,
+    display_cmd: str | None = None,
+) -> str:
+    print(f"$ {display_cmd or cmd}", flush=True)
     if capture:
         out = subprocess.run(cmd, shell=True, check=check, text=True, capture_output=True)
         return out.stdout
     subprocess.run(cmd, shell=True, check=check)
     return ""
+
+
+def retry_command(
+    cmd: str,
+    *,
+    attempts: int,
+    label: str,
+    capture: bool = False,
+    display_cmd: str | None = None,
+    sleeper=time.sleep,
+) -> str:
+    """Run an infrastructure command with bounded exponential backoff."""
+    for attempt in range(1, attempts + 1):
+        try:
+            return sh(cmd, capture=capture, display_cmd=display_cmd)
+        except subprocess.CalledProcessError:
+            if attempt >= attempts:
+                raise
+            delay = min(RETRY_DELAY_SECONDS * (2 ** (attempt - 1)), 60)
+            print(
+                f"[retry] {label} failed attempt {attempt}/{attempts}; "
+                f"retrying in {delay}s",
+                file=sys.stderr,
+                flush=True,
+            )
+            sleeper(delay)
+    raise AssertionError("retry loop exhausted")
 
 
 def host_test(path: str) -> bool:
@@ -437,7 +474,11 @@ def ensure_image(image_ref: str, *, backend: str) -> str:
     have = sh(f"{DOCKER} images -q {image_ref}", capture=True).strip()
     image_tag = image_ref.rsplit(":", 1)[-1] if ":" in image_ref.rsplit("/", 1)[-1] else "latest"
     if not have or image_tag == "latest":
-        sh(f"{DOCKER} pull {image_ref}")
+        retry_command(
+            f"{DOCKER} pull {shlex.quote(image_ref)}",
+            attempts=PULL_ATTEMPTS,
+            label=f"docker pull {image_ref}",
+        )
 
     if backend in ("vllm", "vllm-rocm"):
         ver = sh(
@@ -510,18 +551,23 @@ def ensure_model(host_cfg: dict, model_slug: str, model_def: dict, quant: str) -
             script = (
                 "set -eu; "
                 f"rm -rf {shlex.quote(partial_dir)}; "
-                f"rm -f {shlex.quote(archive_path)}; "
                 f"mkdir -p {shlex.quote(parent_dir)} {shlex.quote(partial_dir)}; "
-                f"trap 'rm -rf {shlex.quote(partial_dir)}; rm -f {shlex.quote(archive_path)}' EXIT; "
-                f"curl -fL --retry 3 --retry-delay 5 --connect-timeout 30 "
-                f"-o {shlex.quote(archive_path)} {shlex.quote(archive_url)}; "
-                f"printf '%s  %s\\n' {shlex.quote(archive_sha256)} {shlex.quote(archive_path)} | sha256sum -c -; "
+                f"trap 'rm -rf {shlex.quote(partial_dir)}' EXIT; "
+                f"attempt=1; until curl -fL --retry 2 --retry-all-errors --retry-delay 5 "
+                f"--connect-timeout 30 --continue-at - -o {shlex.quote(archive_path)} "
+                f"{shlex.quote(archive_url)}; do "
+                f"if [ \"$attempt\" -ge {DOWNLOAD_ATTEMPTS} ]; then exit 1; fi; "
+                "delay=$((attempt * 10)); echo \"download retry $attempt "
+                f"/{DOWNLOAD_ATTEMPTS} in ${{delay}}s\" >&2; sleep \"$delay\"; "
+                "attempt=$((attempt + 1)); done; "
+                f"if ! printf '%s  %s\n' {shlex.quote(archive_sha256)} "
+                f"{shlex.quote(archive_path)} | sha256sum -c -; then "
+                f"rm -f {shlex.quote(archive_path)}; exit 1; fi; "
                 f"tar -xf {shlex.quote(archive_path)} -C {shlex.quote(partial_dir)}; "
                 f"test -f {shlex.quote(f'{partial_dir}/config.json')}; "
                 f"rm -rf {shlex.quote(snap_dir)}; "
                 f"mv {shlex.quote(partial_dir)} {shlex.quote(snap_dir)}; "
-                f"rm -f {shlex.quote(archive_path)}; "
-                "trap - EXIT"
+                f"rm -f {shlex.quote(archive_path)}"
             )
             print(f"[dl] {archive_url} -> {snap_dir}")
             sh(script)
@@ -530,9 +576,11 @@ def ensure_model(host_cfg: dict, model_slug: str, model_def: dict, quant: str) -
         repo = qdef.get("hf_repo") or model_def.get("hf_repo")
         if not repo:
             raise RuntimeError(f"no snapshot source configured for {model_slug}:{quant}")
+        partial_dir = f"{snap_dir}.partial"
+        parent_dir = os.path.dirname(snap_dir)
         sh(
             f"{DOCKER} run --rm -v /:/hostfs alpine:3 "
-            f"sh -c {shlex.quote(f'mkdir -p /hostfs{snap_dir}')}"
+            f"sh -c {shlex.quote(f'rm -rf /hostfs{partial_dir} && mkdir -p /hostfs{parent_dir} /hostfs{partial_dir}')}"
         )
         # Use `hf download` from an arm64-friendly python image.
         # Defaults to https://huggingface.co (hf-mirror.com breaks newer
@@ -545,18 +593,41 @@ def ensure_model(host_cfg: dict, model_slug: str, model_def: dict, quant: str) -
             f"hf download {shlex.quote(repo)} --local-dir /dst "
             "--exclude '.hf/*'"
         )
-        token_env = f"-e HF_TOKEN={shlex.quote(HF_TOKEN)} " if HF_TOKEN else ""
-        sh(
+        # Let Docker copy HF_TOKEN from this process. Never put the secret in
+        # argv: CalledProcessError includes argv and is printed in job summaries.
+        token_run_env = "-e HF_TOKEN " if HF_TOKEN else ""
+        token_display_env = "-e HF_TOKEN=<redacted> " if HF_TOKEN else ""
+        snapshot_cmd = (
             f"{DOCKER} run --rm --network host --user 0:0 "
-            f"-v {shlex.quote(snap_dir)}:/dst "
+            f"-v {shlex.quote(partial_dir)}:/dst "
             f"-e HF_HOME=/dst/.hf "
             f"-e HF_ENDPOINT={shlex.quote(HF_ENDPOINT)} "
             f"-e HF_HUB_ENABLE_HF_TRANSFER=1 "
             f"-e HF_HUB_ETAG_TIMEOUT=60 "
-            f"{token_env}"
+            f"{token_run_env}"
             f"python:3.11-slim "
             f"sh -c {shlex.quote(inner)}"
         )
+        display_snapshot_cmd = snapshot_cmd.replace(token_run_env, token_display_env)
+        try:
+            retry_command(
+                snapshot_cmd,
+                attempts=DOWNLOAD_ATTEMPTS,
+                label=f"hf download {repo}",
+                display_cmd=display_snapshot_cmd,
+            )
+            if not host_test(f"{partial_dir}/config.json"):
+                raise RuntimeError(f"downloaded snapshot has no config.json: {repo}")
+            sh(
+                f"{DOCKER} run --rm -v /:/hostfs alpine:3 "
+                f"sh -c {shlex.quote(f'rm -rf /hostfs{snap_dir} && mv /hostfs{partial_dir} /hostfs{snap_dir}')}"
+            )
+        except Exception:
+            sh(
+                f"{DOCKER} run --rm -v /:/hostfs alpine:3 "
+                f"sh -c {shlex.quote(f'rm -rf /hostfs{partial_dir}')}"
+            )
+            raise
         return snap_dir
 
     # Default: single-file GGUF.
@@ -584,21 +655,31 @@ def ensure_model(host_cfg: dict, model_slug: str, model_def: dict, quant: str) -
         "set -eu; "
         "if [ -n \"${HF_TOKEN:-}\" ]; then "
         "set -- -H \"Authorization: Bearer ${HF_TOKEN}\"; else set --; fi; "
-        f"rm -f {shlex.quote(partial)}; "
-        f"trap 'rm -f {shlex.quote(partial)}' EXIT; "
-        f"expected=$(curl -fsSIL --retry 3 \"$@\" {shlex.quote(url)} | "
+        f"expected=$(curl -fsSIL --retry 8 --retry-all-errors --retry-delay 5 "
+        f"--connect-timeout 30 \"$@\" {shlex.quote(url)} | "
         "awk 'tolower($1) == \"content-length:\" { gsub(\"\\r\", \"\", $2); n=$2 } END { print n }'); "
-        f"curl -fL --retry 3 --retry-all-errors --retry-delay 5 \"$@\" "
-        f"-o {shlex.quote(partial)} {shlex.quote(url)}; "
+        "if [ -z \"$expected\" ] || [ \"$expected\" -le 0 ]; then "
+        "echo \"missing content length\" >&2; exit 1; fi; "
+        f"current=$([ -f {shlex.quote(partial)} ] && wc -c < {shlex.quote(partial)} || echo 0); "
+        f"if [ \"$current\" -gt \"$expected\" ]; then rm -f {shlex.quote(partial)}; current=0; fi; "
+        "attempt=1; while :; do "
+        f"curl -fL --retry 2 --retry-all-errors --retry-delay 5 --connect-timeout 30 "
+        f"--continue-at - \"$@\" -o {shlex.quote(partial)} {shlex.quote(url)} || true; "
+        f"current=$([ -f {shlex.quote(partial)} ] && wc -c < {shlex.quote(partial)} || echo 0); "
+        "if [ \"$current\" -eq \"$expected\" ]; then break; fi; "
+        f"if [ \"$attempt\" -ge {DOWNLOAD_ATTEMPTS} ]; then exit 1; fi; "
+        "delay=$((attempt * 10)); echo \"download retry $attempt "
+        f"/{DOWNLOAD_ATTEMPTS} in ${{delay}}s\" >&2; sleep \"$delay\"; "
+        "attempt=$((attempt + 1)); done; "
         f"actual=$(wc -c < {shlex.quote(partial)}); "
         "if [ -z \"$expected\" ] || [ \"$expected\" -le 0 ] || [ \"$actual\" -ne \"$expected\" ]; then "
         "echo \"download size mismatch: expected=$expected actual=$actual\" >&2; exit 1; fi; "
-        f"mv -f {shlex.quote(partial)} {shlex.quote(dst)}; "
-        "trap - EXIT"
+        f"mv -f {shlex.quote(partial)} {shlex.quote(dst)}"
     )
     use_hf_auth = bool(HF_TOKEN and not download_url)
     token_env = "-e HF_TOKEN=<redacted> " if use_hf_auth else ""
-    token_run_env = f"-e HF_TOKEN={shlex.quote(HF_TOKEN)} " if use_hf_auth else ""
+    # `docker run -e NAME` inherits NAME without embedding its value in argv.
+    token_run_env = "-e HF_TOKEN " if use_hf_auth else ""
     cmd = (
         f"{DOCKER} run --rm --network host --user 0:0 "
         f"-v {shlex.quote(model_dir)}:/dst "
@@ -1308,6 +1389,67 @@ def run_one(entry: dict, models: dict, image_override: str | None) -> list[Path]
         sh(f"{DOCKER} rm -f {shlex.quote(container_name)} >/dev/null 2>&1 || true", check=False)
 
 
+def retryable_run_failure(exc: Exception) -> bool:
+    """Whether rerunning a whole benchmark unit can recover this failure."""
+    if isinstance(exc, (TimeoutError, socket.timeout)):
+        return True
+    if isinstance(exc, urllib.error.URLError):
+        reason = exc.reason
+        if isinstance(reason, (TimeoutError, socket.timeout)):
+            return True
+        if "timed out" in str(reason).lower():
+            return True
+    text = str(exc).lower()
+    command = str(exc.cmd).lower() if isinstance(exc, subprocess.CalledProcessError) else ""
+    if any(marker in command for marker in ("docker pull", "curlimages/curl", "hf download")):
+        return True
+    transient_markers = (
+        "could not resolve host",
+        "temporary failure in name resolution",
+        "connection reset",
+        "connection timed out",
+        "network is unreachable",
+        "no route to host",
+        "remote end closed connection",
+        "unexpected eof",
+        "broken pipe",
+        "timed out",
+        "server health timeout",
+    )
+    if any(marker in text for marker in transient_markers):
+        return True
+    return "serve-stream failed" in text and "timed out" in text
+
+
+def run_one_with_retries(
+    entry: dict,
+    models: dict,
+    image_override: str | None,
+    *,
+    runner=None,
+    attempts: int | None = None,
+    sleeper=time.sleep,
+) -> list[Path]:
+    """Retry a transiently failed unit from a fresh model server container."""
+    operation = runner or run_one
+    max_attempts = attempts if attempts is not None else UNIT_ATTEMPTS
+    for attempt in range(1, max_attempts + 1):
+        try:
+            return operation(entry, models, image_override)
+        except Exception as exc:
+            if attempt >= max_attempts or not retryable_run_failure(exc):
+                raise
+            delay = min(RETRY_DELAY_SECONDS * attempt, 60)
+            print(
+                f"[retry-unit] transient failure attempt {attempt}/{max_attempts}: "
+                f"{exc}; restarting in {delay}s",
+                file=sys.stderr,
+                flush=True,
+            )
+            sleeper(delay)
+    raise AssertionError("unit retry loop exhausted")
+
+
 def git_commit_push(out_paths: Path | list[Path], entry: dict) -> None:
     if isinstance(out_paths, Path):
         paths = [out_paths]
@@ -1510,7 +1652,7 @@ def main() -> int:
     for r in runs:
         print(f"\n=== {r['model']} :: {r['quant']} on {r['host']} ({r.get('backend','cuda')}) ===")
         try:
-            out_abs_list = run_one(r, reg["models"], image_override)
+            out_abs_list = run_one_with_retries(r, reg["models"], image_override)
             if not args.skip_push:
                 if isinstance(out_abs_list, Path):
                     pending_paths.append(out_abs_list)
