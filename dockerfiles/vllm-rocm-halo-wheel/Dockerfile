@@ -61,15 +61,16 @@ RUN echo "cache-bust: ${CACHEBUST}" \
 # library feature, but the HIP compile path effectively runs at C++17 (torch's
 # HIP flags append -std=c++17 after CMake's CMAKE_HIP_STANDARD), so they fail
 # with "no member named 'in_range' in namespace 'std'". in_range<int>(x) here is
-# just an int-range bounds check on a non-negative byte stride; replace it with
-# an equivalent C++17 expression so the kernels compile on the rocm7.13 base
-# unchanged. Patch every file that uses the call (not just the first one, which
-# was the original bug). Scoped to the gfx11 wheel only (main wheel untouched).
-RUN for f in $(grep -rl 'std::in_range<int>(b_row_stride_bytes)' csrc/rocm/ 2>/dev/null); do \
-        sed -i 's/std::in_range<int>(b_row_stride_bytes)/(b_row_stride_bytes <= static_cast<int64_t>(std::numeric_limits<int>::max()))/' "$f" \
-     && (grep -q '#include <limits>' "$f" || sed -i '1i #include <limits>' "$f") \
-     && echo "patched std::in_range -> C++17 range check in $f"; \
-    done \
+# just an int-range bounds check on a non-negative stride; replace it with an
+# equivalent C++17 expression so the kernels compile on the rocm7.13 base
+# unchanged. Scoped to the gfx11 wheel only (main wheel untouched).
+RUN for value in b_row_stride_bytes group_stride; do \
+            for f in $(grep -rl "std::in_range<int>(${value})" csrc/rocm/ 2>/dev/null); do \
+                sed -i "s/std::in_range<int>(${value})/(${value} <= static_cast<int64_t>(std::numeric_limits<int>::max()))/" "$f" \
+                && (grep -q '#include <limits>' "$f" || sed -i '1i #include <limits>' "$f") \
+                && echo "patched std::in_range<int>(${value}) -> C++17 range check in $f"; \
+            done; \
+        done \
  && ! grep -rn 'std::in_range<int>(' csrc/rocm/
 
 # Build-time toolchain. The PyTorch/ROCm stack comes from VLLM_BASE and is kept

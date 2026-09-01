@@ -36,6 +36,20 @@ list_profiles() {
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 
+docker_pull_with_retry() {
+  local host="$1" platarg="$2" image="$3"
+  local attempt max_attempts=3
+  for ((attempt = 1; attempt <= max_attempts; attempt++)); do
+    if run_on "$host" "docker pull ${platarg} ${image}"; then
+      return 0
+    fi
+    if (( attempt == max_attempts )); then
+      return 1
+    fi
+    echo "WARN: docker pull failed for ${image} (attempt ${attempt}/${max_attempts}); retrying" >&2
+  done
+}
+
 package_model_tools() {
   local profile="$1" meta="$2" artifact_host="$3" registry="$4" tag="$5"
   local push="$6" no_latest="$7"; shift 7
@@ -404,7 +418,7 @@ build_profile() {
       echo "→ source_image=$source_image"
 
       echo "→ docker pull on $mirror_host${plat:+ (platform=$plat)}"
-      run_on "$mirror_host" "docker pull ${platarg} ${source_image}"
+      docker_pull_with_retry "$mirror_host" "$platarg" "$source_image"
 
       local latest_tag="${registry}:latest"
       if [[ "$push" == "1" ]]; then
