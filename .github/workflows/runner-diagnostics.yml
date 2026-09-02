@@ -65,4 +65,12 @@ jobs:
             for id in $(sudo -n docker ps -q); do
               sudo -n docker inspect "$id" --format 'pid={{.State.Pid}} name={{.Name}} image={{.Config.Image}} started={{.State.StartedAt}}'
             done
+            if [[ "${{ inputs.runner_label }}" == "inferstation-r9700-weekly" ]]; then
+              echo '=== PyTorch ROCm logical devices ==='
+              sudo -n docker run --rm \
+                --device=/dev/kfd --device=/dev/dri --group-add video \
+                --security-opt seccomp=unconfined --entrypoint python \
+                ghcr.io/inferstation/vllm-rocm-r9700-main:latest -c \
+                'import torch; print("count", torch.cuda.device_count()); [(lambda p, m: print(i, p.name, getattr(p, "pci_bus_id", ""), getattr(p, "uuid", ""), *(round(x / 2**30, 2) for x in m)))(torch.cuda.get_device_properties(i), torch.cuda.mem_get_info(i)) for i in range(torch.cuda.device_count())]'
+            fi
           fi
