@@ -93,6 +93,20 @@ class WorkflowMatrixTests(unittest.TestCase):
             "${{ inputs.request_timeout || '3600' }}",
         )
 
+    def test_targeted_gpu_recovery_forwards_device_and_memory_overrides(self):
+        inputs = self.workflow[True]["workflow_dispatch"]["inputs"]
+        self.assertIn("gpu_device", inputs)
+        self.assertIn("gpu_memory_utilization", inputs)
+        step = next(
+            step for step in self.workflow["jobs"]["bench"]["steps"]
+            if step.get("name") == "Run bench-batch directly"
+        )
+        self.assertEqual(
+            step["env"]["BENCH_GPU_MEMORY_UTILIZATION"],
+            "${{ inputs.gpu_memory_utilization || '' }}",
+        )
+        self.assertIn("nv4090|r9700", step["run"])
+
 
 if __name__ == "__main__":
     unittest.main()

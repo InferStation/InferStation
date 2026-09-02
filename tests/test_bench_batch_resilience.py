@@ -111,6 +111,39 @@ class RetryTests(unittest.TestCase):
         ):
             self.assertTrue(bench_batch.retryable_run_failure(error), str(error))
 
+    def test_rocm_gpu_device_list_is_pinned(self):
+        docker_extra = "--device=/dev/kfd --device=/dev/dri --shm-size 16g"
+        with mock.patch.dict(
+            bench_batch.os.environ,
+            {"BENCH_GPU_DEVICE": "2,3,5,6"},
+        ):
+            result = bench_batch.apply_gpu_device(docker_extra)
+        self.assertIn("-e ROCR_VISIBLE_DEVICES=2,3,5,6", result)
+
+    def test_gpu_device_list_rejects_duplicates(self):
+        with mock.patch.dict(
+            bench_batch.os.environ,
+            {"BENCH_GPU_DEVICE": "2,3,2"},
+        ):
+            with self.assertRaisesRegex(ValueError, "duplicate"):
+                bench_batch.apply_gpu_device("--device=/dev/kfd")
+
+    def test_gpu_memory_utilization_override(self):
+        with mock.patch.dict(
+            bench_batch.os.environ,
+            {"BENCH_GPU_MEMORY_UTILIZATION": "0.75"},
+        ):
+            result = bench_batch.resolve_gpu_memory_utilization({})
+        self.assertEqual(result, 0.75)
+
+    def test_gpu_memory_utilization_rejects_invalid_value(self):
+        with mock.patch.dict(
+            bench_batch.os.environ,
+            {"BENCH_GPU_MEMORY_UTILIZATION": "1.1"},
+        ):
+            with self.assertRaisesRegex(ValueError, "must be in"):
+                bench_batch.resolve_gpu_memory_utilization({})
+
     def test_gguf_download_is_resumable_and_shell_is_valid(self):
         host = {"slug": "test", "models_root": "/models"}
         model = {

@@ -445,21 +445,38 @@ def resolve_image(entry: dict, host_cfg: dict, backend: str, override: str | Non
 
 
 def apply_gpu_device(docker_extra: str) -> str:
-    """Pin NVIDIA Docker launches when BENCH_GPU_DEVICE is set."""
-    gpu_device = os.environ.get("BENCH_GPU_DEVICE", "").strip()
-    if not gpu_device:
+    """Pin NVIDIA or ROCm Docker launches when BENCH_GPU_DEVICE is set."""
+    gpu_devices = os.environ.get("BENCH_GPU_DEVICE", "").strip()
+    if not gpu_devices:
         return docker_extra
-    if not gpu_device.isdigit():
-        raise ValueError(f"invalid BENCH_GPU_DEVICE: {gpu_device!r}")
+    if not re.fullmatch(r"\d+(,\d+)*", gpu_devices):
+        raise ValueError(f"invalid BENCH_GPU_DEVICE: {gpu_devices!r}")
+    device_ids = [str(int(value)) for value in gpu_devices.split(",")]
+    if len(device_ids) != len(set(device_ids)):
+        raise ValueError(f"duplicate BENCH_GPU_DEVICE: {gpu_devices!r}")
+    gpu_devices = ",".join(device_ids)
     if "--gpus all" in docker_extra:
-        return docker_extra.replace("--gpus all", f"--gpus device={gpu_device}", 1)
+        return docker_extra.replace("--gpus all", f"--gpus device={gpu_devices}", 1)
     if "--device nvidia.com/gpu=all" in docker_extra:
-        return docker_extra.replace(
-            "--device nvidia.com/gpu=all",
-            f"--device nvidia.com/gpu={gpu_device}",
-            1,
+        devices = " ".join(
+            f"--device nvidia.com/gpu={device_id}" for device_id in device_ids
         )
-    raise ValueError("BENCH_GPU_DEVICE requires NVIDIA GPU or CDI Docker args")
+        return docker_extra.replace("--device nvidia.com/gpu=all", devices, 1)
+    if "--device=/dev/kfd" in docker_extra:
+        return f"{docker_extra} -e ROCR_VISIBLE_DEVICES={gpu_devices}"
+    raise ValueError("BENCH_GPU_DEVICE requires NVIDIA or ROCm Docker args")
+
+
+def resolve_gpu_memory_utilization(entry: dict) -> float:
+    override = os.environ.get("BENCH_GPU_MEMORY_UTILIZATION", "").strip()
+    raw_value = override or entry.get("gpu_memory_utilization", 0.85)
+    try:
+        value = float(raw_value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"invalid GPU memory utilization: {raw_value!r}") from exc
+    if not 0 < value <= 1:
+        raise ValueError(f"GPU memory utilization must be in (0, 1], got {value}")
+    return value
 
 
 def ensure_image(image_ref: str, *, backend: str) -> str:
@@ -1241,7 +1258,7 @@ def run_one_vllm(entry: dict, models: dict, image_override: str | None) -> Path:
     )
     model_name = "inferstation-bench"
     max_model_len = int(entry.get("max_model_len", max(2048, (pp + tg) * 2 + 1024)))
-    gpu_mem_util = float(entry.get("gpu_memory_utilization", 0.85))
+    gpu_mem_util = resolve_gpu_memory_utilization(entry)
     vllm_args = shlex.join(shlex.split(str(entry.get("vllm_args", ""))))
     inner_cmd = (
         f"exec vllm serve /model "

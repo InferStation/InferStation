@@ -64,7 +64,11 @@ on:
         type: string
         default: ''
       gpu_device:
-        description: 'Optional single NVIDIA GPU index. Only valid with target=nv4090.'
+        description: 'Optional comma-separated GPU indices for targeted NVIDIA or ROCm recovery.'
+        type: string
+        default: ''
+      gpu_memory_utilization:
+        description: 'Optional vLLM GPU memory utilization override for targeted recovery.'
         type: string
         default: ''
       unsharded:
@@ -163,6 +167,7 @@ jobs:
           BENCH_RESUME_EXISTING: ${{ inputs.resume_existing || 'date' }}
           BENCH_RUN_DATE: ${{ inputs.run_date || '' }}
           BENCH_GPU_DEVICE: ${{ inputs.gpu_device || '' }}
+          BENCH_GPU_MEMORY_UTILIZATION: ${{ inputs.gpu_memory_utilization || '' }}
           BENCH_REQUEST_TIMEOUT: ${{ inputs.request_timeout || '3600' }}
           BENCH_PUSH_BATCH_SIZE: ${{ inputs.push_batch_size || '20' }}
           BENCH_RESULT_HOST: ${{ matrix.result_host || '' }}
@@ -180,8 +185,8 @@ jobs:
             echo "skip target=${{ matrix.target }} because requested target=$BENCH_TARGET"
             exit 0
           fi
-          if [[ -n "$BENCH_GPU_DEVICE" && ( "$BENCH_TARGET" != "nv4090" || ! "$BENCH_GPU_DEVICE" =~ ^[0-9]+$ ) ]]; then
-            echo "gpu_device requires target=nv4090 and a numeric GPU index" >&2
+          if [[ -n "$BENCH_GPU_DEVICE" && ( ! "$BENCH_TARGET" =~ ^(nv4090|r9700)$ || ! "$BENCH_GPU_DEVICE" =~ ^[0-9]+(,[0-9]+)*$ ) ]]; then
+            echo "gpu_device requires target=nv4090 or r9700 and comma-separated numeric GPU indices" >&2
             exit 1
           fi
           if [[ -z "$BENCH_GIT_PAT" ]]; then
