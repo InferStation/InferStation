@@ -1,0 +1,68 @@
+name: runner-diagnostics
+
+on:
+  workflow_dispatch:
+    inputs:
+      runner_label:
+        description: 'Exact self-hosted runner label to inspect'
+        type: choice
+        required: true
+        options:
+          - inferstation-r9700-weekly
+          - inferstation-nv4090-weekly
+          - inferstation-halo3
+          - inferstation-halo4
+          - inferstation-spark1
+          - inferstation-spark2
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on:
+      - self-hosted
+      - inferstation-bench
+      - ${{ inputs.runner_label }}
+    timeout-minutes: 10
+    steps:
+      - name: Inspect runner and GPU ownership
+        shell: bash
+        run: |
+          set -u
+          echo '=== host ==='
+          hostname
+          date -Is
+          uptime
+
+          echo '=== accelerator ==='
+          if command -v rocm-smi >/dev/null 2>&1; then
+            sudo -n rocm-smi --showuse --showmemuse --showpids || true
+          fi
+          if command -v amd-smi >/dev/null 2>&1; then
+            sudo -n amd-smi process --json || true
+          fi
+          if command -v nvidia-smi >/dev/null 2>&1; then
+            nvidia-smi || true
+            nvidia-smi --query-compute-apps=pid,name,used_memory,gpu_uuid --format=csv,noheader || true
+          fi
+
+          echo '=== device owners ==='
+          pids=''
+          for device in /dev/kfd /dev/nvidia[0-9]*; do
+            [[ -e "$device" ]] || continue
+            owners=$(sudo -n fuser "$device" 2>/dev/null || true)
+            pids="$pids $owners"
+          done
+          for pid in $(printf '%s\n' $pids | sort -nu); do
+            sudo -n ps -p "$pid" -o user=,pid=,ppid=,lstart=,etime=,comm= || true
+            sudo -n sed -n '1,8p' "/proc/$pid/cgroup" 2>/dev/null || true
+          done
+
+          echo '=== containers ==='
+          if sudo -n docker version >/dev/null 2>&1; then
+            sudo -n docker ps --no-trunc --format '{{.ID}} {{.Names}} {{.Image}} {{.Status}}'
+            for id in $(sudo -n docker ps -q); do
+              sudo -n docker inspect "$id" --format 'pid={{.State.Pid}} name={{.Name}} image={{.Config.Image}} started={{.State.StartedAt}}'
+            done
+          fi
