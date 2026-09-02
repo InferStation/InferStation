@@ -35,6 +35,11 @@ jobs:
           date -Is
           uptime
 
+          echo '=== network ==='
+          hostname -I || true
+          ip -br -4 addr || true
+          ip -4 route || true
+
           echo '=== accelerator ==='
           if command -v rocm-smi >/dev/null 2>&1; then
             sudo -n rocm-smi --showuse --showmemuse --showpids || true
