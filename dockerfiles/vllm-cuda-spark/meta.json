@@ -5,7 +5,7 @@
   "platform": "linux/arm64",
   "gpu_arch": "sm_121",
   "source_image": "vllm/vllm-openai:latest",
-  "mirror_host": "local",
+  "mirror_host": "spark2",
   "build_host": "spark1",
   "registry": "ghcr.io/inferstation/vllm-cuda-spark",
   "tag": "v0.22.0-sm121",

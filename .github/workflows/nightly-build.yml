@@ -40,6 +40,12 @@ on:
           - nv4090
           - r9700
           - spark
+          - spark-vllm
+      nightly_date:
+        description: 'Optional Spark recovery date (YYYYMMDD); publishes nightly-* and latest'
+        type: string
+        required: false
+        default: ''
 
 permissions:
   contents: read         # checkout only; ghcr push uses the GHCR_PAT secret (see above)
@@ -179,22 +185,28 @@ jobs:
   # Spark NVIDIA images mirror official upstream images. CICD imports the arm64
   # manifest, then a native Spark runner adds the shared HF + ModelScope tools.
   build-spark:
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.tracks == 'all' || inputs.tracks == 'spark' }}
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.tracks == 'all' || inputs.tracks == 'spark' || inputs.tracks == 'spark-vllm' }}
     runs-on: [self-hosted, cicd]
     steps:
       - uses: actions/checkout@v4
       - name: ghcr login (GHCR_PAT)
         run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u AlisaLi0 --password-stdin
-      - name: mirror spark images (arm64) on cicd -> ghcr
+      - name: mirror spark images (arm64) -> ghcr
         working-directory: dockerfiles
         env:
           TRIGGER: ${{ github.event_name }}
+          TRACKS: ${{ inputs.tracks }}
           GHCR_PAT: ${{ secrets.GHCR_PAT }}
           GHCR_USER: AlisaLi0
+          NIGHTLY_DATE: ${{ inputs.nightly_date }}
         run: |
           set -e
           chmod +x build.sh daily.sh prune.sh
-          ./daily.sh spark
+          if [[ "$TRIGGER" == "workflow_dispatch" && "$TRACKS" == "spark-vllm" ]]; then
+            ./daily.sh spark-vllm
+          else
+            ./daily.sh spark
+          fi
 
   verify-halo-runtime:
     needs: [build-halo-runtime]
@@ -222,45 +234,56 @@ jobs:
           GHCR_PAT: ${{ secrets.GHCR_PAT }}
         run: |
           set -e
-          DATE=$(date -u +%Y%m%d)
+          DATE="${{ inputs.nightly_date }}"
+          [[ -n "$DATE" ]] || DATE=$(date -u +%Y%m%d)
           echo "verify nightly-${DATE} for spark/halo/nv4090/r9700 repos under ghcr.io/inferstation"
           echo "radeon-base=${{ needs.build-radeon-base.result }} spark=${{ needs.build-spark.result }} halo=${{ needs.build-halo.result }} nv4090=${{ needs.build-nv4090.result }} r9700=${{ needs.build-r9700.result }}"
 
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && -z "${{ inputs.nightly_date }}" ]]; then
             echo "manual workflow_dispatch builds intentionally do not move nightly-* tags; skipping nightly tag verification"
             exit 0
           fi
 
-          test "${{ needs.build-radeon-base.result }}" == "success"
-          test "${{ needs.build-spark.result }}"  == "success"
-          test "${{ needs.build-halo.result }}"   == "success"
-          test "${{ needs.build-nv4090.result }}" == "success"
-          test "${{ needs.build-r9700.result }}"  == "success"
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            test "${{ needs.build-spark.result }}" == "success"
+            case "${{ inputs.tracks }}" in
+              spark-vllm) repos=(vllm-cuda-spark) ;;
+              spark) repos=(llama-cuda-spark vllm-cuda-spark llama-vulkan-spark) ;;
+              *) echo "nightly_date recovery is supported only for spark or spark-vllm" >&2; exit 1 ;;
+            esac
+          else
+            test "${{ needs.build-radeon-base.result }}" == "success"
+            test "${{ needs.build-spark.result }}"  == "success"
+            test "${{ needs.build-halo.result }}"   == "success"
+            test "${{ needs.build-nv4090.result }}" == "success"
+            test "${{ needs.build-r9700.result }}"  == "success"
+
+            repos=(
+              llama-cuda-spark
+              vllm-cuda-spark
+              llama-vulkan-spark
+              pytorch-rocm-halo
+              llama-rocm-halo
+              vllm-rocm-halo-main
+              vllm-rocm-halo
+              llama-vulkan-halo
+              llama-cuda-4090
+              vllm-cuda-4090
+              llama-vulkan-4090
+              pytorch-rocm-r9700
+              pytorch-rocm-w7900
+              vllm-rocm-w7900-main
+              llama-rocm-r9700
+              vllm-rocm-r9700-main
+              llama-vulkan-r9700
+            )
+          fi
 
           if [[ -z "${GHCR_PAT:-}" ]]; then
             echo "GHCR_PAT is empty; cannot verify private/internal ghcr packages" >&2
             exit 1
           fi
 
-          repos=(
-            llama-cuda-spark
-            vllm-cuda-spark
-            llama-vulkan-spark
-            pytorch-rocm-halo
-            llama-rocm-halo
-            vllm-rocm-halo-main
-            vllm-rocm-halo
-            llama-vulkan-halo
-            llama-cuda-4090
-            vllm-cuda-4090
-            llama-vulkan-4090
-            pytorch-rocm-r9700
-            pytorch-rocm-w7900
-            vllm-rocm-w7900-main
-            llama-rocm-r9700
-            vllm-rocm-r9700-main
-            llama-vulkan-r9700
-          )
           accept='application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.oci.image.manifest.v1+json,application/vnd.docker.distribution.manifest.v2+json'
           failed=0
           for repo in "${repos[@]}"; do

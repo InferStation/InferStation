@@ -50,6 +50,14 @@ docker_pull_with_retry() {
   done
 }
 
+registry_login_on_host() {
+  local host="$1" registry="$2"
+  [[ "$host" == "local" || -z "$host" ]] && return 0
+  [[ -n "${GHCR_PAT:-}" ]] || die "GHCR_PAT is required to push from remote host $host"
+  printf '%s\n' "$GHCR_PAT" | run_on "$host" \
+    "docker login ${registry%%/*} -u ${GHCR_USER:-AlisaLi0} --password-stdin >/dev/null"
+}
+
 package_model_tools() {
   local profile="$1" meta="$2" artifact_host="$3" registry="$4" tag="$5"
   local push="$6" no_latest="$7"; shift 7
@@ -422,6 +430,7 @@ build_profile() {
 
       local latest_tag="${registry}:latest"
       if [[ "$push" == "1" ]]; then
+        registry_login_on_host "$mirror_host" "$registry"
         if [[ "$no_latest" != "1" ]]; then
           echo "→ docker tag + push to $full_tag (and :latest)"
           run_on "$mirror_host" "docker tag ${source_image} ${full_tag} && docker push ${full_tag} && docker tag ${source_image} ${latest_tag} && docker push ${latest_tag}"

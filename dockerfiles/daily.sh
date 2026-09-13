@@ -20,10 +20,10 @@
 # <release>-<arch> tags are permanent (prune.sh only touches nightly-* tags), so
 # every release stays pullable forever; nightly-* keeps a 7-day rolling window.
 #
-# Usage:  ./daily.sh spark | halo | nv4090 | r9700 | radeon-base | halo-base | halo-vllm
+# Usage:  ./daily.sh spark | spark-vllm | halo | nv4090 | r9700 | radeon-base | halo-base | halo-vllm
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TRACK="${1:?usage: daily.sh spark|halo|nv4090|r9700|radeon-base|halo-base|halo-vllm}"
+TRACK="${1:?usage: daily.sh spark|spark-vllm|halo|nv4090|r9700|radeon-base|halo-base|halo-vllm}"
 
 # Trigger mode: nightly (scheduled cron) vs manual (workflow_dispatch).
 # CI passes TRIGGER=${{ github.event_name }} (schedule | workflow_dispatch).
@@ -33,7 +33,16 @@ TRIGGER="${TRIGGER:-schedule}"
 MANUAL=0
 [[ "$TRIGGER" == "workflow_dispatch" ]] && MANUAL=1
 
-DATE=$(date -u +%Y%m%d)
+if [[ -n "${NIGHTLY_DATE:-}" ]]; then
+  [[ "$NIGHTLY_DATE" =~ ^[0-9]{8}$ ]] || {
+    echo "invalid NIGHTLY_DATE: $NIGHTLY_DATE (expected YYYYMMDD)" >&2
+    exit 1
+  }
+  DATE="$NIGHTLY_DATE"
+  MANUAL=0
+else
+  DATE=$(date -u +%Y%m%d)
+fi
 NIGHTLY="nightly-${DATE}"
 
 # Harbor RETIRED 2026-06-24 — 镜像已全迁 ghcr.io/inferstation。下面 HARBOR_* 变量
@@ -492,9 +501,12 @@ case "$TRACK" in
     # NVIDIA images now MIRROR upstream official (verified to run on GB10/sm121),
     # so cicd (x86) produces the arm64 image via `docker pull --platform`.
     run_one llama-cuda-spark   mirror_pkg llama-cuda-spark ghcr.io/ggml-org/llama.cpp:server-cuda &
-    run_one vllm-cuda-spark    mirror_pkg vllm-cuda-spark  vllm/vllm-openai:latest &
+    INFERSTATION_FORCE_LOCAL_BUILD=0 run_one vllm-cuda-spark mirror_pkg vllm-cuda-spark vllm/vllm-openai:latest &
     run_one llama-vulkan-spark mirror_pkg llama-vulkan-spark &
     wait
+    ;;
+  spark-vllm)
+    INFERSTATION_FORCE_LOCAL_BUILD=0 run_one vllm-cuda-spark mirror_pkg vllm-cuda-spark vllm/vllm-openai:latest
     ;;
   halo)
     run_one llama-rocm-halo       build_pkg       llama-rocm-halo    llama gfx1151 &
@@ -523,7 +535,7 @@ case "$TRACK" in
     wait
     ;;
   *)
-    echo "unknown track: $TRACK (expected spark|halo|nv4090|r9700|radeon-base|halo-base|halo-vllm)" >&2; exit 1 ;;
+    echo "unknown track: $TRACK (expected spark|spark-vllm|halo|nv4090|r9700|radeon-base|halo-base|halo-vllm)" >&2; exit 1 ;;
 esac
 
 echo
