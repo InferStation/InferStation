@@ -215,7 +215,7 @@ jobs:
             args+=("--filter=${{ matrix.host }}")
           fi
           args+=("--scope=$BENCH_SCOPE")
-          if [[ "${{ inputs.unsharded || false }}" == "true" || -n "$BENCH_RUNNER_LABEL" ]]; then
+          if [[ "${{ inputs.unsharded || false }}" == "true" ]]; then
             args+=("--shard-index=0" "--shard-count=1")
           else
             args+=("--shard-index=${{ matrix.shard_index }}" "--shard-count=${{ matrix.shard_count }}")

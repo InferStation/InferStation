@@ -74,12 +74,16 @@ class WorkflowMatrixTests(unittest.TestCase):
             "inferstation-spark1",
         )
 
-    def test_runner_targeted_recovery_is_unsharded(self):
+    def test_runner_targeted_recovery_preserves_matrix_shard(self):
         step = next(
             step for step in self.workflow["jobs"]["bench"]["steps"]
             if step.get("name") == "Run bench-batch directly"
         )
-        self.assertIn('|| -n "$BENCH_RUNNER_LABEL"', step["run"])
+        self.assertNotIn('|| -n "$BENCH_RUNNER_LABEL"', step["run"])
+        self.assertIn(
+            'args+=("--shard-index=${{ matrix.shard_index }}" "--shard-count=${{ matrix.shard_count }}")',
+            step["run"],
+        )
 
     def test_default_request_timeout_is_one_hour(self):
         inputs = self.workflow[True]["workflow_dispatch"]["inputs"]
