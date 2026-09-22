@@ -66,8 +66,65 @@ rm -f "$tmp"
 
         workflow = NIGHTLY_WORKFLOW.read_text()
         self.assertIn("          - spark-vllm", workflow)
-        self.assertIn("NIGHTLY_DATE: ${{ inputs.nightly_date }}", workflow)
+        self.assertIn(
+            "NIGHTLY_DATE: ${{ needs.prepare.outputs.nightly_date }}", workflow
+        )
         self.assertIn("spark-vllm) repos=(vllm-cuda-spark)", workflow)
+
+    def test_nightly_date_is_frozen_once_before_build_queue(self):
+        workflow = NIGHTLY_WORKFLOW.read_text()
+        self.assertIn("  prepare:", workflow)
+        self.assertIn(
+            "nightly_date: ${{ steps.context.outputs.nightly_date }}", workflow
+        )
+        self.assertIn(
+            "llama_revision: ${{ steps.context.outputs.llama_revision }}",
+            workflow,
+        )
+        self.assertEqual(
+            workflow.count(
+                "NIGHTLY_DATE: ${{ needs.prepare.outputs.nightly_date }}"
+            ),
+            5,
+        )
+        self.assertIn('DATE="${{ needs.prepare.outputs.nightly_date }}"', workflow)
+        verify_job = workflow.split("\n  verify:", 1)[1]
+        self.assertNotIn("date -u +%Y%m%d", verify_job)
+
+    def test_llama_revision_is_frozen_and_verified(self):
+        workflow = NIGHTLY_WORKFLOW.read_text()
+        expected_env = "LLAMA_REVISION: ${{ needs.prepare.outputs.llama_revision }}"
+        halo_job = workflow.split("\n  build-halo:", 1)[1].split(
+            "\n  build-halo-runtime:", 1
+        )[0]
+        r9700_job = workflow.split("\n  build-r9700:", 1)[1].split(
+            "\n  # Spark NVIDIA", 1
+        )[0]
+        verify_job = workflow.split("\n  verify:", 1)[1]
+        base_job = workflow.split("\n  build-radeon-base:", 1)[1].split(
+            "\n  build-halo:", 1
+        )[0]
+        runtime_verify = workflow.split("\n  verify-halo-runtime:", 1)[1].split(
+            "\n  verify:", 1
+        )[0]
+        for job in (halo_job, r9700_job, verify_job):
+            self.assertIn(expected_env, job)
+        for job in (base_job, runtime_verify):
+            self.assertNotIn(expected_env, job)
+        self.assertIn(
+            "git ls-remote https://github.com/ggml-org/llama.cpp "
+            "refs/heads/master",
+            workflow,
+        )
+        self.assertIn(
+            'actual=$(docker image inspect "$ref" --format '
+            "'{{ index .Config.Labels \"org.opencontainers.image.revision\" }}')",
+            workflow,
+        )
+        self.assertIn('[[ "$actual" == "$LLAMA_REVISION" ]]', workflow)
+
+        daily = DAILY_SCRIPT.read_text()
+        self.assertIn('local sha="${LLAMA_REVISION:-}"', daily)
 
     def test_llama_rolling_build_uses_exact_revision_as_cachebust(self):
         daily = DAILY_SCRIPT.read_text()

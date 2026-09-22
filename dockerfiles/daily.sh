@@ -232,7 +232,8 @@ vllm_build() {
 build_pkg() {
   local profile="$1" kind="$2" arch="$3"   # kind = llama | vllm
   if [[ "$kind" == "llama" ]]; then
-    local sha; sha=$(upstream_head_sha "$profile" master || true)
+    local sha="${LLAMA_REVISION:-}"
+    [[ -n "$sha" ]] || sha=$(upstream_head_sha "$profile" master || true)
     [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || {
       echo ">>> ${profile}: cannot resolve exact upstream master revision" >&2
       return 1

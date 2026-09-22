@@ -20,8 +20,9 @@ name: nightly-build
 #     runner and push to ghcr.
 #
 # Triggers: WEEKLY @ Beijing Fri 23:00 (Fri 15:00 UTC) + manual workflow_dispatch.
-# (The weekly bench runs Sat 07:00 CST = Fri 23:00 UTC ~8h later, SAME UTC date
-#  (Fri), so it finds this build's nightly-<Fri-UTC> tag — no cross-midnight gap.)
+# The prepare job freezes one UTC date for the whole workflow before the
+# self-hosted build queue starts, so long serial builds cannot split tags across
+# UTC midnight.
 
 on:
   schedule:
@@ -57,7 +58,35 @@ env:
   INFERSTATION_GHCR_MODE: '1'                    # skip Harbor dedup; always build/mirror
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      nightly_date: ${{ steps.context.outputs.nightly_date }}
+      llama_revision: ${{ steps.context.outputs.llama_revision }}
+    steps:
+      - id: context
+        env:
+          REQUESTED_DATE: ${{ inputs.nightly_date || '' }}
+        run: |
+          set -euo pipefail
+          nightly_date="$REQUESTED_DATE"
+          if [[ -z "$nightly_date" && "$GITHUB_EVENT_NAME" == "schedule" ]]; then
+            nightly_date=$(date -u +%Y%m%d)
+          fi
+          if [[ -n "$nightly_date" && ! "$nightly_date" =~ ^[0-9]{8}$ ]]; then
+            echo "invalid nightly_date: $nightly_date (expected YYYYMMDD)" >&2
+            exit 1
+          fi
+          llama_revision=$(git ls-remote https://github.com/ggml-org/llama.cpp refs/heads/master | awk 'NR == 1 { print $1 }')
+          if [[ ! "$llama_revision" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "cannot resolve exact llama.cpp master revision" >&2
+            exit 1
+          fi
+          echo "nightly_date=$nightly_date" >> "$GITHUB_OUTPUT"
+          echo "llama_revision=$llama_revision" >> "$GITHUB_OUTPUT"
+
   build-radeon-base:
+    needs: [prepare]
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.tracks == 'all' || inputs.tracks == 'radeon-base' || inputs.tracks == 'halo' || inputs.tracks == 'r9700' }}
     runs-on: [self-hosted, cicd]
     steps:
@@ -69,6 +98,7 @@ jobs:
         env:
           TRIGGER: ${{ github.event_name }}
           TRACKS: ${{ inputs.tracks }}
+          NIGHTLY_DATE: ${{ needs.prepare.outputs.nightly_date }}
         run: |
           set -e
           chmod +x build.sh daily.sh prune.sh
@@ -79,7 +109,7 @@ jobs:
           fi
 
   build-halo:
-    needs: [build-radeon-base]
+    needs: [prepare, build-radeon-base]
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.tracks == 'all' || inputs.tracks == 'halo' }}
     runs-on: [self-hosted, cicd]
     steps:
@@ -91,6 +121,8 @@ jobs:
         env:
           TRIGGER: ${{ github.event_name }}
           TRACKS: ${{ inputs.tracks }}
+          NIGHTLY_DATE: ${{ needs.prepare.outputs.nightly_date }}
+          LLAMA_REVISION: ${{ needs.prepare.outputs.llama_revision }}
         run: |
           set -e
           chmod +x build.sh daily.sh prune.sh
@@ -149,6 +181,7 @@ jobs:
             --fail-if-exists
 
   build-nv4090:
+    needs: [prepare]
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.tracks == 'all' || inputs.tracks == 'nv4090' }}
     runs-on: [self-hosted, cicd]
     steps:
@@ -159,13 +192,14 @@ jobs:
         working-directory: dockerfiles
         env:
           TRIGGER: ${{ github.event_name }}
+          NIGHTLY_DATE: ${{ needs.prepare.outputs.nightly_date }}
         run: |
           set -e
           chmod +x build.sh daily.sh prune.sh
           ./daily.sh nv4090
 
   build-r9700:
-    needs: [build-radeon-base]
+    needs: [prepare, build-radeon-base]
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.tracks == 'all' || inputs.tracks == 'r9700' }}
     runs-on: [self-hosted, cicd]
     steps:
@@ -177,6 +211,8 @@ jobs:
         env:
           TRIGGER: ${{ github.event_name }}
           INFERSTATION_SKIP_RADEON_BASE: '1'
+          NIGHTLY_DATE: ${{ needs.prepare.outputs.nightly_date }}
+          LLAMA_REVISION: ${{ needs.prepare.outputs.llama_revision }}
         run: |
           set -e
           chmod +x build.sh daily.sh prune.sh
@@ -185,6 +221,7 @@ jobs:
   # Spark NVIDIA images mirror official upstream images. CICD imports the arm64
   # manifest, then a native Spark runner adds the shared HF + ModelScope tools.
   build-spark:
+    needs: [prepare]
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.tracks == 'all' || inputs.tracks == 'spark' || inputs.tracks == 'spark-vllm' }}
     runs-on: [self-hosted, cicd]
     steps:
@@ -198,7 +235,7 @@ jobs:
           TRACKS: ${{ inputs.tracks }}
           GHCR_PAT: ${{ secrets.GHCR_PAT }}
           GHCR_USER: AlisaLi0
-          NIGHTLY_DATE: ${{ inputs.nightly_date }}
+          NIGHTLY_DATE: ${{ needs.prepare.outputs.nightly_date }}
         run: |
           set -e
           chmod +x build.sh daily.sh prune.sh
@@ -225,17 +262,17 @@ jobs:
           echo "verified ghcr.io/inferstation/vllm-rocm-halo:${tag}"
 
   verify:
-    needs: [build-radeon-base, build-spark, build-halo, build-nv4090, build-r9700]
+    needs: [prepare, build-radeon-base, build-spark, build-halo, build-nv4090, build-r9700]
     if: ${{ !cancelled() }}
     runs-on: [self-hosted, cicd]
     steps:
-      - name: assert today's nightly tags exist in ghcr (fail loudly if a build silently produced nothing)
+      - name: assert this run's nightly tags exist in ghcr (fail loudly if a build silently produced nothing)
         env:
           GHCR_PAT: ${{ secrets.GHCR_PAT }}
+          LLAMA_REVISION: ${{ needs.prepare.outputs.llama_revision }}
         run: |
           set -e
-          DATE="${{ inputs.nightly_date }}"
-          [[ -n "$DATE" ]] || DATE=$(date -u +%Y%m%d)
+          DATE="${{ needs.prepare.outputs.nightly_date }}"
           echo "verify nightly-${DATE} for spark/halo/nv4090/r9700 repos under ghcr.io/inferstation"
           echo "radeon-base=${{ needs.build-radeon-base.result }} spark=${{ needs.build-spark.result }} halo=${{ needs.build-halo.result }} nv4090=${{ needs.build-nv4090.result }} r9700=${{ needs.build-r9700.result }}"
 
@@ -305,4 +342,19 @@ jobs:
               failed=1
             fi
           done
+
+          if [[ "${{ github.event_name }}" != "workflow_dispatch" ]]; then
+            printf '%s\n' "$GHCR_PAT" | docker login ghcr.io -u AlisaLi0 --password-stdin >/dev/null
+            for repo in llama-rocm-halo llama-rocm-r9700; do
+              ref="ghcr.io/inferstation/${repo}:nightly-${DATE}"
+              docker pull "$ref" >/dev/null
+              actual=$(docker image inspect "$ref" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')
+              if [[ "$actual" == "$LLAMA_REVISION" ]]; then
+                echo "OK ${repo}: revision ${actual}"
+              else
+                echo "STALE ${repo}: expected revision ${LLAMA_REVISION}, got ${actual:-<missing>}" >&2
+                failed=1
+              fi
+            done
+          fi
           exit "$failed"
