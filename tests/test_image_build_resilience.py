@@ -79,7 +79,9 @@ rm -f "$tmp"
             self.assertIn("ARG CACHEBUST", source)
             self.assertIn('git fetch --depth=1 origin "${CACHEBUST}"', source)
             self.assertIn(
-                'test "$(git rev-parse HEAD)" = "${CACHEBUST}"', source
+                'if [ -n "${CACHEBUST}" ]; then '
+                'test "$(git rev-parse HEAD)" = "${CACHEBUST}"; fi',
+                source,
             )
             self.assertIn(
                 'org.opencontainers.image.revision="${CACHEBUST}"', source

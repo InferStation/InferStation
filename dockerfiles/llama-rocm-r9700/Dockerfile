@@ -39,7 +39,7 @@ RUN if [ -n "${CACHEBUST}" ]; then \
             git clone --depth=1 --branch "${LLAMA_TAG}" "${LLAMA_REPO}" . 2>/dev/null \
             || (git clone "${LLAMA_REPO}" . && git checkout "${LLAMA_TAG}"); \
         fi \
- && test -z "${CACHEBUST}" || test "$(git rev-parse HEAD)" = "${CACHEBUST}" \
+ && if [ -n "${CACHEBUST}" ]; then test "$(git rev-parse HEAD)" = "${CACHEBUST}"; fi \
  && git rev-parse HEAD > /commit.txt
 
 RUN HIPCXX="$(hipconfig -l)/clang" HIP_PATH="$(hipconfig -R)" \
