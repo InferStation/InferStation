@@ -19,6 +19,7 @@ ARG ROCM_DOCKER_ARCH=gfx1201
 FROM ${BASE_ROCM_DEV_CONTAINER} AS builder
 ARG LLAMA_REPO
 ARG LLAMA_TAG
+ARG CACHEBUST
 ARG ROCM_DOCKER_ARCH
 
 ENV AMDGPU_TARGETS=${ROCM_DOCKER_ARCH}
@@ -30,8 +31,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src
-RUN git clone --depth=1 --branch "${LLAMA_TAG}" "${LLAMA_REPO}" . 2>/dev/null \
- || (git clone "${LLAMA_REPO}" . && git checkout "${LLAMA_TAG}") \
+RUN if [ -n "${CACHEBUST}" ]; then \
+            git init . && git remote add origin "${LLAMA_REPO}" \
+            && git fetch --depth=1 origin "${CACHEBUST}" \
+            && git checkout --detach FETCH_HEAD; \
+        else \
+            git clone --depth=1 --branch "${LLAMA_TAG}" "${LLAMA_REPO}" . 2>/dev/null \
+            || (git clone "${LLAMA_REPO}" . && git checkout "${LLAMA_TAG}"); \
+        fi \
+ && test -z "${CACHEBUST}" || test "$(git rev-parse HEAD)" = "${CACHEBUST}" \
  && git rev-parse HEAD > /commit.txt
 
 RUN HIPCXX="$(hipconfig -l)/clang" HIP_PATH="$(hipconfig -R)" \
@@ -53,8 +61,10 @@ RUN HIPCXX="$(hipconfig -l)/clang" HIP_PATH="$(hipconfig -R)" \
 # ---------- runtime ----------
 FROM ${BASE_ROCM_DEV_CONTAINER}
 ARG LLAMA_TAG
+ARG CACHEBUST
 LABEL org.inferstation.profile="llama-rocm-r9700" \
       org.inferstation.llama_tag="${LLAMA_TAG}" \
+    org.opencontainers.image.revision="${CACHEBUST}" \
       org.opencontainers.image.title="llama.cpp" \
       org.opencontainers.image.description="LLM inference in C/C++ (HIP, gfx1201 / Radeon AI PRO R9700)" \
       org.opencontainers.image.source="https://github.com/ggml-org/llama.cpp"

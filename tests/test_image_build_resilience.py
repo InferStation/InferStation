@@ -11,6 +11,10 @@ NIGHTLY_WORKFLOW = ROOT / ".github/workflows/nightly-build.yml"
 SPARK_VLLM_META = ROOT / "dockerfiles/vllm-cuda-spark/meta.json"
 HALO_GFX11_DOCKERFILE = ROOT / "dockerfiles/vllm-rocm-halo-wheel/Dockerfile"
 HALO_MAIN_DOCKERFILE = ROOT / "dockerfiles/vllm-rocm-halo-main/Dockerfile"
+LLAMA_ROCM_DOCKERFILES = [
+    ROOT / "dockerfiles/llama-rocm-halo/Dockerfile",
+    ROOT / "dockerfiles/llama-rocm-r9700/Dockerfile",
+]
 
 
 class ImageBuildResilienceTests(unittest.TestCase):
@@ -64,6 +68,22 @@ rm -f "$tmp"
         self.assertIn("          - spark-vllm", workflow)
         self.assertIn("NIGHTLY_DATE: ${{ inputs.nightly_date }}", workflow)
         self.assertIn("spark-vllm) repos=(vllm-cuda-spark)", workflow)
+
+    def test_llama_rolling_build_uses_exact_revision_as_cachebust(self):
+        daily = DAILY_SCRIPT.read_text()
+        self.assertIn('[[ "$sha" =~ ^[0-9a-f]{40}$ ]]', daily)
+        self.assertEqual(daily.count('--build-arg "CACHEBUST=${sha}"'), 2)
+
+        for dockerfile in LLAMA_ROCM_DOCKERFILES:
+            source = dockerfile.read_text()
+            self.assertIn("ARG CACHEBUST", source)
+            self.assertIn('git fetch --depth=1 origin "${CACHEBUST}"', source)
+            self.assertIn(
+                'test "$(git rev-parse HEAD)" = "${CACHEBUST}"', source
+            )
+            self.assertIn(
+                'org.opencontainers.image.revision="${CACHEBUST}"', source
+            )
 
     def test_gfx11_patch_covers_all_known_stride_checks(self):
         source = HALO_GFX11_DOCKERFILE.read_text()

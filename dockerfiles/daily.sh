@@ -233,6 +233,10 @@ build_pkg() {
   local profile="$1" kind="$2" arch="$3"   # kind = llama | vllm
   if [[ "$kind" == "llama" ]]; then
     local sha; sha=$(upstream_head_sha "$profile" master || true)
+    [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || {
+      echo ">>> ${profile}: cannot resolve exact upstream master revision" >&2
+      return 1
+    }
     local short="${sha:0:12}"
     local commit_tag="commit-${short}"   # permanent per-commit identity tag
 
@@ -245,7 +249,8 @@ build_pkg() {
         return
       fi
       echo ">>> ${profile}: MANUAL — build master (${short}) as ${commit_tag} (no nightly/latest)"
-      "${SCRIPT_DIR}/build.sh" "$profile" --ref="master" --tag="$commit_tag" --no-latest
+      "${SCRIPT_DIR}/build.sh" "$profile" --ref="master" --tag="$commit_tag" \
+        --build-arg "CACHEBUST=${sha}" --no-latest
       return
     fi
 
@@ -264,7 +269,8 @@ build_pkg() {
     # NOTE: do not rely on `set -e` here — build_pkg is invoked via `if "$@"`
     # in run_one, which disables errexit for the whole call chain. Check the
     # build's exit status explicitly so we only record the sha on success.
-    if "${SCRIPT_DIR}/build.sh" "$profile" --ref="master" --tag="$NIGHTLY" --also-tag="$commit_tag"; then
+    if "${SCRIPT_DIR}/build.sh" "$profile" --ref="master" --tag="$NIGHTLY" \
+      --build-arg "CACHEBUST=${sha}" --also-tag="$commit_tag"; then
       mark_built "$profile" "$sha"
     else
       local rc=$?
