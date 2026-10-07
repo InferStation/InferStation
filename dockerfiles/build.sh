@@ -78,11 +78,6 @@ package_model_tools() {
       "docker login ${registry_host} -u ${GHCR_USER:-AlisaLi0} --password-stdin >/dev/null"
   fi
 
-  local remote_dir="/tmp/inferstation-model-tools-package"
-  echo "→ package HF + ModelScope tools on ${package_host}"
-  tar -C "$SCRIPT_DIR" -czf - model-tools package-model-tools.sh | \
-    run_on "$package_host" "rm -rf ${remote_dir} && mkdir -p ${remote_dir} && tar -C ${remote_dir} -xzf -"
-
   local args=(--tag "$tag")
   [[ "$push" == "1" ]] || args+=(--no-push)
   [[ "$no_latest" == "1" ]] || args+=(--latest)
@@ -92,7 +87,19 @@ package_model_tools() {
 
   local args_q
   printf -v args_q '%q ' "${args[@]}"
-  run_on "$package_host" "cd ${remote_dir} && chmod +x package-model-tools.sh && ./package-model-tools.sh ${args_q}"
+  local remote_dir_template="/tmp/inferstation-model-tools-package.${profile}.XXXXXX"
+  local remote_dir_template_q
+  printf -v remote_dir_template_q '%q' "$remote_dir_template"
+
+  echo "→ package HF + ModelScope tools on ${package_host}"
+  tar -C "$SCRIPT_DIR" -czf - model-tools package-model-tools.sh | \
+    run_on "$package_host" "set -e
+remote_dir=\$(mktemp -d ${remote_dir_template_q})
+trap 'rm -rf \"\$remote_dir\"' EXIT
+tar -C \"\$remote_dir\" -xzf -
+cd \"\$remote_dir\"
+chmod +x package-model-tools.sh
+./package-model-tools.sh ${args_q}"
 }
 
 run_on() {

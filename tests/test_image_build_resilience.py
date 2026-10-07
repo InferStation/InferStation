@@ -36,6 +36,66 @@ fi
 """
         subprocess.run(["bash", "-c", script], check=True)
 
+    def test_concurrent_model_tools_packaging_uses_isolated_temp_dirs(self):
+        script = f"""
+source <(sed '/^main "\\$@"$/d' {BUILD_SCRIPT})
+SCRIPT_DIR={BUILD_SCRIPT.parent}
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+mkdir -p "$tmp/bin"
+cat > "$tmp/bin/jq" <<'SH'
+#!/usr/bin/env bash
+case "$2" in
+    '.model_tools // false') echo true ;;
+    '.package_host // ""') echo local ;;
+    *) exit 1 ;;
+esac
+SH
+cat > "$tmp/bin/docker" <<'SH'
+#!/usr/bin/env bash
+set -e
+case "${{1:-}}" in
+    version|pull|run|push|tag) exit 0 ;;
+    image)
+        if [[ "$*" == *org.inferstation.model-tools* ]]; then
+            echo true
+        fi
+        exit 0
+        ;;
+    build)
+        dockerfile=""
+        while [[ $# -gt 0 ]]; do
+            if [[ "$1" == "--file" ]]; then dockerfile="$2"; break; fi
+            shift
+        done
+        [[ -f "$dockerfile" ]]
+        printf '%s\\n' "$PWD" >> "$PACKAGE_DIR_LOG"
+        exit 0
+        ;;
+    *) exit 1 ;;
+esac
+SH
+chmod +x "$tmp/bin/jq" "$tmp/bin/docker"
+export PATH="$tmp/bin:$PATH"
+export PACKAGE_DIR_LOG="$tmp/package-dirs"
+printf '{{"model_tools": true, "package_host": "local"}}\\n' > "$tmp/meta.json"
+
+package_model_tools same-profile "$tmp/meta.json" local example/first test 0 1 &
+first_pid=$!
+package_model_tools same-profile "$tmp/meta.json" local example/second test 0 1 &
+second_pid=$!
+wait "$first_pid"
+wait "$second_pid"
+
+mapfile -t package_dirs < "$PACKAGE_DIR_LOG"
+[[ "${{#package_dirs[@]}}" -eq 2 ]]
+[[ "${{package_dirs[0]}}" != "${{package_dirs[1]}}" ]]
+for package_dir in "${{package_dirs[@]}}"; do
+    [[ ! -e "$package_dir" ]]
+done
+"""
+        subprocess.run(["bash", "-c", script], check=True)
+
     def test_spark_vllm_mirror_uses_native_host_with_remote_login(self):
         meta = json.loads(SPARK_VLLM_META.read_text())
         self.assertEqual(meta["platform"], "linux/arm64")
