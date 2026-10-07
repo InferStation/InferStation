@@ -63,6 +63,31 @@ Important tag behavior:
 - A tag is not immutable merely because its name contains a date or source SHA.
   Record and deploy the manifest digest from `IMAGE_RELEASES.md`.
 
+### Model Tools Packaging
+
+Profiles with `"model_tools": true` are wrapped after their initial image push
+with the shared Hugging Face and ModelScope toolchain from
+[`model-tools/Dockerfile`](model-tools/Dockerfile). The wrapped image is tested
+and pushed back to the requested tag and aliases.
+
+Each `package_model_tools` invocation stages its context in a unique directory
+matching `/tmp/inferstation-model-tools-package.<profile>.*` on the packaging
+host and removes it on exit. This isolation is required: `daily.sh` runs several
+profiles concurrently, including the three PyTorch/ROCm bases in the
+`radeon-base` track. Do not replace the unique directory with a shared fixed
+path or separate context upload from script execution; either change can let
+one build remove another build's `model-tools/Dockerfile`.
+
+An image tag can exist even when packaging failed because the unwrapped image
+is pushed first. Treat the job result, not tag presence alone, as the publication
+gate. For an additional check, the final image must have this label:
+
+```bash
+docker image inspect ghcr.io/inferstation/<profile>:<tag> \
+  --format '{{ index .Config.Labels "org.inferstation.model-tools" }}'
+# expected: true
+```
+
 ## vLLM Wheel And Runtime Images
 
 Radeon vLLM profiles use three layers:
@@ -98,7 +123,7 @@ The active build workflow is
 
 - Schedule: Friday 15:00 UTC (Beijing Friday 23:00).
 - Manual tracks: `all`, `radeon-base`, `halo`, `halo-runtime`, `nv4090`,
-  `r9700`, and `spark`.
+  `r9700`, `spark`, and `spark-vllm`.
 - Scheduled runs build the complete matrix and publish `nightly-YYYYMMDD` plus
   `latest` where applicable.
 - Manual runs produce isolated tags and intentionally do not move nightly tags.
@@ -115,6 +140,33 @@ date.
 The benchmark workflow is separate:
 [`../.github/workflows/bench-batch.yml`](../.github/workflows/bench-batch.yml).
 Building an image does not prove that it works on the target GPU.
+
+### Radeon Base Recovery
+
+If `build-radeon-base` fails during `package HF + ModelScope tools`, inspect the
+first profile-specific error rather than the final track summary. The historical
+signature of a shared staging-directory collision is:
+
+```text
+failed to read dockerfile: open Dockerfile: no such file or directory
+```
+
+Run `nightly-build` manually from `main` with `tracks=radeon-base` and leave
+`nightly_date` empty. This exercises only the Radeon base track, does not wait
+for Spark, and manual mode does not move `nightly-*` or `latest` tags. A recovery
+is complete only when all four track results are `OK`:
+
+```text
+pytorch-rocm-halo
+pytorch-rocm-r9700
+pytorch-rocm-w7900
+vllm-rocm-w7900-main
+```
+
+After the run, inspect the `org.inferstation.model-tools=true` label on each
+published rolling tag. If a dated nightly tag from an earlier failed run must be
+repaired, do not assume the existing tag is wrapped; rebuild that date through
+an explicitly reviewed recovery path before using it.
 
 ## Release Procedure
 
