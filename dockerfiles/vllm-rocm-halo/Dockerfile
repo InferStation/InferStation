@@ -43,11 +43,11 @@ ENV PYTHONUNBUFFERED=1
 COPY --from=wheel / /tmp/wheels/
 
 # Install our prebuilt wheel against the same PyTorch/ROCm ABI constraints used
-# by the wheel builder. Keep full multimodal support via transformers 5.10.2.
+# by the wheel builder. Keep full multimodal support via transformers >=5.10.2.
 RUN --mount=type=cache,target=/root/.cache/uv,id=vllm-halo-runtime-uv,sharing=locked \
     grep -E '^(amd-[A-Za-z0-9_.+-]+|rocm[A-Za-z0-9_.+-]*|torch|torchvision|triton)==' \
        /tmp/wheels/constraints.txt > /tmp/wheels/runtime-constraints.txt \
- && printf 'numpy<2.5\nsetuptools>=77.0.3,<80.0.0\ntransformers==5.10.2\nhuggingface-hub[hf_transfer,cli]\n' >> /tmp/wheels/runtime-constraints.txt \
+ && printf 'numpy<2.5\nsetuptools>=77.0.3,<80.0.0\ntransformers>=5.10.2\nhuggingface-hub[hf_transfer,cli]\n' >> /tmp/wheels/runtime-constraints.txt \
  && uv -v pip install --system --python python \
        --constraint /tmp/wheels/runtime-constraints.txt \
        --index-url "https://rocm.nightlies.amd.com/whl-multi-arch/" \
