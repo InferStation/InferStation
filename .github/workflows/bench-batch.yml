@@ -197,7 +197,9 @@ jobs:
           export GIT_CONFIG_COUNT=1
           export GIT_CONFIG_KEY_0=http.https://github.com/.extraheader
           export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $git_auth"
-          git push --dry-run origin HEAD:main
+          # Jobs can queue for hours while main advances; probe from the current tip.
+          git fetch --depth=1 origin main
+          git push --dry-run origin FETCH_HEAD:refs/heads/main
           echo "durable Git write authentication verified"
           if [[ -z "$BENCH_RUN_DATE" ]]; then
             export BENCH_RUN_DATE="$(date -u +%F)"
