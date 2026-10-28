@@ -44,13 +44,13 @@ run_one llama-rocm-halo    "${SCRIPT_DIR}/build.sh" llama-rocm-halo    --ref=mas
 # (ccache makes this incremental), then assemble the runtime from that wheel.
 run_one vllm-cuda-spark-whl "${SCRIPT_DIR}/build.sh" vllm-cuda-spark-wheel --ref=main --tag="$TAG"
 run_one vllm-cuda-spark     "${SCRIPT_DIR}/build.sh" vllm-cuda-spark \
-            --build-arg "WHEEL_IMAGE=10.161.176.38:8443/inferstation/vllm-wheel-spark:$TAG" \
+            --build-arg "WHEEL_IMAGE=${INFERSTATION_REGISTRY:-ghcr.io/inferstation}/vllm-wheel-spark:$TAG" \
             --tag="$TAG"
 # vllm-rocm-halo is now two-stage: build the wheel pkg from main (ccache makes
 # this incremental), then assemble the runtime from that exact nightly wheel.
 run_one vllm-rocm-halo-whl "${SCRIPT_DIR}/build.sh" vllm-rocm-halo-wheel --ref=main --tag="$TAG"
 run_one vllm-rocm-halo     "${SCRIPT_DIR}/build.sh" vllm-rocm-halo \
-            --build-arg "WHEEL_IMAGE=10.161.176.38:8443/inferstation/vllm-wheel-halo:$TAG" \
+            --build-arg "WHEEL_IMAGE=${INFERSTATION_REGISTRY:-ghcr.io/inferstation}/vllm-wheel-halo:$TAG" \
             --tag="$TAG"
 
 # --- 2 mirror profiles: ggml-org publishes `full-vulkan` as the rolling latest.
@@ -66,18 +66,19 @@ run_one llama-vulkan-halo  "${SCRIPT_DIR}/build.sh" llama-vulkan-halo \
 # spark hosts run cuda + vulkan-spark + vllm-cuda; halo hosts run vulkan-halo +
 # rocm-halo + vllm-rocm. We `docker pull` :latest on each so subsequent
 # `docker run` (from hb-llama wrapper, which does NOT pull) uses the new image.
-SSH_LOCAL_CMD="ssh -F /home/lkang/.ssh/config -i /home/lkang/.ssh/id_rsa"
-REGISTRY="10.161.176.38:8443"
+SSH_LOCAL_CMD="${INFERSTATION_SSH:-ssh -o BatchMode=yes}"
+REGISTRY="${INFERSTATION_REGISTRY:-ghcr.io/inferstation}"
+RELAY="${INFERSTATION_RELAY:?set INFERSTATION_RELAY (user@relay-host)}"
 
 pull_on_host() {
   local host="$1"; shift
   local images=("$@")
   local cmd=""
   for img in "${images[@]}"; do
-    cmd+="sudo docker pull ${REGISTRY}/inferstation/${img}:latest && "
+    cmd+="sudo docker pull ${REGISTRY}/${img}:latest && "
   done
   cmd+="echo done"
-  $SSH_LOCAL_CMD amd@10.161.176.110 "ssh ${host} $(printf '%q' "$cmd")"
+  $SSH_LOCAL_CMD "$RELAY" "ssh ${host} $(printf '%q' "$cmd")"
 }
 
 run_one pull-spark1 pull_on_host spark1 llama-cuda-spark llama-vulkan-spark vllm-cuda-spark

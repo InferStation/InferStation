@@ -88,7 +88,7 @@ flowchart LR
 The frontend and backend are separate deployment units:
 
 - Next.js is statically exported and copied to
-  `/home/lkang/inferstation/site`.
+  `~/inferstation/site`.
 - Eval Hub is built from `services/llm-eval-hub` in the server source checkout
   and runs as the `inferstation-eval-hub` Compose project.
 - PostgreSQL, Redis, and artifacts use dedicated persistent volumes.

@@ -10,9 +10,9 @@
 # Lock so concurrent timers don't trample each other.
 set -euo pipefail
 
-REPO="${REPO:-/home/lkang/codes/InferStation}"
-SSH="ssh -F /home/lkang/.ssh/config -i /home/lkang/.ssh/id_rsa -o BatchMode=yes -o ConnectTimeout=10"
-DEPLOY_TARGET="${DEPLOY_TARGET:-lkang@10.161.176.110:/home/lkang/inferstation/site/}"
+REPO="${REPO:-$HOME/codes/InferStation}"
+SSH="ssh -o BatchMode=yes -o ConnectTimeout=10"
+DEPLOY_TARGET="${DEPLOY_TARGET:?set DEPLOY_TARGET (user@host:/path/to/site/)}"
 LOG="${LOG:-/tmp/inferstation-watch.log}"
 LOCK="/tmp/inferstation-watch.lock"
 
@@ -48,7 +48,7 @@ if [[ "$CHANGED" -eq 0 ]]; then
 fi
 
 log "build start"
-export PATH="/home/lkang/.local/node20/bin:$PATH"
+export PATH="$HOME/.local/node20/bin:$PATH"
 if ! pnpm build >>"$LOG" 2>&1; then
   log "build FAILED"
   exit 1

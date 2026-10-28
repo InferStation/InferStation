@@ -55,8 +55,8 @@ REGISTRY = REPO / "bench" / "registry.yaml"
 
 # Private container registry serving InferStation's official engine images.
 # Configured as insecure-registry on every bench host; `docker login` must
-# already be cached (see /memories/api-keys.md for credentials).
-INFER_REGISTRY = os.environ.get("INFER_REGISTRY", "10.161.176.9:8443")
+# already be cached (credentials are not stored in this repository).
+INFER_REGISTRY = os.environ.get("INFER_REGISTRY", "registry.invalid")
 
 # Newer InferStation images are published on GHCR. Keep the old INFER_REGISTRY
 # default for legacy entries, but let registry.yaml point runs at GHCR images.
@@ -219,7 +219,7 @@ HOSTS = {
         "chip": "RDNA3 gfx1100 x2",
         "vram_gb": 96,
         "form": "workstation",
-        "models_root": "/home/lkang/inferstation/models",
+        "models_root": os.environ.get("INFERSTATION_W7900_MODELS_ROOT", os.path.expanduser("~/inferstation/models")),
         "backends": {
             "vllm-rocm": f"{GHCR_REGISTRY}/vllm-rocm-w7900-main:latest",
         },
@@ -558,6 +558,7 @@ def ensure_model(host_cfg: dict, model_slug: str, model_def: dict, quant: str) -
             return snap_dir
 
         archive_url = qdef.get("archive_url") or model_def.get("archive_url")
+        archive_url = os.path.expandvars(archive_url) if archive_url else archive_url
         archive_sha256 = qdef.get("archive_sha256") or model_def.get("archive_sha256")
         if archive_url:
             if not archive_sha256:
@@ -656,6 +657,7 @@ def ensure_model(host_cfg: dict, model_slug: str, model_def: dict, quant: str) -
         return path
     repo = qdef.get("hf_repo") or model_def.get("hf_repo")
     download_url = qdef.get("download_url")
+    download_url = os.path.expandvars(download_url) if download_url else download_url
     if not download_url and not repo:
         raise RuntimeError(f"missing {path} and no hf_repo configured for {model_slug}:{quant}")
     url = download_url or f"{HF_ENDPOINT}/{repo}/resolve/main/{fn}"
@@ -1606,7 +1608,7 @@ def main() -> int:
     ap.add_argument("--resume-existing", choices=("none", "date", "any"), default=os.environ.get("BENCH_RESUME_EXISTING", "none"), help="Skip selected runs that already have successful result JSONs. date checks BENCH_RUN_DATE; any checks all dates.")
     ap.add_argument(
         "--image", default=os.environ.get("BENCH_IMAGE", ""),
-        help="Override container image for ALL selected runs (e.g. 10.161.176.9:8443/inferstation/llama-cuda-spark:dev). "
+        help="Override container image for ALL selected runs (e.g. ghcr.io/inferstation/llama-cuda-spark:dev). "
              "Beats both registry.yaml `image:` and the host's default backend image.",
     )
     args = ap.parse_args()

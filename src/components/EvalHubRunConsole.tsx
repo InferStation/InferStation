@@ -29,7 +29,7 @@ import {
 } from "@/lib/evalHubRunProgress";
 
 const defaultApiBase =
-  process.env.NEXT_PUBLIC_EVAL_HUB_API_BASE || "http://10.170.38.102:18080/api/v1";
+  process.env.NEXT_PUBLIC_EVAL_HUB_API_BASE || "http://localhost:18080/api/v1";
 
 type BusyAction = "connect" | "endpoint" | "probe" | "validate" | "run" | "cancel" | "history" | null;
 

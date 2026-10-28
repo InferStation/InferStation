@@ -36,7 +36,7 @@
 # re-pushing, so mirroring will not unlink packages.
 set -uo pipefail
 
-HARBOR_HOST="${HARBOR_HOST:-10.161.176.38:8443}"
+HARBOR_HOST="${HARBOR_HOST:?set HARBOR_HOST (retired Harbor; legacy only)}"
 HARBOR_PROJECT="${HARBOR_PROJECT:-inferstation}"
 HARBOR_API="http://${HARBOR_HOST}/api/v2.0"
 HARBOR="${HARBOR_HOST}/${HARBOR_PROJECT}"

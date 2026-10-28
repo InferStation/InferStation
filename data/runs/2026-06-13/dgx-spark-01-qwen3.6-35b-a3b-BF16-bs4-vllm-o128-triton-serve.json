@@ -42,7 +42,7 @@
   "n_gpu_layers": null,
   "vram_used_gb": null,
   "scenario": "serve-stream-in512-out128-c1x4x16x32-attn-triton",
-  "image": "10.161.176.9:8443/inferstation/vllm-cuda-spark:nightly-20260613",
+  "image": "registry.internal/inferstation/vllm-cuda-spark:nightly-20260613",
   "image_tag": "nightly-20260613",
   "usability_tag": "ok",
   "log_url": "",

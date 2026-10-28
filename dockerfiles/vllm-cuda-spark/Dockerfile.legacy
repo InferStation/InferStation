@@ -18,7 +18,7 @@
 # Build:
 #   docker build --build-arg VLLM_TAG=v0.22.0 \
 #     --build-arg TORCH_CUDA_ARCH_LIST=12.1 \
-#     -t 10.161.176.38:8443/inferstation/vllm-cuda-spark:v0.22.0-sm121 .
+#     -t ghcr.io/inferstation/vllm-cuda-spark:v0.22.0-sm121 .
 #
 # Expected build time: 30-60 min on Spark.
 

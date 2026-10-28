@@ -6,7 +6,7 @@
 # Other tags (release tags, :latest, dev branches) are NEVER touched.
 
 set -euo pipefail
-HARBOR="${HARBOR:-http://10.161.176.38:8443}"   # Harbor here is HTTP-on-8443 (RETIRED)
+HARBOR="${HARBOR:?set HARBOR (retired; legacy only)}"   # Harbor here is HTTP-on-8443 (RETIRED)
 PROJECT="inferstation"
 USER="admin"
 PASS="${HARBOR_PASS:-}"

@@ -6,13 +6,13 @@ and the LLM Eval Hub backend on the RTX4090 host.
 ## 1. Production layout
 
 ```text
-/home/lkang/codes/InferStation/              Git source checkout
+~/codes/InferStation/              Git source checkout
 ├── out/                                     generated frontend export
 ├── services/llm-eval-hub/                  backend source
 └── deploy/llm-eval-hub/                    production override/example
 
-/home/lkang/inferstation/site/              Nginx static content only
-/home/lkang/inferstation/eval-hub.env       backend secrets/config, mode 0600
+~/inferstation/site/              Nginx static content only
+~/inferstation/eval-hub.env       backend secrets/config, mode 0600
 
 Docker project inferstation-eval-hub
 ├── web          0.0.0.0:18080
@@ -24,12 +24,12 @@ Docker project inferstation-eval-hub
 ```
 
 The Nginx container continues to serve only
-`/home/lkang/inferstation/site`. Backend code and state must never be placed in
+`~/inferstation/site`. Backend code and state must never be placed in
 that directory because frontend deployment uses `rsync --delete`.
 
 ## 2. Required preflight
 
-Run as `lkang` in `/home/lkang/codes/InferStation`:
+Run as the deploy user in `~/codes/InferStation`:
 
 ```bash
 git status --short
@@ -37,7 +37,7 @@ git rev-parse HEAD
 docker compose version
 docker ps --format '{{.Names}}\t{{.Status}}\t{{.Ports}}'
 docker volume ls
-df -h /home/lkang /var/lib/docker
+df -h "$HOME" /var/lib/docker
 ```
 
 Stop before changing anything when:
@@ -58,8 +58,8 @@ overwrite an existing environment and generates all three secrets locally:
 
 ```bash
 ./services/llm-eval-hub/scripts/generate_deploy_env.sh \
-  /home/lkang/inferstation/eval-hub.env \
-  http://10.170.38.102:8200 \
+  ~/inferstation/eval-hub.env \
+  http://<eval-hub-host>:8200 \
   deploy/llm-eval-hub/rtx4090.env.example
 ```
 
@@ -73,7 +73,7 @@ Validate the merged Compose configuration before starting it:
 
 ```bash
 docker compose \
-  --env-file /home/lkang/inferstation/eval-hub.env \
+  --env-file ~/inferstation/eval-hub.env \
   -f services/llm-eval-hub/compose.deploy.yml \
   -f deploy/llm-eval-hub/compose.rtx4090.yml \
   config --quiet
@@ -83,7 +83,7 @@ Start and wait for health checks:
 
 ```bash
 docker compose \
-  --env-file /home/lkang/inferstation/eval-hub.env \
+  --env-file ~/inferstation/eval-hub.env \
   -f services/llm-eval-hub/compose.deploy.yml \
   -f deploy/llm-eval-hub/compose.rtx4090.yml \
   up -d --build --wait
@@ -93,7 +93,7 @@ Register the immutable benchmark and smoke datasets idempotently:
 
 ```bash
 docker compose \
-  --env-file /home/lkang/inferstation/eval-hub.env \
+  --env-file ~/inferstation/eval-hub.env \
   -f services/llm-eval-hub/compose.deploy.yml \
   -f deploy/llm-eval-hub/compose.rtx4090.yml \
   run --rm benchmark-register
@@ -105,16 +105,16 @@ The existing manual chain remains authoritative:
 
 ```bash
 git pull --ff-only origin main
-export PATH=/home/lkang/.local/node20/bin:$PATH
+export PATH=~/.local/node20/bin:$PATH
 pnpm install --frozen-lockfile
 pnpm build
-rsync -a --delete out/ /home/lkang/inferstation/site/
+rsync -a --delete out/ ~/inferstation/site/
 ```
 
 Before `rsync`, record the Git SHA and verify that `out/accuracy/index.html`
 and `out/accuracy/run/index.html` exist. On the first deployment of a new
 revision, retain one copy of the current static site under
-`/home/lkang/inferstation/site-backups/` before replacement. Do not copy the
+`~/inferstation/site-backups/` before replacement. Do not copy the
 repository root or backend directories into `site/`.
 
 ## 5. Verification
@@ -129,7 +129,7 @@ Also verify:
 
 - Performance Overview, Summary, Charts, Compare, Runs, and History still load;
 - Accuracy Results shows Preview or reviewed results as expected;
-- Run evaluation connects to `http://10.170.38.102:18080/api/v1`;
+- Run evaluation connects to `http://<eval-hub-host>:18080/api/v1`;
 - the dataset list includes the clearly labeled ten-row smoke pack;
 - `data/runs` and Performance manifest counts are unchanged by the feature;
 - the backend containers respect CPU/memory limits; and
@@ -159,7 +159,7 @@ From `services/llm-eval-hub`, create a backup during a quiet period:
 
 ```bash
 ./scripts/backup.sh \
-  --env-file /home/lkang/inferstation/eval-hub.env
+  --env-file ~/inferstation/eval-hub.env
 ```
 
 Store the complete backup outside the Docker host when practical. It includes
@@ -173,7 +173,7 @@ and never replace an existing encryption key.
 
 ```bash
 docker compose \
-  --env-file /home/lkang/inferstation/eval-hub.env \
+  --env-file ~/inferstation/eval-hub.env \
   -f services/llm-eval-hub/compose.deploy.yml \
   -f deploy/llm-eval-hub/compose.rtx4090.yml \
   ps

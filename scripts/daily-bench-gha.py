@@ -18,7 +18,7 @@ from urllib import error, parse, request
 
 ROOT = Path(__file__).resolve().parents[1]
 UNITS_DIR = Path(os.environ.get("INFERSTATION_UNITS_DIR", ROOT / "admin_api" / "units"))
-LEGACY_DAILY_SCRIPT = Path(os.environ.get("INFERSTATION_LEGACY_DAILY_SCRIPT", "/home/lkang/bin/inferstation-daily-bench.sh"))
+LEGACY_DAILY_SCRIPT = Path(os.environ.get("INFERSTATION_LEGACY_DAILY_SCRIPT", str(Path.home() / "bin/inferstation-daily-bench.sh")))
 
 REPRESENTATIVE_MODELS = {
     "Gemma-4-26B-A4B-it",

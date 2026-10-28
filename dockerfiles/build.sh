@@ -27,7 +27,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # (rewritten to ghcr via INFERSTATION_REGISTRY in CI). Harbor retired 2026-06-24.
 REGISTRY="ghcr.io/inferstation"
 
-SSH_LOCAL="ssh -F /home/lkang/.ssh/config -i /home/lkang/.ssh/id_rsa -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=25"
+SSH_LOCAL="${INFERSTATION_SSH:-ssh -o BatchMode=yes -o ConnectTimeout=25}"
 
 list_profiles() {
   find "$SCRIPT_DIR" -mindepth 2 -maxdepth 2 -name meta.json | sort | \
@@ -115,7 +115,7 @@ run_on() {
       ;;
     9700|9700x8|4090)
       # 9700 / 9700x8 / 4090 run docker as root via passwordless sudo, reached
-      # DIRECTLY through lkang's ssh config (NOT the amd@.110 relay). They are
+      # DIRECTLY through the CI user's ssh config (NOT the relay). They are
       # single-host families (family_of_host returns "" -> unpooled), so the
       # pinned meta build_host is used as-is.
       local sudoed

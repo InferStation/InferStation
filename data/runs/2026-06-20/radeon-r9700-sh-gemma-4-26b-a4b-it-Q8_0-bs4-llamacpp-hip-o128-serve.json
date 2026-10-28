@@ -41,7 +41,7 @@
   "n_gpu_layers": null,
   "vram_used_gb": null,
   "scenario": "serve-stream-in512-out128-c1x4x8",
-  "image": "10.161.176.38:8443/inferstation/llama-rocm-r9700:latest",
+  "image": "registry.internal/inferstation/llama-rocm-r9700:latest",
   "image_tag": "latest",
   "usability_tag": "ok",
   "log_url": "",

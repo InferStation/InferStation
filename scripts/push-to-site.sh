@@ -7,8 +7,8 @@
 set -euo pipefail
 
 REPO="${REPO:-$HOME/InferStation}"
-SITE_HOST="${SITE_HOST:-amd@10.161.176.110}"
-SITE_ROOT="${SITE_ROOT:-/home/lkang/inferstation/site}"
+SITE_HOST="${SITE_HOST:?set SITE_HOST (user@host of the site server)}"
+SITE_ROOT="${SITE_ROOT:?set SITE_ROOT (static root on the site server)}"
 
 cd "$REPO"
 

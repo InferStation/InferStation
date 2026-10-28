@@ -41,7 +41,7 @@
   "n_gpu_layers": null,
   "vram_used_gb": null,
   "scenario": "serve-stream-in512-out128-c1x4x16x32",
-  "image": "10.161.176.9:8443/inferstation/llama-vulkan-halo:latest",
+  "image": "registry.internal/inferstation/llama-vulkan-halo:latest",
   "image_tag": "latest",
   "usability_tag": "ok",
   "log_url": "",

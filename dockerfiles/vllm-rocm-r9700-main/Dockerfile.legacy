@@ -17,7 +17,7 @@
 #   ./build.sh vllm-rocm-r9700-main --no-push          # validate
 #   ./build.sh vllm-rocm-r9700-main                    # build + push
 
-ARG VLLM_BASE=10.161.176.38:8443/inferstation/vllm-rocm-r9700:commit-gfx1201-20260619
+ARG VLLM_BASE=ghcr.io/inferstation/vllm-rocm-r9700:commit-gfx1201-20260619
 ARG VLLM_REPO=https://github.com/vllm-project/vllm.git
 ARG VLLM_TAG=v0.22.0
 ARG PYTORCH_ROCM_ARCH=gfx1201
