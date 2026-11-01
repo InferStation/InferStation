@@ -559,6 +559,8 @@ def ensure_model(host_cfg: dict, model_slug: str, model_def: dict, quant: str) -
 
         archive_url = qdef.get("archive_url") or model_def.get("archive_url")
         archive_url = os.path.expandvars(archive_url) if archive_url else archive_url
+        if archive_url and "$" in archive_url:
+            raise RuntimeError(f"unset variable in archive_url {archive_url!r}; set INFERSTATION_MODEL_MIRROR")
         archive_sha256 = qdef.get("archive_sha256") or model_def.get("archive_sha256")
         if archive_url:
             if not archive_sha256:
@@ -658,6 +660,11 @@ def ensure_model(host_cfg: dict, model_slug: str, model_def: dict, quant: str) -
     repo = qdef.get("hf_repo") or model_def.get("hf_repo")
     download_url = qdef.get("download_url")
     download_url = os.path.expandvars(download_url) if download_url else download_url
+    if download_url and "$" in download_url:
+        if not repo:
+            raise RuntimeError(f"unset variable in download_url {download_url!r}; set INFERSTATION_MODEL_MIRROR")
+        print(f"[warn] unset variable in {download_url!r}; falling back to {HF_ENDPOINT}")
+        download_url = None
     if not download_url and not repo:
         raise RuntimeError(f"missing {path} and no hf_repo configured for {model_slug}:{quant}")
     url = download_url or f"{HF_ENDPOINT}/{repo}/resolve/main/{fn}"

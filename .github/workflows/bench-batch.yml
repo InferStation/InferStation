@@ -159,6 +159,7 @@ jobs:
       - name: Run bench-batch directly
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          INFERSTATION_MODEL_MIRROR: ${{ vars.INFERSTATION_MODEL_MIRROR }}
           BENCH_GIT_PAT: ${{ secrets.GHCR_PAT }}
           BENCH_TARGET: ${{ inputs.target || 'all' }}
           BENCH_RUNNER_LABEL: ${{ inputs.runner_label || '' }}
