@@ -1627,6 +1627,13 @@ def main() -> int:
     base_runs = scope_base_runs(expanded_runs, args.scope, args.filter)
     runs = select(base_runs, args.filter)
     runs = shard_runs(runs, args.shard_index, args.shard_count)
+    # Run each (host, model, quant) back to back so its artifact is freed before the
+    # next is downloaded; the registry order otherwise holds every quant until the
+    # second backend pass. Stable sort keeps the in-group order; shard membership is unchanged.
+    first_seen: dict[tuple[str, str, str], int] = {}
+    for i, r in enumerate(runs):
+        first_seen.setdefault((r["host"], r["model"], r["quant"]), i)
+    runs.sort(key=lambda r: first_seen[(r["host"], r["model"], r["quant"])])
     if args.result_host:
         runs = [{**r, "result_host": args.result_host} for r in runs]
     if args.resume_existing != "none":
