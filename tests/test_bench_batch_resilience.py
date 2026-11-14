@@ -117,8 +117,44 @@ class RetryTests(unittest.TestCase):
             bench_batch.os.environ,
             {"BENCH_GPU_DEVICE": "2,3,5,6"},
         ):
-            result = bench_batch.apply_gpu_device(docker_extra)
+            result = bench_batch.apply_gpu_device(docker_extra, "radeon-r9700-sh", 4)
+            single = bench_batch.apply_gpu_device(docker_extra, "radeon-r9700-sh", 1)
         self.assertIn("-e ROCR_VISIBLE_DEVICES=2,3,5,6", result)
+        self.assertIn("-e ROCR_VISIBLE_DEVICES=2 ", single)
+
+    def test_multi_gpu_hosts_pin_exactly_tp_gpus(self):
+        rocm = "--device=/dev/kfd --device=/dev/dri --group-add video"
+        vulkan = "--device=/dev/dri --group-add video"
+        with mock.patch.dict(bench_batch.os.environ, {"BENCH_GPU_DEVICE": ""}):
+            for tp, ids in ((1, "0"), (2, "0,1"), (4, "0,1,2,3")):
+                r = bench_batch.apply_gpu_device(rocm, "radeon-r9700-sh", tp)
+                self.assertIn(f"ROCR_VISIBLE_DEVICES={ids} ", r)
+                v = bench_batch.apply_gpu_device(vulkan, "radeon-r9700-sh", tp)
+                self.assertTrue(v.endswith(f"GGML_VK_VISIBLE_DEVICES={ids}"), v)
+            self.assertIn(
+                "--gpus '\"device=0\"'",
+                bench_batch.apply_gpu_device("--gpus all", "rtx-4090-sh", 1),
+            )
+            self.assertEqual(
+                bench_batch.apply_gpu_device(
+                    "--device nvidia.com/gpu=all -e X=1", "rtx-4090-sh", 2
+                ),
+                "--device nvidia.com/gpu=0 --device nvidia.com/gpu=1 -e X=1",
+            )
+            self.assertEqual(bench_batch.apply_gpu_device(vulkan, "ryzen-ai-max-395-03", 1), vulkan)
+
+    def test_gpu_device_list_shorter_than_tp_is_rejected(self):
+        with mock.patch.dict(bench_batch.os.environ, {"BENCH_GPU_DEVICE": "5"}):
+            with self.assertRaisesRegex(ValueError, "fewer than tp=2"):
+                bench_batch.apply_gpu_device("--device=/dev/kfd", "radeon-r9700-sh", 2)
+
+    def test_min_tp_fit_uses_fewest_gpus(self):
+        gib = 2**30
+        self.assertEqual(bench_batch.min_tp_fit("radeon-r9700-sh", 25 * gib), 1)
+        self.assertEqual(bench_batch.min_tp_fit("radeon-r9700-sh", 34 * gib), 2)
+        self.assertEqual(bench_batch.min_tp_fit("radeon-r9700-sh", 64 * gib), 4)
+        self.assertEqual(bench_batch.min_tp_fit("rtx-4090-sh", 35 * gib), 1)
+        self.assertEqual(bench_batch.min_tp_fit("dgx-spark-01", 99 * gib), 1)
 
     def test_gpu_device_list_rejects_duplicates(self):
         with mock.patch.dict(

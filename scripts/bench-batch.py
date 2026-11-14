@@ -423,6 +423,14 @@ def host_readlink(path: str) -> str:
     return out.removeprefix("/hostfs")
 
 
+def host_file_size(path: str) -> int:
+    out = sh(
+        f"{DOCKER} run --rm -v /:/hostfs:ro alpine:3 stat -L -c %s /hostfs{shlex.quote(path)}",
+        capture=True,
+    ).strip()
+    return int(out)
+
+
 def resolve_image(entry: dict, host_cfg: dict, backend: str, override: str | None) -> str:
     """Pick the container image for one run.
 
@@ -444,27 +452,62 @@ def resolve_image(entry: dict, host_cfg: dict, backend: str, override: str | Non
     return host_backends[backend]
 
 
-def apply_gpu_device(docker_extra: str) -> str:
-    """Pin NVIDIA or ROCm Docker launches when BENCH_GPU_DEVICE is set."""
+# Workstations with several GPUs: every unit gets exactly `tp` GPUs.
+# Value = usable weight budget per GPU in GiB (R9700 28GB/卡 rule, 48GB cards keep 4GiB headroom).
+MULTI_GPU_HOSTS = {"rtx-4090-sh": 44, "radeon-r9700-sh": 28, "radeon-w7900d": 44}
+
+
+def min_tp_fit(host: str, model_bytes: int) -> int:
+    """Fewest GPUs (1, 2, 4, 8) whose weight budget holds the model."""
+    budget = MULTI_GPU_HOSTS.get(host)
+    if budget is None:
+        return 1
+    for tp in (1, 2, 4, 8):
+        if model_bytes <= tp * budget * 2**30:
+            return tp
+    raise ValueError(f"{model_bytes / 2**30:.1f} GiB does not fit {host}")
+
+
+def select_gpu_devices(host: str, tp: int) -> list[str] | None:
+    """Return the GPU ids a unit may see, or None to leave visibility alone."""
+    if tp < 1:
+        raise ValueError(f"invalid tp: {tp}")
     gpu_devices = os.environ.get("BENCH_GPU_DEVICE", "").strip()
     if not gpu_devices:
-        return docker_extra
+        if host not in MULTI_GPU_HOSTS:
+            return None
+        return [str(i) for i in range(tp)]
     if not re.fullmatch(r"\d+(,\d+)*", gpu_devices):
         raise ValueError(f"invalid BENCH_GPU_DEVICE: {gpu_devices!r}")
     device_ids = [str(int(value)) for value in gpu_devices.split(",")]
     if len(device_ids) != len(set(device_ids)):
         raise ValueError(f"duplicate BENCH_GPU_DEVICE: {gpu_devices!r}")
+    if len(device_ids) < tp:
+        raise ValueError(f"BENCH_GPU_DEVICE {gpu_devices!r} has fewer than tp={tp} GPUs")
+    return device_ids[:tp]
+
+
+def apply_gpu_device(docker_extra: str, host: str = "", tp: int = 1) -> str:
+    """Restrict a Docker launch to the GPUs chosen by select_gpu_devices."""
+    device_ids = select_gpu_devices(host, tp)
+    if device_ids is None:
+        return docker_extra
     gpu_devices = ",".join(device_ids)
     if "--gpus all" in docker_extra:
-        return docker_extra.replace("--gpus all", f"--gpus device={gpu_devices}", 1)
+        return docker_extra.replace("--gpus all", f"--gpus '\"device={gpu_devices}\"'", 1)
     if "--device nvidia.com/gpu=all" in docker_extra:
         devices = " ".join(
             f"--device nvidia.com/gpu={device_id}" for device_id in device_ids
         )
         return docker_extra.replace("--device nvidia.com/gpu=all", devices, 1)
     if "--device=/dev/kfd" in docker_extra:
-        return f"{docker_extra} -e ROCR_VISIBLE_DEVICES={gpu_devices}"
-    raise ValueError("BENCH_GPU_DEVICE requires NVIDIA or ROCm Docker args")
+        return (
+            f"{docker_extra} -e ROCR_VISIBLE_DEVICES={gpu_devices} "
+            f"-e GGML_VK_VISIBLE_DEVICES={gpu_devices}"
+        )
+    if "--device=/dev/dri" in docker_extra:
+        return f"{docker_extra} -e GGML_VK_VISIBLE_DEVICES={gpu_devices}"
+    raise ValueError("GPU pinning requires NVIDIA, ROCm or Vulkan Docker args")
 
 
 def resolve_gpu_memory_utilization(entry: dict) -> float:
@@ -1221,6 +1264,7 @@ def write_serve_record(
         "concurrency": npl,
         "n_gpu_layers": None,
         "vram_used_gb": None,
+        "gpu_count": int(entry.get("tp", 1)),
         "scenario": scenario,
         "image": image_ref,
         "image_tag": image_tag(image_ref),
@@ -1246,14 +1290,16 @@ def run_one_vllm(entry: dict, models: dict, image_override: str | None) -> Path:
     quant = entry["quant"]
     backend = entry.get("backend", "vllm")
     bcfg = BACKENDS[backend]
-    docker_extra = apply_gpu_device(entry.get("docker_extra") or bcfg["docker_extra"])
+    tp = int(entry.get("tp", 1))
+    docker_extra = apply_gpu_device(
+        entry.get("docker_extra") or bcfg["docker_extra"], host_slug, tp
+    )
     model_def = models[model_slug]
     snap_dir = ensure_model(host_cfg, model_slug, model_def, quant)
     real_dir = host_readlink(snap_dir) or snap_dir
     image_ref = resolve_image(entry, host_cfg, backend, image_override)
     engine_commit = ensure_image(image_ref, backend=backend)
     image_manifest_digest = image_digest(image_ref)
-    tp = int(entry.get("tp", 1))
     pp = int(entry.get("pp", 512))
     tg = int(entry.get("tg", 128))
     npl = int(entry.get("npl", 1))
@@ -1345,6 +1391,13 @@ def run_one(entry: dict, models: dict, image_override: str | None) -> list[Path]
     real_path = host_readlink(model_path)
     real_dir = os.path.dirname(real_path)
     real_fn = os.path.basename(real_path)
+    if "tp" in entry:
+        tp = int(entry["tp"])
+    elif host_slug in MULTI_GPU_HOSTS:
+        tp = min_tp_fit(host_slug, host_file_size(real_path))
+    else:
+        tp = 1
+    entry = dict(entry, tp=tp)
     image_ref = resolve_image(entry, host_cfg, backend, image_override)
     engine_commit = ensure_image(image_ref, backend=backend)
     image_manifest_digest = image_digest(image_ref)
@@ -1375,8 +1428,11 @@ def run_one(entry: dict, models: dict, image_override: str | None) -> list[Path]
         f"exec \"$server_bin\" -m /models/{shlex.quote(real_fn)} -ngl 999 "
         f"--host 0.0.0.0 --port {port} --alias {shlex.quote(model_name)} "
         f"-c {ctx_size} -np {max_npl} -fa on -cb --no-webui"
+        f"{' -sm none' if tp == 1 else ''}"
     )
-    docker_extra = apply_gpu_device(entry.get("docker_extra") or bcfg["docker_extra"])
+    docker_extra = apply_gpu_device(
+        entry.get("docker_extra") or bcfg["docker_extra"], host_slug, tp
+    )
     base_url = f"http://127.0.0.1:{port}"
     sh(f"{DOCKER} rm -f {shlex.quote(container_name)} >/dev/null 2>&1 || true", check=False)
     try:
