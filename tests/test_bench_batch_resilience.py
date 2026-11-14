@@ -156,6 +156,15 @@ class RetryTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "fewer than tp=2"):
                 bench_batch.apply_gpu_device("--device=/dev/kfd", "radeon-r9700-sh", 2)
 
+    def test_cpu_fallback_fails_unit(self):
+        logs = subprocess.CompletedProcess("", 0, "warning: no usable GPU found, --gpu-layers option will be ignored\n", "")
+        with mock.patch.object(bench_batch.subprocess, "run", return_value=logs):
+            with self.assertRaisesRegex(RuntimeError, "no GPU"):
+                bench_batch.assert_llama_on_gpu("c")
+        self.assertFalse(bench_batch.retryable_run_failure(RuntimeError("llama-server has no GPU")))
+        for key in (("radeon-r9700-sh", "vulkan"), ("ryzen-ai-max-395-03", "vulkan")):
+            self.assertIn("icd.d/radeon_icd.json", bench_batch.WEEKLY_DOCKER_EXTRA[key])
+
     def test_min_tp_fit_uses_fewest_gpus(self):
         gib = 2**30
         self.assertEqual(bench_batch.min_tp_fit("radeon-r9700-sh", 25 * gib), 1)

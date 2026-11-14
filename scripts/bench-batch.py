@@ -247,11 +247,11 @@ WEEKLY_BACKEND_MAP = {
 WEEKLY_DOCKER_EXTRA = {
     ("ryzen-ai-max-395-03", "vulkan"): (
         "--device=/dev/dri --group-add video --security-opt seccomp=unconfined "
-        "-e VK_DRIVER_FILES=/usr/share/vulkan/icd.d/radeon_icd.x86_64.json"
+        "-e VK_DRIVER_FILES=/usr/share/vulkan/icd.d/radeon_icd.json"
     ),
     ("radeon-r9700-sh", "vulkan"): (
         "--device=/dev/dri --group-add video --security-opt seccomp=unconfined "
-        "-e VK_DRIVER_FILES=/usr/share/vulkan/icd.d/radeon_icd.x86_64.json"
+        "-e VK_DRIVER_FILES=/usr/share/vulkan/icd.d/radeon_icd.json"
     ),
     ("rtx-4090-sh", "vulkan"): (
         "--device nvidia.com/gpu=all "
@@ -1007,6 +1007,23 @@ def wait_health(base_url: str, container_name: str, *, timeout_s: int = 1800) ->
     raise RuntimeError(f"server health timeout after {timeout_s}s; last={last}\n{logs.stdout}\n{logs.stderr}")
 
 
+CPU_FALLBACK_MARKERS = ("no usable GPU found", "compiled without support for GPU offload")
+
+
+def assert_llama_on_gpu(container_name: str) -> None:
+    """Fail the unit when llama-server silently fell back to CPU."""
+    logs = subprocess.run(
+        f"{DOCKER} logs {shlex.quote(container_name)}",
+        shell=True,
+        text=True,
+        capture_output=True,
+    )
+    text = logs.stdout + logs.stderr
+    for marker in CPU_FALLBACK_MARKERS:
+        if marker in text:
+            raise RuntimeError(f"llama-server has no GPU ({marker!r}); refusing CPU result")
+
+
 def make_prompt(seq: int, approx_tokens: int) -> str:
     sentence = f"InferStation request {seq}: the quick brown fox jumps over the lazy dog. "
     reps = max(1, approx_tokens // 9 + 1)
@@ -1458,6 +1475,7 @@ def run_one(entry: dict, models: dict, image_override: str | None) -> list[Path]
             f"-lc {shlex.quote(cmd)}"
         )
         wait_health(base_url, container_name)
+        assert_llama_on_gpu(container_name)
         out_paths: list[Path] = []
         for npl in npls:
             bench = run_serve_client(base_url, model_name, concurrency=npl, input_len=pp, output_len=tg)
