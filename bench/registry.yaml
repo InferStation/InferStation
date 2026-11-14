@@ -162,7 +162,7 @@ runs:
   # ---- MiniCPM5-2.6B BF16 (vLLM, day-0 adaptation) ----
   - { host: ryzen-ai-max-395-03, model: minicpm5-2.6b, quant: BF16, backend: vllm-rocm, npls: [1, 4, 16, 32], image: "ghcr.io/inferstation/vllm-rocm-halo:latest" }
   - { host: dgx-spark-01, model: minicpm5-2.6b, quant: BF16, backend: vllm, npls: [1, 4, 16, 32], image: "ghcr.io/inferstation/vllm-cuda-spark:latest" }
-  - { host: rtx-4090-sh, model: minicpm5-2.6b, quant: BF16, backend: vllm, npls: [1, 4, 16, 32], image: "ghcr.io/inferstation/vllm-cuda-4090:nightly-20261030", docker_extra: "--gpus all --shm-size 16g --ipc=host" }
+  - { host: rtx-4090-sh, model: minicpm5-2.6b, quant: BF16, backend: vllm, npls: [1, 4, 16, 32], image: "ghcr.io/inferstation/vllm-cuda-4090:latest", docker_extra: "--gpus all --shm-size 16g --ipc=host" }
   - { host: radeon-r9700-sh, model: minicpm5-2.6b, quant: BF16, backend: vllm-rocm, npls: [1, 4, 16, 32], image: "ghcr.io/inferstation/vllm-rocm-r9700-main:latest" }
 
   # ---- qwen3.6-35b-a3b (cuda) ----
