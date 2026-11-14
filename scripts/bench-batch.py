@@ -197,7 +197,7 @@ HOSTS = {
             # the dual-4090 workstation.
             "cuda": "ghcr.io/ggml-org/llama.cpp:full-cuda",
             "vulkan": f"{GHCR_REGISTRY}/llama-vulkan-4090:latest",
-            "vllm": f"{GHCR_REGISTRY}/vllm-cuda-4090:latest",
+            "vllm": f"{GHCR_REGISTRY}/vllm-cuda-4090:nightly-20261030",
         },
     },
     "radeon-r9700-sh": {
