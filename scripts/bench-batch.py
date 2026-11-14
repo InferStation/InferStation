@@ -455,6 +455,21 @@ def resolve_image(entry: dict, host_cfg: dict, backend: str, override: str | Non
 # Workstations with several GPUs: every unit gets exactly `tp` GPUs.
 # Value = usable weight budget per GPU in GiB (R9700 28GB/卡 rule, 48GB cards keep 4GiB headroom).
 MULTI_GPU_HOSTS = {"rtx-4090-sh": 44, "radeon-r9700-sh": 28, "radeon-w7900d": 44}
+# Default GPUs (amd-smi / nvidia-smi index) per shared host; BENCH_GPU_DEVICE overrides.
+GPU_POOLS = {"radeon-r9700-sh": "1,2,5,6"}
+_RENDER_NODES: list[str] | None = None
+
+
+def host_render_nodes() -> list[str]:
+    """AMD render nodes ordered by PCI address, which is the amd-smi index order."""
+    global _RENDER_NODES
+    if _RENDER_NODES is None:
+        out = sh(f"{DOCKER} run --rm -v /dev/dri:/d:ro alpine:3 ls -l /d/by-path", capture=True)
+        pairs = re.findall(r"pci-(\S+)-render -> \.\./(renderD\d+)", out)
+        if not pairs:
+            raise RuntimeError("no /dev/dri/by-path render nodes found")
+        _RENDER_NODES = [f"/dev/dri/{node}" for _, node in sorted(pairs)]
+    return _RENDER_NODES
 
 
 def min_tp_fit(host: str, model_bytes: int) -> int:
@@ -472,7 +487,7 @@ def select_gpu_devices(host: str, tp: int) -> list[str] | None:
     """Return the GPU ids a unit may see, or None to leave visibility alone."""
     if tp < 1:
         raise ValueError(f"invalid tp: {tp}")
-    gpu_devices = os.environ.get("BENCH_GPU_DEVICE", "").strip()
+    gpu_devices = os.environ.get("BENCH_GPU_DEVICE", "").strip() or GPU_POOLS.get(host, "")
     if not gpu_devices:
         if host not in MULTI_GPU_HOSTS:
             return None
@@ -500,13 +515,14 @@ def apply_gpu_device(docker_extra: str, host: str = "", tp: int = 1) -> str:
             f"--device nvidia.com/gpu={device_id}" for device_id in device_ids
         )
         return docker_extra.replace("--device nvidia.com/gpu=all", devices, 1)
-    if "--device=/dev/kfd" in docker_extra:
-        return (
-            f"{docker_extra} -e ROCR_VISIBLE_DEVICES={gpu_devices} "
-            f"-e GGML_VK_VISIBLE_DEVICES={gpu_devices}"
-        )
-    if "--device=/dev/dri" in docker_extra:
-        return f"{docker_extra} -e GGML_VK_VISIBLE_DEVICES={gpu_devices}"
+    dri = re.compile(r"--device=/dev/dri(?=\s|$)")
+    if dri.search(docker_extra):
+        # Pass only the chosen render nodes; HIP/ROCr/Vulkan indices disagree on shared hosts.
+        nodes = host_render_nodes()
+        if max(int(i) for i in device_ids) >= len(nodes):
+            raise ValueError(f"GPU ids {gpu_devices} exceed {len(nodes)} render nodes")
+        devices = " ".join(f"--device={nodes[int(i)]}" for i in device_ids)
+        return dri.sub(devices, docker_extra, count=1)
     raise ValueError("GPU pinning requires NVIDIA, ROCm or Vulkan Docker args")
 
 

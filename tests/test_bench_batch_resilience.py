@@ -111,26 +111,34 @@ class RetryTests(unittest.TestCase):
         ):
             self.assertTrue(bench_batch.retryable_run_failure(error), str(error))
 
+    RENDER = [f"/dev/dri/renderD{n}" for n in (130, 131, 129, 128, 134, 135, 133, 132)]
+
     def test_rocm_gpu_device_list_is_pinned(self):
         docker_extra = "--device=/dev/kfd --device=/dev/dri --shm-size 16g"
         with mock.patch.dict(
             bench_batch.os.environ,
             {"BENCH_GPU_DEVICE": "2,3,5,6"},
-        ):
+        ), mock.patch.object(bench_batch, "host_render_nodes", return_value=self.RENDER):
             result = bench_batch.apply_gpu_device(docker_extra, "radeon-r9700-sh", 4)
             single = bench_batch.apply_gpu_device(docker_extra, "radeon-r9700-sh", 1)
-        self.assertIn("-e ROCR_VISIBLE_DEVICES=2,3,5,6", result)
-        self.assertIn("-e ROCR_VISIBLE_DEVICES=2 ", single)
+        self.assertEqual(
+            result,
+            "--device=/dev/kfd --device=/dev/dri/renderD129 --device=/dev/dri/renderD128 "
+            "--device=/dev/dri/renderD135 --device=/dev/dri/renderD133 --shm-size 16g",
+        )
+        self.assertEqual(single, "--device=/dev/kfd --device=/dev/dri/renderD129 --shm-size 16g")
 
     def test_multi_gpu_hosts_pin_exactly_tp_gpus(self):
         rocm = "--device=/dev/kfd --device=/dev/dri --group-add video"
         vulkan = "--device=/dev/dri --group-add video"
-        with mock.patch.dict(bench_batch.os.environ, {"BENCH_GPU_DEVICE": ""}):
-            for tp, ids in ((1, "0"), (2, "0,1"), (4, "0,1,2,3")):
+        with mock.patch.dict(bench_batch.os.environ, {"BENCH_GPU_DEVICE": ""}), \
+                mock.patch.object(bench_batch, "host_render_nodes", return_value=self.RENDER):
+            for tp, nodes in ((1, (131,)), (2, (131, 129)), (4, (131, 129, 135, 133))):
+                want = " ".join(f"--device=/dev/dri/renderD{n}" for n in nodes)
                 r = bench_batch.apply_gpu_device(rocm, "radeon-r9700-sh", tp)
-                self.assertIn(f"ROCR_VISIBLE_DEVICES={ids} ", r)
+                self.assertEqual(r, f"--device=/dev/kfd {want} --group-add video")
                 v = bench_batch.apply_gpu_device(vulkan, "radeon-r9700-sh", tp)
-                self.assertTrue(v.endswith(f"GGML_VK_VISIBLE_DEVICES={ids}"), v)
+                self.assertEqual(v, f"{want} --group-add video")
             self.assertIn(
                 "--gpus '\"device=0\"'",
                 bench_batch.apply_gpu_device("--gpus all", "rtx-4090-sh", 1),
@@ -162,7 +170,7 @@ class RetryTests(unittest.TestCase):
             {"BENCH_GPU_DEVICE": "2,3,2"},
         ):
             with self.assertRaisesRegex(ValueError, "duplicate"):
-                bench_batch.apply_gpu_device("--device=/dev/kfd")
+                bench_batch.apply_gpu_device("--device=/dev/kfd", "radeon-r9700-sh", 1)
 
     def test_gpu_memory_utilization_override(self):
         with mock.patch.dict(
