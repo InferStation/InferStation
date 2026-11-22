@@ -1526,7 +1526,30 @@ def run_one(entry: dict, models: dict, image_override: str | None) -> list[Path]
             file=sys.stderr,
             flush=True,
         )
+        wait_gpu_memory_released(apply_gpu_device(entry.get("docker_extra") or bcfg["docker_extra"], host_slug, 2))
         return serve(dict(entry, tp=2))
+
+
+SYSFS_DRM = "/sys/class/drm"
+
+
+def wait_gpu_memory_released(docker_extra: str, *, timeout_s: int = 120, sleeper=time.sleep) -> None:
+    """Wait until the GPUs in `docker_extra` no longer hold the failed server's VRAM."""
+    # A removed container's VRAM is freed a few seconds later; relaunching at once hits OOM again.
+    paths = [
+        f"{SYSFS_DRM}/{node}/device/mem_info_vram_used"
+        for node in re.findall(r"--device=/dev/dri/(renderD\d+)", docker_extra)
+    ]
+    paths = [p for p in paths if os.path.exists(p)]
+    if not paths:
+        sleeper(30)
+        return
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        if all(int(Path(p).read_text()) < 2 * 2**30 for p in paths):
+            return
+        sleeper(2)
+    print(f"[tp-grow] GPU memory still in use after {timeout_s}s: {paths}", file=sys.stderr, flush=True)
 
 
 GPU_OOM_MARKERS = ("out of memory", "failed to allocate", "erroroutofdevicememory")

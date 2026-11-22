@@ -3,6 +3,7 @@ import shlex
 import socket
 import subprocess
 import sys
+import tempfile
 import unittest
 import urllib.error
 from pathlib import Path
@@ -292,6 +293,7 @@ class LlamaGpuGrowthTests(unittest.TestCase):
 
     def run_unit(self, health_errors, entry=None):
         launches, records = [], []
+        self.release = mock.Mock()
 
         def shell(command, **_kwargs):
             if " run -d " in command:
@@ -320,6 +322,7 @@ class LlamaGpuGrowthTests(unittest.TestCase):
             mock.patch.object(
                 bench_batch.subprocess, "run", return_value=subprocess.CompletedProcess("", 0, "", "")
             ),
+            mock.patch.object(bench_batch, "wait_gpu_memory_released", self.release),
         ]
         for p in patches:
             p.start()
@@ -339,6 +342,29 @@ class LlamaGpuGrowthTests(unittest.TestCase):
         self.assertIn("--device=/dev/dri/renderD128 --device=/dev/dri/renderD129", launches[1])
         self.assertNotIn("-sm none", launches[1])
         self.assertEqual([r["tp"] for r in records], [2])
+        self.release.assert_called_once()
+        self.assertIn("renderD128 --device=/dev/dri/renderD129", self.release.call_args.args[0])
+
+    def test_retry_waits_for_previous_server_vram_to_be_freed(self):
+        with tempfile.TemporaryDirectory() as root:
+            files = []
+            for node in ("renderD128", "renderD129"):
+                d = Path(root, node, "device")
+                d.mkdir(parents=True)
+                files.append(d / "mem_info_vram_used")
+                files[-1].write_text(str(26 * 2**30))
+            files[1].write_text(str(57 * 2**20))
+            sleeps = []
+
+            def sleeper(seconds):
+                sleeps.append(seconds)
+                files[0].write_text(str(57 * 2**20))
+
+            with mock.patch.object(bench_batch, "SYSFS_DRM", root):
+                bench_batch.wait_gpu_memory_released(
+                    "--device=/dev/kfd --device=/dev/dri/renderD128 --device=/dev/dri/renderD129", sleeper=sleeper
+                )
+        self.assertEqual(sleeps, [2])
 
     def test_other_start_failures_do_not_add_gpus(self):
         with self.assertRaisesRegex(RuntimeError, "unknown model architecture"):
