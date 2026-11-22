@@ -1515,50 +1515,28 @@ def run_one(entry: dict, models: dict, image_override: str | None) -> list[Path]
         return serve(entry)
     except RuntimeError as exc:
         # min_tp_fit counts weights only; the high-concurrency KV cache can still overflow one GPU.
-        if not can_grow or not gpu_oom_failure(exc):
+        if not can_grow or not context_oom_failure(exc):
             raise
         try:
             select_gpu_devices(host_slug, 2)
         except ValueError:
             raise exc
         print(
-            f"[tp-grow] {model_slug}:{quant}:{backend} out of GPU memory on 1 GPU; retrying on 2",
+            f"[tp-grow] {model_slug}:{quant}:{backend} context does not fit 1 GPU; retrying on 2",
             file=sys.stderr,
             flush=True,
         )
-        wait_gpu_memory_released(apply_gpu_device(entry.get("docker_extra") or bcfg["docker_extra"], host_slug, 2))
         return serve(dict(entry, tp=2))
-
-
-SYSFS_DRM = "/sys/class/drm"
-
-
-def wait_gpu_memory_released(docker_extra: str, *, timeout_s: int = 120, sleeper=time.sleep) -> None:
-    """Wait until the GPUs in `docker_extra` no longer hold the failed server's VRAM."""
-    # A removed container's VRAM is freed a few seconds later; relaunching at once hits OOM again.
-    paths = [
-        f"{SYSFS_DRM}/{node}/device/mem_info_vram_used"
-        for node in re.findall(r"--device=/dev/dri/(renderD\d+)", docker_extra)
-    ]
-    paths = [p for p in paths if os.path.exists(p)]
-    if not paths:
-        sleeper(30)
-        return
-    deadline = time.monotonic() + timeout_s
-    while time.monotonic() < deadline:
-        if all(int(Path(p).read_text()) < 2 * 2**30 for p in paths):
-            return
-        sleeper(2)
-    print(f"[tp-grow] GPU memory still in use after {timeout_s}s: {paths}", file=sys.stderr, flush=True)
 
 
 GPU_OOM_MARKERS = ("out of memory", "failed to allocate", "erroroutofdevicememory")
 
 
-def gpu_oom_failure(exc: Exception) -> bool:
-    """Whether a server start failed because the model and its context did not fit in GPU memory."""
+def context_oom_failure(exc: Exception) -> bool:
+    """Whether the weights loaded but the context (KV cache, compute buffers) did not fit in GPU memory."""
+    # min_tp_fit sizes the weights to fit, so a failed weight load means another job holds the GPU.
     text = str(exc).lower()
-    return any(marker in text for marker in GPU_OOM_MARKERS)
+    return "failed to initialize the context" in text and any(marker in text for marker in GPU_OOM_MARKERS)
 
 
 def retryable_run_failure(exc: Exception) -> bool:
