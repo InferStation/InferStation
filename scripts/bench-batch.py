@@ -456,7 +456,8 @@ def resolve_image(entry: dict, host_cfg: dict, backend: str, override: str | Non
 # Value = usable weight budget per GPU in GiB (R9700 28GB/卡 rule, 48GB cards keep 4GiB headroom).
 MULTI_GPU_HOSTS = {"rtx-4090-sh": 44, "radeon-r9700-sh": 28, "radeon-w7900d": 44}
 # Default GPUs (amd-smi / nvidia-smi index) per shared host; BENCH_GPU_DEVICE overrides.
-GPU_POOLS = {"radeon-r9700-sh": "1,2,5,6"}
+# R9700：amd-smi 3、2 即总线 63、43（ROCm 0、1），11-22 其余 6 张都被别人的容器指定或占用。
+GPU_POOLS = {"radeon-r9700-sh": "3,2"}
 _RENDER_NODES: list[str] | None = None
 
 
@@ -498,7 +499,7 @@ def select_gpu_devices(host: str, tp: int) -> list[str] | None:
     if len(device_ids) != len(set(device_ids)):
         raise ValueError(f"duplicate BENCH_GPU_DEVICE: {gpu_devices!r}")
     if len(device_ids) < tp:
-        raise ValueError(f"BENCH_GPU_DEVICE {gpu_devices!r} has fewer than tp={tp} GPUs")
+        raise ValueError(f"GPU list {gpu_devices!r} (BENCH_GPU_DEVICE or GPU_POOLS) has fewer than tp={tp} GPUs")
     return device_ids[:tp]
 
 

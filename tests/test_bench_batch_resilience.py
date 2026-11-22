@@ -133,12 +133,14 @@ class RetryTests(unittest.TestCase):
         vulkan = "--device=/dev/dri --group-add video"
         with mock.patch.dict(bench_batch.os.environ, {"BENCH_GPU_DEVICE": ""}), \
                 mock.patch.object(bench_batch, "host_render_nodes", return_value=self.RENDER):
-            for tp, nodes in ((1, (131,)), (2, (131, 129)), (4, (131, 129, 135, 133))):
+            for tp, nodes in ((1, (128,)), (2, (128, 129))):
                 want = " ".join(f"--device=/dev/dri/renderD{n}" for n in nodes)
                 r = bench_batch.apply_gpu_device(rocm, "radeon-r9700-sh", tp)
                 self.assertEqual(r, f"--device=/dev/kfd {want} --group-add video")
                 v = bench_batch.apply_gpu_device(vulkan, "radeon-r9700-sh", tp)
                 self.assertEqual(v, f"{want} --group-add video")
+            with self.assertRaisesRegex(ValueError, "fewer than tp=4"):
+                bench_batch.apply_gpu_device(rocm, "radeon-r9700-sh", 4)
             self.assertIn(
                 "--gpus '\"device=0\"'",
                 bench_batch.apply_gpu_device("--gpus all", "rtx-4090-sh", 1),
