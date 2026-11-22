@@ -1431,6 +1431,7 @@ def run_one(entry: dict, models: dict, image_override: str | None) -> list[Path]
         tp = min_tp_fit(host_slug, host_file_size(real_path))
     else:
         tp = 1
+    can_grow = "tp" not in entry and host_slug in MULTI_GPU_HOSTS and tp == 1
     entry = dict(entry, tp=tp)
     image_ref = resolve_image(entry, host_cfg, backend, image_override)
     engine_commit = ensure_image(image_ref, backend=backend)
@@ -1445,68 +1446,96 @@ def run_one(entry: dict, models: dict, image_override: str | None) -> list[Path]
     tg = int(entry.get("tg", 128))
     max_npl = max(npls)
 
-    port = get_free_port()
-    container_name = (
-        f"inferstation-bench-{sanitize_container_part(host_slug)}-"
-        f"{sanitize_container_part(model_slug)}-{sanitize_container_part(quant)}-"
-        f"{os.getpid()}-{port}"
-    )
-    model_name = "inferstation-bench"
-    ctx_size = int(entry.get("ctx", max(32768, max_npl * 2048)))
-    cmd = (
-        "server_bin=$(command -v llama-server || true); "
-        "if [ -z \"$server_bin\" ]; then "
-        "for p in /app/llama-server /usr/local/bin/llama-server /usr/bin/llama-server /opt/llama.cpp/llama-server; do "
-        "[ -x \"$p\" ] && server_bin=\"$p\" && break; done; fi; "
-        "[ -n \"$server_bin\" ] || { echo 'llama-server not found' >&2; exit 127; }; "
-        f"exec \"$server_bin\" -m /models/{shlex.quote(real_fn)} -ngl 999 "
-        f"--host 0.0.0.0 --port {port} --alias {shlex.quote(model_name)} "
-        f"-c {ctx_size} -np {max_npl} -fa on -cb --no-webui"
-        f"{' -sm none' if tp == 1 else ''}"
-    )
-    docker_extra = apply_gpu_device(
-        entry.get("docker_extra") or bcfg["docker_extra"], host_slug, tp
-    )
-    base_url = f"http://127.0.0.1:{port}"
-    sh(f"{DOCKER} rm -f {shlex.quote(container_name)} >/dev/null 2>&1 || true", check=False)
-    try:
-        sh(
-            f"{DOCKER} run -d --name {shlex.quote(container_name)} {docker_extra} --network host --entrypoint bash "
-            f"-v {shlex.quote(real_dir)}:/models:ro {image_ref} "
-            f"-lc {shlex.quote(cmd)}"
+    def serve(unit: dict) -> list[Path]:
+        tp = int(unit["tp"])
+        port = get_free_port()
+        container_name = (
+            f"inferstation-bench-{sanitize_container_part(host_slug)}-"
+            f"{sanitize_container_part(model_slug)}-{sanitize_container_part(quant)}-"
+            f"{os.getpid()}-{port}"
         )
-        wait_health(base_url, container_name)
-        assert_llama_on_gpu(container_name)
-        out_paths: list[Path] = []
-        for npl in npls:
-            bench = run_serve_client(base_url, model_name, concurrency=npl, input_len=pp, output_len=tg)
-            out_paths.append(
-                write_serve_record(
-                    entry,
-                    host_cfg,
-                    model_def,
-                    bcfg,
-                    image_ref,
-                    image_manifest_digest,
-                    engine_commit,
-                    cmd,
-                    bench,
-                )
-            )
-        return out_paths
-    except Exception:
-        logs = subprocess.run(
-            f"{DOCKER} logs --tail 200 {shlex.quote(container_name)}",
-            shell=True,
-            text=True,
-            capture_output=True,
+        model_name = "inferstation-bench"
+        ctx_size = int(unit.get("ctx", max(32768, max_npl * 2048)))
+        cmd = (
+            "server_bin=$(command -v llama-server || true); "
+            "if [ -z \"$server_bin\" ]; then "
+            "for p in /app/llama-server /usr/local/bin/llama-server /usr/bin/llama-server /opt/llama.cpp/llama-server; do "
+            "[ -x \"$p\" ] && server_bin=\"$p\" && break; done; fi; "
+            "[ -n \"$server_bin\" ] || { echo 'llama-server not found' >&2; exit 127; }; "
+            f"exec \"$server_bin\" -m /models/{shlex.quote(real_fn)} -ngl 999 "
+            f"--host 0.0.0.0 --port {port} --alias {shlex.quote(model_name)} "
+            f"-c {ctx_size} -np {max_npl} -fa on -cb --no-webui"
+            f"{' -sm none' if tp == 1 else ''}"
         )
-        if logs.stdout or logs.stderr:
-            print(logs.stdout, file=sys.stderr)
-            print(logs.stderr, file=sys.stderr)
-        raise
-    finally:
+        docker_extra = apply_gpu_device(
+            unit.get("docker_extra") or bcfg["docker_extra"], host_slug, tp
+        )
+        base_url = f"http://127.0.0.1:{port}"
         sh(f"{DOCKER} rm -f {shlex.quote(container_name)} >/dev/null 2>&1 || true", check=False)
+        try:
+            sh(
+                f"{DOCKER} run -d --name {shlex.quote(container_name)} {docker_extra} --network host --entrypoint bash "
+                f"-v {shlex.quote(real_dir)}:/models:ro {image_ref} "
+                f"-lc {shlex.quote(cmd)}"
+            )
+            wait_health(base_url, container_name)
+            assert_llama_on_gpu(container_name)
+            out_paths: list[Path] = []
+            for npl in npls:
+                bench = run_serve_client(base_url, model_name, concurrency=npl, input_len=pp, output_len=tg)
+                out_paths.append(
+                    write_serve_record(
+                        unit,
+                        host_cfg,
+                        model_def,
+                        bcfg,
+                        image_ref,
+                        image_manifest_digest,
+                        engine_commit,
+                        cmd,
+                        bench,
+                    )
+                )
+            return out_paths
+        except Exception:
+            logs = subprocess.run(
+                f"{DOCKER} logs --tail 200 {shlex.quote(container_name)}",
+                shell=True,
+                text=True,
+                capture_output=True,
+            )
+            if logs.stdout or logs.stderr:
+                print(logs.stdout, file=sys.stderr)
+                print(logs.stderr, file=sys.stderr)
+            raise
+        finally:
+            sh(f"{DOCKER} rm -f {shlex.quote(container_name)} >/dev/null 2>&1 || true", check=False)
+
+    try:
+        return serve(entry)
+    except RuntimeError as exc:
+        # min_tp_fit counts weights only; the high-concurrency KV cache can still overflow one GPU.
+        if not can_grow or not gpu_oom_failure(exc):
+            raise
+        try:
+            select_gpu_devices(host_slug, 2)
+        except ValueError:
+            raise exc
+        print(
+            f"[tp-grow] {model_slug}:{quant}:{backend} out of GPU memory on 1 GPU; retrying on 2",
+            file=sys.stderr,
+            flush=True,
+        )
+        return serve(dict(entry, tp=2))
+
+
+GPU_OOM_MARKERS = ("out of memory", "failed to allocate", "erroroutofdevicememory")
+
+
+def gpu_oom_failure(exc: Exception) -> bool:
+    """Whether a server start failed because the model and its context did not fit in GPU memory."""
+    text = str(exc).lower()
+    return any(marker in text for marker in GPU_OOM_MARKERS)
 
 
 def retryable_run_failure(exc: Exception) -> bool:

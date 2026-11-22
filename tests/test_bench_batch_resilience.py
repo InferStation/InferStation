@@ -286,5 +286,67 @@ class RetryTests(unittest.TestCase):
         subprocess.run(["sh", "-n", "-c", script], check=True)
 
 
+class LlamaGpuGrowthTests(unittest.TestCase):
+    RENDER = [f"/dev/dri/renderD{n}" for n in (130, 131, 129, 128, 134, 135, 133, 132)]
+    ENTRY = {"host": "radeon-r9700-sh", "model": "m", "quant": "Q8_0", "backend": "rocm", "npl": 32}
+
+    def run_unit(self, health_errors, entry=None):
+        launches, records = [], []
+
+        def shell(command, **_kwargs):
+            if " run -d " in command:
+                launches.append(command)
+            return ""
+
+        health = mock.Mock(side_effect=list(health_errors) + [None])
+        patches = [
+            mock.patch.dict(bench_batch.os.environ, {"BENCH_GPU_DEVICE": ""}),
+            mock.patch.object(bench_batch, "host_render_nodes", return_value=self.RENDER),
+            mock.patch.object(bench_batch, "ensure_model", return_value="/models/m/m-Q8_0.gguf"),
+            mock.patch.object(bench_batch, "host_readlink", return_value="/models/m/m-Q8_0.gguf"),
+            mock.patch.object(bench_batch, "host_file_size", return_value=26 * 2**30),
+            mock.patch.object(bench_batch, "resolve_image", return_value="img"),
+            mock.patch.object(bench_batch, "ensure_image", return_value="commit"),
+            mock.patch.object(bench_batch, "image_digest", return_value="sha256:0"),
+            mock.patch.object(bench_batch, "get_free_port", return_value=18000),
+            mock.patch.object(bench_batch, "sh", side_effect=shell),
+            mock.patch.object(bench_batch, "wait_health", health),
+            mock.patch.object(bench_batch, "assert_llama_on_gpu"),
+            mock.patch.object(bench_batch, "run_serve_client", return_value={}),
+            mock.patch.object(
+                bench_batch, "write_serve_record",
+                side_effect=lambda unit, *_a: records.append(unit) or Path("r.json"),
+            ),
+            mock.patch.object(
+                bench_batch.subprocess, "run", return_value=subprocess.CompletedProcess("", 0, "", "")
+            ),
+        ]
+        for p in patches:
+            p.start()
+            self.addCleanup(p.stop)
+        bench_batch.run_one(entry or dict(self.ENTRY), {"m": {}}, None)
+        return launches, records
+
+    def test_kv_cache_oom_on_one_gpu_retries_on_two(self):
+        oom = RuntimeError(
+            "server container exited before health check passed\n"
+            "allocating 9600.00 MiB on device 0: cudaMalloc failed: out of memory"
+        )
+        launches, records = self.run_unit([oom])
+        self.assertEqual(len(launches), 2)
+        self.assertIn("--device=/dev/dri/renderD128 --group-add", launches[0])
+        self.assertIn("-sm none", launches[0])
+        self.assertIn("--device=/dev/dri/renderD128 --device=/dev/dri/renderD129", launches[1])
+        self.assertNotIn("-sm none", launches[1])
+        self.assertEqual([r["tp"] for r in records], [2])
+
+    def test_other_start_failures_do_not_add_gpus(self):
+        with self.assertRaisesRegex(RuntimeError, "unknown model architecture"):
+            self.run_unit([RuntimeError("server container exited before health check passed\nunknown model architecture")])
+        oom = RuntimeError("server container exited before health check passed\nout of memory")
+        with self.assertRaisesRegex(RuntimeError, "out of memory"):
+            self.run_unit([oom], entry=dict(self.ENTRY, tp=1))
+
+
 if __name__ == "__main__":
     unittest.main()
