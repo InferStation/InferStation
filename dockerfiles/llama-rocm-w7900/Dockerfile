@@ -2,13 +2,15 @@
 # llama.cpp HIP/ROCm backend on amd64, targeted at AMD Radeon PRO W7900
 # (gfx1100, RDNA3). Build from upstream master (rolling); compiled on the 9700x8 box.
 #
-# Base: ROCm 7.2-complete, the same userspace as llama-rocm-r9700. A llama.cpp
-# build on a ROCm 7.2 userspace has run the W7900 benchmarks on hosts with the
-# amdgpu 7.1.x driver.
+# Base: ROCm 7.2.1-complete. On W7900 (gfx1100, amdgpu 7.1.3 host) the same
+# llama.cpp commit built on the ROCm 7.2 userspace ran prompt processing ~4x
+# slower (Granite-4.2-8B Q8_0: 585-token prompt ~2300 -> ~570 tok/s), which cut
+# end-to-end throughput by up to 60% at 32 concurrent requests. Rebuilding on
+# 7.2.1 with nothing else changed restored it (2026-11-27 A/B).
 
 ARG LLAMA_REPO=https://github.com/ggml-org/llama.cpp
 ARG LLAMA_TAG=master
-ARG ROCM_VERSION=7.2
+ARG ROCM_VERSION=7.2.1
 ARG UBUNTU_VERSION=24.04
 ARG BASE_ROCM_DEV_CONTAINER=rocm/dev-ubuntu-${UBUNTU_VERSION}:${ROCM_VERSION}-complete
 # Radeon PRO W7900 only (gfx1100) -> small + fast build.
