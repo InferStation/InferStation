@@ -31,6 +31,11 @@ class WorkflowMatrixTests(unittest.TestCase):
         self.assertEqual(len(rows), 6)
         self.assertEqual(len({row["label"] for row in rows}), 6)
 
+    def test_skip_targets_leaves_a_pool_out(self):
+        rows = bench_matrix.build_matrix("all", "", "r9700")["include"]
+        self.assertNotIn("r9700", {row["target"] for row in rows})
+        self.assertEqual(len(rows), 5)
+
     def test_target_selects_only_that_runner_pool(self):
         rows = self.matrix(target="halo")
         self.assertEqual(

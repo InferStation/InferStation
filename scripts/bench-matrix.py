@@ -18,12 +18,14 @@ RUNNERS = [
 ]
 
 
-def build_matrix(target: str = "all", runner_label: str = "") -> dict:
+def build_matrix(target: str = "all", runner_label: str = "", skip_targets: str = "") -> dict:
+    skip = {t.strip() for t in skip_targets.split(",") if t.strip()}
     selected = [
         row
         for row in RUNNERS
         if target in ("all", row["target"])
         and (not runner_label or runner_label == row["label"])
+        and row["target"] not in skip
     ]
     if not selected:
         raise ValueError(
@@ -40,9 +42,13 @@ def main() -> int:
     parser.add_argument(
         "--runner-label", default=os.environ.get("BENCH_RUNNER_LABEL", "")
     )
+    parser.add_argument(
+        "--skip-targets", default=os.environ.get("BENCH_SKIP_TARGETS", ""),
+        help="comma-separated targets to leave out (e.g. a runner lent to someone)",
+    )
     args = parser.parse_args()
     try:
-        matrix = build_matrix(args.target, args.runner_label)
+        matrix = build_matrix(args.target, args.runner_label, args.skip_targets)
     except ValueError as exc:
         parser.error(str(exc))
     print(json.dumps(matrix, separators=(",", ":")))

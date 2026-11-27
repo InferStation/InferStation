@@ -108,6 +108,13 @@ jobs:
             run_bench=false
             echo "Skipping this weekly benchmark during the planned datacenter outage."
           fi
+          # 2026-11-28/29: another team holds the first four R9700 cards on the
+          # 9700x8 box, and our default pool (amd-smi 3,2 = ROCm 0,1) is inside
+          # them. The scheduled weekly bench leaves R9700 out this weekend
+          # (images still build); R9700 is dispatched by hand afterwards.
+          if [[ "$EVENT_NAME" == "schedule" && "$(date -u +%s)" -lt "$(date -u -d '2026-11-29T16:00:00Z' +%s)" ]]; then
+            export BENCH_SKIP_TARGETS=r9700
+          fi
           matrix=$(python3 scripts/bench-matrix.py)
           echo "run_bench=$run_bench" >> "$GITHUB_OUTPUT"
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
