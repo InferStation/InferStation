@@ -1311,6 +1311,7 @@ def write_serve_record(
     }
     out_abs.write_text(json.dumps(record, indent=2) + "\n")
     print(f"wrote {out_abs}")
+    print(f"[result] bs={npl} image={image_ref} {notes}", flush=True)
     return out_abs
 
 
