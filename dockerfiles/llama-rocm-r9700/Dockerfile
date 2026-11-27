@@ -3,13 +3,15 @@
 # (gfx1201, RDNA4). Build from upstream master (rolling). Runs on the 9700x8 box.
 #
 # Base ROCm must match the run host's KFD driver. 9700x8 ships ROCm 7.2.3; the
-# 7.2-complete base (ROCm 7.2.0 userspace) is proven to run there (the validated
-# nightly-20260619 image used it). Do NOT drop to the 7.0 base — gfx12xx on 7.0
-# segfaults inside libhsa-runtime64 during tensor upload.
+# 7.2.1-complete base is the same userspace as llama-rocm-halo/-w7900. 7.2.0
+# (the 7.2-complete tag) ran llama.cpp prompt processing ~4x slower on gfx1100
+# with the same llama.cpp commit (2026-11-27 A/B), so no image uses it anymore.
+# Do NOT drop to the 7.0 base — gfx12xx on 7.0 segfaults inside
+# libhsa-runtime64 during tensor upload.
 
 ARG LLAMA_REPO=https://github.com/ggml-org/llama.cpp
 ARG LLAMA_TAG=master
-ARG ROCM_VERSION=7.2
+ARG ROCM_VERSION=7.2.1
 ARG UBUNTU_VERSION=24.04
 ARG BASE_ROCM_DEV_CONTAINER=rocm/dev-ubuntu-${UBUNTU_VERSION}:${ROCM_VERSION}-complete
 # Radeon AI PRO R9700 only -> small + fast build. Add more arches here if needed.
