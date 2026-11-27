@@ -71,6 +71,10 @@ on:
         description: 'Optional vLLM GPU memory utilization override for targeted recovery.'
         type: string
         default: ''
+      image:
+        description: 'Optional image for every selected run (A/B a build); pair with a filter.'
+        type: string
+        default: ''
       unsharded:
         description: 'Run the full filtered plan on each selected result host; normally pair with resume_existing=date.'
         type: boolean
@@ -176,6 +180,7 @@ jobs:
           BENCH_RUN_DATE: ${{ inputs.run_date || '' }}
           BENCH_GPU_DEVICE: ${{ inputs.gpu_device || '' }}
           BENCH_GPU_MEMORY_UTILIZATION: ${{ inputs.gpu_memory_utilization || '' }}
+          BENCH_IMAGE: ${{ inputs.image || '' }}
           BENCH_REQUEST_TIMEOUT: ${{ inputs.request_timeout || '3600' }}
           BENCH_PUSH_BATCH_SIZE: ${{ inputs.push_batch_size || '20' }}
           BENCH_RESULT_HOST: ${{ matrix.result_host || '' }}
