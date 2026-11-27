@@ -14,6 +14,7 @@ HALO_MAIN_DOCKERFILE = ROOT / "dockerfiles/vllm-rocm-halo-main/Dockerfile"
 LLAMA_ROCM_DOCKERFILES = [
     ROOT / "dockerfiles/llama-rocm-halo/Dockerfile",
     ROOT / "dockerfiles/llama-rocm-r9700/Dockerfile",
+    ROOT / "dockerfiles/llama-rocm-w7900/Dockerfile",
 ]
 
 

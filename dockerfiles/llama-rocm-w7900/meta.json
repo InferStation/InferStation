@@ -1,0 +1,21 @@
+{
+  "name": "llama-rocm-w7900",
+  "kind": "build",
+  "backend": "llama.cpp",
+  "platform": "linux/amd64",
+  "gpu_arch": "gfx1100",
+  "registry": "ghcr.io/inferstation/llama-rocm-w7900",
+  "tag": "master-gfx1100",
+  "build_host": "9700x8",
+  "dockerfile": "Dockerfile",
+  "upstream": "https://github.com/ggml-org/llama.cpp",
+  "upstream_ref": "master",
+  "build_args": {
+    "LLAMA_TAG": "master",
+    "ROCM_DOCKER_ARCH": "gfx1100",
+    "ROCM_VERSION": "7.2"
+  },
+  "expected_size_mb": 8000,
+  "description": "llama.cpp HIP/ROCm built from upstream master for AMD Radeon PRO W7900 (gfx1100, x86_64). Compiled on the 9700x8 box (no GPU needed to build). ROCm 7.2-complete base, same userspace as llama-rocm-r9700.",
+  "model_tools": true
+}

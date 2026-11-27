@@ -311,6 +311,7 @@ jobs:
               pytorch-rocm-w7900
               vllm-rocm-w7900-main
               llama-rocm-r9700
+              llama-rocm-w7900
               vllm-rocm-r9700-main
               llama-vulkan-r9700
             )
@@ -345,7 +346,7 @@ jobs:
 
           if [[ "${{ github.event_name }}" != "workflow_dispatch" ]]; then
             printf '%s\n' "$GHCR_PAT" | docker login ghcr.io -u AlisaLi0 --password-stdin >/dev/null
-            for repo in llama-rocm-halo llama-rocm-r9700; do
+            for repo in llama-rocm-halo llama-rocm-r9700 llama-rocm-w7900; do
               ref="ghcr.io/inferstation/${repo}:nightly-${DATE}"
               docker pull "$ref" >/dev/null
               actual=$(docker image inspect "$ref" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')

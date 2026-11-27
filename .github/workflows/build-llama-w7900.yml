@@ -1,0 +1,62 @@
+# Build the W7900 (gfx1100) llama.cpp ROCm image at one pinned llama.cpp commit.
+#
+# Radeon Arena's W7900 results are measured with this image, so it is tagged
+# only by commit (commit-<sha12>) and never moves :latest or nightly-*. The
+# weekly nightly-build.yml keeps building the rolling master line.
+#
+# Triggers: a push that changes the profile (builds the default revision below)
+# or a manual run with any llama.cpp commit.
+
+name: build-llama-w7900
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'dockerfiles/llama-rocm-w7900/**'
+      - '.github/workflows/build-llama-w7900.yml'
+  workflow_dispatch:
+    inputs:
+      revision:
+        description: 'llama.cpp commit (40-hex)'
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+env:
+  INFERSTATION_REGISTRY: ghcr.io/inferstation
+  INFERSTATION_FORCE_LOCAL_BUILD: '1'
+  INFERSTATION_GHCR_MODE: '1'
+  # Same llama.cpp source as the 2026-11 Radeon Arena batch on R9700 and Strix Halo.
+  DEFAULT_REVISION: 29b52d398b294509746ec0a3f28948a3107c0213
+
+jobs:
+  build:
+    runs-on: [self-hosted, cicd]
+    steps:
+      - uses: actions/checkout@v4
+      - name: ghcr login (GHCR_PAT)
+        run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u AlisaLi0 --password-stdin
+      - name: build llama-rocm-w7900 at a pinned commit
+        working-directory: dockerfiles
+        env:
+          REVISION: ${{ inputs.revision }}
+        run: |
+          set -euo pipefail
+          rev="${REVISION:-$DEFAULT_REVISION}"
+          [[ "$rev" =~ ^[0-9a-f]{40}$ ]] || { echo "revision must be a 40-hex commit: $rev" >&2; exit 1; }
+          chmod +x build.sh
+          ./build.sh llama-rocm-w7900 --ref="$rev" --tag="commit-${rev:0:12}" \
+            --build-arg "CACHEBUST=${rev}" --no-latest
+      - name: verify the pushed image revision
+        run: |
+          set -euo pipefail
+          rev="${{ inputs.revision }}"; rev="${rev:-$DEFAULT_REVISION}"
+          ref="ghcr.io/inferstation/llama-rocm-w7900:commit-${rev:0:12}"
+          docker pull "$ref" >/dev/null
+          actual=$(docker image inspect "$ref" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')
+          [[ "$actual" == "$rev" ]] || { echo "STALE: expected $rev, got ${actual:-<missing>}" >&2; exit 1; }
+          echo "OK $ref revision $actual digest $(docker image inspect "$ref" --format '{{ index .RepoDigests 0 }}')"

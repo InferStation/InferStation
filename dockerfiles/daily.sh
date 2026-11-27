@@ -537,6 +537,7 @@ case "$TRACK" in
       run_one pytorch-rocm-r9700 build_radeon_pytorch_base pytorch-rocm-r9700
     fi
     run_one llama-rocm-r9700      build_pkg          llama-rocm-r9700   llama gfx1201 &
+    run_one llama-rocm-w7900      build_pkg          llama-rocm-w7900   llama gfx1100 &
     run_one vllm-rocm-r9700-main  build_r9700_vllm &
     run_one llama-vulkan-r9700    mirror_pkg         llama-vulkan-r9700 &
     wait
