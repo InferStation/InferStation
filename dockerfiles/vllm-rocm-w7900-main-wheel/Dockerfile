@@ -5,7 +5,7 @@
 # compile vLLM into a wheel, then export only the wheel artifacts from a scratch
 # stage.
 
-ARG VLLM_BASE=ghcr.io/inferstation/pytorch-rocm-w7900:v2-staging-gfx110x-all
+ARG VLLM_BASE=ghcr.io/inferstation/pytorch-rocm-w7900:rocm10.2.0-gfx1100
 ARG VLLM_REPO=https://github.com/vllm-project/vllm.git
 ARG VLLM_TAG=main
 ARG PYTORCH_ROCM_ARCH=gfx1100

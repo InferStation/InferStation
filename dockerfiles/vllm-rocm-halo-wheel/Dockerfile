@@ -15,15 +15,18 @@
 # Build (via dockerfiles/build.sh):
 #   ./build.sh vllm-rocm-halo-wheel --ref=gfx11 --tag=gfx11-gfx1151 --no-latest
 
-ARG VLLM_BASE=ghcr.io/inferstation/pytorch-rocm-halo:multiarch-7.15.0a20260719-gfx1151
+ARG VLLM_BASE=ghcr.io/inferstation/pytorch-rocm-halo:rocm10.2.0-gfx1151
 ARG VLLM_REPO=https://github.com/ROCm/vllm.git
 ARG VLLM_TAG=gfx11
 ARG PYTORCH_ROCM_ARCH=gfx1151
+# Optional exact commit on VLLM_TAG (reproducible rebuilds / base-only A/B).
+ARG VLLM_COMMIT=
 
 FROM ${VLLM_BASE} AS builder
 ARG VLLM_REPO
 ARG VLLM_TAG
 ARG PYTORCH_ROCM_ARCH
+ARG VLLM_COMMIT
 # Cache-bust token for the `git clone` layer below. When VLLM_TAG is a moving
 # branch (e.g. main) the clone RUN's command text is identical every night, so
 # BuildKit caches the FIRST clone forever and the wheel freezes at that commit
@@ -55,6 +58,10 @@ WORKDIR /opt/vllm-src
 RUN echo "cache-bust: ${CACHEBUST}" \
  && git clone --depth=1 --branch "${VLLM_TAG}" "${VLLM_REPO}" . 2>/dev/null \
  || (git clone "${VLLM_REPO}" . && git fetch --depth=1 origin "${VLLM_TAG}" && git checkout FETCH_HEAD)
+RUN if [ -n "${VLLM_COMMIT}" ]; then \
+        git fetch --depth=1 origin "${VLLM_COMMIT}" && git checkout --detach FETCH_HEAD \
+        && test "$(git rev-parse HEAD)" = "${VLLM_COMMIT}"; \
+    fi
 
 # gfx11-branch fix: several csrc files (skinny_gemms_int4.cu and the two
 # skinny_gemms_int4_sweep_wvsplitk*.cu variants) call std::in_range, a C++23

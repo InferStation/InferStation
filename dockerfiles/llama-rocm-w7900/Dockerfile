@@ -2,17 +2,19 @@
 # llama.cpp HIP/ROCm backend on amd64, targeted at AMD Radeon PRO W7900
 # (gfx1100, RDNA3). Build from upstream master (rolling); compiled on the 9700x8 box.
 #
-# Base: ROCm 7.2.1-complete. On W7900 (gfx1100, amdgpu 7.1.3 host) the same
-# llama.cpp commit built on the ROCm 7.2 userspace ran prompt processing ~4x
-# slower (Granite-4.2-8B Q8_0: 585-token prompt ~2300 -> ~570 tok/s), which cut
-# end-to-end throughput by up to 60% at 32 concurrent requests. Rebuilding on
-# 7.2.1 with nothing else changed restored it (2026-11-27 A/B).
+# Base ROCm userspace: see ROCM_VERSION below. Re-check prompt processing on real
+# hardware whenever it changes (7.2.0 once cost ~4x on gfx1100).
 
 ARG LLAMA_REPO=https://github.com/ggml-org/llama.cpp
 ARG LLAMA_TAG=master
-ARG ROCM_VERSION=7.2.1
+# ROCm 10.2.0 (2026-11-18 release). rocm/dev-ubuntu 10.x images only ship as
+# '-full' (no '-complete'); same /opt/rocm layout, hipconfig and rocWMMA headers.
+# History: 7.2.0 ran prompt processing ~4x slower on gfx1100 (2026-11-27 A/B);
+# 7.0 segfaulted on gfx1151/gfx12xx against newer kernel drivers.
+ARG ROCM_VERSION=10.2.0
+ARG ROCM_IMAGE_FLAVOR=full
 ARG UBUNTU_VERSION=24.04
-ARG BASE_ROCM_DEV_CONTAINER=rocm/dev-ubuntu-${UBUNTU_VERSION}:${ROCM_VERSION}-complete
+ARG BASE_ROCM_DEV_CONTAINER=rocm/dev-ubuntu-${UBUNTU_VERSION}:${ROCM_VERSION}-${ROCM_IMAGE_FLAVOR}
 # Radeon PRO W7900 only (gfx1100) -> small + fast build.
 ARG ROCM_DOCKER_ARCH=gfx1100
 

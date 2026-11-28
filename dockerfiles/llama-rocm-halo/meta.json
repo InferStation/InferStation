@@ -13,9 +13,10 @@
   "build_args": {
     "LLAMA_TAG": "master",
     "ROCM_DOCKER_ARCH": "gfx1151",
-    "ROCM_VERSION": "7.2.1"
+    "ROCM_VERSION": "10.2.0",
+    "ROCM_IMAGE_FLAVOR": "full"
   },
   "expected_size_mb": 8000,
-  "description": "llama.cpp HIP/ROCm built from upstream master. Strix Halo (gfx1151) only -> small + fast build. Replaces previous mirror of rocm/llama.cpp:b6652 which was stuck at 2025-11-04 and lacked qwen35 support.",
+  "description": "llama.cpp HIP/ROCm built from upstream master for AMD Strix Halo (gfx1151) only -> small + fast build, on the ROCm 10.2.0 base (rocm/dev-ubuntu-24.04:10.2.0-full). Replaces the old mirror of rocm/llama.cpp:b6652.",
   "model_tools": true
 }

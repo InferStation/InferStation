@@ -13,9 +13,10 @@
   "build_args": {
     "LLAMA_TAG": "master",
     "ROCM_DOCKER_ARCH": "gfx1100",
-    "ROCM_VERSION": "7.2.1"
+    "ROCM_VERSION": "10.2.0",
+    "ROCM_IMAGE_FLAVOR": "full"
   },
   "expected_size_mb": 8000,
-  "description": "llama.cpp HIP/ROCm built from upstream master for AMD Radeon PRO W7900 (gfx1100, x86_64). Compiled on the 9700x8 box (no GPU needed to build). ROCm 7.2.1-complete base (7.2 ran prompt processing ~4x slower on gfx1100).",
+  "description": "llama.cpp HIP/ROCm built from upstream master for AMD Radeon PRO W7900 (gfx1100, x86_64), on the ROCm 10.2.0 base (rocm/dev-ubuntu-24.04:10.2.0-full). Never use the ROCm 7.2.0 userspace: it ran prompt processing ~4x slower on gfx1100.",
   "model_tools": true
 }

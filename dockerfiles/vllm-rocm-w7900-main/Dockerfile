@@ -2,11 +2,11 @@
 # Runtime image for AMD Radeon W7900 / RDNA3 (gfx1100 family), assembled from a
 # vLLM wheel built by vllm-rocm-w7900-main-wheel.
 
-ARG VLLM_BASE=ghcr.io/inferstation/pytorch-rocm-w7900:v2-staging-gfx110x-all
-ARG WHEEL_IMAGE=ghcr.io/inferstation/vllm-wheel-w7900:main-gfx1100-v2-staging
+ARG VLLM_BASE=ghcr.io/inferstation/pytorch-rocm-w7900:rocm10.2.0-gfx1100
+ARG WHEEL_IMAGE=ghcr.io/inferstation/vllm-wheel-w7900:main-gfx1100
 ARG VLLM_TAG=main
 ARG PYTORCH_ROCM_ARCH=gfx1100
-ARG ROCM_INDEX_URL=https://rocm.nightlies.amd.com/v2-staging/gfx110X-all/
+ARG ROCM_INDEX_URL=https://stable.repo.amd.com/rocm/whl-next/
 
 FROM ${WHEEL_IMAGE} AS wheel
 

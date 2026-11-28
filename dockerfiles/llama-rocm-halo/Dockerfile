@@ -6,12 +6,14 @@
 
 ARG LLAMA_REPO=https://github.com/ggml-org/llama.cpp
 ARG LLAMA_TAG=master
-# Must match the host's ROCm/KFD driver (halo6 = 7.2.1). gfx1151 on the 7.0
-# base segfaults inside libhsa-runtime64 during tensor upload because the
-# userspace HSA runtime is out of sync with the 7.2.1 kernel driver.
-ARG ROCM_VERSION=7.2.1
+# ROCm 10.2.0 (2026-11-18 release). rocm/dev-ubuntu 10.x images only ship as
+# '-full' (no '-complete'); same /opt/rocm layout, hipconfig and rocWMMA headers.
+# History: 7.2.0 ran prompt processing ~4x slower on gfx1100 (2026-11-27 A/B);
+# 7.0 segfaulted on gfx1151/gfx12xx against newer kernel drivers.
+ARG ROCM_VERSION=10.2.0
+ARG ROCM_IMAGE_FLAVOR=full
 ARG UBUNTU_VERSION=24.04
-ARG BASE_ROCM_DEV_CONTAINER=rocm/dev-ubuntu-${UBUNTU_VERSION}:${ROCM_VERSION}-complete
+ARG BASE_ROCM_DEV_CONTAINER=rocm/dev-ubuntu-${UBUNTU_VERSION}:${ROCM_VERSION}-${ROCM_IMAGE_FLAVOR}
 # Strix Halo only -> small + fast build. Add more arches here if needed.
 ARG ROCM_DOCKER_ARCH=gfx1151
 

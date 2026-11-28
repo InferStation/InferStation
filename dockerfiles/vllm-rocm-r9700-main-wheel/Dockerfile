@@ -5,7 +5,7 @@
 # compile vLLM into a wheel, then export only the wheel artifacts from a scratch
 # stage.
 
-ARG VLLM_BASE=ghcr.io/inferstation/pytorch-rocm-r9700:v2-staging-gfx120x-all
+ARG VLLM_BASE=ghcr.io/inferstation/pytorch-rocm-r9700:rocm10.2.0-gfx1201
 ARG VLLM_REPO=https://github.com/vllm-project/vllm.git
 ARG VLLM_TAG=main
 ARG PYTORCH_ROCM_ARCH=gfx1201
@@ -15,6 +15,8 @@ ARG VLLM_REPO
 ARG VLLM_TAG
 ARG PYTORCH_ROCM_ARCH
 ARG CACHEBUST=main
+# Optional exact commit on VLLM_TAG (reproducible rebuilds / base-only A/B).
+ARG VLLM_COMMIT=
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTORCH_ROCM_ARCH=${PYTORCH_ROCM_ARCH}
@@ -44,6 +46,10 @@ WORKDIR /opt/vllm-src
 RUN echo "cache-bust: ${CACHEBUST}" \
  && (git clone --depth=1 --branch "${VLLM_TAG}" "${VLLM_REPO}" . 2>/dev/null \
      || (git clone "${VLLM_REPO}" . && git fetch --depth=1 origin "${VLLM_TAG}" && git checkout FETCH_HEAD)) \
+ && if [ -n "${VLLM_COMMIT}" ]; then \
+        git fetch --depth=1 origin "${VLLM_COMMIT}" && git checkout --detach FETCH_HEAD \
+        && test "$(git rev-parse HEAD)" = "${VLLM_COMMIT}"; \
+    fi \
  && git rev-parse HEAD > /commit.txt
 
 RUN --mount=type=cache,target=/root/.cache/ccache,id=vllm-r9700-ci-ccache,sharing=locked \

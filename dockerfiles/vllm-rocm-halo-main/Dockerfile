@@ -14,10 +14,12 @@
 # The legacy one-shot Dockerfile (compile-in-place + COPY /opt/python) is kept
 # at Dockerfile.legacy for reference / fallback.
 
-ARG VLLM_BASE=ghcr.io/inferstation/pytorch-rocm-halo:multiarch-7.15.0a20260719-gfx1151
+ARG VLLM_BASE=ghcr.io/inferstation/pytorch-rocm-halo:rocm10.2.0-gfx1151
 ARG WHEEL_IMAGE=ghcr.io/inferstation/vllm-wheel-halo:main-gfx1151
 ARG VLLM_TAG=main
 ARG PYTORCH_ROCM_ARCH=gfx1151
+# Must be the index the VLLM_BASE ROCm/PyTorch wheels came from.
+ARG ROCM_INDEX_URL=https://stable.repo.amd.com/rocm/whl-next/
 
 # The prebuilt-wheel pkg (FROM scratch: vllm-*.whl + rocm-requirements.txt).
 FROM ${WHEEL_IMAGE} AS wheel
@@ -25,6 +27,7 @@ FROM ${WHEEL_IMAGE} AS wheel
 FROM ${VLLM_BASE}
 ARG VLLM_TAG
 ARG PYTORCH_ROCM_ARCH
+ARG ROCM_INDEX_URL
 
 LABEL org.opencontainers.image.source="https://github.com/vllm-project/vllm" \
       org.opencontainers.image.version="${VLLM_TAG}" \
@@ -50,7 +53,7 @@ RUN --mount=type=cache,target=/root/.cache/uv,id=vllm-halo-main-runtime-uv,shari
  && printf 'numpy<2.5\nsetuptools>=77.0.3,<80.0.0\ntransformers>=5.10.2\nhuggingface-hub[hf_transfer,cli]\n' >> /tmp/wheels/runtime-constraints.txt \
  && uv -v pip install --system --python python \
        --constraint /tmp/wheels/runtime-constraints.txt \
-       --index-url "https://rocm.nightlies.amd.com/whl-multi-arch/" \
+       --index-url "${ROCM_INDEX_URL}" \
        --extra-index-url https://pypi.org/simple/ \
        --index-strategy unsafe-best-match \
        --prerelease allow \

@@ -143,7 +143,7 @@ jobs:
         working-directory: dockerfiles
         env:
           CANDIDATE_TAG: runtime-${{ github.sha }}
-          BASE_REF: ghcr.io/inferstation/pytorch-rocm-halo:multiarch-7.15.0a20260719-gfx1151
+          BASE_REF: ghcr.io/inferstation/pytorch-rocm-halo:rocm10.2.0-gfx1151
           WHEEL_REF: ghcr.io/inferstation/vllm-wheel-halo-gfx11:gfx11-gfx1151
         run: |
           set -euo pipefail

@@ -5,13 +5,13 @@
   "platform": "linux/amd64",
   "gpu_arch": "gfx1100",
   "registry": "ghcr.io/inferstation/vllm-wheel-w7900",
-  "tag": "main-gfx1100-v2-staging",
+  "tag": "main-gfx1100",
   "build_host": "9700x8",
   "dockerfile": "Dockerfile",
   "upstream": "https://github.com/vllm-project/vllm",
   "upstream_ref": "main",
   "build_args": {
-    "VLLM_BASE": "ghcr.io/inferstation/pytorch-rocm-w7900:v2-staging-gfx110x-all",
+    "VLLM_BASE": "ghcr.io/inferstation/pytorch-rocm-w7900:rocm10.2.0-gfx1100",
     "VLLM_REPO": "https://github.com/vllm-project/vllm.git",
     "VLLM_TAG": "main",
     "PYTORCH_ROCM_ARCH": "gfx1100"

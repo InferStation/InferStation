@@ -2,10 +2,10 @@
 # PyTorch/ROCm base for AMD Strix Halo (RDNA3.5 / gfx1151).
 
 ARG ROCM_CI_BASE=ghcr.io/rocm/vllm/gfx11-ci:latest
-ARG ROCM_INDEX_URL=https://rocm.nightlies.amd.com/whl-multi-arch/
-ARG ROCM_VERSION=7.15.0a20260719
-ARG TORCH_VERSION=2.14.0a0+rocm7.15.0a20260719
-ARG TORCHVISION_VERSION=0.29.0a0+rocm7.15.0a20260719
+ARG ROCM_INDEX_URL=https://stable.repo.amd.com/rocm/whl-next/
+ARG ROCM_VERSION=10.2.0
+ARG TORCH_VERSION=2.14.0+rocm10.2.0
+ARG TORCHVISION_VERSION=0.29.0+rocm10.2.0
 ARG PYTORCH_ROCM_ARCH=gfx1151
 
 FROM ${ROCM_CI_BASE}
@@ -22,8 +22,8 @@ ENV HIP_PATH=/usr/local/lib/python3.12/site-packages/_rocm_sdk_devel
 ENV HSA_OVERRIDE_GFX_VERSION=11.5.1
 ENV UV_LINK_MODE=copy
 
-LABEL org.opencontainers.image.source="https://rocm.nightlies.amd.com/whl-multi-arch/" \
-      org.opencontainers.image.description="PyTorch ROCm nightly base for AMD Strix Halo (gfx1151)" \
+LABEL org.opencontainers.image.source="https://stable.repo.amd.com/rocm/whl-next/" \
+      org.opencontainers.image.description="PyTorch ROCm base for AMD Strix Halo (gfx1151)" \
       io.amd.rocm.arch="${PYTORCH_ROCM_ARCH}"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \

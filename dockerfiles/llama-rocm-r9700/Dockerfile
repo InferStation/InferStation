@@ -2,18 +2,19 @@
 # llama.cpp HIP/ROCm backend on amd64, targeted at AMD Radeon AI PRO R9700
 # (gfx1201, RDNA4). Build from upstream master (rolling). Runs on the 9700x8 box.
 #
-# Base ROCm must match the run host's KFD driver. 9700x8 ships ROCm 7.2.3; the
-# 7.2.1-complete base is the same userspace as llama-rocm-halo/-w7900. 7.2.0
-# (the 7.2-complete tag) ran llama.cpp prompt processing ~4x slower on gfx1100
-# with the same llama.cpp commit (2026-11-27 A/B), so no image uses it anymore.
-# Do NOT drop to the 7.0 base — gfx12xx on 7.0 segfaults inside
-# libhsa-runtime64 during tensor upload.
+# Base ROCm userspace: see ROCM_VERSION below. Re-check prompt processing on real
+# hardware whenever it changes (7.2.0 once cost ~4x on gfx1100).
 
 ARG LLAMA_REPO=https://github.com/ggml-org/llama.cpp
 ARG LLAMA_TAG=master
-ARG ROCM_VERSION=7.2.1
+# ROCm 10.2.0 (2026-11-18 release). rocm/dev-ubuntu 10.x images only ship as
+# '-full' (no '-complete'); same /opt/rocm layout, hipconfig and rocWMMA headers.
+# History: 7.2.0 ran prompt processing ~4x slower on gfx1100 (2026-11-27 A/B);
+# 7.0 segfaulted on gfx1151/gfx12xx against newer kernel drivers.
+ARG ROCM_VERSION=10.2.0
+ARG ROCM_IMAGE_FLAVOR=full
 ARG UBUNTU_VERSION=24.04
-ARG BASE_ROCM_DEV_CONTAINER=rocm/dev-ubuntu-${UBUNTU_VERSION}:${ROCM_VERSION}-complete
+ARG BASE_ROCM_DEV_CONTAINER=rocm/dev-ubuntu-${UBUNTU_VERSION}:${ROCM_VERSION}-${ROCM_IMAGE_FLAVOR}
 # Radeon AI PRO R9700 only -> small + fast build. Add more arches here if needed.
 ARG ROCM_DOCKER_ARCH=gfx1201
 

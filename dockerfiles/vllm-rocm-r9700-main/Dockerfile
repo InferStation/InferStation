@@ -5,8 +5,8 @@
 # Keep Python/ROCm/torch aligned with the wheel builder by using the same daily
 # PyTorch/ROCm base image.
 
-ARG VLLM_BASE=ghcr.io/inferstation/pytorch-rocm-r9700:v2-staging-gfx120x-all
-ARG WHEEL_IMAGE=ghcr.io/inferstation/vllm-wheel-r9700:main-gfx1201-v2-staging
+ARG VLLM_BASE=ghcr.io/inferstation/pytorch-rocm-r9700:rocm10.2.0-gfx1201
+ARG WHEEL_IMAGE=ghcr.io/inferstation/vllm-wheel-r9700:main-gfx1201
 ARG VLLM_TAG=main
 ARG PYTORCH_ROCM_ARCH=gfx1201
 
@@ -15,6 +15,8 @@ FROM ${WHEEL_IMAGE} AS wheel
 FROM ${VLLM_BASE}
 ARG VLLM_TAG
 ARG PYTORCH_ROCM_ARCH
+# Must be the index the VLLM_BASE ROCm/PyTorch wheels came from.
+ARG ROCM_INDEX_URL=https://stable.repo.amd.com/rocm/whl-next/
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTORCH_ROCM_ARCH=${PYTORCH_ROCM_ARCH}
@@ -36,7 +38,7 @@ RUN --mount=type=cache,target=/root/.cache/uv,id=vllm-r9700-runtime-uv,sharing=l
  && printf 'numpy<2.5\nsetuptools>=77.0.3,<80.0.0\n' >> /tmp/wheels/runtime-constraints.txt \
  && uv -v pip install --system --python python \
       --constraint /tmp/wheels/runtime-constraints.txt \
-        --index-url "https://rocm.nightlies.amd.com/v2-staging/gfx120X-all/" \
+        --index-url "${ROCM_INDEX_URL}" \
         --extra-index-url https://pypi.org/simple/ \
         --index-strategy unsafe-best-match \
         --prerelease allow \
